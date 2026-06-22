@@ -12,8 +12,11 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | Secret | Phase | Used by | Purpose |
 |--------|-------|---------|---------|
 | `TEST_DATABASE_URL` | live | backend CI | PostGIS integration tests |
-| `DASHBOARD_BASE_URL` | 2.5 | onboarding proxy smoke | Staging dashboard URL |
-| `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5, 2.6, 2.7 | onboarding proxy smoke, backend deploy auth probe, golden bootstrap | Supabase JWT for golden recipient tenant |
+| `DASHBOARD_BASE_URL` | 2.5 | onboarding proxy smoke | Production dashboard URL (`https://dashboard.tracebud.com`) |
+| `SUPABASE_URL` | 2.5, 2.6 | deploy smoke token mint | Product Supabase project URL — mints fresh smoke JWT each workflow run |
+| `SUPABASE_ANON_KEY` | 2.5, 2.6 | deploy smoke token mint | Anon key for Supabase verify step during mint |
+| `SUPABASE_SERVICE_ROLE_KEY` | 2.5, 2.6 | deploy smoke token mint | Service role for admin magic-link mint (**sensitive** — repo-scoped access only) |
+| `TRACEBUD_SMOKE_BEARER_TOKEN` | 2.5, 2.6, 2.7 | optional legacy fallback | Deprecated — prefer Supabase mint secrets; local dev can use `--stdout` mint |
 | `TRACEBUD_SMOKE_TENANT_ID` | 2.7, 4.4–4.7 | Playwright / smoke assertions | Optional — default `tenant_rwanda_001` per manifest |
 | `TRACEBUD_SMOKE_ROLE` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `compliance_manager` |
 | `TRACEBUD_SMOKE_STEP_KEY` | 2.5, 2.7 | onboarding proxy smoke | Optional — default `create_first_campaign` |
@@ -95,10 +98,11 @@ Marketing build: no secrets required for static build; forms need env only at ru
 
 **Bootstrap (staging):** `node apps/dashboard-product/scripts/golden-staging-bootstrap.mjs`  
 **Onboarding smoke:** `node apps/dashboard-product/scripts/launch-onboarding-proxy-smoke.mjs`  
-**Token mint (rotate bearer):** `npm run smoke:token:mint -w tracebud-backend -- --set-github-secret`  
+**CI smoke auth:** deploy workflows mint a fresh bearer via `smoke-bearer-ci-preflight.mjs` when `SUPABASE_URL` + `SUPABASE_ANON_KEY` + `SUPABASE_SERVICE_ROLE_KEY` are set in GitHub.  
+**Local token:** `export TRACEBUD_SMOKE_BEARER_TOKEN="$(npm run smoke:token:mint -s -w tracebud-backend -- --stdout)"`  
 **CI guard:** `npm run golden:staging:assert`
 
-Slice **2.5** is wired — `dashboard-deploy-smoke.yml` runs after Vercel production deploy when `DASHBOARD_BASE_URL` + `TRACEBUD_SMOKE_BEARER_TOKEN` are set. Rotate the bearer token before Supabase JWT expiry.
+Slice **2.5** / **2.6** post-deploy smokes use workflow-time mint (no hourly secret rotation).
 
 ---
 

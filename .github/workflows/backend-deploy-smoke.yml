@@ -33,10 +33,17 @@ jobs:
         with:
           node-version: 20
 
+      - name: Mint smoke bearer token
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
+        run: node tracebud-backend/scripts/smoke-bearer-ci-preflight.mjs --github-env
+
       - name: Run backend post-deploy smoke
         env:
           UPTIME_BACKEND_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.UPTIME_BACKEND_BASE_URL }}
-          TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${UPTIME_BACKEND_BASE_URL:-}" ]; then

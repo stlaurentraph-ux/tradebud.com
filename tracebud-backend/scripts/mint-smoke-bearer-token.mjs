@@ -2,16 +2,18 @@
 /**
  * Mint TRACEBUD_SMOKE_BEARER_TOKEN via Supabase Admin (golden demo user).
  *
- * Requires tracebud-backend/.env.local:
+ * Env (CI or tracebud-backend/.env.local):
  * - SUPABASE_URL
  * - SUPABASE_SERVICE_ROLE_KEY
  * - SUPABASE_ANON_KEY (for verify step)
  *
  * Run:
  *   npm run smoke:token:mint -w tracebud-backend
- *   npm run smoke:token:mint -w tracebud-backend -- --set-github-secret
+ *   npm run smoke:token:mint -w tracebud-backend -- --stdout
+ *   npm run smoke:token:mint -w tracebud-backend -- --github-env
+ *   npm run smoke:token:mint -w tracebud-backend -- --set-github-secret  # legacy manual rotation
  */
-import { readFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -25,14 +27,18 @@ const goldenManifestPath = path.join(
 
 function loadEnvFile(relativePath) {
   const fullPath = path.join(backendRoot, relativePath);
-  for (const line of readFileSync(fullPath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const idx = trimmed.indexOf('=');
-    if (idx === -1) continue;
-    const key = trimmed.slice(0, idx);
-    const value = trimmed.slice(idx + 1);
-    if (!process.env[key]) process.env[key] = value;
+  try {
+    for (const line of readFileSync(fullPath, 'utf8').split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const idx = trimmed.indexOf('=');
+      if (idx === -1) continue;
+      const key = trimmed.slice(0, idx);
+      const value = trimmed.slice(idx + 1);
+      if (!process.env[key]) process.env[key] = value;
+    }
+  } catch {
+    // Local dev may rely on exported env only.
   }
 }
 
@@ -42,6 +48,8 @@ function loadGoldenManifest() {
 
 function parseArgs(argv) {
   return {
+    stdout: argv.includes('--stdout'),
+    githubEnv: argv.includes('--github-env'),
     setGithubSecret: argv.includes('--set-github-secret'),
     outputPath: argv.find((arg) => arg.startsWith('--out='))?.split('=')[1],
   };
@@ -74,8 +82,11 @@ async function adminFetch(url, serviceRole, pathName, init = {}) {
   return body;
 }
 
-async function mintToken() {
-  loadEnvFile('.env.local');
+export async function mintSmokeBearerToken(options = {}) {
+  if (!options.skipEnvFile) {
+    loadEnvFile('.env.local');
+  }
+
   const golden = loadGoldenManifest();
   const supabaseUrl = process.env.SUPABASE_URL?.replace(/\/$/, '');
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -87,7 +98,9 @@ async function mintToken() {
   };
 
   if (!supabaseUrl || !serviceRole || !anonKey) {
-    throw new Error('Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_ANON_KEY in .env.local');
+    throw new Error(
+      'Missing SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, or SUPABASE_ANON_KEY (set in env or tracebud-backend/.env.local)',
+    );
   }
 
   const users = await adminFetch(supabaseUrl, serviceRole, `/auth/v1/admin/users?email=${encodeURIComponent(email)}`);
@@ -136,9 +149,28 @@ async function mintToken() {
   };
 }
 
+function writeGithubEnv(accessToken) {
+  const githubEnv = process.env.GITHUB_ENV;
+  if (!githubEnv) {
+    throw new Error('GITHUB_ENV is not set (use --github-env only in GitHub Actions)');
+  }
+  appendFileSync(githubEnv, `TRACEBUD_SMOKE_BEARER_TOKEN=${accessToken}\n`);
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const { accessToken, email, tenantId, role } = await mintToken();
+  const { accessToken, email, tenantId, role } = await mintSmokeBearerToken();
+
+  if (args.stdout) {
+    process.stdout.write(accessToken);
+    return;
+  }
+
+  if (args.githubEnv) {
+    writeGithubEnv(accessToken);
+    console.log(`Minted smoke bearer for ${email} (${tenantId}, ${role}) → GITHUB_ENV`);
+    return;
+  }
 
   if (args.outputPath) {
     writeFileSync(args.outputPath, accessToken, { mode: 0o600 });
@@ -160,17 +192,20 @@ async function main() {
     if (!args.outputPath) {
       writeFileSync(inputPath, '', { mode: 0o600 });
     }
-    console.log('Updated GitHub secret TRACEBUD_SMOKE_BEARER_TOKEN');
+    console.log('Updated GitHub secret TRACEBUD_SMOKE_BEARER_TOKEN (legacy — prefer CI mint via Supabase secrets)');
   }
 
   if (!args.setGithubSecret && !args.outputPath) {
     console.log(`Minted smoke token for ${email} (${tenantId}, ${role})`);
-    console.log('Pass to gh secret set TRACEBUD_SMOKE_BEARER_TOKEN or rerun with --set-github-secret');
+    console.log('Local smoke: export TRACEBUD_SMOKE_BEARER_TOKEN="$(npm run smoke:token:mint -s -w tracebud-backend -- --stdout)"');
     console.log(`expires_at=${new Date(JSON.parse(Buffer.from(accessToken.split('.')[1], 'base64url').toString()).exp * 1000).toISOString()}`);
   }
 }
 
-main().catch((error) => {
-  console.error(error.message ?? error);
-  process.exit(1);
-});
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
+if (isMain) {
+  main().catch((error) => {
+    console.error(error.message ?? error);
+    process.exit(1);
+  });
+}

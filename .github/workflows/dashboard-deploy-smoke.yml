@@ -20,6 +20,8 @@ on:
     paths:
       - 'apps/dashboard-product/**'
       - '.github/workflows/dashboard-deploy-smoke.yml'
+      - 'tracebud-backend/scripts/mint-smoke-bearer-token.mjs'
+      - 'tracebud-backend/scripts/smoke-bearer-ci-preflight.mjs'
 
 jobs:
   smoke:
@@ -45,15 +47,27 @@ jobs:
         with:
           node-version: 20
 
+      - name: Mint smoke bearer token
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
+        run: node tracebud-backend/scripts/smoke-bearer-ci-preflight.mjs --github-env
+
       - name: Run dashboard post-deploy smoke
         env:
           DASHBOARD_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.DASHBOARD_BASE_URL }}
-          TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${DASHBOARD_BASE_URL:-}" ] || [ -z "${TRACEBUD_SMOKE_BEARER_TOKEN:-}" ]; then
-            echo "DASHBOARD_BASE_URL or TRACEBUD_SMOKE_BEARER_TOKEN is not configured — skipping dashboard post-deploy smoke."
-            echo "Add secrets in GitHub Settings → Secrets and variables → Actions."
+          if [ -z "${DASHBOARD_BASE_URL:-}" ]; then
+            echo "DASHBOARD_BASE_URL is not configured — skipping dashboard post-deploy smoke."
+            echo "Add the secret in GitHub Settings → Secrets and variables → Actions."
+            exit 0
+          fi
+          if [ -z "${TRACEBUD_SMOKE_BEARER_TOKEN:-}" ]; then
+            echo "Smoke auth not configured — skipping dashboard post-deploy smoke."
+            echo "Add SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY (or legacy TRACEBUD_SMOKE_BEARER_TOKEN)."
             exit 0
           fi
           if [ "${{ github.event_name }}" = "push" ]; then
