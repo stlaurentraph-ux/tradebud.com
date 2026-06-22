@@ -6858,6 +6858,14 @@ Append-only session log.
 - Verification: migration applied locally; `contacts.service.spec.ts` and `contact-activity-types.test.ts` pass.
 - Next step: re-import sample suppliers CSV to confirm combined activity labels in `/contacts`.
 
+### 2026-06-22 (triage: CI regression — field tenant isolation smoke missing secrets)
+- Focus: Lane 2 triage of "Expo app lint" CI failure on Dependabot PR #136 (expo-crypto 15.0.9 → 56.0.4).
+- Root cause: "Field tenant isolation smoke (blocking)" step added by PR #213 ([ops] slice 4.O.2) without the required GitHub Actions secrets being provisioned. Four secrets are absent: `FIELD_TENANT_SMOKE_FARMER_A_EMAIL`, `FIELD_TENANT_SMOKE_FARMER_A_PASSWORD`, `FIELD_TENANT_SMOKE_FARMER_B_ID`, `FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID`. SUPABASE_URL/ANON_KEY are set but farmer credentials are not.
+- Impact: "Expo app lint" CI job fails on every main push and every PR touching `apps/offline-product/`. Pre-existing since PR #213 merged.
+- No code fix applied: failure is pre-existing on main and unrelated to the expo-crypto dependency bump in PR #136.
+- Required human action: (1) Provision the four `FIELD_TENANT_SMOKE_FARMER_*` secrets in GitHub repository settings per `product-os/04-quality/golden-field-tenant-smoke.md`. (2) After secrets are added, a separate follow-up Lane 1 slice should add `if: github.actor != 'dependabot[bot]'` to the smoke step so Dependabot PRs (which cannot access repo secrets) do not permanently block on it.
+- PR #136 merge is blocked by this pre-existing CI failure; once secrets are provisioned and `Expo app lint` passes on main, PR #136 can be re-run and merged.
+
 ### 2026-06-20 (execution: Founder OS app extraction)
 - Focus: extract Founder OS from `dashboard-product` into standalone `apps/founder-os`; dashboard redirects legacy paths to ops URL.
 - Files changed: `apps/founder-os/**`, dashboard internal-tools/middleware cleanup, root `package.json`, `.github/workflows/ci.yml`, `docs/vercel-monorepo.md`, `product-os/02-features/FEAT-founder-os-app.md`.
