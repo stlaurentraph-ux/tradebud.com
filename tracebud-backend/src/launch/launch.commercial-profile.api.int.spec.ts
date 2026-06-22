@@ -93,6 +93,7 @@ describeIfDb('Launch commercial-profile API integration', () => {
     createClientMock.mockReset();
     process.env.SUPABASE_URL = 'https://supabase.example.test';
     process.env.SUPABASE_ANON_KEY = 'anon-key';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
     await pool.query(`DELETE FROM tenant_commercial_profiles`);
   });
 
@@ -117,6 +118,9 @@ describeIfDb('Launch commercial-profile API integration', () => {
           },
           error: null,
         }),
+        admin: {
+          updateUserById: jest.fn().mockResolvedValue({ data: { user: {} }, error: null }),
+        },
       },
     } as any);
 

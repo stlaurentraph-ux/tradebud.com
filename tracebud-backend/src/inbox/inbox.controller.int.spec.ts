@@ -1,5 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
+import { createInboxTablesForIntTest } from '../testing/inbox-tables.fixture';
 import { InboxController } from './inbox.controller';
 import { InboxService } from './inbox.service';
 
@@ -48,6 +49,7 @@ describeIfDb('InboxController integration: tenant claim + role policy', () => {
   beforeEach(async () => {
     await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
     await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
+    await createInboxTablesForIntTest(pool);
     await service.bootstrap('reset');
   });
 
