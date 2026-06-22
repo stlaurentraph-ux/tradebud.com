@@ -250,33 +250,86 @@ export function createDeliveryReceiptsBrowserStyles(c: AppColors) {
     list: { gap: 10 },
     plotHeading: { color: c.text, fontSize: 18 },
     plotSubheading: { color: c.textMuted, marginBottom: 4 },
-    plotCard: { padding: 14, borderRadius: 16 },
-    plotCardRow: {
+    tableCard: {
+      padding: 0,
+      borderRadius: 16,
+      overflow: 'hidden',
+    },
+    tableHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 12,
-    },
-    plotIconWrap: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
-      backgroundColor: c.surfaceAccent,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    plotCardBody: { flex: 1, minWidth: 0 },
-    plotCardMeta: { color: c.textMuted, marginTop: 2 },
-    receiptRow: { padding: 14, borderRadius: 14, gap: 6 },
-    receiptRowTop: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
       gap: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+      backgroundColor: c.backgroundSecondary,
     },
-    receiptKg: { color: c.link },
-    receiptDate: { color: c.textMuted },
-    receiptBuyer: { color: c.textSecondary },
-    receiptPending: { color: c.textWarningStrong, marginTop: 2 },
+    tableHeaderCell: {
+      color: c.textMuted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.35,
+      fontSize: 11,
+    },
+    tableRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      backgroundColor: c.backgroundCard,
+    },
+    tableRowBorder: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: c.border,
+    },
+    tableRowPressed: {
+      backgroundColor: c.backgroundSecondary,
+    },
+    tableColPlot: {
+      flex: 1.15,
+      minWidth: 0,
+    },
+    tableColWeight: {
+      width: 72,
+      alignItems: 'flex-end',
+    },
+    tableColWeightWide: {
+      width: 88,
+      alignItems: 'flex-end',
+    },
+    tableColRecipient: {
+      flex: 1,
+      minWidth: 0,
+    },
+    tableColChevron: {
+      width: 18,
+      alignItems: 'center',
+    },
+    tablePlotName: {
+      color: c.text,
+    },
+    tableKg: {
+      color: c.link,
+      textAlign: 'right',
+    },
+    tableDate: {
+      color: c.textMuted,
+      marginTop: 2,
+    },
+    tableDateRight: {
+      textAlign: 'right',
+    },
+    recipientRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 4,
+    },
+    recipientDefault: { color: c.textSecondary, flex: 1 },
+    recipientQr: { color: c.link, flex: 1 },
+    recipientPending: { color: c.textWarningStrong, flex: 1 },
+    recipientMuted: { color: c.textMuted, flex: 1 },
+    chevron: { color: c.textMuted },
   });
 }
 

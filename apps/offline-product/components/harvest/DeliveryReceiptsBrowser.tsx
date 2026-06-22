@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
@@ -8,34 +8,35 @@ import { Card } from '@/components/ui/card';
 import type { HarvestPlotOption } from '@/features/harvest/multiPlotDeliverySession';
 import {
   formatReceiptDateLabel,
-  groupDeliveryReceiptsByPlot,
+  formatReceiptRecipientSummary,
   normalizeDeliveryReceipts,
   type DeliveryReceiptRecord,
 } from '@/features/harvest/deliveryReceiptModels';
 import {
-  dedupeDeliveryReceipts,
-  findPlotReceiptGroupForScreen,
-  mergeDeliveryReceiptLists,
+  enrichAndDedupeDeliveryReceipts,
   receiptMatchesPlotFilter,
 } from '@/features/harvest/localDeliveryReceipts';
+import type { PlotServerLinks } from '@/features/plots/plotServerLink';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
+import { cacheReceiptForNavigation } from '@/features/harvest/receiptNavigationCache';
 import type { TranslateFn } from '@/features/i18n/translate';
 import { createDeliveryReceiptsBrowserStyles } from '@/components/harvest/harvestPanelStyles';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-
-type ReceiptsScreen = { kind: 'plots' } | { kind: 'plot'; plotId: string };
 
 type DeliveryReceiptsBrowserProps = {
   t: TranslateFn;
   vouchers: unknown[];
   mergedPlots: readonly HarvestPlotOption[];
-  /** When set, skip plot picker and show this plot's deliveries only. */
+  /** When set, list only this plot's deliveries. */
   plotIdFilter?: string | null;
   /** Extra plot ids to match (local id when filter uses server id, etc.). */
   plotIdAliases?: readonly string[];
   plotNameFilter?: string | null;
   pendingReceipts?: DeliveryReceiptRecord[];
   deviceReceipts?: DeliveryReceiptRecord[];
+  plotServerLinks?: PlotServerLinks;
+  /** Passed to receipt detail for back navigation. */
+  receiptFrom?: string;
 };
 
 export function DeliveryReceiptsBrowser({
@@ -47,15 +48,19 @@ export function DeliveryReceiptsBrowser({
   plotNameFilter = null,
   pendingReceipts = [],
   deviceReceipts = [],
+  plotServerLinks = {},
+  receiptFrom,
 }: DeliveryReceiptsBrowserProps) {
   const styles = useThemedStyles(createDeliveryReceiptsBrowserStyles);
   const receipts = useMemo(() => {
     const synced = normalizeDeliveryReceipts({ vouchers, mergedPlots, t });
-    return dedupeDeliveryReceipts(
-      mergeDeliveryReceiptLists(deviceReceipts, pendingReceipts, synced),
-    );
-  }, [vouchers, mergedPlots, pendingReceipts, deviceReceipts, t]);
-  const plotGroups = useMemo(() => groupDeliveryReceiptsByPlot(receipts), [receipts]);
+    return enrichAndDedupeDeliveryReceipts({
+      deviceReceipts,
+      pendingReceipts,
+      synced,
+      plotServerLinks,
+    });
+  }, [vouchers, mergedPlots, pendingReceipts, deviceReceipts, plotServerLinks, t]);
 
   const plotFilterIds = useMemo(() => {
     const ids = new Set<string>();
@@ -66,36 +71,21 @@ export function DeliveryReceiptsBrowser({
     return ids;
   }, [plotIdFilter, plotIdAliases]);
 
-  const filteredGroups = useMemo(() => {
-    if (plotFilterIds.size === 0) return plotGroups;
-    return plotGroups
-      .map((group) => {
-        const matchingReceipts = group.receipts.filter((receipt) =>
-          receiptMatchesPlotFilter(receipt, plotFilterIds),
-        );
-        if (matchingReceipts.length === 0) return null;
-        return {
-          ...group,
-          receipts: matchingReceipts,
-          receiptCount: matchingReceipts.length,
-        };
-      })
-      .filter((group): group is NonNullable<typeof group> => group != null);
-  }, [plotGroups, plotFilterIds]);
+  const displayReceipts = useMemo(() => {
+    if (plotFilterIds.size === 0) return receipts;
+    return receipts.filter((receipt) => receiptMatchesPlotFilter(receipt, plotFilterIds));
+  }, [receipts, plotFilterIds]);
 
-  const screen = useMemo(
-    (): ReceiptsScreen =>
-      plotIdFilter ? { kind: 'plot', plotId: plotIdFilter } : { kind: 'plots' },
-    [plotIdFilter],
-  );
-
-  const activePlotGroup = useMemo(() => {
-    if (screen.kind === 'plots') return null;
-    return findPlotReceiptGroupForScreen(filteredGroups, screen.plotId, plotFilterIds);
-  }, [screen, filteredGroups, plotFilterIds]);
+  const showPlotColumn = plotFilterIds.size === 0;
 
   const openReceipt = (receiptId: string) => {
-    router.push(deliveryReceiptHref(receiptId));
+    const row = displayReceipts.find((receipt) => receipt.id === receiptId);
+    if (row) {
+      cacheReceiptForNavigation(row);
+    }
+    router.push(
+      deliveryReceiptHref(receiptId, receiptFrom ? { from: receiptFrom } : undefined),
+    );
   };
 
   if (receipts.length === 0) {
@@ -106,101 +96,164 @@ export function DeliveryReceiptsBrowser({
     );
   }
 
-  if (screen.kind === 'plot') {
-    if (!activePlotGroup) {
-      return (
-        <View style={styles.wrap}>
-          {plotNameFilter ? (
-            <ThemedText type="defaultSemiBold" style={styles.plotHeading}>
-              {plotNameFilter}
-            </ThemedText>
-          ) : null}
-          <Card variant="outlined" style={styles.card}>
-            <ThemedText type="caption">{t('no_deliveries')}</ThemedText>
-          </Card>
-        </View>
-      );
-    }
+  if (displayReceipts.length === 0) {
     return (
       <View style={styles.wrap}>
-        <ThemedText type="defaultSemiBold" style={styles.plotHeading}>
-          {activePlotGroup.plotName}
-        </ThemedText>
-        <ThemedText type="caption" style={styles.plotSubheading}>
-          {t('harvest_receipts_plot_count', { n: activePlotGroup.receiptCount })}
-        </ThemedText>
-        <View style={styles.list}>
-          {activePlotGroup.receipts.map((receipt) => (
-            <ReceiptRow
-              key={receipt.id}
-              receipt={receipt}
-              t={t}
-              onPress={() => openReceipt(receipt.id)}
-            />
-          ))}
-        </View>
+        {plotNameFilter ? (
+          <ThemedText type="defaultSemiBold" style={styles.plotHeading}>
+            {plotNameFilter}
+          </ThemedText>
+        ) : null}
+        <Card variant="outlined" style={styles.card}>
+          <ThemedText type="caption">{t('no_deliveries')}</ThemedText>
+        </Card>
       </View>
     );
   }
 
   return (
-    <View style={styles.list}>
-      {filteredGroups.map((group) => (
-        <Pressable
-          key={group.plotId}
-          accessibilityRole="button"
-          onPress={() => router.push(`/plot/${encodeURIComponent(group.plotId)}?sub=deliveries`)}
-        >
-          <Card variant="outlined" style={styles.plotCard}>
-            <View style={styles.plotCardRow}>
-              <View style={styles.plotIconWrap}>
-                <Ionicons name="leaf-outline" size={20} color="#0B8B63" />
-              </View>
-              <View style={styles.plotCardBody}>
-                <ThemedText type="defaultSemiBold">{group.plotName}</ThemedText>
-                <ThemedText type="caption" style={styles.plotCardMeta}>
-                  {t('harvest_receipts_plot_count', { n: group.receiptCount })}
-                </ThemedText>
-              </View>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </View>
-          </Card>
-        </Pressable>
-      ))}
+    <View style={styles.wrap}>
+      {plotNameFilter ? (
+        <>
+          <ThemedText type="defaultSemiBold" style={styles.plotHeading}>
+            {plotNameFilter}
+          </ThemedText>
+          <ThemedText type="caption" style={styles.plotSubheading}>
+            {t('harvest_receipts_plot_count', { n: displayReceipts.length })}
+          </ThemedText>
+        </>
+      ) : null}
+      <ReceiptsTable
+        receipts={displayReceipts}
+        showPlotColumn={showPlotColumn}
+        t={t}
+        onPressReceipt={openReceipt}
+      />
     </View>
   );
 }
 
-function ReceiptRow({
+function ReceiptsTable({
+  receipts,
+  showPlotColumn,
+  t,
+  onPressReceipt,
+}: {
+  receipts: DeliveryReceiptRecord[];
+  showPlotColumn: boolean;
+  t: TranslateFn;
+  onPressReceipt: (receiptId: string) => void;
+}) {
+  const styles = useThemedStyles(createDeliveryReceiptsBrowserStyles);
+
+  return (
+    <Card variant="outlined" style={styles.tableCard}>
+      <View style={styles.tableHeader}>
+        {showPlotColumn ? (
+          <ThemedText type="caption" style={[styles.tableHeaderCell, styles.tableColPlot]}>
+            {t('harvest_receipts_col_plot')}
+          </ThemedText>
+        ) : null}
+        <ThemedText
+          type="caption"
+          style={[
+            styles.tableHeaderCell,
+            showPlotColumn ? styles.tableColWeight : styles.tableColWeightWide,
+          ]}
+        >
+          {t('harvest_receipts_col_weight')}
+        </ThemedText>
+        <ThemedText type="caption" style={[styles.tableHeaderCell, styles.tableColRecipient]}>
+          {t('harvest_receipts_col_recipient')}
+        </ThemedText>
+        <View style={styles.tableColChevron} />
+      </View>
+      {receipts.map((receipt, index) => (
+        <ReceiptTableRow
+          key={receipt.id}
+          receipt={receipt}
+          showPlotColumn={showPlotColumn}
+          isLast={index === receipts.length - 1}
+          t={t}
+          onPress={() => onPressReceipt(receipt.id)}
+        />
+      ))}
+    </Card>
+  );
+}
+
+function ReceiptTableRow({
   receipt,
+  showPlotColumn,
+  isLast,
   t,
   onPress,
 }: {
   receipt: DeliveryReceiptRecord;
+  showPlotColumn: boolean;
+  isLast: boolean;
   t: TranslateFn;
   onPress: () => void;
 }) {
   const styles = useThemedStyles(createDeliveryReceiptsBrowserStyles);
+  const recipient = formatReceiptRecipientSummary(receipt, t);
+  const recipientStyle =
+    recipient.tone === 'pending'
+      ? styles.recipientPending
+      : recipient.tone === 'qr'
+        ? styles.recipientQr
+        : recipient.tone === 'muted'
+          ? styles.recipientMuted
+          : styles.recipientDefault;
+
   return (
-    <Pressable accessibilityRole="button" onPress={onPress}>
-      <Card variant="outlined" style={styles.receiptRow}>
-        <View style={styles.receiptRowTop}>
-          <ThemedText type="subtitle" style={styles.receiptKg}>
-            {`${Math.round(receipt.kg).toLocaleString()} kg`}
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${receipt.plotName}, ${Math.round(receipt.kg)} kg, ${recipient.label}`}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tableRow,
+        !isLast && styles.tableRowBorder,
+        pressed && styles.tableRowPressed,
+      ]}
+    >
+      {showPlotColumn ? (
+        <View style={styles.tableColPlot}>
+          <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.tablePlotName}>
+            {receipt.plotName}
           </ThemedText>
-          <ThemedText type="caption" style={styles.receiptDate}>
+          <ThemedText type="caption" numberOfLines={1} style={styles.tableDate}>
             {formatReceiptDateLabel(receipt.createdAt)}
           </ThemedText>
         </View>
-        <ThemedText type="caption" style={styles.receiptBuyer}>
-          {receipt.buyerLabel}
+      ) : null}
+      <View style={showPlotColumn ? styles.tableColWeight : styles.tableColWeightWide}>
+        <ThemedText type="defaultSemiBold" style={styles.tableKg}>
+          {`${Math.round(receipt.kg).toLocaleString()} kg`}
         </ThemedText>
-        {receipt.pendingSync ? (
-          <ThemedText type="caption" style={styles.receiptPending}>
-            {t('harvest_receipt_pending_sync')}
+        {!showPlotColumn ? (
+          <ThemedText
+            type="caption"
+            numberOfLines={1}
+            style={[styles.tableDate, styles.tableDateRight]}
+          >
+            {formatReceiptDateLabel(receipt.createdAt)}
           </ThemedText>
         ) : null}
-      </Card>
+      </View>
+      <View style={styles.tableColRecipient}>
+        <View style={styles.recipientRow}>
+          {recipient.showQrIcon ? (
+            <Ionicons name="qr-code-outline" size={14} color={styles.recipientQr.color} />
+          ) : null}
+          <ThemedText type="caption" numberOfLines={2} style={recipientStyle}>
+            {recipient.label}
+          </ThemedText>
+        </View>
+      </View>
+      <View style={styles.tableColChevron}>
+        <Ionicons name="chevron-forward" size={18} color={styles.chevron.color} />
+      </View>
     </Pressable>
   );
 }

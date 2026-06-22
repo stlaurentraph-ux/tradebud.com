@@ -1588,6 +1588,7 @@ export default function PlotDetailScreen() {
               plotNameFilter={String(plot.name ?? t('plot_fallback'))}
               pendingReceipts={pendingHarvestReceipts}
               deviceReceipts={deviceHarvestReceipts}
+              plotServerLinks={plotServerLinks}
             />
           </>
         ) : null}

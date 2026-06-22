@@ -724,6 +724,8 @@ export default function HarvestsScreen() {
             vouchers={vouchers}
             mergedPlots={mergedHarvestPlots}
             deviceReceipts={deviceReceipts}
+            plotServerLinks={plotServerLinks}
+            receiptFrom="harvests"
           />
         </View>
           </>
