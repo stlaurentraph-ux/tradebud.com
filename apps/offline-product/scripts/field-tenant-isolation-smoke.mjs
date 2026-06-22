@@ -123,6 +123,20 @@ async function apiRequest(token, pathname, init = {}) {
 
 async function main() {
   if (missingCredentials()) {
+    // Dependabot PRs run in a restricted secret scope; org-level FIELD_TENANT_SMOKE_*
+    // secrets are not available to dependabot[bot] without explicit Dependabot secret
+    // configuration. Skip (not fail) so dependency bumps can pass CI — the smoke will
+    // run on every human-authored PR where credentials are present.
+    const isDependabot = process.env.GITHUB_ACTOR?.trim() === 'dependabot[bot]';
+    if (isDependabot) {
+      console.log(
+        'SKIP tenant isolation smoke — Dependabot context; FIELD_TENANT_SMOKE_* secrets are not passed to Dependabot PRs by GitHub.',
+      );
+      console.log(
+        'To enable: add FIELD_TENANT_SMOKE_* to the Dependabot secret store in repo Settings → Secrets and variables → Dependabot.',
+      );
+      process.exit(0);
+    }
     failOrSkip('missing FIELD_TENANT_SMOKE_* or Supabase credentials');
   }
 
