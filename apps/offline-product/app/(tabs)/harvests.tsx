@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, TextInput, View, type ScrollView } from 'react-native';
+import { Alert, Pressable, TextInput, View, type ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -25,6 +25,7 @@ import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 import {
   buyerLabelForDeliveryRecipient,
   normalizeLocalDeliveryReceipts,
+  resolvePlotReceiptFilterIds,
 } from '@/features/harvest/localDeliveryReceipts';
 import type { DeliveryReceiptRecord } from '@/features/harvest/deliveryReceiptModels';
 import {
@@ -34,8 +35,11 @@ import {
 } from '@/features/harvest/DeliveryRecipientFields';
 import { MultiPlotDeliveryWizard } from '@/features/harvest/MultiPlotDeliveryWizard';
 import { sumDeliveredKgByPlot } from '@/features/harvest/plotYieldCapacity';
-import { buildMergedHarvestPlots, findHarvestPlotOption, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
-import { resolvePlotReceiptFilterIds } from '@/features/harvest/localDeliveryReceipts';
+import {
+  buildMergedHarvestPlots,
+  findHarvestPlotOption,
+  resolveLocalPlotForHarvestSubmit,
+} from '@/features/harvest/mergeHarvestPlotOptions';
 import { resolveServerPlotIdForLocal } from '@/features/plots/plotServerLink';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';

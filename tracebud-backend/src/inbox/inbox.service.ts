@@ -195,7 +195,38 @@ export class InboxService {
     );
   }
 
+  private async ensureInboxTables(): Promise<void> {
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS inbox_requests (
+        id TEXT PRIMARY KEY,
+        campaign_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        request_type TEXT NOT NULL CHECK (
+          request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')
+        ),
+        due_at TIMESTAMPTZ NOT NULL,
+        from_org TEXT NOT NULL,
+        sender_tenant_id TEXT NOT NULL,
+        recipient_tenant_id TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
+        created_at TIMESTAMPTZ NOT NULL,
+        updated_at TIMESTAMPTZ NOT NULL
+      )
+    `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS inbox_request_events (
+        id BIGSERIAL PRIMARY KEY,
+        request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
+        event_type TEXT NOT NULL,
+        actor_tenant_id TEXT NULL,
+        payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+  }
+
   private async upsertRequests(requests: InboxRequestRecord[], action: BootstrapAction | 'auto_init'): Promise<void> {
+    await this.ensureInboxTables();
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -259,7 +290,16 @@ export class InboxService {
   }
 
   private async seedIfEmpty(): Promise<void> {
-    const countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
+    let countRes;
+    try {
+      countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
+    } catch (error: any) {
+      if (error?.code !== '42P01') {
+        throw error;
+      }
+      await this.ensureInboxTables();
+      countRes = await this.pool.query<{ count: string }>('SELECT COUNT(*)::text AS count FROM inbox_requests');
+    }
     if ((Number(countRes.rows[0]?.count ?? '0')) > 0) return;
     const defaults = this.requestsForAction('reset');
     await this.upsertRequests(defaults, 'auto_init');
@@ -311,6 +351,8 @@ export class InboxService {
       );
     } catch (error: any) {
       if (error?.code === '42P01') {
+        await this.ensureInboxTables();
+        await this.seedIfEmpty();
         rowsRes = await this.pool.query<{
           id: string;
           campaign_id: string;

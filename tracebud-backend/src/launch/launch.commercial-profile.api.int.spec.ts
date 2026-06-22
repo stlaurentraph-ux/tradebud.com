@@ -5,6 +5,8 @@ import { Pool } from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { LaunchPublicController } from './launch.public.controller';
 import { LaunchService } from './launch.service';
+import { OnboardingEmailService } from './onboarding-email.service';
+import { InboxService } from '../inbox/inbox.service';
 import { PG_POOL } from '../db/db.module';
 
 jest.mock('@supabase/supabase-js', () => ({
@@ -69,7 +71,12 @@ describeIfDb('Launch commercial-profile API integration', () => {
 
     const moduleRef = await Test.createTestingModule({
       controllers: [LaunchPublicController],
-      providers: [LaunchService, { provide: PG_POOL, useValue: pool }],
+      providers: [
+        LaunchService,
+        { provide: PG_POOL, useValue: pool },
+        { provide: OnboardingEmailService, useValue: {} },
+        { provide: InboxService, useValue: {} },
+      ],
     }).compile();
 
     app = moduleRef.createNestApplication();
@@ -86,6 +93,7 @@ describeIfDb('Launch commercial-profile API integration', () => {
     createClientMock.mockReset();
     process.env.SUPABASE_URL = 'https://supabase.example.test';
     process.env.SUPABASE_ANON_KEY = 'anon-key';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
     await pool.query(`DELETE FROM tenant_commercial_profiles`);
   });
 
@@ -110,6 +118,9 @@ describeIfDb('Launch commercial-profile API integration', () => {
           },
           error: null,
         }),
+        admin: {
+          updateUserById: jest.fn().mockResolvedValue({ data: { user: {} }, error: null }),
+        },
       },
     } as any);
 

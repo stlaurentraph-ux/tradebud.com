@@ -7,6 +7,7 @@ import { PlotsController } from '../plots/plots.controller';
 import { PlotsService } from '../plots/plots.service';
 import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
+import { createPlotsServiceForIntTest } from '../testing/plots-service.mock';
 import { ConsentService } from '../consent/consent.service';
 
 function makeConsentPassthrough(pool: Pool) {
@@ -117,10 +118,10 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     `);
 
     harvestService = new HarvestService(pool, createBillingServiceMock());
-    plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    plotsService = createPlotsServiceForIntTest(pool);
     const consentService = makeConsentPassthrough(pool);
-    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
-    plotsController = new PlotsController(plotsService, consentService);
+    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService, pool);
+    plotsController = new PlotsController(plotsService, consentService, pool);
   }, 20_000);
 
   afterAll(async () => {
@@ -236,7 +237,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
 
     await expect(
       plotsController.geometryHistory(plotA, undefined, undefined, undefined, undefined, undefined, {
-        user: { id: userA, email: 'farmer@example.com' },
+        user: { id: userB, email: 'farmer+other@example.com' },
       }),
     ).rejects.toThrow(ForbiddenException);
 
@@ -375,7 +376,12 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       }),
     );
 
-    expect(submitSpy).toHaveBeenCalledWith('pkg_1', 'idem-1', expect.objectContaining({ tenantId: 'tenant_1' }));
+    expect(submitSpy).toHaveBeenCalledWith(
+      'pkg_1',
+      'idem-1',
+      expect.objectContaining({ tenantId: 'tenant_1' }),
+      expect.any(Object),
+    );
   });
 
   it('persists readiness audit lifecycle events on exporter readiness checks', async () => {
@@ -466,7 +472,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.syncPhotos(
         plotA,
         { kind: 'ground_truth', photos: [], hlcTimestamp: '1712524800000:1', clientEventId: 'evt-1' } as any,
-        { user: { id: userA, email: 'farmer@example.com' } },
+        { user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { role: 'exporter' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
 
@@ -474,7 +480,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.syncLegal(
         plotA,
         { reason: 'title update', hlcTimestamp: '1712524800000:1', clientEventId: 'evt-2' } as any,
-        { user: { id: userA, email: 'farmer@example.com' } },
+        { user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { role: 'exporter' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
 
@@ -482,7 +488,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotsController.syncEvidence(
         plotA,
         { kind: 'tenure_evidence', items: [], reason: 'evidence upload', hlcTimestamp: '1712524800000:1', clientEventId: 'evt-3' } as any,
-        { user: { id: userA, email: 'farmer@example.com' } },
+        { user: { id: userA, email: 'exporter+scope@example.com', app_metadata: { role: 'exporter' } } },
       ),
     ).rejects.toThrow(ForbiddenException);
 
@@ -536,6 +542,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotA,
       expect.objectContaining({ clientEventId: 'evt-1' }),
       userA,
+      'tenant_1',
     );
     expect(legalSpy).toHaveBeenCalledWith(
       plotA,

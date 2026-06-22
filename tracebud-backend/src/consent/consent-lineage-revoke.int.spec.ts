@@ -7,6 +7,7 @@ import { PlotsController } from '../plots/plots.controller';
 import { PlotsService } from '../plots/plots.service';
 import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
+import { createPlotsServiceForIntTest } from '../testing/plots-service.mock';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
@@ -105,6 +106,8 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
         transaction_id UUID NOT NULL,
         qr_code_ref TEXT NULL,
         status TEXT NOT NULL DEFAULT 'issued',
+        intended_recipient_email TEXT NULL,
+        intended_recipient_tenant_id TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE TABLE dds_package (
@@ -149,9 +152,9 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
     const push = { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() };
     consentService = new ConsentService(pool, push as any);
     const harvestService = new HarvestService(pool, createBillingServiceMock());
-    const plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
-    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
-    plotsController = new PlotsController(plotsService, consentService);
+    const plotsService = createPlotsServiceForIntTest(pool);
+    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService, pool);
+    plotsController = new PlotsController(plotsService, consentService, pool);
   }, 30_000);
 
   afterAll(async () => {

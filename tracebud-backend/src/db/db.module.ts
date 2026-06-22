@@ -27,7 +27,7 @@ function createPgPool(): Pool {
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
     keepAlive: true,
-    options: '-c search_path=public,integrations,commercial,internal,ops,crm,gtm',
+    options: '-c search_path=public,extensions,integrations,commercial,internal,ops,crm,gtm',
   });
 
   // Idle clients dropped by Supabase pooler must not take down the process.

@@ -60,7 +60,7 @@ describeIfDb('WorkflowTemplatesController integration', () => {
         ('workflow_template_created', '{"tenantId":"tenant_2","templateId":"t_2","name":"Template B"}'::jsonb)
     `);
     const result = await controller.listTemplates('20', '0', {
-      user: { id: 'user_1', email: 'agent+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'agent+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'agent' } },
     });
     expect(result.total).toBe(1);
     expect(result.items[0]).toEqual(
@@ -73,7 +73,7 @@ describeIfDb('WorkflowTemplatesController integration', () => {
 
   it('persists transition evidence and enforces state machine', async () => {
     const req = {
-      user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     };
     const transition1 = await controller.transitionStage('template_1', 'collect_docs', { toStatus: 'in_progress' }, req);
     expect(transition1).toEqual(expect.objectContaining({ fromStatus: 'pending', toStatus: 'in_progress' }));
@@ -86,7 +86,7 @@ describeIfDb('WorkflowTemplatesController integration', () => {
 
   it('persists SLA transition evidence and enforces SLA recovery state machine', async () => {
     const req = {
-      user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1' } },
+      user: { id: 'user_1', email: 'exporter+demo@tracebud.com', app_metadata: { tenant_id: 'tenant_1', role: 'exporter' } },
     };
     const warning = await controller.transitionStageSla('template_1', 'collect_docs', { toState: 'warning' }, req);
     expect(warning).toEqual(expect.objectContaining({ fromState: 'on_track', toState: 'warning' }));

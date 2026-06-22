@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
+import { createInboxTablesForIntTest } from '../testing/inbox-tables.fixture';
 import { InboxService } from './inbox.service';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
@@ -45,6 +46,7 @@ describeIfDb('InboxService integration: tenant/state boundaries', () => {
   beforeEach(async () => {
     await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
     await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
+    await createInboxTablesForIntTest(pool);
     await pool.query(`DELETE FROM audit_log WHERE event_type IN ('inbox_requests_seeded', 'inbox_request_responded')`);
   });
 

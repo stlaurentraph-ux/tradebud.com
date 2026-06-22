@@ -44,6 +44,7 @@ describeIfDb('API integration: package/report access policy', () => {
 
     await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
+    await pool.query(`SET search_path TO ${schema},public`);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS plot (
@@ -114,6 +115,7 @@ describeIfDb('API integration: package/report access policy', () => {
       new HarvestService(pool, createBillingServiceMock()),
       createLaunchServiceMock(),
       new ConsentService(pool, { registerDevice: jest.fn(), notifyFarmerConsentRequest: jest.fn() } as any),
+      pool,
     );
     reportsController = new ReportsController(pool, createLaunchServiceMock());
   }, 20_000);

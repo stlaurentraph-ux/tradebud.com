@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -67,7 +67,7 @@ export default function PlotsScreen() {
   const { t, languageCode, openLanguagePicker } = useLanguage();
 
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
-  const [vouchers, setVouchers] = useState<any[]>([]);
+  const [, setVouchers] = useState<any[]>([]);
   const [deliveryCountByPlotId, setDeliveryCountByPlotId] = useState<Record<string, number>>({});
   const [photoCountByPlotId, setPhotoCountByPlotId] = useState<Record<string, number>>({});
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build/install debug app on a USB iPhone with correct Metro LAN hostname.
+# Build/install debug app on a physical iPhone/iPad (USB or wireless) with Metro LAN hostname.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -23,13 +23,21 @@ if ! lsof -i :8081 -sTCP:LISTEN >/dev/null 2>&1; then
 fi
 
 DEVICE_UDID="${TRACE_BUD_IOS_DEVICE_UDID:-}"
+DEVICE_KIND="${TRACE_BUD_IOS_DEVICE_KIND:-any}"
 if [[ -z "$DEVICE_UDID" ]]; then
+  if [[ "$DEVICE_KIND" == "ipad" ]]; then
+    PATTERN='^iPad'
+  elif [[ "$DEVICE_KIND" == "iphone" ]]; then
+    PATTERN='^iPhone'
+  else
+    PATTERN='^iPhone|^iPad'
+  fi
   DEVICE_UDID="$(
     xcrun xctrace list devices 2>/dev/null \
-      | grep -E '^iPhone|^iPad' \
+      | grep -E "$PATTERN" \
       | grep -v Simulator \
       | grep -Eo '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' \
-      | tail -1 \
+      | head -1 \
       || true
   )"
 fi
