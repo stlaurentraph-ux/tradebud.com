@@ -283,4 +283,8 @@ describe('formatReceiptDateLabel', () => {
     expect(formatReceiptDateLabel(null)).toBe('—');
     expect(formatReceiptDateLabel('not-a-date')).toBe('—');
   });
+
+  it('formats as DD/MM/YY', () => {
+    expect(formatReceiptDateLabel('2026-06-19T14:30:00.000Z')).toBe('19/06/26');
+  });
 });
