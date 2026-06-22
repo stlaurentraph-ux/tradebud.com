@@ -204,6 +204,8 @@ function main() {
   const { profile, verifyOAuth } = parseArgs(process.argv.slice(2));
   const projectRoot = process.cwd();
   loadEnvFileIfPresent(path.join(projectRoot, '.env.local'));
+  loadEnvFileIfPresent(path.join(projectRoot, '.env.production.local'));
+  loadEnvFileIfPresent(path.join(projectRoot, '.env.sentry.local'));
   loadEnvFileIfPresent(path.join(projectRoot, '.env'));
 
   const eas = readEasJson(projectRoot);

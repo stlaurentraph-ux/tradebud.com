@@ -11,13 +11,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const EXPECTED_REDIRECT = 'tracebudoffline://auth/callback';
+/** Field-app + field-auth only — dashboard OAuth is separate (dashboard.tracebud.com). */
 const RECOMMENDED_REDIRECT_PATTERNS = [
   'tracebudoffline://auth/callback',
   'tracebudoffline://**',
   'exp://**',
   'exp://**/--/auth/callback',
-  'https://dashboard.tracebud.com/**',
-  'https://dashboard.tracebud.com/auth/mobile-callback',
+  'https://app.tracebud.com/**',
+  'https://app.tracebud.com/auth/callback',
+  'https://app.tracebud.com/auth/confirm',
 ];
 const REQUIRED_PROVIDERS = ['google', 'apple', 'email'];
 
@@ -98,6 +100,8 @@ async function fetchRedirectAllowList(projectRef, accessToken) {
 async function main() {
   const projectRoot = process.cwd();
   loadEnvFileIfPresent(path.join(projectRoot, '.env.local'));
+  loadEnvFileIfPresent(path.join(projectRoot, '.env.production.local'));
+  loadEnvFileIfPresent(path.join(projectRoot, '.env.sentry.local'));
   loadEnvFileIfPresent(path.join(projectRoot, '.env'));
   loadSupabaseFromEas(projectRoot);
 

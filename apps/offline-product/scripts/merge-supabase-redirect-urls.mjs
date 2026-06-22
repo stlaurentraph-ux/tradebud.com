@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * Merge field-app + dashboard redirect URLs into Supabase Auth (uri_allow_list).
+ * Merge field-app + field-auth redirect URLs into Supabase Auth (uri_allow_list).
+ * Dashboard web OAuth (`dashboard.tracebud.com`) is configured separately.
  * Does not change Google/Apple provider secrets.
  *
  *   SUPABASE_ACCESS_TOKEN in .env.local, or:
@@ -31,6 +32,8 @@ function loadEnvFileIfPresent(filePath) {
 
 for (const envPath of [
   path.join(projectRoot, '.env.local'),
+  path.join(projectRoot, '.env.production.local'),
+  path.join(projectRoot, '.env.sentry.local'),
   path.join(projectRoot, '.env'),
   path.join(repoRoot, '.env.local'),
 ]) {
@@ -48,7 +51,6 @@ const REQUIRED_REDIRECTS = [
   'https://app.tracebud.com/**',
   'https://app.tracebud.com/auth/callback',
   'https://app.tracebud.com/auth/confirm',
-  'https://dashboard.tracebud.com/**',
 ];
 
 if (!ACCESS_TOKEN) {
