@@ -13,6 +13,7 @@ import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
+import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { buildDeliveryReceiptCatalog } from '@/features/harvest/buildDeliveryReceiptCatalog';
 import {
   countDeliveryReceiptsForPlots,
@@ -63,7 +64,7 @@ export default function PlotsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const styles = useThemedStyles(createExploreScreenStyles);
   const params = useLocalSearchParams<{ plotId?: string; focus?: string }>();
-  const { plots, farmer } = useAppState();
+  const { plots, farmer, reloadFromDisk } = useAppState();
   const { t, languageCode, openLanguagePicker } = useLanguage();
 
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
@@ -209,6 +210,12 @@ export default function PlotsScreen() {
   useEffect(() => {
     void refreshPlotChecklists();
   }, [refreshPlotChecklists]);
+
+  useEffect(() => {
+    return subscribeServerPlotSyncChanged(() => {
+      void reloadFromDisk();
+    });
+  }, [reloadFromDisk]);
 
   useFocusEffect(
     useCallback(() => {

@@ -62,11 +62,16 @@ import { runAutoBackup, type RunAutoBackupResult } from '@/features/sync/runAuto
 import {
   listUnsyncedLocalPlots,
 } from '@/features/sync/plotServerSync';
+import {
+  countServerPlotsForPostAuthRestore,
+  postAuthSyncPlotCountHint,
+  shouldOfferPostAuthSync,
+} from '@/features/sync/postAuthSyncOffer';
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { getSetting, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
+import { getSetting, loadAppState, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
 import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
@@ -192,18 +197,61 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   );
 
   const offerBackupAfterAuth = useCallback(async () => {
-    const unsynced = await countUnsyncedPlots();
+    const { farmer: alignedFarmer, rekeyed } = await alignFarmerWithAuthUser(farmer, {
+      localPlots: plots,
+    });
+    const activeFarmer = alignedFarmer ?? farmer;
+    if (!activeFarmer?.id) return;
+
+    let activePlots = plots;
+    if (rekeyed) {
+      setFarmer(activeFarmer);
+      await reloadFromDisk();
+      activePlots = (await loadAppState().catch(() => ({ plots: activePlots }))).plots;
+    }
+
+    let unsynced = 0;
+    if (activePlots.length > 0) {
+      try {
+        const backend = await fetchPlotsForFarmer(activeFarmer.id);
+        unsynced = listUnsyncedLocalPlots(activePlots, backend ?? []).length;
+      } catch {
+        unsynced = activePlots.length;
+      }
+    }
+
     const pendingQueue = await loadPendingSyncActions().catch(() => []);
-    if (unsynced <= 0 && pendingQueue.length === 0) return;
-    if ((await hasDataProcessingConsent()) && farmer?.id) {
-      const backup = await runAutoBackup({ farmerId: farmer.id, localPlots: plots });
+    const serverPlotCount =
+      activePlots.length === 0
+        ? await countServerPlotsForPostAuthRestore({
+            profileFarmerId: activeFarmer.id,
+            localPlots: activePlots,
+          })
+        : null;
+
+    const offerInput = {
+      localPlotCount: activePlots.length,
+      unsyncedPlotCount: unsynced,
+      pendingQueueCount: pendingQueue.length,
+      serverPlotCount,
+    };
+    if (!shouldOfferPostAuthSync(offerInput)) return;
+
+    const plotCountHint = postAuthSyncPlotCountHint(offerInput);
+
+    if ((await hasDataProcessingConsent()) && activeFarmer.id) {
+      const backup = await runAutoBackup({
+        farmerId: activeFarmer.id,
+        localPlots: activePlots,
+      });
+      await reloadFromDisk();
       showBackupOutcomeAlert(backup);
       return;
     }
     if (backupBusy) return;
-    setBackupPlotCount(unsynced || plots.length || pendingQueue.length);
+    setBackupPlotCount(plotCountHint);
     setBackupModalVisible(true);
-  }, [backupBusy, countUnsyncedPlots, farmer?.id, plots, showBackupOutcomeAlert]);
+  }, [backupBusy, farmer, plots, reloadFromDisk, setFarmer, showBackupOutcomeAlert]);
 
   const promptBackupConsent = useCallback(
     async (onConfirmed?: () => void | Promise<void>) => {
@@ -239,6 +287,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       }
 
       const backup = await runBackupWithConsent({ farmerId, localPlots: plots });
+      await reloadFromDisk();
       showBackupOutcomeAlert(backup);
       const cb = backupConfirmedCallbackRef.current;
       backupConfirmedCallbackRef.current = undefined;
