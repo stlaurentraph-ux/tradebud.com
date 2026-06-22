@@ -1151,7 +1151,9 @@ jobs:
 
       - name: Field tenant isolation smoke (blocking)
         env:
-          FIELD_TENANT_SMOKE_STRICT: "1"
+          # Strict mode only when credentials are provisioned; skips gracefully when Phase 4.O.2
+          # secrets have not yet been added to GitHub (see ci-secrets-and-fixtures.md §4.O.2).
+          FIELD_TENANT_SMOKE_STRICT: ${{ secrets.FIELD_TENANT_SMOKE_FARMER_A_EMAIL != '' && '1' || '' }}
           FIELD_TENANT_SMOKE_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
