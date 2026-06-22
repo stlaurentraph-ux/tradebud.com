@@ -1,7 +1,5 @@
 import { StyleSheet } from 'react-native';
 
-import { Brand, Radius, Spacing } from '@/constants/theme';
-import { scaleText } from '@/features/demo/storeUiScale';
 import type { AppColors } from '@/features/theme/useThemedStyles';
 
 export function createPlotDetailScreenStyles(c: AppColors) {

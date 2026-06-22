@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Image, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Image, Linking, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { DocumentListRow } from '@/components/evidence/DocumentListRow';

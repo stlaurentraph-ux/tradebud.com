@@ -20,6 +20,8 @@
     "dev:ios": "expo run:ios",
     "dev": "node ./scripts/dev-phone-preflight.mjs",
     "dev:device": "bash ./scripts/run-ios-device-lan.sh",
+    "dev:device:wait": "bash ./scripts/wait-and-install-ios-device.sh",
+    "dev:device:ipad": "TRACE_BUD_IOS_DEVICE_KIND=ipad bash ./scripts/wait-and-install-ios-device.sh",
     "dev:android": "expo run:android",
     "dev:metro": "bash ./scripts/start-metro-lan.sh",
     "check:metro-start": "node ./scripts/validate-metro-start.mjs",

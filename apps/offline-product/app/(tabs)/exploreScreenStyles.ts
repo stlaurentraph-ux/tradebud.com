@@ -1,6 +1,5 @@
 import { StyleSheet } from 'react-native';
 
-import { Brand, Radius } from '@/constants/theme';
 import type { AppColors } from '@/features/theme/useThemedStyles';
 
 export function createExploreScreenStyles(c: AppColors) {

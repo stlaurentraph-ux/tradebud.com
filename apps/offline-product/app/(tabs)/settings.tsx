@@ -1,14 +1,4 @@
-import {
-  Alert,
-  Image,
-  Linking,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  View,
-} from 'react-native';
+import { Alert, Image, Linking, Platform, Pressable, ScrollView, Switch, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -106,8 +96,7 @@ import {
 } from '@/features/sync/syncReachabilityMessage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brand, Colors, Spacing } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { Brand } from '@/constants/theme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createSettingsScreenStyles } from '@/app/(tabs)/settingsScreenStyles';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
@@ -175,8 +164,6 @@ export default function SettingsScreen() {
   const { refreshAuth, openSignIn, isSignedIn, signOutOnDevice } = useSignInSheet();
   const [nameInput, setNameInput] = useState('');
   const insets = useSafeAreaInsets();
-  const colorScheme = useColorScheme();
-  const colors = Colors[colorScheme ?? 'light'];
   const styles = useThemedStyles(createSettingsScreenStyles);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncMessageKind, setSyncMessageKind] = useState<'success' | 'error' | null>(null);

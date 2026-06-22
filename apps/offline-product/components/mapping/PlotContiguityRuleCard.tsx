@@ -1,9 +1,8 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import type { TranslateFn } from '@/features/i18n/translate';
-import { scaleText } from '@/features/demo/storeUiScale';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createPlotContiguityRuleCardStyles } from '@/components/mapping/plotContiguityRuleCardStyles';
 

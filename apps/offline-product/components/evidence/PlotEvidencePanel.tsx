@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import { Alert, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { DocumentListRow } from '@/components/evidence/DocumentListRow';

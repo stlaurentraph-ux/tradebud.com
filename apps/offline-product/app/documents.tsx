@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { StackGradientHeader } from '@/components/layout/StackGradientHeader';
 import { router, useFocusEffect } from 'expo-router';
 

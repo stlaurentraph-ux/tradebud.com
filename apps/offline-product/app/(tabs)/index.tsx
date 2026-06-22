@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +11,7 @@ import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
-import { Brand, Colors, Radius, Shadows } from '@/constants/theme';
+import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createHomeScreenStyles } from '@/app/(tabs)/homeScreenStyles';
@@ -26,17 +26,6 @@ import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
-import { scaleText } from '@/features/demo/storeUiScale';
-
-const HOME_SCREEN_PAD = 16;
-const HOME_TILE_GAP = 12;
-/** Home tile layout contract — keep ≥16px padding, flexible height, wrapping text (see device-qa-preflight). */
-const HOME_TILE_PAD_MIN = 16;
-const HOME_TILE_ICON_SIZE = 40;
-const HOME_TILE_ICON_GAP = 12;
-const HOME_TILE_TEXT_GAP = 6;
-const HOME_TILE_TITLE_LINE_HEIGHT = scaleText(20);
-const HOME_TILE_SUBTITLE_LINE_HEIGHT = scaleText(18);
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
