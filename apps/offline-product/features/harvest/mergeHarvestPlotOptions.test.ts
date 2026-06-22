@@ -4,6 +4,7 @@ import {
   findHarvestPlotOption,
   resolveHarvestPlotPickerId,
   resolveLocalPlotForHarvestSubmit,
+  resolveLocalPlotIdForRoute,
   resolveLocalPlotsForFarmer,
 } from './mergeHarvestPlotOptions';
 
@@ -155,5 +156,44 @@ describe('mergeHarvestPlotOptions', () => {
     });
 
     expect(resolved?.id).toBe('local-renamed');
+  });
+
+  it('resolves local plot from server id via client_plot_id after farmer rekey', () => {
+    const localPlots = [
+      {
+        id: 'dcdd88e5-13e6-45d6-8e09-e6f1968e7e17-1781682185168',
+        farmerId: 'farmer-old',
+        name: 'Plot 1',
+        areaHectares: 0.35,
+        kind: 'polygon' as const,
+      },
+    ];
+    const backendPlots = [
+      {
+        id: '686b9ff6-acf7-40ff-9bb0-2d96f060bb78',
+        client_plot_id: '66b5dafa-30be-4acb-a9c5-4e5c1ea22455-1781682185168',
+        name: 'Plot 1',
+        area_ha: 0.35,
+        kind: 'polygon',
+      },
+    ];
+
+    expect(
+      resolveLocalPlotForHarvestSubmit({
+        selectedPlotId: '686b9ff6-acf7-40ff-9bb0-2d96f060bb78',
+        localPlots,
+        backendPlots,
+        plotServerLinks: {},
+      })?.id,
+    ).toBe('dcdd88e5-13e6-45d6-8e09-e6f1968e7e17-1781682185168');
+
+    expect(
+      resolveLocalPlotIdForRoute({
+        routePlotId: '686b9ff6-acf7-40ff-9bb0-2d96f060bb78',
+        localPlots,
+        backendPlots,
+        plotServerLinks: {},
+      }),
+    ).toBe('dcdd88e5-13e6-45d6-8e09-e6f1968e7e17-1781682185168');
   });
 });

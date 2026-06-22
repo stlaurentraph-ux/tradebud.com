@@ -207,7 +207,6 @@ export default function PlotsScreen() {
         centerTitle={t('my_plots_header')}
         onLanguagePress={openLanguagePicker}
         languageLabel={languageCode}
-        textInverseColor={colors.textInverse}
       />
 
       <ThemedScrollView contentContainerStyle={styles.containerCompact}>

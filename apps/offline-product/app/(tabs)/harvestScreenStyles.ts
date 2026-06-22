@@ -277,5 +277,16 @@ export function createHarvestScreenStyles(c: AppColors) {
       color: c.helpText,
       marginTop: 4,
     },
+    receiptsPlotBackRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginBottom: 10,
+      alignSelf: 'flex-start',
+      paddingVertical: 4,
+    },
+    receiptsPlotBackText: {
+      color: c.link,
+    },
   });
 }

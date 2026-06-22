@@ -21,6 +21,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   HEADER_GRADIENT_COLORS,
+  HEADER_GRADIENT_TEXT,
   compactTabHeaderStyles,
 } from '@/constants/compactTabHeader';
 import { Colors } from '@/constants/theme';
@@ -420,8 +421,8 @@ export default function DataSharingScreen() {
         <View style={compactTabHeaderStyles.headerRowCompact}>
           <View style={[compactTabHeaderStyles.headerSideSlot, compactTabHeaderStyles.headerSideLeft]}>
             <Pressable onPress={() => goBackOrHome(router)} style={compactTabHeaderStyles.backButton}>
-              <Ionicons name="chevron-back" size={20} color={colors.textInverse} />
-              <ThemedText type="defaultSemiBold" style={{ color: colors.textInverse }}>
+              <Ionicons name="chevron-back" size={20} color={HEADER_GRADIENT_TEXT} />
+              <ThemedText type="defaultSemiBold" style={{ color: HEADER_GRADIENT_TEXT }}>
                 {t('back')}
               </ThemedText>
             </Pressable>

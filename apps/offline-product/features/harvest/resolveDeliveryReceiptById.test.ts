@@ -29,6 +29,7 @@ describe('resolveDeliveryReceiptById', () => {
       backendPlots: [],
       plotServerLinks: {},
       vouchers: [],
+      deviceReceipts: [],
     };
     expect(resolveDeliveryReceiptById(catalog, 'voucher-1', [], { mergedPlots, t })).toEqual(
       receipts[0],
@@ -70,6 +71,7 @@ describe('resolveDeliveryReceiptById', () => {
           created_at: '2026-06-16T12:00:00.000Z',
         },
       ],
+      deviceReceipts: [],
     };
 
     expect(findDeliveryReceiptById(catalog.receipts, 'harvest-local-1-1000')).toBeNull();
@@ -95,6 +97,7 @@ describe('resolveDeliveryReceiptById', () => {
           qr_code_ref: 'QR-9',
         },
       ],
+      deviceReceipts: [],
     };
 
     const resolved = resolveDeliveryReceiptById(catalog, 'voucher-9', [], { mergedPlots, t });

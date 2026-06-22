@@ -88,24 +88,30 @@ export class OnboardingEmailService {
     country: string;
     primaryRole: SignupPrimaryRole;
   }): Promise<boolean> {
-    const alreadySent = await this.pool.query<{ welcome_email_sent_at: string | null }>(
-      `
-        SELECT welcome_email_sent_at
-        FROM tenant_signup_contacts
-        WHERE tenant_id = $1
-      `,
-      [input.tenantId],
-    );
-    if (alreadySent.rows[0]?.welcome_email_sent_at) {
+    const tenantId = input.tenantId.trim();
+    const recipient = input.email.trim().toLowerCase();
+    if (!tenantId || !recipient) {
+      return false;
+    }
+
+    await this.upsertTenantSignupContact({
+      tenantId,
+      userId: input.userId ?? recipient,
+      email: recipient,
+      fullName: input.fullName,
+    });
+
+    const claimed = await this.tryClaimTenantWelcomeSend(tenantId);
+    if (!claimed) {
       return false;
     }
 
     if (!this.isResendConfigured()) {
       this.logger.warn('Skipping welcome email: Resend is not configured.');
+      await this.releaseTenantWelcomeClaim(tenantId);
       return false;
     }
 
-    const recipient = input.email.trim().toLowerCase();
     const firstName = this.firstNameFrom(input.fullName, recipient);
     const dashboardUrl = this.getDashboardBaseUrl();
     const loginUrl = `${dashboardUrl}/login`;
@@ -132,23 +138,12 @@ export class OnboardingEmailService {
       });
       if (result.error) {
         this.logger.warn(`Welcome email failed for ${recipient}: ${result.error.message}`);
+        await this.releaseTenantWelcomeClaim(tenantId);
         return false;
       }
 
-      await this.pool.query(
-        `
-          INSERT INTO tenant_signup_contacts (tenant_id, user_id, email, full_name, welcome_email_sent_at, updated_at)
-          VALUES ($1, $2, $3, $4, NOW(), NOW())
-          ON CONFLICT (tenant_id) DO UPDATE SET
-            email = EXCLUDED.email,
-            full_name = COALESCE(EXCLUDED.full_name, tenant_signup_contacts.full_name),
-            welcome_email_sent_at = NOW(),
-            updated_at = NOW()
-        `,
-        [input.tenantId, input.userId ?? recipient, recipient, input.fullName?.trim() || null],
-      );
       await this.emitAuditEvent('onboarding_welcome_email_sent', {
-        tenantId: input.tenantId,
+        tenantId,
         email: recipient,
         sentAt: new Date().toISOString(),
       });
@@ -156,6 +151,7 @@ export class OnboardingEmailService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Welcome email failed for ${recipient}: ${message}`);
+      await this.releaseTenantWelcomeClaim(tenantId);
       return false;
     }
   }
@@ -173,20 +169,21 @@ export class OnboardingEmailService {
       return false;
     }
 
-    const alreadySent = await this.pool.query<{ welcome_email_sent_at: string | null }>(
-      `
-        SELECT welcome_email_sent_at
-        FROM field_app_signup_contacts
-        WHERE user_id = $1
-      `,
-      [userId],
-    );
-    if (alreadySent.rows[0]?.welcome_email_sent_at) {
+    await this.upsertFieldSignupContact({
+      userId,
+      farmerId,
+      email: recipient,
+      fullName: input.fullName,
+    });
+
+    const claimed = await this.tryClaimFarmerWelcomeSend(userId);
+    if (!claimed) {
       return false;
     }
 
     if (!this.isResendConfigured()) {
       this.logger.warn('Skipping farmer welcome email: Resend is not configured.');
+      await this.releaseFarmerWelcomeClaim(userId);
       return false;
     }
 
@@ -206,29 +203,10 @@ export class OnboardingEmailService {
       });
       if (result.error) {
         this.logger.warn(`Farmer welcome email failed for ${recipient}: ${result.error.message}`);
+        await this.releaseFarmerWelcomeClaim(userId);
         return false;
       }
 
-      await this.pool.query(
-        `
-          INSERT INTO field_app_signup_contacts (
-            user_id,
-            farmer_id,
-            email,
-            full_name,
-            welcome_email_sent_at,
-            updated_at
-          )
-          VALUES ($1, $2::uuid, $3, $4, NOW(), NOW())
-          ON CONFLICT (user_id) DO UPDATE SET
-            farmer_id = COALESCE(EXCLUDED.farmer_id, field_app_signup_contacts.farmer_id),
-            email = EXCLUDED.email,
-            full_name = COALESCE(EXCLUDED.full_name, field_app_signup_contacts.full_name),
-            welcome_email_sent_at = NOW(),
-            updated_at = NOW()
-        `,
-        [userId, farmerId, recipient, input.fullName?.trim() || null],
-      );
       await this.emitAuditEvent('farmer_welcome_email_sent', {
         userId,
         farmerId,
@@ -239,6 +217,7 @@ export class OnboardingEmailService {
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       this.logger.warn(`Farmer welcome email failed for ${recipient}: ${message}`);
+      await this.releaseFarmerWelcomeClaim(userId);
       return false;
     }
   }
@@ -448,6 +427,111 @@ export class OnboardingEmailService {
     if (role === 'compliance_manager') return 'Compliance manager';
     if (role === 'admin') return 'Administrator';
     return 'Exporter';
+  }
+
+  private async upsertTenantSignupContact(input: {
+    tenantId: string;
+    userId: string;
+    email: string;
+    fullName: string | null;
+  }): Promise<void> {
+    await this.pool.query(
+      `
+        INSERT INTO tenant_signup_contacts (
+          tenant_id,
+          user_id,
+          email,
+          full_name,
+          signup_completed_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, NOW(), NOW())
+        ON CONFLICT (tenant_id) DO UPDATE SET
+          user_id = EXCLUDED.user_id,
+          email = EXCLUDED.email,
+          full_name = COALESCE(EXCLUDED.full_name, tenant_signup_contacts.full_name),
+          updated_at = NOW()
+      `,
+      [input.tenantId, input.userId, input.email, input.fullName?.trim() || null],
+    );
+  }
+
+  private async tryClaimTenantWelcomeSend(tenantId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        UPDATE tenant_signup_contacts
+        SET welcome_email_sent_at = NOW(), updated_at = NOW()
+        WHERE tenant_id = $1
+          AND welcome_email_sent_at IS NULL
+        RETURNING tenant_id
+      `,
+      [tenantId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  private async releaseTenantWelcomeClaim(tenantId: string): Promise<void> {
+    await this.pool.query(
+      `
+        UPDATE tenant_signup_contacts
+        SET welcome_email_sent_at = NULL, updated_at = NOW()
+        WHERE tenant_id = $1
+          AND welcome_email_sent_at IS NOT NULL
+      `,
+      [tenantId],
+    );
+  }
+
+  private async upsertFieldSignupContact(input: {
+    userId: string;
+    farmerId: string;
+    email: string;
+    fullName: string | null;
+  }): Promise<void> {
+    await this.pool.query(
+      `
+        INSERT INTO field_app_signup_contacts (
+          user_id,
+          farmer_id,
+          email,
+          full_name,
+          updated_at
+        )
+        VALUES ($1, $2::uuid, $3, $4, NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+          farmer_id = COALESCE(EXCLUDED.farmer_id, field_app_signup_contacts.farmer_id),
+          email = EXCLUDED.email,
+          full_name = COALESCE(EXCLUDED.full_name, field_app_signup_contacts.full_name),
+          updated_at = NOW()
+      `,
+      [input.userId, input.farmerId, input.email, input.fullName?.trim() || null],
+    );
+  }
+
+  private async tryClaimFarmerWelcomeSend(userId: string): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        UPDATE field_app_signup_contacts
+        SET welcome_email_sent_at = NOW(), updated_at = NOW()
+        WHERE user_id = $1
+          AND welcome_email_sent_at IS NULL
+        RETURNING user_id
+      `,
+      [userId],
+    );
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  private async releaseFarmerWelcomeClaim(userId: string): Promise<void> {
+    await this.pool.query(
+      `
+        UPDATE field_app_signup_contacts
+        SET welcome_email_sent_at = NULL, updated_at = NOW()
+        WHERE user_id = $1
+          AND welcome_email_sent_at IS NOT NULL
+      `,
+      [userId],
+    );
   }
 
   private async emitAuditEvent(eventType: string, payload: Record<string, unknown>): Promise<void> {

@@ -1,4 +1,5 @@
 import { effectivePlotAreaHectares } from '@/features/harvest/plotYieldCapacity';
+import { backendRowMatchesLocalClientId } from '@/features/plots/backendPlotMatch';
 import {
   resolveServerPlotIdForLocal,
   type PlotServerLinks,
@@ -91,17 +92,45 @@ export function resolveLocalPlotForHarvestSubmit<T extends LocalPlotForMerge>(pa
     }
   }
 
-  const serverRow = (params.backendPlots as { id?: unknown; name?: string }[]).find(
-    (row) => String(row.id ?? '') === selectedId,
-  );
+  const serverRow = (params.backendPlots as {
+    id?: unknown;
+    name?: string;
+    client_plot_id?: string | null;
+    clientPlotId?: string | null;
+  }[]).find((row) => String(row.id ?? '') === selectedId);
   if (!serverRow) return null;
 
-  const clientKey = String(serverRow.name ?? '');
-  return (
-    params.localPlots.find((plot) => plot.id === clientKey) ??
-    params.localPlots.find((plot) => plot.name === clientKey) ??
-    null
+  const byClientId = params.localPlots.find((plot) =>
+    backendRowMatchesLocalClientId(serverRow, plot.id),
   );
+  if (byClientId) return byClientId;
+
+  const displayName = String(serverRow.name ?? '').trim();
+  if (displayName) {
+    return params.localPlots.find((plot) => plot.name === displayName) ?? null;
+  }
+
+  return null;
+}
+
+/** Plot detail routes use on-device plot ids — map server voucher ids when needed. */
+export function resolveLocalPlotIdForRoute(params: {
+  routePlotId: string;
+  localPlots: readonly LocalPlotForMerge[];
+  backendPlots: unknown[];
+  plotServerLinks?: PlotServerLinks | null;
+}): string {
+  const routeId = String(params.routePlotId).trim();
+  if (!routeId) return routeId;
+  if (params.localPlots.some((plot) => plot.id === routeId)) return routeId;
+
+  const resolved = resolveLocalPlotForHarvestSubmit({
+    selectedPlotId: routeId,
+    localPlots: params.localPlots,
+    backendPlots: params.backendPlots,
+    plotServerLinks: params.plotServerLinks,
+  });
+  return resolved?.id ?? routeId;
 }
 
 /**

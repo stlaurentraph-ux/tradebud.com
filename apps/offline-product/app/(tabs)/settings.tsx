@@ -352,11 +352,14 @@ export default function SettingsScreen() {
     };
 
     const plotSnapshot = options?.plots ?? plots;
-    const profileFarmerId = options?.farmerId?.trim() || farmer?.id?.trim() || '';
-    const links = await loadPlotServerLinks().catch(() => ({}));
+    let profileFarmerId = options?.farmerId?.trim() || farmer?.id?.trim() || '';
+    let ownedFarmerIds = options?.ownedFarmerIds;
+    let apiFarmerId = profileFarmerId;
+    let plotSnapshotForSync = plotSnapshot;
 
     const canQueryServer = Boolean(profileFarmerId && hasSyncAuthSession());
     if (!canQueryServer) {
+      const links = await loadPlotServerLinks().catch(() => ({}));
       const pending: TotalSyncPendingSnapshot = {
         queuePendingCount: rows.length,
         unsyncedPlotCount: 0,
@@ -378,6 +381,32 @@ export default function SettingsScreen() {
       return applyDisplay ? pending : null;
     }
 
+    if (!ownedFarmerIds?.length) {
+      try {
+        const syncContext = await prepareFieldSyncContext({
+          profileFarmerId,
+          localPlots: plotSnapshotForSync,
+        });
+        apiFarmerId = syncContext.farmerId;
+        ownedFarmerIds = syncContext.ownedFarmerIds;
+        if (syncContext.rekeyed) {
+          await reloadFromDisk();
+          const diskState = await loadAppState().catch(() => null);
+          if (diskState?.farmer?.id?.trim()) {
+            profileFarmerId = diskState.farmer.id.trim();
+            apiFarmerId = profileFarmerId;
+          }
+          if (diskState?.plots?.length) {
+            plotSnapshotForSync = diskState.plots;
+          }
+        }
+      } catch {
+        ownedFarmerIds = ownedFarmerIds ?? [];
+      }
+    } else {
+      apiFarmerId = profileFarmerId;
+    }
+
     if (applyDisplay && !hasSettledMetrics) {
       setPlotsFetchState('loading');
       setSyncAccessFailure(null);
@@ -392,16 +421,17 @@ export default function SettingsScreen() {
         try {
           backend = await fetchServerPlotListForUi({
             profileFarmerId,
-            localPlots: plotSnapshot,
-            ownedFarmerIds: options?.ownedFarmerIds,
+            localPlots: plotSnapshotForSync,
+            ownedFarmerIds,
+            resolvedFarmerId: apiFarmerId,
             force: options?.forcePlotFetch === true,
           });
           nextPlotsFetchState = 'ok';
           nextSyncAccessFailure = null;
         } catch (err) {
           const cached = peekServerPlotListCache({
-            farmerId: profileFarmerId,
-            ownedFarmerIds: options?.ownedFarmerIds,
+            farmerId: apiFarmerId,
+            ownedFarmerIds,
           });
           if (cached?.length) {
             backend = cached;
@@ -438,19 +468,22 @@ export default function SettingsScreen() {
       }
 
       const pending = await measureTotalSyncPending({
-        farmerId: profileFarmerId,
-        ownedFarmerIds: options?.ownedFarmerIds,
-        plots: plotSnapshot,
+        farmerId: apiFarmerId,
+        ownedFarmerIds,
+        plots: plotSnapshotForSync,
         isSignedIn: true,
         forcePlotFetch: options?.forcePlotFetch === true,
       });
+      const reconciledLinks =
+        pending.plotServerLinks ?? (await loadPlotServerLinks().catch(() => ({})));
+      const reconciledBackend = pending.backendPlots ?? backend;
       if (!applyDisplay) return pending;
 
       publishSyncMetricsDisplay({
         queueRows: rows,
         pending,
-        backendPlots: backend ?? [],
-        plotServerLinks: links,
+        backendPlots: reconciledBackend,
+        plotServerLinks: reconciledLinks,
         plotsFetchState: nextPlotsFetchState,
         syncAccessFailure: nextSyncAccessFailure,
       });
@@ -460,7 +493,7 @@ export default function SettingsScreen() {
         sessionOpened.end();
       }
     }
-  }, [farmer, plots]);
+  }, [farmer, plots, reloadFromDisk]);
 
   useFocusEffect(
     useCallback(() => {
@@ -1170,7 +1203,6 @@ export default function SettingsScreen() {
         centerTitle={t('settings_title')}
         onLanguagePress={openLanguagePicker}
         languageLabel={languageCode}
-        textInverseColor={colors.textInverse}
       />
 
       <ThemedScrollView
@@ -1815,6 +1847,32 @@ export default function SettingsScreen() {
                     ) : null}
                   </View>
                 ) : null}
+              </CardContent>
+            </Card>
+
+            <Card variant="outlined" padding="none" style={[styles.card, styles.helpCard]}>
+              <CardContent style={styles.cardInner}>
+                <View style={styles.sectionHeaderRow}>
+                  <Ionicons name="leaf-outline" size={20} color={Brand.primary} />
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
+                      {t('why_tracebud_settings_title')}
+                    </ThemedText>
+                    <ThemedText type="caption" style={styles.mutedText}>
+                      {t('why_tracebud_settings_subtitle')}
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.btnWrap}>
+                  <Button
+                    variant="secondary"
+                    size="md"
+                    fullWidth
+                    onPress={() => router.push({ pathname: '/why-tracebud', params: { source: 'settings' } })}
+                  >
+                    {t('why_tracebud_settings_cta')}
+                  </Button>
+                </View>
               </CardContent>
             </Card>
 

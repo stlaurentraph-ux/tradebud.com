@@ -7,8 +7,8 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
-import { useThemeColor } from '@/hooks/use-theme-color';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography } from '@/constants/theme';
+import { useAppColors } from '@/features/theme/useThemedStyles';
 
 export interface InputProps extends TextInputProps {
   label?: string;
@@ -21,8 +21,7 @@ export interface InputProps extends TextInputProps {
 export const Input = forwardRef<TextInput, InputProps>(
   ({ label, style, containerStyle, error = false, dense = false, onFocus, onBlur, ...props }, ref) => {
     const [focused, setFocused] = useState(false);
-    const background = useThemeColor({}, 'background');
-    const colors = background === Colors.dark.background ? Colors.dark : Colors.light;
+    const colors = useAppColors();
 
     return (
       <View style={containerStyle}>
@@ -89,4 +88,3 @@ const styles = StyleSheet.create({
     padding: 0,
   },
 });
-

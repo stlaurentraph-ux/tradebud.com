@@ -15,6 +15,7 @@ import { Brand, Colors, Radius, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createHomeScreenStyles } from '@/app/(tabs)/homeScreenStyles';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
@@ -48,19 +49,27 @@ export default function HomeScreen() {
   const [pendingCount, setPendingCount] = useState(0);
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [plotServerLinks, setPlotServerLinks] = useState<Record<string, string>>({});
-  const [loadingBackend, setLoadingBackend] = useState(false);
-  const [plotChecklistDoneById, setPlotChecklistDoneById] = useState<Record<string, boolean>>({});
+  const [homeReadinessStats, setHomeReadinessStats] = useState<{
+    compliant: number;
+    pending: number;
+  } | null>(null);
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
+  const readinessRefreshGenRef = useRef(0);
   const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
 
   const refreshPlotReadiness = useCallback(async () => {
     if (plots.length === 0) {
-      setPlotChecklistDoneById({});
       setActionRequired(null);
+      setHomeReadinessStats(null);
       return;
     }
+    const gen = ++readinessRefreshGenRef.current;
     const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer);
-    setPlotChecklistDoneById(Object.fromEntries(results.map((r) => [r.plotId, r.done])));
+    if (gen !== readinessRefreshGenRef.current) return;
+
+    const compliant = results.filter((r) => r.done).length;
+    const pending = Math.max(0, plots.length - compliant);
+    setHomeReadinessStats({ compliant, pending });
     const firstIncomplete = results.find((r) => !r.done);
     if (!firstIncomplete) {
       setActionRequired(null);
@@ -81,10 +90,8 @@ export default function HomeScreen() {
     async (force = false) => {
       if (!farmer?.id || !isSignedIn) {
         setBackendPlots([]);
-        setLoadingBackend(false);
         return;
       }
-      setLoadingBackend(true);
       try {
         const rows = await fetchServerPlotListForUi({
           profileFarmerId: farmer.id,
@@ -94,8 +101,6 @@ export default function HomeScreen() {
         setBackendPlots(rows ?? []);
       } catch {
         setBackendPlots([]);
-      } finally {
-        setLoadingBackend(false);
       }
     },
     [farmer?.id, isSignedIn, plots],
@@ -103,8 +108,6 @@ export default function HomeScreen() {
 
   const refreshBackendPlotsRef = useRef(refreshBackendPlots);
   refreshBackendPlotsRef.current = refreshBackendPlots;
-  const refreshPlotReadinessRef = useRef(refreshPlotReadiness);
-  refreshPlotReadinessRef.current = refreshPlotReadiness;
 
   useFocusEffect(
     useCallback(() => {
@@ -116,7 +119,6 @@ export default function HomeScreen() {
         .then((links) => setPlotServerLinks(links))
         .catch(() => undefined);
       void refreshBackendPlotsRef.current(false);
-      void refreshPlotReadinessRef.current();
     }, [refreshAuth]),
   );
 
@@ -148,14 +150,9 @@ export default function HomeScreen() {
 
   useEffect(() => {
     void refreshPlotReadiness();
-  }, [plots.length, backendPlots.length, refreshPlotReadiness]);
+  }, [refreshPlotReadiness]);
 
-  const counts = useMemo(() => {
-    const plotsCount = plots.length;
-    const compliant = plots.filter((p) => plotChecklistDoneById[p.id] === true).length;
-    const pending = Math.max(0, plotsCount - compliant);
-    return { plotsCount, compliant, pending };
-  }, [plots, plotChecklistDoneById]);
+  const plotsCount = plots.length;
 
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
@@ -237,7 +234,6 @@ export default function HomeScreen() {
         left={<HomeHeaderBrandLeft />}
         onLanguagePress={openLanguagePicker}
         languageLabel={languageCode}
-        textInverseColor={colors.textInverse}
         homeBrandLayout
       />
 
@@ -308,6 +304,33 @@ export default function HomeScreen() {
             </Pressable>
           </Card>
         ) : null}
+
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={t('why_tracebud_home_link')}
+          onPress={() => {
+            trackEvent(ANALYTICS_EVENTS.WHY_TRACEBUD_HOME_TEASER_CLICKED, { source: 'home' });
+            router.push({ pathname: '/why-tracebud', params: { source: 'home' } });
+          }}
+          style={({ pressed }) => [
+            styles.whyTracebudTeaser,
+            pressed && styles.whyTracebudTeaserPressed,
+          ]}
+        >
+          <View style={styles.whyTracebudTeaserIcon}>
+            <Ionicons name="leaf-outline" size={18} color={Brand.primary} />
+          </View>
+          <View style={styles.whyTracebudTeaserText}>
+            <ThemedText type="defaultSemiBold" style={styles.whyTracebudTeaserLink}>
+              {t('why_tracebud_home_link')}
+            </ThemedText>
+            <ThemedText type="caption" style={styles.whyTracebudTeaserHint}>
+              {t('why_tracebud_home_teaser')}
+            </ThemedText>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.link} />
+        </Pressable>
+
         <LinearGradient
           colors={[...HEADER_GRADIENT_COLORS]}
           start={{ x: 0, y: 0 }}
@@ -320,14 +343,14 @@ export default function HomeScreen() {
           <ThemedText type="title" style={styles.welcomeName}>
             {farmerDisplayName || t('farmer_fallback')}
           </ThemedText>
-          {counts.plotsCount > 0 ? (
+          {plotsCount > 0 ? (
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <ThemedText type="caption" style={styles.statLabel}>
                 {t('plots_stat')}
               </ThemedText>
               <ThemedText type="defaultSemiBold" style={styles.statValue}>
-                {counts.plotsCount}
+                {plotsCount}
               </ThemedText>
             </View>
             <View style={styles.statBox}>
@@ -335,7 +358,7 @@ export default function HomeScreen() {
                 {t('compliant_stat')}
               </ThemedText>
               <ThemedText type="defaultSemiBold" style={styles.statValue}>
-                {loadingBackend ? '…' : counts.compliant}
+                {homeReadinessStats ? homeReadinessStats.compliant : '\u00a0'}
               </ThemedText>
             </View>
             <View style={styles.statBox}>
@@ -344,9 +367,12 @@ export default function HomeScreen() {
               </ThemedText>
               <ThemedText
                 type="defaultSemiBold"
-                style={[styles.statValue, counts.pending > 0 && styles.statValuePending]}
+                style={[
+                  styles.statValue,
+                  (homeReadinessStats?.pending ?? 0) > 0 && styles.statValuePending,
+                ]}
               >
-                {loadingBackend ? '…' : counts.pending}
+                {homeReadinessStats ? homeReadinessStats.pending : '\u00a0'}
               </ThemedText>
             </View>
           </View>
@@ -403,7 +429,7 @@ export default function HomeScreen() {
           </Card>
         ) : null}
 
-        {counts.plotsCount > 0 ? (
+        {plotsCount > 0 ? (
         <Pressable
           onPress={openBackupFlow}
           accessibilityRole="button"
@@ -434,8 +460,8 @@ export default function HomeScreen() {
                       { backgroundColor: 'rgba(221,107,32,0.14)' },
                     ]}
                   >
-                    <ThemedText type="caption" style={{ color: Brand.warning }}>
-                      {t('pending_count', { n: totalPendingSync })}
+                    <ThemedText type="caption" style={styles.pendingPillText}>
+                      {t('backup_pill_pending')}
                     </ThemedText>
                   </View>
                 ) : null}

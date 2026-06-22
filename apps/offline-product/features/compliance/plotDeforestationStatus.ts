@@ -92,6 +92,39 @@ export function deforestationUiStateFromBackendStatus(status: unknown): Deforest
   return 'pending';
 }
 
+type BackendPlotComplianceRow = {
+  status?: unknown;
+  deforestation_screening?: unknown;
+};
+
+/**
+ * Prefer plot.status; when still pending_check, infer from deforestation_screening snapshot
+ * so the field app matches Supabase after screening completes.
+ */
+export function resolveBackendPlotComplianceStatus(
+  row: BackendPlotComplianceRow | null | undefined,
+): BackendPlotComplianceStatus {
+  if (!row) return 'pending_check';
+
+  const fromStatus = normalizeBackendPlotStatus(row.status);
+  if (fromStatus !== 'pending_check') return fromStatus;
+
+  const screening = parseDeforestationScreening(row.deforestation_screening);
+  if (!screening?.screenedAt) return fromStatus;
+
+  const tier = String(screening.signalTier ?? '').toLowerCase();
+  if (tier === 'green' || tier === 'clear' || tier === 'deforestation_clear') {
+    return 'deforestation_clear';
+  }
+  if (tier === 'amber' || tier === 'degradation_risk') return 'degradation_risk';
+  if (tier === 'red' || tier === 'deforestation_detected') return 'deforestation_detected';
+  if (tier === 'review' || tier === 'under_review') return 'under_review';
+
+  if (screening.alertCount === 0) return 'deforestation_clear';
+
+  return fromStatus;
+}
+
 export function deforestationTitleKey(state: DeforestationUiState): string {
   switch (state) {
     case 'passed':

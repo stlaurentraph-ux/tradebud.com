@@ -1,9 +1,11 @@
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
 import { ThemedText } from '@/components/themed-text';
-import { Brand, Radius, Spacing } from '@/constants/theme';
+import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
+import { Spacing } from '@/constants/theme';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
 
 type BackupConsentModalProps = {
   visible: boolean;
@@ -27,23 +29,24 @@ export function BackupConsentModal({
   onDecline,
 }: BackupConsentModalProps) {
   const insets = useSafeAreaInsets();
+  const styles = useThemedStyles(createAuthSheetStyles);
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onDecline}>
-      <View style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
+      <View style={[styles.backupBackdrop, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
         <View style={styles.card}>
-          <ThemedText type="title" style={styles.title}>
+          <ThemedText type="title" style={styles.backupTitle}>
             {title}
           </ThemedText>
-          <ThemedText type="default" style={styles.body}>
+          <ThemedText type="default" style={styles.backupBody}>
             {body}
           </ThemedText>
-          <View style={styles.actions}>
+          <View style={styles.backupActions}>
             <Button variant="primary" fullWidth loading={busy} disabled={busy} onPress={onConfirm}>
               {consentLabel}
             </Button>
-            <Pressable onPress={onDecline} hitSlop={12} style={styles.declineBtn} disabled={busy}>
-              <ThemedText type="defaultSemiBold" style={styles.declineText}>
+            <Pressable onPress={onDecline} hitSlop={12} style={styles.backupDeclineBtn} disabled={busy}>
+              <ThemedText type="defaultSemiBold" style={styles.backupDeclineText}>
                 {declineLabel}
               </ThemedText>
             </Pressable>
@@ -53,38 +56,3 @@ export function BackupConsentModal({
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(15, 23, 42, 0.5)',
-    justifyContent: 'center',
-    padding: Spacing.lg,
-  },
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radius.xl,
-    padding: Spacing.lg,
-    gap: Spacing.sm,
-  },
-  title: {
-    color: Brand.primary,
-    textAlign: 'center',
-  },
-  body: {
-    textAlign: 'center',
-    color: '#4B5563',
-    lineHeight: 22,
-  },
-  actions: {
-    marginTop: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  declineBtn: {
-    alignSelf: 'center',
-    paddingVertical: Spacing.xs,
-  },
-  declineText: {
-    color: '#6B7280',
-  },
-});

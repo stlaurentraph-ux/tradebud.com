@@ -1,5 +1,9 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import {
+  fetchOwnedFarmerIdsFromApi,
+  getBootstrapOwnedFarmerIds,
+} from '@/features/api/fieldAppBootstrap';
+import {
   compactDuplicatePendingSyncActions,
   loadPendingSyncActions,
   loadPlotServerLinks,
@@ -7,9 +11,12 @@ import {
 } from '@/features/state/persistence';
 import { createTranslator } from '@/features/i18n/translate';
 import { defaultLocale } from '@/features/i18n/config';
-import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
+import { invalidateServerPlotListCache } from '@/features/sync/serverPlotListCache';
 import { invalidateServerPlotFetchCache } from '@/features/sync/serverPlotFetchCache';
-import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
+import {
+  fetchBackendPlotsForSyncScope,
+  prepareFieldSyncContext,
+} from '@/features/sync/resolveFieldSyncScope';
 import { reconcilePlotServerLinks } from '@/features/plots/plotServerLink';
 import {
   classifyLocalPlotSyncPending,
@@ -28,7 +35,51 @@ export type TotalSyncPendingSnapshot = {
   blockedPlots: PlotSyncBlockInfo[];
   /** Server plot list could not be loaded — counts may rely on saved links only. */
   plotsFetchFailed?: boolean;
+  /** Merged server rows used for the pending count (Settings display). */
+  backendPlots?: unknown[];
+  /** Reconciled local↔server links after the measurement pass. */
+  plotServerLinks?: Record<string, string>;
 };
+
+function uniqueIds(candidates: string[]): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const raw of candidates) {
+    const id = raw.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ordered.push(id);
+  }
+  return ordered;
+}
+
+async function resolvePlotSyncScope(params: {
+  profileFarmerId: string;
+  localPlots: Plot[];
+  ownedFarmerIds?: string[];
+}): Promise<{ apiFarmerId: string; ownedFarmerIds: string[] }> {
+  const profileFarmerId = params.profileFarmerId.trim();
+  const preset = params.ownedFarmerIds ?? [];
+  if (preset.length > 0) {
+    return { apiFarmerId: profileFarmerId, ownedFarmerIds: preset };
+  }
+
+  try {
+    const scope = await prepareFieldSyncContext({
+      profileFarmerId,
+      localPlots: params.localPlots,
+    });
+    return { apiFarmerId: scope.farmerId, ownedFarmerIds: scope.ownedFarmerIds };
+  } catch {
+    const ownedFarmerIds = uniqueIds([
+      ...(await fetchOwnedFarmerIdsFromApi().catch(() => [])),
+      ...getBootstrapOwnedFarmerIds(),
+      profileFarmerId,
+      ...params.localPlots.map((plot) => plot.farmerId ?? ''),
+    ]);
+    return { apiFarmerId: profileFarmerId, ownedFarmerIds };
+  }
+}
 
 /** Queue rows + local plots that still need farmer attention on the server. */
 export async function measureTotalSyncPending(params: {
@@ -49,54 +100,44 @@ export async function measureTotalSyncPending(params: {
   let unsyncedPlotNames: string[] = [];
   let blockedPlots: PlotSyncBlockInfo[] = [];
   let plotsFetchFailed = false;
+  let backendPlots: unknown[] | undefined;
+  let plotServerLinks: Record<string, string> | undefined;
 
   if (params.isSignedIn && params.farmerId && params.plots.length > 0) {
     if (params.forcePlotFetch) {
       invalidateServerPlotFetchCache();
+      invalidateServerPlotListCache();
     }
 
     const profileFarmerId = params.farmerId.trim();
-    let apiFarmerId = profileFarmerId;
-    let ownedFarmerIds = params.ownedFarmerIds ?? [];
-    if (ownedFarmerIds.length === 0) {
-      try {
-        const scope = await prepareFieldSyncContext({
-          profileFarmerId,
-          localPlots: params.plots,
-        });
-        apiFarmerId = scope.farmerId;
-        ownedFarmerIds = scope.ownedFarmerIds;
-      } catch {
-        ownedFarmerIds = [profileFarmerId];
-      }
-    } else {
-      apiFarmerId = profileFarmerId;
-    }
+    const { apiFarmerId, ownedFarmerIds } = await resolvePlotSyncScope({
+      profileFarmerId,
+      localPlots: params.plots,
+      ownedFarmerIds: params.ownedFarmerIds,
+    });
 
-    let plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+    let links: Record<string, string> = await loadPlotServerLinks().catch(() => ({}));
     try {
-      const backend = await fetchServerPlotListForUi({
-        profileFarmerId,
-        localPlots: params.plots,
-        ownedFarmerIds,
-        resolvedFarmerId: apiFarmerId,
-        force: params.forcePlotFetch === true,
-      });
-      const reconciled = reconcilePlotServerLinks(params.plots, backend ?? [], plotServerLinks);
-      if (
-        Object.keys(reconciled).length !== Object.keys(plotServerLinks).length ||
-        Object.entries(reconciled).some(
-          ([localId, serverId]) =>
-            (plotServerLinks as Record<string, string>)[localId] !== serverId,
-        )
-      ) {
-        plotServerLinks = reconciled;
+      const backend =
+        (await fetchBackendPlotsForSyncScope({
+          farmerId: apiFarmerId,
+          ownedFarmerIds,
+        })) ?? [];
+      backendPlots = backend;
+      const reconciled = reconcilePlotServerLinks(params.plots, backend, links);
+      const linksChanged =
+        Object.keys(reconciled).length !== Object.keys(links).length ||
+        Object.entries(reconciled).some(([localId, serverId]) => links[localId] !== serverId);
+      if (linksChanged) {
+        links = reconciled;
         await persistPlotServerLinks(reconciled).catch(() => undefined);
+        invalidateServerPlotListCache();
       }
+      plotServerLinks = links;
       const classified = classifyLocalPlotSyncPending({
         localPlots: params.plots,
-        backendPlots: backend ?? [],
-        plotServerLinks,
+        backendPlots: backend,
+        plotServerLinks: links,
         t,
       });
       const summary = summarizePlotSyncPending(classified);
@@ -106,10 +147,11 @@ export async function measureTotalSyncPending(params: {
       blockedPlots = summary.blockedPlots;
     } catch (err) {
       plotsFetchFailed = isPlotFetchReachabilityFailure(err);
+      plotServerLinks = links;
       const classified = classifyLocalPlotSyncPending({
         localPlots: params.plots,
         backendPlots: [],
-        plotServerLinks,
+        plotServerLinks: links,
         t,
         trustPersistedLinksWithoutServer: true,
       });
@@ -131,5 +173,7 @@ export async function measureTotalSyncPending(params: {
     unsyncedPlotNames,
     blockedPlots,
     plotsFetchFailed,
+    backendPlots,
+    plotServerLinks,
   };
 }

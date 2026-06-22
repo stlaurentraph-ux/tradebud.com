@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { StackGradientHeader } from '@/components/layout/StackGradientHeader';
 import { ThemedText } from '@/components/themed-text';
 import { ActionButton as Button } from '@/components/ui/action-button';
 import {
@@ -53,15 +54,12 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
-      <View style={[styles.screen, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-        <View style={styles.header}>
-          <Pressable accessibilityRole="button" onPress={onClose} style={styles.closeBtn}>
-            <Ionicons name="close" size={24} color={colors.text} />
-          </Pressable>
-          <ThemedText type="defaultSemiBold" style={styles.title} numberOfLines={2}>
-            {item?.label ?? t('documents_preview_title')}
-          </ThemedText>
-        </View>
+      <View style={[styles.screen, { paddingBottom: insets.bottom }]}>
+        <StackGradientHeader
+          title={item?.label ?? t('documents_preview_title')}
+          onBack={onClose}
+          backVariant="close"
+        />
 
         <ScrollView contentContainerStyle={styles.body}>
           {signatureText ? (

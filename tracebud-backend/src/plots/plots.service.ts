@@ -483,6 +483,7 @@ export class PlotsService {
     userId: string;
     countryCode?: string;
     fullName?: string | null;
+    email?: string | null;
   }): Promise<{ created: boolean }> {
     const created = await this.ensureFarmerProfileForPlot(params.farmerId, params.userId, {
       countryCode: params.countryCode,
@@ -503,6 +504,13 @@ export class PlotsService {
         [params.userId, params.fullName.trim()],
       );
     }
+    this.maybeSendFarmerWelcome({
+      created,
+      userId: params.userId,
+      farmerId: params.farmerId,
+      email: params.email,
+      fullName: params.fullName ?? null,
+    });
     return { created };
   }
 
