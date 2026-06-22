@@ -93,11 +93,18 @@ function assertCiWiring(manifest) {
   if (!ci.includes('qa:tenant-isolation')) {
     throw new Error('ci.yml app job must run qa:tenant-isolation smoke');
   }
-  if (
-    !ci.includes(`${manifest.ciEnv.strictFlag}: 1`) &&
-    !ci.includes(`${manifest.ciEnv.strictFlag}: '1'`) &&
-    !ci.includes(`${manifest.ciEnv.strictFlag}: "1"`)
-  ) {
+  // Accept literal "1" or a conditional expression that evaluates to '1' when secrets are
+  // present and '0' when absent (Dependabot-safe form: ${{ secret != '' && '1' || '0' }}).
+  const strictFlag = manifest.ciEnv.strictFlag;
+  const hasLiteralStrict =
+    ci.includes(`${strictFlag}: 1`) ||
+    ci.includes(`${strictFlag}: '1'`) ||
+    ci.includes(`${strictFlag}: "1"`);
+  const hasConditionalStrict = ci
+    .split('\n')
+    .filter((line) => line.includes(`${strictFlag}:`))
+    .some((line) => line.includes(`\${{`) && line.includes(`&& '1' ||`));
+  if (!hasLiteralStrict && !hasConditionalStrict) {
     throw new Error(`ci.yml must set ${manifest.ciEnv.strictFlag}=1 on tenant isolation step`);
   }
   if (ci.includes('Tenant isolation smoke (optional)')) {
