@@ -45,6 +45,7 @@
     "release:health:assert": "node scripts/release-health-gate-guard.mjs",
     "release:health:gate": "node scripts/release-health-gate.mjs",
     "release:health:collect": "node scripts/release-health-collect.mjs",
+    "weekly:health:assert": "node scripts/weekly-health-automation-guard.mjs",
     "check:workspaces": "npm run lint:workspaces && npm run test:workspaces && npm run typecheck:workspaces",
     "test:backend": "npm test -w tracebud-backend",
     "test:dashboard": "npm test -w dashboard-product",

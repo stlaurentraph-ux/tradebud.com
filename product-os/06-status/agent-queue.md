@@ -75,7 +75,7 @@ Use `implement-automation-slice`. One slice per PR. Branch: `chore/automation-<s
 - [x] **2.M.1** Email template render smoke — PR #183
 - [x] **2.M.2** SEO smoke (sitemap, robots) — PR #181
 - [ ] **2.O.3** n8n daily outreach intelligence
-- [ ] **3.3** Weekly health Cursor Automation
+- [ ] **3.3** Weekly health Cursor Automation — `chore/automation-weekly-health-3-3` (PR pending; human: Automations editor)
 - [ ] **3.5** Dependabot babysit automation
 - [ ] **3.7–3.10** CODEOWNERS enforce, stale PR, PR templates, auto-merge fixes
 - [x] **4.9–4.10, 4.M.1–4.M.2** — Phase 4 complete (PRs #176–#179)

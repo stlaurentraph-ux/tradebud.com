@@ -74,5 +74,5 @@ Then run **`implement-automation-slice`** to implement.
 ## 7. Human-only gates (never agent-PR)
 
 - **0.H**, **0.H.2**, **0.H.3** — branch protection, Vercel deployment protection, PR-only `main`
-- **3.1**, **3.2** — Cursor Automations editor setup
+- **3.1**, **3.2**, **3.3** — Cursor Automations editor setup (3.3 runbook: `weekly-health-automation.md`)
 - Adding GitHub secrets

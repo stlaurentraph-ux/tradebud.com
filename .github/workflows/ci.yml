@@ -163,6 +163,9 @@ jobs:
       - name: Release health gate guard
         run: npm run release:health:assert
 
+      - name: Weekly health automation guard
+        run: npm run weekly:health:assert
+
       - name: PR labeler guard
         run: npm run pr:labeler:assert
 
