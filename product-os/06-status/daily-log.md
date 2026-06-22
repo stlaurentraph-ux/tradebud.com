@@ -1,3 +1,9 @@
+### 2026-06-22 (offline automation — Maestro seed + tighter asserts)
+
+- **Bootstrap** — `maestro-ci-bootstrap-simulator.sh` launches app, runs `seed-maestro-simulator.mjs` (DB wait/retry), terminates before flows; `MAESTRO_SEED_SKIP=1` escape hatch.
+- **Flows** — `land-title-photo` / `tenure-evidence` require seeded `Finca Norte` + `tab-my-plots`; `settings-sync-smoke` requires Backup section + Sync now or sign-in CTA (fewer optional steps).
+- **Guard** — `maestro-nightly-smoke-guard.mjs` asserts bootstrap seed wiring and plot flow assertions.
+
 ### 2026-06-22 (offline — restore morning UX after PR #208)
 
 - **Root cause** — Most field-app UX from 2026-06-22 morning lived in git stash `stash@{1}` and was not included in PR #208 (receipts-only merge).

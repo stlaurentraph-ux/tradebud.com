@@ -67,7 +67,31 @@ function assertFlowsBaseline(manifest) {
   }
 }
 
+function assertBootstrapSeedsSimulatorDb() {
+  const bootstrap = read('scripts/maestro-ci-bootstrap-simulator.sh');
+  if (!bootstrap.includes('seed-maestro-simulator.mjs')) {
+    throw new Error('maestro-ci-bootstrap-simulator.sh must seed simulator DB before flows');
+  }
+  if (!bootstrap.includes('MAESTRO_SEED_SKIP')) {
+    throw new Error('bootstrap must support MAESTRO_SEED_SKIP escape hatch');
+  }
+}
+
+function assertPlotDocumentFlowsUseSeededPlot() {
+  for (const flowFile of ['land-title-photo.yaml', 'tenure-evidence.yaml']) {
+    const flow = read(path.join('.maestro/flows', flowFile));
+    if (!flow.includes('Finca Norte')) {
+      throw new Error(`${flowFile} must assert seeded plot Finca Norte`);
+    }
+    if (!flow.includes('tab-my-plots')) {
+      throw new Error(`${flowFile} must navigate via tab-my-plots testID`);
+    }
+  }
+}
+
 function assertRunnerScripts(manifest) {
+  assertBootstrapSeedsSimulatorDb();
+  assertPlotDocumentFlowsUseSeededPlot();
   read('scripts/maestro-ci-bootstrap-simulator.sh');
   const nightly = read('scripts/maestro-ci-nightly-smoke.sh');
   if (!nightly.includes('maestro-ci-bootstrap-simulator.sh')) {

@@ -88,6 +88,8 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 
 **Golden path on `main` (3.O.1):** pushes touching offline Maestro paths run `settings-sync-smoke.yaml` on `macos-latest`. Uses `EXPO_TOKEN` + latest EAS simulator build when set; otherwise `expo run:ios` (slower).
 
+**Simulator seed (4.8+):** all macOS Maestro runners source `maestro-ci-bootstrap-simulator.sh`, which seeds SQLite (`Maria Santos` / `Finca Norte`) via `seed-maestro-simulator.mjs` before flows. Plot/document nightly flows assert that plot; `MAESTRO_SEED_SKIP=1` skips seed for debugging.
+
 **Refresh flow manifest baseline:**
 
 ```bash
