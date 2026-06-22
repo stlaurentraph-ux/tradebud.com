@@ -94,6 +94,19 @@ Field-sync failure ("12 waiting to upload", "Plot not on server yet", `plot_uplo
 - **State transitions / exceptions:** unchanged canonical transitions; cache never caches errors (transient 403/timeout for one farmer id does not poison later passes). Plot links persist and are honored even when the scoped server list is transiently empty, so the queue can still drain.
 - **Tests:** `serverPlotFetchCache.test.ts`, `alignFarmerWithAuthUser.test.ts`.
 
+## Cross-device plot restore — Phase 1 (2026-06-19)
+
+Upload-only sync left My Plots empty on a second signed-in device when plots already existed on Tracebud (e.g. iPhone → iPad).
+
+- **Restore step** — `restoreLocalPlotsFromServer` at the start of `runFieldSyncPipeline` (Settings Sync now + auto-backup after sign-in).
+- **Merge rules** — Pull merged server list; import rows missing locally (match by `client_plot_id`, server link, or server id). Never delete or overwrite on-device plots.
+- **Geometry** — Backend `listByFarmer` includes parsed GeoJSON `geometry`; mobile maps to local `Plot.points`.
+- **Permissions** — Same farmer-scope gate as plot list (`scope=farmer`, owned-profile check).
+- **Analytics** — Restore uses existing `sync:plot_list:start` breadcrumb with `phase: restore`.
+- **Acceptance** — Sign in on fresh device → Sync now → My Plots shows server plots with boundaries; local-only plots still upload on sync.
+- **Tests:** `localPlotFromServerGeometry.test.ts`, `restoreLocalPlotsFromServer.test.ts`.
+- **Later phases** — Delivery receipt metadata, evidence files, HLC conflict rules (not in Phase 1).
+
 ## Tasks checklist
 
 - [x] Confirm permissions and tenant boundaries

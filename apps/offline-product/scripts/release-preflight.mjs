@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { sentryAuthEnvPath } from './sentryAuthEnvPath.mjs';
 
 const VALID_PROFILES = new Set(['preview', 'production']);
 
@@ -205,7 +206,7 @@ function main() {
   const projectRoot = process.cwd();
   loadEnvFileIfPresent(path.join(projectRoot, '.env.local'));
   loadEnvFileIfPresent(path.join(projectRoot, '.env.production.local'));
-  loadEnvFileIfPresent(path.join(projectRoot, '.env.sentry.local'));
+  loadEnvFileIfPresent(sentryAuthEnvPath(projectRoot));
   loadEnvFileIfPresent(path.join(projectRoot, '.env'));
 
   const eas = readEasJson(projectRoot);

@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline **Phase 1 cloud plot restore** (2026-06-19): server → local plot hydration on Sync now; backend list includes geometry; plot server link reconciliation.
 - Offline automation **4.O.2** (2026-06-22): golden field tenant smoke manifest + blocking Expo CI probe; `FIELD_TENANT_SMOKE_*` secrets documented.
 - Offline automation **Maestro seed + asserts** (2026-06-22): CI bootstrap seeds simulator SQLite; tighter plot/settings nightly flows; guard asserts seed wiring.
 - Offline field app morning UX restore (2026-06-22): reapplied stashed readability/sync/home/receipt-detail/Why Tracebud work on branch `feat/restore-morning-offline-ux` while keeping PR #208 flat receipts table + navigation cache.

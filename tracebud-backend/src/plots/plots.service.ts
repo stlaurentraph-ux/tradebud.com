@@ -2102,7 +2102,8 @@ export class PlotsService {
           production_system,
           deforestation_screening,
           status,
-          created_at
+          created_at,
+          ST_AsGeoJSON(geometry) AS geometry_geojson
         FROM plot
         WHERE farmer_id = $1
         ORDER BY created_at DESC
@@ -2110,7 +2111,20 @@ export class PlotsService {
       [farmerId],
     );
 
-    return result.rows;
+    return result.rows.map((row) => {
+      const { geometry_geojson, ...rest } = row as Record<string, unknown> & {
+        geometry_geojson?: string | null;
+      };
+      let geometry: Record<string, unknown> | null = null;
+      if (typeof geometry_geojson === 'string' && geometry_geojson.trim()) {
+        try {
+          geometry = JSON.parse(geometry_geojson) as Record<string, unknown>;
+        } catch {
+          geometry = null;
+        }
+      }
+      return { ...rest, geometry };
+    });
   }
 
   async listForTenant(

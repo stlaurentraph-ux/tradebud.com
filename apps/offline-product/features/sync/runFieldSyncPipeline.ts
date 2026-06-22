@@ -26,6 +26,7 @@ import {
   warmPlotServerLinksForSync,
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
+import { restoreLocalPlotsFromServer } from '@/features/sync/restoreLocalPlotsFromServer';
 import { reportSyncFailure, reportSyncStepStart } from '@/features/sync/reportSyncFailure';
 import { emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { invalidateServerPlotListCache } from '@/features/sync/serverPlotListCache';
@@ -63,6 +64,8 @@ export type FieldSyncPipelineResult = {
   syncResultMessage: string;
   skipQueueDrain: boolean;
   stoppedForAuth?: boolean;
+  /** Plots merged from server during restore — caller should reload local state when > 0. */
+  plotsRestored?: number;
 };
 
 function mergeQueueResult(
@@ -129,16 +132,34 @@ export async function runFieldSyncPipeline(
     onPhase?.(phase);
   };
 
-  reportSyncStepStart('plot_upload', { plotCount: syncPlots.length });
-  await warmPlotServerLinksForSync({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: syncPlots,
-  });
-
   const outcome: SyncNowUserOutcome = {};
   let plotUploadFirstError: string | undefined;
   let skipQueueDrain = false;
+
+  setPhase('restoring_plots');
+  reportSyncStepStart('plot_list', { phase: 'restore', plotCount: syncPlots.length });
+  let activePlots = syncPlots;
+  const restoreResult = await restoreLocalPlotsFromServer({
+    apiFarmerId,
+    ownedFarmerIds: farmerScopeIds,
+    localPlots: syncPlots,
+  });
+  if (restoreResult.restoredCount > 0) {
+    activePlots = restoreResult.mergedPlots;
+    outcome.plotsRestored = restoreResult.restoredCount;
+    invalidateServerPlotListCache();
+  }
+  if (restoreResult.fetchFailed && activePlots.length === 0) {
+    outcome.plotsFetchFailed = true;
+  }
+
+  reportSyncStepStart('plot_upload', { plotCount: activePlots.length });
+  await warmPlotServerLinksForSync({
+    farmerId: apiFarmerId,
+    ownedFarmerIds: farmerScopeIds,
+    localPlots: activePlots,
+  });
+
   const selectedTypes =
     selectedQueueActionTypes.length > 0 ? selectedQueueActionTypes : allQueueActionTypes;
   const queueDrainTypes = selectedTypes.filter((actionType) =>
@@ -146,16 +167,16 @@ export async function runFieldSyncPipeline(
   );
   const shouldProcessConsent = selectedTypes.some(isConsentQueueActionType);
 
-  setPhase(syncPlots.length > 0 ? 'uploading_plots' : 'processing_queue');
+  setPhase(activePlots.length > 0 ? 'uploading_plots' : 'processing_queue');
 
   let lastPlotUploadResult: UploadUnsyncedPlotsResult | null = null;
-  if (syncPlots.length === 0) {
+  if (activePlots.length === 0) {
     outcome.plotsNone = true;
   } else {
     let syncRes = await uploadUnsyncedPlotsForFarmer({
       farmerId: apiFarmerId,
       ownedFarmerIds: farmerScopeIds,
-      localPlots: syncPlots,
+      localPlots: activePlots,
       farmerDisplayName: syncFarmer?.name?.trim() || undefined,
       t,
       surface: 'settings',
@@ -164,7 +185,7 @@ export async function runFieldSyncPipeline(
       const verifyBeforeQueue = await measureTotalSyncPending({
         farmerId: apiFarmerId,
         ownedFarmerIds: farmerScopeIds,
-        plots: syncPlots,
+        plots: activePlots,
         isSignedIn: true,
         forcePlotFetch: true,
       });
@@ -172,7 +193,7 @@ export async function runFieldSyncPipeline(
         syncRes = await uploadUnsyncedPlotsForFarmer({
           farmerId: apiFarmerId,
           ownedFarmerIds: farmerScopeIds,
-          localPlots: syncPlots,
+          localPlots: activePlots,
           farmerDisplayName: syncFarmer?.name?.trim() || undefined,
           t,
           surface: 'settings',
@@ -190,13 +211,14 @@ export async function runFieldSyncPipeline(
         syncResultMessage: '',
         skipQueueDrain: true,
         stoppedForAuth: true,
+        plotsRestored: outcome.plotsRestored,
       };
     }
     if (syncRes.fetchFailed) {
       outcome.plotsFetchFailed = true;
       plotUploadFirstError = syncRes.firstError;
       const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
-      const plotsMissingServerLink = syncPlots.filter(
+      const plotsMissingServerLink = activePlots.filter(
         (plot) => !plotServerLinks[plot.id]?.trim(),
       );
       skipQueueDrain = plotsMissingServerLink.length > 0;
@@ -225,12 +247,12 @@ export async function runFieldSyncPipeline(
     lastPlotUploadResult = syncRes;
   }
 
-  if (syncPlots.length > 0) {
+  if (activePlots.length > 0) {
     const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
     await enqueuePlotDependentSyncForLinkedPlots({
       farmerId: apiFarmerId,
       farmer: syncFarmer,
-      plots: syncPlots,
+      plots: activePlots,
       plotServerLinks,
     }).catch(() => undefined);
   }
@@ -251,7 +273,7 @@ export async function runFieldSyncPipeline(
     if (__DEV__ && queueSmartSweepEnabled) {
       const retryingPass = await processPendingSyncQueue({
         farmerId: apiFarmerId,
-        localPlots: syncPlots,
+        localPlots: activePlots,
         farmerScopeIds,
         actionTypes: queueDrainTypes,
         attemptScope: 'retrying_only' satisfies PendingSyncAttemptScope,
@@ -267,7 +289,7 @@ export async function runFieldSyncPipeline(
       if (!retryingPass.fetchFailed && remainingBudget > 0) {
         const firstAttemptPass = await processPendingSyncQueue({
           farmerId: apiFarmerId,
-          localPlots: syncPlots,
+          localPlots: activePlots,
           farmerScopeIds,
           actionTypes: queueDrainTypes,
           attemptScope: 'first_attempt_only' satisfies PendingSyncAttemptScope,
@@ -281,7 +303,7 @@ export async function runFieldSyncPipeline(
     } else {
       const queueRes = await drainPendingSyncQueueForManualSync({
         farmerId: apiFarmerId,
-        localPlots: syncPlots,
+        localPlots: activePlots,
         farmerScopeIds,
         actionTypes: queueDrainTypes,
         attemptScope: 'all',
@@ -297,7 +319,7 @@ export async function runFieldSyncPipeline(
   const pendingAfter = await measureTotalSyncPending({
     farmerId: apiFarmerId,
     ownedFarmerIds: farmerScopeIds,
-    plots: syncPlots,
+    plots: activePlots,
     isSignedIn: true,
     forcePlotFetch: true,
   });
@@ -371,7 +393,8 @@ export async function runFieldSyncPipeline(
   if (
     (outcome.queueCompleted ?? 0) > 0 ||
     (lastPlotUploadResult?.uploaded ?? 0) > 0 ||
-    outcome.plotsUploadedAll != null
+    outcome.plotsUploadedAll != null ||
+    (outcome.plotsRestored ?? 0) > 0
   ) {
     emitServerPlotSyncChanged();
   }
@@ -383,5 +406,6 @@ export async function runFieldSyncPipeline(
     lastPlotUploadResult,
     syncResultMessage,
     skipQueueDrain,
+    plotsRestored: outcome.plotsRestored,
   };
 }

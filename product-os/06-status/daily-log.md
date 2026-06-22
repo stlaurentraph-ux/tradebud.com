@@ -1,3 +1,10 @@
+### 2026-06-19 (offline — Phase 1 cloud plot restore)
+
+- **Gap** — Sync was upload-only; signing in on a second device (e.g. iPad) showed empty My Plots even when server had Hector's plots.
+- **Fix** — `restoreLocalPlotsFromServer` runs at the start of `runFieldSyncPipeline` (Sync now + auto-backup): fetches merged server plot list, maps GeoJSON → local `Plot` rows, persists via SQLite, reconciles `plotServerLinks`. Never overwrites existing local plots.
+- **Backend** — `GET /v1/plots?farmerId=…&scope=farmer` now includes parsed `geometry` on each row (ST_AsGeoJSON).
+- **Tests** — `localPlotFromServerGeometry.test.ts`, `restoreLocalPlotsFromServer.test.ts`.
+
 ### 2026-06-22 (offline — My Plots delivery recap counts)
 
 - **Root cause** — Per-plot counts only matched exact `receipt.plotId` values. Device rows preferred stale `serverPlotId`, and farmer rekey left receipts under old local plot id suffixes that no longer matched current plot cards.

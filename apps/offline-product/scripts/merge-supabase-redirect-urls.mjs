@@ -12,6 +12,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { sentryAuthEnvPath } from './sentryAuthEnvPath.mjs';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '..');
 const repoRoot = path.resolve(projectRoot, '../..');
@@ -30,10 +32,11 @@ function loadEnvFileIfPresent(filePath) {
   }
 }
 
+
 for (const envPath of [
   path.join(projectRoot, '.env.local'),
   path.join(projectRoot, '.env.production.local'),
-  path.join(projectRoot, '.env.sentry.local'),
+  sentryAuthEnvPath(projectRoot),
   path.join(projectRoot, '.env'),
   path.join(repoRoot, '.env.local'),
 ]) {

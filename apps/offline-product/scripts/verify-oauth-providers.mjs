@@ -9,6 +9,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { sentryAuthEnvPath } from './sentryAuthEnvPath.mjs';
 
 const EXPECTED_REDIRECT = 'tracebudoffline://auth/callback';
 /** Field-app + field-auth only — dashboard OAuth is separate (dashboard.tracebud.com). */
@@ -101,7 +102,7 @@ async function main() {
   const projectRoot = process.cwd();
   loadEnvFileIfPresent(path.join(projectRoot, '.env.local'));
   loadEnvFileIfPresent(path.join(projectRoot, '.env.production.local'));
-  loadEnvFileIfPresent(path.join(projectRoot, '.env.sentry.local'));
+  loadEnvFileIfPresent(sentryAuthEnvPath(projectRoot));
   loadEnvFileIfPresent(path.join(projectRoot, '.env'));
   loadSupabaseFromEas(projectRoot);
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Store SENTRY_AUTH_TOKEN in .env.sentry.local (gitignored) for local release preflight.
+ * Store SENTRY_AUTH_TOKEN in local/sentry-auth.env (gitignored) for local release preflight.
  * EAS production already has this secret; it cannot be read back via `eas env:get`.
  *
  * Usage:
@@ -15,8 +15,10 @@ import path from 'node:path';
 import readline from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
+import { sentryAuthEnvPath } from './sentryAuthEnvPath.mjs';
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const targetPath = path.join(root, '.env.sentry.local');
+const targetPath = sentryAuthEnvPath(root);
 const SENTRY_ORG = 'tracebud';
 const SENTRY_PROJECT = 'react-native';
 
@@ -61,6 +63,7 @@ async function main() {
     `SENTRY_AUTH_TOKEN=${token}`,
     '',
   ].join('\n');
+  fs.mkdirSync(path.dirname(targetPath), { recursive: true });
   fs.writeFileSync(targetPath, body, { mode: 0o600 });
   console.log(`Wrote ${path.relative(root, targetPath)}`);
   console.log('Verify: npm run release:preflight:production');

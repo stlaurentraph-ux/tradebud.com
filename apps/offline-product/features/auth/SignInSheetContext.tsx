@@ -10,6 +10,7 @@ import {
 import {
   ActivityIndicator,
   Alert,
+  InteractionManager,
   KeyboardAvoidingView,
   Linking,
   Modal,
@@ -408,8 +409,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   }, [refreshAuth]);
 
   const dismissWelcome = useCallback(async () => {
-    await setSetting(ACCOUNT_WELCOME_DISMISSED_KEY, '1');
     setWelcomeVisible(false);
+    await setSetting(ACCOUNT_WELCOME_DISMISSED_KEY, '1');
   }, []);
 
   useEffect(() => {
@@ -463,6 +464,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setEmailMode(false);
     setVisible(true);
   }, []);
+
+  /** iPad: close welcome before presenting sign-in — two Modals in one frame fails silently. */
+  const openSignInFromWelcome = useCallback(async () => {
+    await dismissWelcome();
+    await new Promise<void>((resolve) => {
+      InteractionManager.runAfterInteractions(() => resolve());
+    });
+    openSignIn({ variant: 'general' });
+  }, [dismissWelcome, openSignIn]);
 
   const titleKey =
     variant === 'after_plot'
@@ -649,10 +659,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         signInLabel={t('sign_in')}
         skipLabel={t('welcome_account_skip')}
         onCreateAccount={() => void openCreateAccount()}
-        onSignIn={() => {
-          void dismissWelcome();
-          openSignIn({ variant: 'general' });
-        }}
+        onSignIn={() => void openSignInFromWelcome()}
         onSkip={() => void dismissWelcome()}
       />
       <CreateAccountWizard
@@ -667,7 +674,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
             .then(() => syncLocalFarmerFromAuth())
             .catch(() => undefined);
         }}
-        onSignInInstead={() => openSignIn({ variant: 'general' })}
+        onSignInInstead={() => {
+          setCreateWizardVisible(false);
+          void (async () => {
+            await new Promise<void>((resolve) => {
+              InteractionManager.runAfterInteractions(() => resolve());
+            });
+            openSignIn({ variant: 'general' });
+          })();
+        }}
       />
       <BackupConsentModal
         visible={backupModalVisible}

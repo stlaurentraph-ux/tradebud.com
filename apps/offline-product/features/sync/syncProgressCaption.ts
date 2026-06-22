@@ -12,6 +12,8 @@ function phaseStepLabel(t: TranslateFn, phase: SyncQueuePhase): string {
       return t('sync_progress_preparing');
     case 'checking_connection':
       return t('sync_progress_connecting');
+    case 'restoring_plots':
+      return t('sync_progress_restoring_plots');
     case 'uploading_plots':
       return t('sync_progress_plots');
     case 'processing_consent':

@@ -33,6 +33,7 @@ yarn-error.*
 
 # local env files
 .env*.local
+local/sentry-auth.env
 scripts/oauth.env
 
 # typescript

@@ -8,6 +8,7 @@ export type SyncQueuePhase =
   | 'preparing'
   | 'waiting_for_lock'
   | 'checking_connection'
+  | 'restoring_plots'
   | 'uploading_plots'
   | 'processing_consent'
   | 'processing_queue';

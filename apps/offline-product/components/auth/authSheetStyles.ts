@@ -16,6 +16,7 @@ export function createAuthSheetStyles(c: AppColors, isDark: boolean) {
     },
     backdropPress: {
       ...StyleSheet.absoluteFillObject,
+      zIndex: 0,
     },
     card: {
       backgroundColor: c.backgroundElevated,
@@ -26,6 +27,7 @@ export function createAuthSheetStyles(c: AppColors, isDark: boolean) {
       gap: 8,
       borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
       borderColor: c.border,
+      zIndex: 1,
     },
     headerRow: {
       flexDirection: 'row',

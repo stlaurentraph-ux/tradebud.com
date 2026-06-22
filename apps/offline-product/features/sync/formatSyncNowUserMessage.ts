@@ -25,6 +25,7 @@ export type SyncNowUserOutcome = {
   queueFailed?: number;
   queueFetchFailed?: boolean;
   plotsFetchFailed?: boolean;
+  plotsRestored?: number;
   /** Measured after the run — queue + plots still needing attention on device. */
   remainingPending?: number;
   unsyncedPlotCount?: number;
@@ -116,6 +117,10 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
   }
 
   if (remainingPending === 0) {
+    const restored = outcome.plotsRestored ?? 0;
+    if (restored > 0) {
+      return t('sync_result_plots_restored', { n: restored });
+    }
     return t('sync_result_complete');
   }
 

@@ -41,14 +41,17 @@ export function WelcomeAccountModal({
       presentationStyle="overFullScreen"
       onRequestClose={onSkip}
     >
-      <View style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}>
+      <View
+        style={[styles.backdrop, { paddingBottom: Math.max(insets.bottom, Spacing.sm) }]}
+        pointerEvents="box-none"
+      >
         <Pressable
           style={styles.backdropPress}
           accessibilityRole="button"
           accessibilityLabel={skipLabel}
           onPress={onSkip}
         />
-        <View style={styles.card}>
+        <View style={styles.card} pointerEvents="auto">
           <ThemedText type="defaultSemiBold" style={styles.welcomeTitle}>
             {title}
           </ThemedText>
