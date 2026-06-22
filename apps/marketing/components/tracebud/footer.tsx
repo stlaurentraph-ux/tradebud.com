@@ -1,6 +1,6 @@
 "use client";
 
-import { Mail, Linkedin, Twitter } from "lucide-react";
+import { Mail, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
@@ -8,6 +8,16 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useWaitlistDialog } from "@/components/waitlist-dialog";
 import { locales, type Locale } from "@/i18n.config";
+
+function LinkedInIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+      <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
+      <rect width="4" height="12" x="2" y="9" />
+      <circle cx="4" cy="4" r="2" />
+    </svg>
+  );
+}
 
 function isHomePath(pathname: string) {
   if (pathname === "/") return true;
@@ -85,7 +95,7 @@ export function Footer() {
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-600 transition-all hover:text-[var(--forest-canopy)] hover:shadow-md"
                 aria-label="LinkedIn"
               >
-                <Linkedin className="h-5 w-5" />
+                <LinkedInIcon className="h-5 w-5" />
               </a>
               <a
                 href="https://twitter.com/tracebud"
@@ -94,7 +104,7 @@ export function Footer() {
                 className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-gray-600 transition-all hover:text-[var(--forest-canopy)] hover:shadow-md"
                 aria-label="Twitter"
               >
-                <Twitter className="h-5 w-5" />
+                <X className="h-5 w-5" />
               </a>
             </div>
           </div>
