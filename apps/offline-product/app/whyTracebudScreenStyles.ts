@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-import { Brand, Radius, Shadows, Spacing } from '@/constants/theme';
+import { Radius, Shadows, Spacing } from '@/constants/theme';
 import { scaleText } from '@/features/demo/storeUiScale';
 import type { AppColors } from '@/features/theme/useThemedStyles';
 
@@ -108,9 +108,9 @@ export function createWhyTracebudScreenStyles(c: AppColors) {
       borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      backgroundColor: c.surfaceAccent,
+      backgroundColor: c.avatarBackground,
       borderWidth: StyleSheet.hairlineWidth,
-      borderColor: c.surfaceAccentBorder,
+      borderColor: c.avatarBorder,
     },
     benefitTextWrap: {
       flex: 1,
@@ -135,7 +135,7 @@ export function createWhyTracebudScreenStyles(c: AppColors) {
       backgroundColor: c.surfaceAccent,
       borderColor: c.surfaceAccentBorder,
       borderLeftWidth: 4,
-      borderLeftColor: Brand.primary,
+      borderLeftColor: c.link,
     },
     livelihoodTitle: {
       color: c.text,

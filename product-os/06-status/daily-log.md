@@ -1,3 +1,11 @@
+### 2026-06-22 (offline — Hector auth split + field OAuth guards)
+
+- **Root cause** — Production Supabase had merged auth user `cd80a540…` (primary `exporter+demo@tracebud.com`, Google identity `hector@tracebud.com`, role `compliance_manager`) linked to farmer profile `dcdd88e5…`.
+- **DB** — Migration `202606221200_split_hector_farmer_from_exporter_demo_auth.sql` splits Google identity to dedicated `hector@tracebud.com` farmer auth; exporter demo keeps email-only dashboard session.
+- **Field app guards** — `fieldAppBlocksDashboardOAuthSignIn` blocks dashboard/compliance sessions and `exporter+demo` primary email; `getFieldAppEmailFromSession` prefers Google/Apple identity email for stored/display email; OAuth refresh uses field-app email resolver.
+- **Why Tracebud dark mode** — Benefit icons and teaser leaf use `colors.link` instead of `Brand.primary` on dark `surfaceAccent` backgrounds.
+- **Backend CI** — Integration specs pass 9th `OnboardingEmailService` arg to `PlotsService` constructor.
+
 ### 2026-06-22 (offline automation — Maestro seed + tighter asserts)
 
 - **Bootstrap** — `maestro-ci-bootstrap-simulator.sh` launches app, runs `seed-maestro-simulator.mjs` (DB wait/retry), terminates before flows; `MAESTRO_SEED_SKIP=1` escape hatch.

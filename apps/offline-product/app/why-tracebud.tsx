@@ -10,11 +10,10 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
-import { Brand } from '@/constants/theme';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { goBackOrHome } from '@/features/navigation/routes';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createWhyTracebudScreenStyles } from '@/app/whyTracebudScreenStyles';
 
 const BENEFIT_ROWS = [
@@ -54,6 +53,7 @@ function splitHeroTagline(tagline: string): string[] {
 }
 
 export default function WhyTracebudScreen() {
+  const colors = useAppColors();
   const styles = useThemedStyles(createWhyTracebudScreenStyles);
   const { t, lang, openLanguagePicker } = useLanguage();
   const params = useLocalSearchParams<{ source?: string }>();
@@ -118,7 +118,7 @@ export default function WhyTracebudScreen() {
         </Card>
 
         <View style={styles.sectionHeadingRow}>
-          <Ionicons name="sparkles-outline" size={18} color={Brand.primary} />
+          <Ionicons name="sparkles-outline" size={18} color={colors.link} />
           <ThemedText type="defaultSemiBold" style={styles.sectionHeading}>
             {t('why_tracebud_benefits_heading')}
           </ThemedText>
@@ -134,7 +134,7 @@ export default function WhyTracebudScreen() {
               ]}
             >
               <View style={styles.benefitIconWrap}>
-                <Ionicons name={row.icon} size={22} color={Brand.primary} />
+                <Ionicons name={row.icon} size={22} color={colors.link} />
               </View>
               <View style={styles.benefitTextWrap}>
                 <ThemedText type="defaultSemiBold" style={styles.benefitTitle}>

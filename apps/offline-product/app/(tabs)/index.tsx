@@ -318,7 +318,7 @@ export default function HomeScreen() {
           ]}
         >
           <View style={styles.whyTracebudTeaserIcon}>
-            <Ionicons name="leaf-outline" size={18} color={Brand.primary} />
+            <Ionicons name="leaf-outline" size={18} color={colors.link} />
           </View>
           <View style={styles.whyTracebudTeaserText}>
             <ThemedText type="defaultSemiBold" style={styles.whyTracebudTeaserLink}>

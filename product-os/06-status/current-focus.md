@@ -11,7 +11,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 
 ## Work now
 
-- **Field app device QA (2026-06-21, priority)** — Branch `feature/offline-field-sync-ui`: Metro `dev:metro:production`, Hector account. Verify Settings backup pill (no flash), sync messages (queue vs plots), Documents plot list stability, farmer name on Home/Settings, tenure jurisdiction hints on dashboard.
+- **Field app device QA (2026-06-22, priority)** — After Hector auth split PR merges: sign out → Google sign-in as `hector@tracebud.com` (must not land on `exporter+demo`); reload Metro and confirm Why Tracebud icons readable in dark mode. Then re-check Settings backup pill, sync messages, Documents plot list stability.
 - **Automation ops** — **3.3** runbook on main (PR #194); **create Cursor Automation** Mon 09:30 UTC per `weekly-health-automation.md`.
 - **Metro structural isolation (2026-06-20)** — Device debug unblocked. Install field deps only in `apps/offline-product`; run `npm run dev:metro:production` from that directory. Root `npm install` must not reintroduce `react-native` at repo root. `npm run check:metro-start` gates before Metro.
 - **Tenure AI lifecycle (2026-06-20)** — Upload dedup + supersede + wrong-doc alert skip deployed in code; redeploy backend + reload Metro. Device QA: re-upload wrong photo → single verification row, “Upload correct land paper”, no exporter alert.

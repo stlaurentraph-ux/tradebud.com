@@ -1853,7 +1853,7 @@ export default function SettingsScreen() {
             <Card variant="outlined" padding="none" style={[styles.card, styles.helpCard]}>
               <CardContent style={styles.cardInner}>
                 <View style={styles.sectionHeaderRow}>
-                  <Ionicons name="leaf-outline" size={20} color={Brand.primary} />
+                  <Ionicons name="leaf-outline" size={20} color={colors.link} />
                   <View style={{ flex: 1 }}>
                     <ThemedText type="defaultSemiBold" style={styles.sectionLabel}>
                       {t('why_tracebud_settings_title')}

@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline field app Hector auth split + OAuth guards (2026-06-22): Supabase migration splits merged exporter/hector auth; field app blocks dashboard OAuth sessions; identity email preference; Why Tracebud dark-mode icon contrast; backend int spec `PlotsService` ctor fix.
 - Offline automation **Maestro seed + asserts** (2026-06-22): CI bootstrap seeds simulator SQLite; tighter plot/settings nightly flows; guard asserts seed wiring.
 - Offline field app morning UX restore (2026-06-22): reapplied stashed readability/sync/home/receipt-detail/Why Tracebud work on branch `feat/restore-morning-offline-ux` while keeping PR #208 flat receipts table + navigation cache.
 - Offline automation **5.10** (2026-06-22): EAS OTA skew guard, production OTA preflight + `update:production:safe`, offline-ota-production-gate workflow, mark-three-corners nightly.
