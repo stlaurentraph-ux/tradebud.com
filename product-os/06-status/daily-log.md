@@ -1,3 +1,9 @@
+### 2026-06-22 (fix — Dependabot Expo CI tenant smoke regression)
+
+- **Root cause** — Slice 4.O.2 hardcoded `FIELD_TENANT_SMOKE_STRICT=1`; GitHub does not forward repo secrets to Dependabot PRs, so all `FIELD_TENANT_SMOKE_*` env vars are empty, causing the smoke to exit 1 on every Dependabot bump touching `apps/offline-product`.
+- **Fix** — `.github/workflows/ci.yml`: compute `FIELD_TENANT_SMOKE_STRICT` from `${{ secrets.FIELD_TENANT_SMOKE_FARMER_A_EMAIL != '' && '1' || '0' }}` so Dependabot runs skip gracefully; human PRs with secrets set still enforce strict mode.
+- **Lane 2 — PR on `cursor/tracebud-ci-regressions-381d`**
+
 ### 2026-06-22 (offline automation — 4.O.2 blocking field tenant smoke)
 
 - **Manifest** — `golden-field-tenant-smoke.json` + runbook for dedicated farmer pair (`field+tenant-smoke-a/b@tracebud.com`).
