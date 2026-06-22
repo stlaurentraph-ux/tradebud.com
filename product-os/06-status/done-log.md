@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Automation **3.3** (2026-06-22, PR #198): first weekly health digest merged — release health GO; `daily-log.md` entry for 2026-06-22.
 - Automation **3.3** (2026-06-22, PR #194): weekly health Cursor Automation runbook + `weekly-health-summary` command + CI guard; Mon 09:30 UTC digest → `daily-log.md`.
 - Automation **3.2** (2026-06-21): Cursor Automation **Sentry staging → fix regression** (Issue created trigger; staging scope gate; Sentry MCP + fix-regression lane).
 - Automation **3.1** (2026-06-21): Cursor Automation **CI failed → fix regression** on `stlaurentraph-ux/tradebud.com` open PRs (Checks completed trigger; Sonnet; fix-regression lane).

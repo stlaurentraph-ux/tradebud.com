@@ -16,6 +16,12 @@
 - **Main CI** — https://github.com/stlaurentraph-ux/tradebud.com/actions/runs/27923280827 — Required: Field auth ✓, Marketing ✓. Non-required failures (non-blocking): Workspace root Next app lint ✗ (ESLint v10 from Dependabot PR #180), Backend integration tests ✗ (PostGIS). Dashboard, Contracts, Expo ✓.
 - **Regressions** — Sentry 7d: gate `sentry_clean_window` shows 0 issues in 15m window (Sentry API not directly available). Open fix-lane PRs: 8 DRAFT `[fix]` PRs (#187, #189, #190, #191, #192, #195, #196, #197) — all CI regressions from Dependabot ESLint v10 bump (PR #180) and labeler v6 bump (PR #162).
 - **Next ops** — Resolve ESLint v10 workspace-root lint regression; close the oldest open fix PRs for that class. Parked: 2.9, 2.10, 2.11, 3.5, 3.7–3.10 (Phase 5).
+- **Merged** — PR #198 `[ops] weekly health summary 2026-06-22` (docs only).
+
+### 2026-06-22 (Lane A — marketing stealth middleware)
+- **Problem** — Unpublished IA routes returned 200 in production because Next.js prerendered draft pages before `assertMarketingRoutePublished()` ran.
+- **Fix** — Middleware blocks unpublished stealth paths at the edge (`marketing-stealth-paths.ts`); publication guard extended to verify registry ↔ createDraft wiring.
+- **Follow-up** — Deploy marketing to Vercel, then confirm release-health stealth 404 checks pass (skip removed from `release-health-gate.yml`).
 
 ### 2026-06-22 (automation — 3.3 runbook merged, PR #194)
 - **Weekly health summary** — manifest + `weekly-health-summary` command + CI guard; human: create Cursor Automation Mon 09:30 UTC per `weekly-health-automation.md`.
