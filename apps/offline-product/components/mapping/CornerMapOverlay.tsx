@@ -5,6 +5,8 @@ import { ThemedText } from '@/components/themed-text';
 import type { TranslateFn } from '@/features/i18n/translate';
 import type { CornerCapturePhase } from '@/features/mapping/cornerCaptureUx';
 import { cornerMapOverlayMessageKey } from '@/features/mapping/cornerCaptureUx';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createCornerMapOverlayStyles } from '@/components/mapping/cornerMapOverlayStyles';
 
 type CornerMapOverlayProps = {
   phase: CornerCapturePhase;
@@ -13,6 +15,8 @@ type CornerMapOverlayProps = {
 };
 
 export function CornerMapOverlay({ phase, secondsRemaining, t }: CornerMapOverlayProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createCornerMapOverlayStyles);
   const messageKey = cornerMapOverlayMessageKey(phase);
   const message =
     phase === 'settle'
@@ -25,7 +29,7 @@ export function CornerMapOverlay({ phase, secondsRemaining, t }: CornerMapOverla
         <Ionicons
           name={phase === 'save' ? 'checkmark-circle' : phase === 'settle' ? 'hourglass' : 'footsteps'}
           size={22}
-          color={phase === 'save' ? '#0A7F59' : '#7C3AED'}
+          color={phase === 'save' ? colors.link : colors.tint}
         />
         <ThemedText type="defaultSemiBold" style={styles.text}>
           {message}
@@ -35,34 +39,3 @@ export function CornerMapOverlay({ phase, secondsRemaining, t }: CornerMapOverla
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: {
-    ...StyleSheet.absoluteFillObject,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-  },
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    maxWidth: '100%',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.94)',
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOpacity: 0.12,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  text: {
-    flex: 1,
-    color: '#1F2937',
-    lineHeight: 20,
-  },
-});

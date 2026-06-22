@@ -12,6 +12,8 @@ import {
 } from '@/features/harvest/deliveryReceiptModels';
 import { shareDeliveryReceipt } from '@/features/harvest/shareDeliveryReceipt';
 import type { TranslateFn } from '@/features/i18n/translate';
+import { createDeliveryReceiptDetailPanelStyles } from '@/components/harvest/harvestPanelStyles';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
 
 type DeliveryReceiptDetailPanelProps = {
   t: TranslateFn;
@@ -26,6 +28,7 @@ export function DeliveryReceiptDetailPanel({
   onBack,
   hideBackRow = false,
 }: DeliveryReceiptDetailPanelProps) {
+  const styles = useThemedStyles(createDeliveryReceiptDetailPanelStyles);
   const shareCaptureRef = useRef<View>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
@@ -135,83 +138,3 @@ export function DeliveryReceiptDetailPanel({
   );
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: 12 },
-  backRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    paddingVertical: 4,
-  },
-  backText: { color: '#0A7F59' },
-  receiptCard: {
-    borderRadius: 22,
-    backgroundColor: '#F7F7F7',
-    borderColor: '#D9D9D9',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  shareCapture: {
-    width: '100%',
-    alignItems: 'center',
-    backgroundColor: '#F7F7F7',
-    paddingHorizontal: 8,
-  },
-  qrWrap: {
-    width: 192,
-    height: 192,
-    borderRadius: 18,
-    backgroundColor: '#E7E7E7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  qrInner: {
-    backgroundColor: '#FFFFFF',
-    padding: 6,
-    borderRadius: 12,
-  },
-  qrGeneratingWrap: {
-    width: 192,
-    minHeight: 192,
-    borderRadius: 18,
-    backgroundColor: '#E7E7E7',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    marginBottom: 10,
-  },
-  qrGeneratingText: { color: '#6B7280', textAlign: 'center', lineHeight: 18 },
-  qrHint: { color: '#6B7280', marginBottom: 8, textAlign: 'center' },
-  codeWrap: {
-    marginBottom: 4,
-    width: '100%',
-    borderRadius: 12,
-    backgroundColor: '#DDEFE8',
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  codeText: { color: '#0A7F59' },
-  divider: {
-    width: '100%',
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#D1D5DB',
-    marginVertical: 14,
-  },
-  summaryLabel: {
-    color: '#6B7280',
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    textAlign: 'center',
-  },
-  plotName: { color: '#1F2937', textAlign: 'center' },
-  kgText: { color: '#0A7F59', marginTop: 2, textAlign: 'center' },
-  metaText: { color: '#6B7280', textAlign: 'center' },
-  buyerRow: { marginTop: 10, gap: 2, alignItems: 'center' },
-  buyerKey: { color: '#6B7280', textAlign: 'center' },
-  buyerValue: { color: '#1F2937', textAlign: 'center' },
-  noQr: { color: '#6B7280', textAlign: 'center' },
-});

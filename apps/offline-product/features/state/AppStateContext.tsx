@@ -97,8 +97,11 @@ type AppStateContextValue = {
   setFarmer: (farmer: FarmerProfile) => void;
   /** Persist farmer to SQLite and update in-memory state (await for critical saves). */
   saveFarmer: (farmer: FarmerProfile) => Promise<void>;
-  /** Returns the new plot id when created; undefined if no farmer or not called. */
-  addPlot: (input: Omit<Plot, 'id' | 'farmerId' | 'createdAt'>) => string | undefined;
+  /** Returns the new plot id when created; undefined if no farmer id is available. */
+  addPlot: (
+    input: Omit<Plot, 'id' | 'farmerId' | 'createdAt'>,
+    options?: { farmerId?: string },
+  ) => string | undefined;
   renamePlot: (plotId: string, newName: string) => void;
   /** Merge fields into an existing plot (local persistence + audit). */
   updatePlot: (plotId: string, patch: Partial<Plot>) => void;
@@ -254,17 +257,18 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const addPlot = useCallback<AppStateContextValue['addPlot']>((input) => {
-    if (!farmer) {
+  const addPlot = useCallback<AppStateContextValue['addPlot']>((input, options) => {
+    const farmerId = options?.farmerId?.trim() || farmer?.id;
+    if (!farmerId) {
       return undefined;
     }
 
     const now = Date.now();
-    const id = `${farmer.id}-${now}`;
+    const id = `${farmerId}-${now}`;
 
     const plot: Plot = {
       id,
-      farmerId: farmer.id,
+      farmerId,
       createdAt: now,
       ...input,
     };
@@ -273,7 +277,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       const next = [plot, ...prev];
       persistPlots(next).catch(() => undefined);
       logAuditEvent({
-        userId: farmer.id,
+        userId: farmerId,
         eventType: 'plot_created',
         payload: {
           plotId: plot.id,

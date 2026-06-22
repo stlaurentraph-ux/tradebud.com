@@ -21,10 +21,13 @@ import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTa
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createExploreScreenStyles } from '@/app/(tabs)/exploreScreenStyles';
 
 type PlotListTranslate = (key: string, values?: Record<string, string | number>) => string;
 
-function renderPlotListAreaCaption(plot: Plot, tr: PlotListTranslate) {
+function PlotListAreaCaption({ plot, tr }: { plot: Plot; tr: PlotListTranslate }) {
+  const styles = useThemedStyles(createExploreScreenStyles);
   const hasGpsArea = plot.areaHectares > 0;
   const dec = plot.declaredAreaHectares;
   const hasDeclared = dec != null && Number.isFinite(dec);
@@ -56,6 +59,7 @@ export default function PlotsScreen() {
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const styles = useThemedStyles(createExploreScreenStyles);
   const params = useLocalSearchParams<{ plotId?: string; focus?: string }>();
   const { plots, farmer } = useAppState();
   const { t, languageCode, openLanguagePicker } = useLanguage();
@@ -279,7 +283,7 @@ export default function PlotsScreen() {
                         {statusLabel}
                       </Badge>
                     </View>
-                    {renderPlotListAreaCaption(plot, t)}
+                    <PlotListAreaCaption plot={plot} tr={t} />
                     <View style={styles.plotMetaRow}>
                       <View style={styles.plotMetaItem}>
                         <Ionicons name="camera-outline" size={15} color="#8A8A8A" />
@@ -302,8 +306,8 @@ export default function PlotsScreen() {
         })}
 
         <Pressable style={styles.registerNewPlotCard} onPress={() => router.push('/record')}>
-          <Ionicons name="add" size={24} color="#0B6F50" />
-          <ThemedText type="defaultSemiBold" style={{ color: '#0B6F50' }}>
+          <Ionicons name="add" size={24} color={colors.link} />
+          <ThemedText type="defaultSemiBold" style={{ color: colors.link }}>
             {t('register_new_plot')}
           </ThemedText>
         </Pressable>
@@ -311,103 +315,3 @@ export default function PlotsScreen() {
     </ThemedView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1 },
-  containerCompact: {
-    padding: 16,
-    paddingBottom: 32,
-    gap: 12,
-  },
-  emptyPlotsCard: {
-    borderRadius: 18,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#E8F7F0',
-    padding: 20,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyPlotsIconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyPlotsTitle: {
-    color: '#0B4F3B',
-    textAlign: 'center',
-  },
-  emptyPlotsBody: {
-    color: '#1F6B57',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  emptyPlotsCta: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#0A7F59',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 18,
-    minHeight: 48,
-  },
-  emptyPlotsCtaText: { color: '#FFFFFF' },
-  pickerHintCard: {
-    borderRadius: 14,
-    borderColor: '#C9E8DC',
-    backgroundColor: '#F3FBF7',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-  },
-  pickerHintText: {
-    color: '#1F6B57',
-    lineHeight: 18,
-  },
-  plotProtoCard: { borderRadius: 18, padding: 12 },
-  plotProtoCardSelected: { borderColor: '#74D7B8', borderWidth: 1.8 },
-  plotCardRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  plotCardBody: { flex: 1, minWidth: 0 },
-  plotName: { flex: 1 },
-  areaCaption: { marginTop: 4, color: '#6B7280' },
-  rowHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  plotMetaRow: {
-    marginTop: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  plotMetaItem: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  plotMetaText: {
-    flexShrink: 1,
-    color: '#6B7280',
-    fontSize: 12,
-  },
-  registerNewPlotCard: {
-    marginTop: 6,
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: '#6FD3B2',
-    borderRadius: 18,
-    backgroundColor: '#DDEFE8',
-    minHeight: 90,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-});

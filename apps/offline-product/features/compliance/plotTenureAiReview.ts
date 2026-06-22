@@ -2,7 +2,7 @@ import type {
   PlotTenureParseStatus,
   PlotTenureVerificationRecord,
 } from '@/features/api/postPlot';
-import { tenureVerificationRequiresReupload } from '@/features/compliance/plotTenureVerificationReview';
+import { classifyTenureDocFarmerOutcome } from '@/features/compliance/plotTenureVerificationReview';
 
 export function summarizeTenureAiParseStatus(
   records: PlotTenureVerificationRecord[],
@@ -52,20 +52,8 @@ export function tenureAiParseLabelKey(status: PlotTenureParseStatus): string {
 
 /** Compact status chip for per-file rows in land paper check. */
 export function tenureDocRowStatusLabelKey(record: PlotTenureVerificationRecord): string {
-  if (tenureVerificationRequiresReupload(record)) {
-    return 'plot_tenure_doc_status_reupload';
-  }
-  switch (record.parse_status) {
-    case 'COMPLETED':
-      return 'plot_tenure_doc_status_ok';
-    case 'MANUAL_REQUIRED':
-      return 'plot_tenure_doc_status_review';
-    case 'IN_PROGRESS':
-    case 'PENDING':
-      return 'plot_tenure_doc_status_pending';
-    case 'FAILED':
-      return 'plot_tenure_doc_status_reupload';
-    default:
-      return 'plot_tenure_doc_status_pending';
-  }
+  const outcome = classifyTenureDocFarmerOutcome(record);
+  if (outcome === 'good') return 'plot_tenure_doc_status_ok';
+  if (outcome === 'fix_upload') return 'plot_tenure_doc_status_reupload';
+  return 'plot_tenure_doc_status_pending';
 }

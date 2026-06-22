@@ -15,6 +15,8 @@ import { summarizeTenureBlockedBadge } from '@/features/compliance/plotTenureVer
 import type { PlotTenureVerificationRecord } from '@/features/api/postPlot';
 import { useLanguage } from '@/features/state/LanguageContext';
 import type { Plot } from '@/features/state/AppStateContext';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createPlotTenureStatusCardStyles } from '@/components/compliance/plotTenureStatusCardStyles';
 
 type PlotTenureStatusCardProps = {
   plot: Plot;
@@ -49,6 +51,8 @@ export function PlotTenureStatusCard({
   onOpenDocuments,
   onReplaceLandPaper,
 }: PlotTenureStatusCardProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createPlotTenureStatusCardStyles);
   const { t } = useLanguage();
   const docCount = titlePhotoCount + tenureEvidenceCount;
   const tenureParseGate = evaluateTenureParseGate({
@@ -124,7 +128,7 @@ export function PlotTenureStatusCard({
           <Ionicons
             name={status.path === 'producer_in_possession' ? 'hand-left-outline' : 'document-text-outline'}
             size={18}
-            color="#0A7F59"
+            color={colors.link}
           />
           <ThemedText type="defaultSemiBold">{pathLabel}</ThemedText>
         </View>
@@ -157,14 +161,14 @@ export function PlotTenureStatusCard({
 
       {status.attestationsComplete ? (
         <View style={styles.linkedRow}>
-          <Ionicons name="checkmark-circle-outline" size={16} color="#0A7F59" />
+          <Ionicons name="checkmark-circle-outline" size={16} color={colors.link} />
           <ThemedText type="caption">{t('plot_tenure_attestations_linked')}</ThemedText>
         </View>
       ) : null}
 
       {!hasVerificationRows && docCount > 0 && isSyncedToServer ? (
         <View style={styles.aiRow}>
-          <Ionicons name="time-outline" size={16} color="#8A8A8A" />
+          <Ionicons name="time-outline" size={16} color={colors.iconMuted} />
           <ThemedText type="caption" style={styles.muted}>
             {t('plot_tenure_ai_pending')}
           </ThemedText>
@@ -191,63 +195,3 @@ export function PlotTenureStatusCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: { marginBottom: 12 },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-    gap: 10,
-  },
-  headerTitle: {
-    flex: 1,
-    flexShrink: 1,
-    minWidth: 0,
-  },
-  headerBadgeWrap: {
-    flexShrink: 0,
-    marginTop: 2,
-    maxWidth: '48%',
-  },
-  pathRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-    gap: 8,
-  },
-  noteBlock: {
-    marginTop: 4,
-    marginBottom: 8,
-    gap: 4,
-  },
-  countsRow: {
-    gap: 4,
-    marginBottom: 8,
-  },
-  muted: {
-    opacity: 0.75,
-  },
-  linkedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  aiRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  openDocsWrap: {
-    marginTop: 4,
-  },
-});

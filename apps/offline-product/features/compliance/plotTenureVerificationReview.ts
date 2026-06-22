@@ -421,7 +421,86 @@ const REUPLOAD_REASON_KEYS = new Set([
   'plot_tenure_doc_reason_unreadable',
   'plot_tenure_doc_reason_low_confidence',
   'plot_tenure_doc_reason_country_mismatch',
+  'plot_tenure_doc_reason_missing_clauses',
 ]);
+
+const CLAUSE_HINT_KEYS: Record<string, string> = {
+  witness_signatures: 'plot_tenure_doc_hint_missing_signature',
+  issuer_stamp: 'plot_tenure_doc_hint_missing_stamp',
+  community_stamp: 'plot_tenure_doc_hint_missing_stamp',
+  community_consent: 'plot_tenure_doc_hint_missing_consent',
+  holder_name: 'plot_tenure_doc_hint_missing_owner',
+  parcel_reference: 'plot_tenure_doc_hint_missing_parcel_id',
+  title_number: 'plot_tenure_doc_hint_missing_title_no',
+  not_a_land_document: 'plot_tenure_doc_hint_not_land_paper',
+  wrong_document_type: 'plot_tenure_doc_hint_not_land_paper',
+  not_land_document: 'plot_tenure_doc_hint_not_land_paper',
+};
+
+const REASON_HINT_KEYS: Record<string, string> = {
+  plot_tenure_doc_reason_country_mismatch: 'plot_tenure_doc_hint_country_mismatch',
+  plot_tenure_doc_reason_unreadable: 'plot_tenure_doc_hint_not_land_paper',
+  plot_tenure_doc_reason_failed: 'plot_tenure_doc_hint_hard_to_read',
+  plot_tenure_doc_reason_failed_detail: 'plot_tenure_doc_hint_hard_to_read',
+  plot_tenure_doc_reason_low_confidence: 'plot_tenure_doc_hint_hard_to_read',
+  plot_tenure_doc_reason_missing_clauses: 'plot_tenure_doc_hint_missing_parts',
+  plot_tenure_cadastral_mismatch: 'plot_tenure_doc_hint_land_id_mismatch',
+  plot_tenure_doc_reason_cadastral_issues: 'plot_tenure_doc_hint_land_id_mismatch',
+  plot_tenure_doc_reason_cadastral_review: 'plot_tenure_doc_hint_land_id_mismatch',
+  plot_tenure_doc_reason_check_delayed: 'plot_tenure_doc_hint_sync_pending',
+  plot_tenure_doc_reason_manual_queue: 'plot_tenure_doc_hint_queued',
+  plot_tenure_doc_reason_pending: 'plot_tenure_doc_hint_queued',
+  plot_tenure_manual_review_body: 'plot_tenure_doc_hint_needs_review',
+};
+
+function resolveTenureDocFarmerHintKey(record: PlotTenureVerificationRecord): string | null {
+  const detail = describeTenureVerificationReview(record);
+
+  if (detail.reasonKey === 'plot_tenure_doc_reason_missing_clauses') {
+    const raw = detail.reasonParams?.clauses;
+    const clauses =
+      typeof raw === 'string'
+        ? raw.split(',').map((clause) => clause.trim()).filter(Boolean)
+        : [];
+    for (const clause of clauses) {
+      const key = CLAUSE_HINT_KEYS[clause.toLowerCase()];
+      if (key) return key;
+    }
+    return 'plot_tenure_doc_hint_missing_parts';
+  }
+
+  if (detail.reasonKey === 'plot_tenure_doc_reason_cadastral_issues') {
+    const raw = detail.reasonParams?.issues;
+    const issues =
+      typeof raw === 'string'
+        ? raw.split(',').map((issue) => issue.trim()).filter(Boolean)
+        : [];
+    if (issues.includes('document_country_mismatch')) {
+      return 'plot_tenure_doc_hint_country_mismatch';
+    }
+  }
+
+  return REASON_HINT_KEYS[detail.reasonKey] ?? null;
+}
+
+export function formatTenureDocFarmerHint(
+  record: PlotTenureVerificationRecord,
+  t: (key: string) => string,
+): string {
+  const key = resolveTenureDocFarmerHintKey(record);
+  return key ? t(key) : '';
+}
+
+export type TenureDocFarmerOutcome = 'good' | 'checking' | 'fix_upload';
+
+/** Farmer-facing bucket — only three outcomes in the land-paper check UI. */
+export function classifyTenureDocFarmerOutcome(
+  record: PlotTenureVerificationRecord,
+): TenureDocFarmerOutcome {
+  if (record.parse_status === 'COMPLETED') return 'good';
+  if (tenureVerificationRequiresReupload(record)) return 'fix_upload';
+  return 'checking';
+}
 
 /** Farmer must replace or retake the file — not waiting on cooperative review. */
 export function tenureVerificationRequiresReupload(
@@ -444,7 +523,9 @@ export function summarizeTenureBlockedBadge(
   const blocked = records.filter(
     (row) => row.parse_status === 'FAILED' || row.parse_status === 'MANUAL_REQUIRED',
   );
-  if (blocked.some(tenureVerificationRequiresReupload)) return 'reupload';
+  if (blocked.some((row) => classifyTenureDocFarmerOutcome(row) === 'fix_upload')) {
+    return 'reupload';
+  }
   return 'review';
 }
 
@@ -454,23 +535,9 @@ export function resolvePlotLandBlockedShortHint(
   t: TranslateFn,
 ): string {
   if (!blocked) return t('plot_status_land_parse_blocked');
-  if (tenureVerificationRequiresReupload(blocked)) {
-    const detail = describeTenureVerificationReview(blocked, t);
-    if (detail.reasonKey === 'plot_tenure_doc_reason_unreadable') {
-      return t('plot_status_land_wrong_document_hint');
-    }
-    if (detail.reasonKey === 'plot_tenure_doc_reason_country_mismatch') {
-      return t('plot_status_land_country_mismatch_hint');
-    }
-    if (
-      detail.reasonKey === 'plot_tenure_doc_reason_check_delayed' ||
-      detail.reasonKey === 'plot_tenure_doc_reason_manual_queue'
-    ) {
-      return t('plot_status_land_check_delayed_hint');
-    }
-    return t('plot_status_land_reupload_hint');
-  }
-  return t('plot_status_land_review_hint');
+  const message = formatTenureVerificationReviewMessage(blocked, t);
+  if (message) return message;
+  return t('plot_status_land_parse_blocked');
 }
 
 /** True when the server saved the file but automated review is still pending or queued. */
@@ -486,151 +553,33 @@ export function isTenureVerificationAwaitingReview(
   );
 }
 
-const PILL_ONLY_REASON_KEYS = new Set([
-  'plot_tenure_doc_reason_pending',
-  'plot_tenure_doc_reason_ok',
-]);
-
 export function shouldShowTenureDocStatusBadge(record: PlotTenureVerificationRecord): boolean {
-  if (tenureVerificationRequiresReupload(record)) return false;
-  return true;
+  return classifyTenureDocFarmerOutcome(record) !== 'fix_upload';
 }
 
 export function shouldShowTenureDocReasonBox(
   record: PlotTenureVerificationRecord,
-  detail: TenureVerificationReviewDetail,
   reason: string,
   seenReasons: ReadonlySet<string>,
 ): boolean {
-  if (record.parse_status === 'COMPLETED') {
-    return Boolean(detail.reasonDetail);
-  }
-  if (PILL_ONLY_REASON_KEYS.has(detail.reasonKey)) return false;
+  const outcome = classifyTenureDocFarmerOutcome(record);
+  if (outcome === 'good' || !reason.trim()) return false;
   if (seenReasons.has(reason)) return false;
   return true;
 }
 
-const KNOWN_CLAUSE_KEYS = new Set([
-  'occupation_rights',
-  'community_consent',
-  'witness_signatures',
-  'community_stamp',
-  'issuer_stamp',
-  'automated_extraction_unavailable',
-]);
-
-const CADASTRAL_ISSUE_KEYS: Record<string, string> = {
-  cadastral_key_mismatch: 'plot_tenure_issue_cadastral_mismatch',
-  holder_name_mismatch: 'plot_tenure_issue_holder_mismatch',
-  informal_tenure_formal_document_conflict: 'plot_tenure_issue_tenure_conflict',
-  declared_cadastral_key_missing: 'plot_tenure_issue_cadastral_missing',
-  issuer_jurisdiction_mismatch: 'plot_tenure_issue_issuer_jurisdiction',
-};
-
-const DEV_FACING_TEXT =
-  /(?:^|[\s/])(?:ocr|parser|json|http|tenant\/|manual_required|confidence|parse_status|clauses?_)/i;
-
-function isDevFacingText(text: string): boolean {
-  const trimmed = text.trim();
-  if (!trimmed) return true;
-  if (DEV_FACING_TEXT.test(trimmed)) return true;
-  if (/^[a-z0-9_]+$/.test(trimmed) && trimmed.includes('_')) return true;
-  return false;
-}
-
-function humanizeClauseLabel(
-  clauseKey: string,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string | null {
-  const key = clauseKey.trim().toLowerCase();
-  if (!key || key === 'automated_extraction_unavailable') return null;
-  if (KNOWN_CLAUSE_KEYS.has(key)) {
-    const label = t(`plot_tenure_clause_${key}`);
-    if (label !== `plot_tenure_clause_${key}`) return label;
-  }
-  if (/^[a-z0-9_]+$/.test(key)) return null;
-  return isDevFacingText(key) ? null : key;
-}
-
-function humanizeMissingClauses(
-  clauses: string[],
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  const labels = clauses
-    .map((clause) => humanizeClauseLabel(clause, t))
-    .filter((label): label is string => Boolean(label))
-    .slice(0, 2);
-  if (labels.length === 0) return t('plot_tenure_doc_reason_missing_clauses_generic');
-  if (labels.length === 1) return t('plot_tenure_doc_reason_missing_one', { item: labels[0] });
-  return t('plot_tenure_doc_reason_missing_two', { item1: labels[0], item2: labels[1] });
-}
-
-function humanizeCadastralIssues(
-  issues: string[],
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  for (const issue of issues) {
-    const messageKey = CADASTRAL_ISSUE_KEYS[issue.trim().toLowerCase()];
-    if (messageKey) return t(messageKey);
-  }
-  return t('plot_tenure_doc_reason_cadastral_review');
-}
-
-function humanizeParseError(
-  detail: TenureVerificationReviewDetail,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  if (detail.reasonDetail) {
-    const kind = classifyTenureParseError(detail.reasonDetail);
-    if (kind === 'wrong_document') return t('plot_tenure_doc_reason_unreadable');
-    if (kind === 'service') return t('plot_tenure_doc_reason_check_delayed');
-  }
-  return t('plot_tenure_doc_reason_failed');
-}
-
-function humanizeReviewSummary(
-  summary: string,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  const trimmed = summary.trim();
-  if (!isDevFacingText(trimmed)) return trimmed;
-  return t('plot_tenure_manual_review_body');
-}
-
 export function formatTenureVerificationReviewMessage(
-  detail: TenureVerificationReviewDetail,
+  record: PlotTenureVerificationRecord,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
-  switch (detail.reasonKey) {
-    case 'plot_tenure_doc_reason_failed_detail':
-      return humanizeParseError(detail, t);
-    case 'plot_tenure_doc_reason_summary':
-      return detail.reasonDetail
-        ? humanizeReviewSummary(detail.reasonDetail, t)
-        : t('plot_tenure_manual_review_body');
-    case 'plot_tenure_doc_reason_missing_clauses': {
-      const raw = detail.reasonParams?.clauses;
-      const clauses =
-        typeof raw === 'string'
-          ? raw.split(',').map((part) => part.trim()).filter(Boolean)
-          : [];
-      return humanizeMissingClauses(clauses, t);
-    }
-    case 'plot_tenure_doc_reason_cadastral_issues': {
-      const raw = detail.reasonParams?.issues;
-      const issues =
-        typeof raw === 'string'
-          ? raw.split(',').map((part) => part.trim()).filter(Boolean)
-          : [];
-      return humanizeCadastralIssues(issues, t);
-    }
-    case 'plot_tenure_doc_reason_low_confidence':
-      return t('plot_tenure_doc_reason_unclear_photo');
-    case 'plot_tenure_doc_reason_check_delayed':
-      return t('plot_tenure_doc_reason_check_delayed');
-    case 'plot_tenure_doc_reason_manual_queue':
-      return t('plot_tenure_doc_reason_manual_queue');
-    default:
-      return t(detail.reasonKey, detail.reasonParams);
-  }
+  const outcome = classifyTenureDocFarmerOutcome(record);
+  if (outcome === 'good') return '';
+
+  const base =
+    outcome === 'checking'
+      ? t('plot_tenure_doc_outcome_checking')
+      : t('plot_tenure_doc_outcome_fix_upload');
+  const hint = formatTenureDocFarmerHint(record, t);
+  if (!hint) return base;
+  return `${base} ${hint}`;
 }

@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import type { TranslateFn } from '@/features/i18n/translate';
 import { scaleText } from '@/features/demo/storeUiScale';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createSecondPlotOverlapTipStyles } from '@/components/mapping/secondPlotOverlapTipStyles';
 
 type SecondPlotOverlapTipProps = {
   t: TranslateFn;
@@ -18,11 +20,13 @@ export function SecondPlotOverlapTip({
   nextPlotNumber,
   onDismiss,
 }: SecondPlotOverlapTipProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createSecondPlotOverlapTipStyles);
   return (
     <View style={styles.card} accessibilityRole="alert">
       <View style={styles.row}>
         <View style={styles.iconWrap}>
-          <Ionicons name="map-outline" size={22} color="#0A7F59" />
+          <Ionicons name="map-outline" size={22} color={colors.link} />
         </View>
         <View style={styles.copy}>
           <ThemedText type="defaultSemiBold" style={styles.title}>
@@ -51,60 +55,10 @@ export function SecondPlotOverlapTip({
           hitSlop={8}
           style={({ pressed }) => [styles.closeBtn, pressed && styles.pressed]}
         >
-          <Ionicons name="close" size={20} color="#6B7280" />
+          <Ionicons name="close" size={20} color={colors.textMuted} />
         </Pressable>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    marginTop: 12,
-    borderWidth: 1,
-    borderColor: '#AEE6D3',
-    backgroundColor: '#E8F7F0',
-    borderRadius: 16,
-    padding: 14,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  iconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  copy: {
-    flex: 1,
-    gap: 6,
-  },
-  title: {
-    color: '#0B4F3B',
-    fontSize: scaleText(15),
-  },
-  body: {
-    color: '#1F6B57',
-    lineHeight: scaleText(20),
-  },
-  dismissBtn: {
-    alignSelf: 'flex-start',
-    marginTop: 2,
-    paddingVertical: 4,
-  },
-  dismissText: {
-    color: '#0A7F59',
-    fontSize: scaleText(14),
-  },
-  closeBtn: {
-    padding: 2,
-  },
-  pressed: {
-    opacity: 0.72,
-  },
-});

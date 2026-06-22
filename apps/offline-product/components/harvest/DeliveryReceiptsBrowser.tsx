@@ -20,6 +20,8 @@ import {
 } from '@/features/harvest/localDeliveryReceipts';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
 import type { TranslateFn } from '@/features/i18n/translate';
+import { createDeliveryReceiptsBrowserStyles } from '@/components/harvest/harvestPanelStyles';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
 
 type ReceiptsScreen = { kind: 'plots' } | { kind: 'plot'; plotId: string };
 
@@ -46,6 +48,7 @@ export function DeliveryReceiptsBrowser({
   pendingReceipts = [],
   deviceReceipts = [],
 }: DeliveryReceiptsBrowserProps) {
+  const styles = useThemedStyles(createDeliveryReceiptsBrowserStyles);
   const receipts = useMemo(() => {
     const synced = normalizeDeliveryReceipts({ vouchers, mergedPlots, t });
     return dedupeDeliveryReceipts(
@@ -177,6 +180,7 @@ function ReceiptRow({
   t: TranslateFn;
   onPress: () => void;
 }) {
+  const styles = useThemedStyles(createDeliveryReceiptsBrowserStyles);
   return (
     <Pressable accessibilityRole="button" onPress={onPress}>
       <Card variant="outlined" style={styles.receiptRow}>
@@ -200,38 +204,3 @@ function ReceiptRow({
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: 8 },
-  card: { padding: 14 },
-  list: { gap: 10 },
-  plotHeading: { color: '#1F2937', fontSize: 18 },
-  plotSubheading: { color: '#6B7280', marginBottom: 4 },
-  plotCard: { padding: 14, borderRadius: 16 },
-  plotCardRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  plotIconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#E8F7F0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  plotCardBody: { flex: 1, minWidth: 0 },
-  plotCardMeta: { color: '#6B7280', marginTop: 2 },
-  receiptRow: { padding: 14, borderRadius: 14, gap: 6 },
-  receiptRowTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  receiptKg: { color: '#0A7F59' },
-  receiptDate: { color: '#6B7280' },
-  receiptBuyer: { color: '#374151' },
-  receiptPending: { color: '#B45309', marginTop: 2 },
-});

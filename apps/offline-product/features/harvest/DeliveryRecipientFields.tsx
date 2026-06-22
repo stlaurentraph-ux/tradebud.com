@@ -11,6 +11,8 @@ import {
   type ConsentGrant,
 } from '@/features/api/consentGrants';
 import type { TranslateFn } from '@/features/i18n/translate';
+import { useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createDeliveryRecipientFieldsStyles } from '@/features/harvest/deliveryRecipientFieldsStyles';
 
 export type DeliveryRecipientSelection =
   | { mode: 'buyer'; tenantId: string; label: string; email?: string | null }
@@ -24,6 +26,7 @@ export interface DeliveryRecipientFieldsProps {
 }
 
 export function DeliveryRecipientFields({ t, value, onChange }: DeliveryRecipientFieldsProps) {
+  const styles = useThemedStyles(createDeliveryRecipientFieldsStyles);
   const [grants, setGrants] = useState<ConsentGrant[]>([]);
   const [loading, setLoading] = useState(true);
   const [emailInput, setEmailInput] = useState(
@@ -172,24 +175,3 @@ export function isDeliveryRecipientComplete(selection: DeliveryRecipientSelectio
   return true;
 }
 
-const styles = StyleSheet.create({
-  wrap: { gap: 10 },
-  gapSm: { gap: 6 },
-  sectionLabel: { color: '#374151', fontWeight: '600' },
-  hint: { color: '#6B7280' },
-  optionHint: { color: '#6B7280', marginTop: 2 },
-  optionCard: { padding: 10, borderRadius: 12 },
-  noBuyersCard: { padding: 12, borderRadius: 12, gap: 4 },
-  optionCardSelected: { borderColor: '#0A7F59', backgroundColor: '#F0FAF5' },
-  optionRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  emailInput: {
-    borderWidth: 1,
-    borderColor: '#D8D8D8',
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: '#FFFFFF',
-  },
-  emailInputActive: { borderColor: '#0A7F59' },
-});

@@ -4,6 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Card } from '@/components/ui/card';
 import { ThemedText } from '@/components/themed-text';
 import { useLanguage } from '@/features/state/LanguageContext';
+import type { AppColors } from '@/features/theme/useThemedStyles';
+import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+import { createPlotComplianceStatusCardsStyles } from '@/components/compliance/plotComplianceStatusCardsStyles';
 import {
   deforestationBodyKey,
   deforestationTitleKey,
@@ -20,36 +23,36 @@ type PlotComplianceStatusCardsProps = {
   indigenousOverlap: boolean;
 };
 
-function deforestationIcon(state: DeforestationUiState): {
+function deforestationIcon(c: AppColors, state: DeforestationUiState): {
   name: keyof typeof Ionicons.glyphMap;
   color: string;
   bg: string;
 } {
   switch (state) {
     case 'passed':
-      return { name: 'leaf-outline', color: '#0A7F59', bg: '#E8F8F1' };
+      return { name: 'leaf-outline', color: c.link, bg: c.surfaceAccent };
     case 'under_review':
     case 'at_risk':
-      return { name: 'alert-circle-outline', color: '#B45309', bg: '#FFFBEB' };
+      return { name: 'alert-circle-outline', color: c.textWarningStrong, bg: c.surfaceWarning };
     case 'alert':
-      return { name: 'warning-outline', color: '#C53030', bg: '#FEE2E2' };
+      return { name: 'warning-outline', color: c.error, bg: c.surfaceWarning };
     default:
-      return { name: 'time-outline', color: '#6B7280', bg: '#F3F4F6' };
+      return { name: 'time-outline', color: c.textMuted, bg: c.backgroundSecondary };
   }
 }
 
-function protectedAreasIcon(clear: boolean, synced: boolean): {
+function protectedAreasIcon(c: AppColors, clear: boolean, synced: boolean): {
   name: keyof typeof Ionicons.glyphMap;
   color: string;
   bg: string;
 } {
   if (!synced) {
-    return { name: 'cloud-upload-outline', color: '#6B7280', bg: '#F3F4F6' };
+    return { name: 'cloud-upload-outline', color: c.textMuted, bg: c.backgroundSecondary };
   }
   if (clear) {
-    return { name: 'shield-checkmark-outline', color: '#0A7F59', bg: '#E8F8F1' };
+    return { name: 'shield-checkmark-outline', color: c.link, bg: c.surfaceAccent };
   }
-  return { name: 'shield-outline', color: '#B45309', bg: '#FFFBEB' };
+  return { name: 'shield-outline', color: c.textWarningStrong, bg: c.surfaceWarning };
 }
 
 export function PlotComplianceStatusCards({
@@ -59,6 +62,8 @@ export function PlotComplianceStatusCards({
   sinaphOverlap,
   indigenousOverlap,
 }: PlotComplianceStatusCardsProps) {
+  const colors = useAppColors();
+  const styles = useThemedStyles(createPlotComplianceStatusCardsStyles);
   const { t } = useLanguage();
   const synced = Boolean(backendPlotId);
 
@@ -66,11 +71,11 @@ export function PlotComplianceStatusCards({
     ? deforestationUiStateFromBackendStatus(backendStatus)
     : 'pending';
 
-  const deforestationIconStyle = deforestationIcon(deforestationState);
+  const deforestationIconStyle = deforestationIcon(colors, deforestationState);
   const screening = synced ? parseDeforestationScreening(deforestationScreening) : null;
 
   const protectedClear = !sinaphOverlap && !indigenousOverlap;
-  const protectedIconStyle = protectedAreasIcon(protectedClear, synced);
+  const protectedIconStyle = protectedAreasIcon(colors, protectedClear, synced);
 
   const deforestationTitle = t(deforestationTitleKey(deforestationState));
   const deforestationBody = synced
@@ -140,35 +145,3 @@ export function PlotComplianceStatusCards({
   );
 }
 
-const styles = StyleSheet.create({
-  stack: {
-    gap: 10,
-  },
-  card: {
-    borderRadius: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  iconWrap: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  body: {
-    flex: 1,
-    gap: 4,
-  },
-  bodyText: {
-    color: '#374151',
-    lineHeight: 22,
-  },
-  meta: {
-    color: '#6B7280',
-    marginTop: 2,
-  },
-});
