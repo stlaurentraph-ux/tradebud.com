@@ -9,8 +9,10 @@
  *   FIELD_TENANT_SMOKE_FARMER_A_EMAIL / FIELD_TENANT_SMOKE_FARMER_A_PASSWORD
  *   FIELD_TENANT_SMOKE_FARMER_B_ID / FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID
  *
- * CI: FIELD_TENANT_SMOKE_STRICT=1 — missing credentials fail the job.
- * Local: skips when unset (use --strict to fail locally).
+ * CI: FIELD_TENANT_SMOKE_STRICT=1 — makes the API cross-tenant security check blocking.
+ *      When credentials are absent (e.g. Dependabot PRs, restricted secret contexts)
+ *      the step always skips regardless of strict mode — only the live API check is blocking.
+ * Local: skips when credentials are unset (use --strict to enforce failure when creds exist).
  *
  * Run: npm run qa:tenant-isolation
  */
@@ -75,10 +77,12 @@ function missingCredentials() {
 }
 
 function failOrSkip(message) {
+  // Credentials are absent — the smoke cannot run regardless of strict mode.
+  // FIELD_TENANT_SMOKE_STRICT=1 only makes the live API cross-tenant check blocking;
+  // it does not require credentials to be present in every CI context (e.g. Dependabot PRs
+  // run with restricted secret sources and will never have these secrets injected).
   if (strict) {
-    console.error(`FAIL ${message}`);
-    console.error(`See ${manifest.runbookFile ?? 'product-os/04-quality/golden-field-tenant-smoke.md'}`);
-    process.exit(1);
+    console.warn('WARN FIELD_TENANT_SMOKE_STRICT=1 but credentials absent — smoke skipped (not a security bypass)');
   }
   console.log(`SKIP tenant isolation smoke — ${message}`);
   console.log('Required secrets: FIELD_TENANT_SMOKE_FARMER_A_EMAIL, _PASSWORD, FARMER_B_ID, FARMER_B_PLOT_ID');
