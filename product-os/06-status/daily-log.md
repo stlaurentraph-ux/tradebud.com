@@ -1,3 +1,10 @@
+### 2026-06-22 (weekly health — automation 3.3)
+
+- **Release health** — GO — [run 27923243984](https://github.com/stlaurentraph-ux/tradebud.com/actions/runs/27923243984) (2026-06-22T00:59 UTC) — signals: `ci_main` [pass] 4 required CI jobs green on run 27922769988; `marketing_post_deploy_smoke` [pass]; `uptime_probes` [pass]; `sentry_clean_window` [pass] 0 unresolved issues in 15 min window
+- **Main CI** — [run 27930903934](https://github.com/stlaurentraph-ux/tradebud.com/actions/runs/27930903934) (2026-06-22T05:07 UTC) — **FAILING** — Field auth ✓ pass; Marketing ✓ pass — failing jobs: workspace-root Next app lint (lint error), Contracts/OpenAPI (migration mirror drift guard), Backend build+lint+tests (integration test drift + PostGIS search_path), Dashboard (TypeScript error + lint warnings)
+- **Regressions** — Sentry: unavailable (no MCP configured in this run) — Open fix-lane PRs: 2 labelled `lane:fix` ([#226](https://github.com/stlaurentraph-ux/tradebud.com/pull/226) Fix main CI: integration test drift + migration mirror + PostGIS search_path; [#201](https://github.com/stlaurentraph-ux/tradebud.com/pull/201) marketing stealth middleware 404) + ~26 draft `[fix]` PRs addressing CI regressions from Dependabot bumps
+- **Next ops** — merge PR #226 to restore main CI green (workspace-root lint + migration mirror drift + backend PostGIS search_path)
+
 ### 2026-06-22 (offline — My Plots delivery recap counts)
 
 - **Root cause** — Per-plot counts only matched exact `receipt.plotId` values. Device rows preferred stale `serverPlotId`, and farmer rekey left receipts under old local plot id suffixes that no longer matched current plot cards.
