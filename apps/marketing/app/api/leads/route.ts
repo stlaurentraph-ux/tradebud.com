@@ -21,7 +21,7 @@ const leadSchema = z.object({
   phone: z.string().optional().nullable(),
   country: z.string().optional().nullable(),
   message: z.string().optional().nullable(),
-  payload: z.record(z.unknown()),
+  payload: z.record(z.string(), z.unknown()),
 });
 
 function asString(value: unknown): string | null {
