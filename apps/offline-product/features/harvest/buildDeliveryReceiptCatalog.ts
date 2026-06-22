@@ -26,6 +26,7 @@ import {
   filterDismissedDeliveryReceipts,
   loadDismissedDeliveryReceiptIds,
 } from '@/features/harvest/dismissedDeliveryReceipts';
+import type { TranslateFn } from '@/features/i18n/translate';
 
 export type DeliveryReceiptCatalog = {
   receipts: DeliveryReceiptRecord[];

@@ -713,7 +713,7 @@ export async function clearPlotServerLink(localPlotId: string): Promise<void> {
 }
 
 export async function persistPlotServerLinks(links: Record<string, string>): Promise<void> {
-  const existing = await loadPlotServerLinks().catch(() => ({}));
+  const existing = await loadPlotServerLinks().catch((): Record<string, string> => ({}));
   for (const localPlotId of Object.keys(existing)) {
     if (!(localPlotId in links)) {
       await clearPlotServerLink(localPlotId).catch(() => undefined);
@@ -1094,7 +1094,7 @@ export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<voi
 
 export async function deletePlotLocalData(plotId: string): Promise<void> {
   const db = await getDb();
-  const links = await loadPlotServerLinks().catch(() => ({}));
+  const links = await loadPlotServerLinks().catch((): Record<string, string> => ({}));
   const serverPlotId = links[plotId]?.trim();
   if (serverPlotId) {
     await db.runAsync(

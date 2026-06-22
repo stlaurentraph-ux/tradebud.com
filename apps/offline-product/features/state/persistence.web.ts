@@ -471,7 +471,7 @@ export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<voi
 }
 
 export async function deletePlotLocalData(plotId: string): Promise<void> {
-  const links = await loadPlotServerLinks().catch(() => ({}));
+  const links = await loadPlotServerLinks().catch((): Record<string, string> => ({}));
   const serverPlotId = links[plotId]?.trim();
   memLocalDeliveryReceipts = memLocalDeliveryReceipts.filter((row) => {
     if (row.localPlotId === plotId) return false;

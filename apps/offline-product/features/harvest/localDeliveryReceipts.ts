@@ -10,8 +10,13 @@ import {
   findBackendPlotForLocal,
   plotClientIdsShareCreationSuffix,
   type BackendPlotRow,
+  type LocalPlotForBackendMatch,
 } from '@/features/plots/backendPlotMatch';
 import { resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
+
+function plotForBackendMatch(plot: { id: string }): LocalPlotForBackendMatch {
+  return { id: plot.id, areaHectares: 0, kind: 'polygon' };
+}
 
 export type LocalDeliveryReceipt = {
   id: string;
@@ -59,11 +64,11 @@ function resolveServerPlotIdForReceiptPlot(
   backendPlots: readonly unknown[],
   plotServerLinks: PlotServerLinks,
 ): string | null {
-  const backend = findBackendPlotForLocal(plot as { id: string }, backendPlots) as
+  const backend = findBackendPlotForLocal(plotForBackendMatch(plot), [...backendPlots]) as
     | { id?: unknown }
     | null;
   return (
-    resolveServerPlotIdForLocal(plot as { id: string }, backendPlots, plotServerLinks) ??
+    resolveServerPlotIdForLocal(plotForBackendMatch(plot), [...backendPlots], plotServerLinks) ??
     (backend?.id != null ? String(backend.id) : null)
   );
 }
@@ -146,11 +151,15 @@ export function buildAllPlotReceiptFilterIds(params: {
 }): Set<string> {
   const ids = new Set<string>();
   for (const plot of params.plots) {
-    const backend = findBackendPlotForLocal(plot as { id: string }, params.backendPlots) as
+    const backend = findBackendPlotForLocal(plotForBackendMatch(plot), [...params.backendPlots]) as
       | { id?: unknown }
       | null;
     const serverPlotId =
-      resolveServerPlotIdForLocal(plot as { id: string }, params.backendPlots, params.plotServerLinks) ??
+      resolveServerPlotIdForLocal(
+        plotForBackendMatch(plot),
+        [...params.backendPlots],
+        params.plotServerLinks,
+      ) ??
       (backend?.id != null ? String(backend.id) : null);
     for (const id of resolvePlotReceiptFilterIds({
       localPlotId: plot.id,
