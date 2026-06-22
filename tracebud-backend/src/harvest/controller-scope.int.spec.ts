@@ -548,7 +548,6 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
       plotA,
       expect.objectContaining({ clientEventId: 'evt-2' }),
       userA,
-      'tenant_1',
     );
     expect(evidenceSpy).toHaveBeenCalledWith(
       plotA,
