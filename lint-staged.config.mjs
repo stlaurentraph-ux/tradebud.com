@@ -1,5 +1,5 @@
 /** @type {import('lint-staged').Configuration} */
-export default {
+const lintStagedConfig = {
   "apps/dashboard-product/**/*.{js,jsx,ts,tsx,mjs}":
     "eslint --config packages/eslint-config/nextjs.mjs --max-warnings 0",
   "apps/marketing/**/*.{js,jsx,ts,tsx,mjs}":
@@ -14,3 +14,4 @@ export default {
   },
   "scripts/**/*.{js,mjs}": "eslint --max-warnings 0",
 };
+export default lintStagedConfig;
