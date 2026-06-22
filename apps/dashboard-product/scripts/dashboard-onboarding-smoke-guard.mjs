@@ -102,6 +102,9 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('run-dashboard-onboarding-smoke.mjs')) {
     throw new Error(`${manifest.workflowFile} must run dashboard onboarding smoke script`);
   }
+  if (!workflow.includes('smoke-bearer-ci-preflight.mjs')) {
+    throw new Error(`${manifest.workflowFile} must mint smoke bearer before deploy smoke`);
+  }
   if (!workflow.includes('deployment_status')) {
     throw new Error(`${manifest.workflowFile} must trigger on Vercel deployment_status`);
   }

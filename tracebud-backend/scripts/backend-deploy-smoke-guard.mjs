@@ -81,6 +81,9 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('run-backend-deploy-smoke.mjs')) {
     throw new Error(`${manifest.workflowFile} must run backend deploy smoke script`);
   }
+  if (!workflow.includes('smoke-bearer-ci-preflight.mjs')) {
+    throw new Error(`${manifest.workflowFile} must mint smoke bearer before deploy smoke`);
+  }
   if (!workflow.includes('repository_dispatch')) {
     throw new Error(`${manifest.workflowFile} must accept repository_dispatch for Railway webhook`);
   }

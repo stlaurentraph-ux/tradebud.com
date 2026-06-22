@@ -70,21 +70,24 @@ Add in **Settings → Secrets and variables → Actions** (values never committe
 
 | Secret | Value guidance |
 |--------|----------------|
-| `DASHBOARD_BASE_URL` | Staging dashboard origin (no trailing slash) |
-| `TRACEBUD_SMOKE_BEARER_TOKEN` | Supabase JWT for `tenant_rwanda_001` with `compliance_manager` (onboarding smoke) or exporter (bootstrap) |
+| `DASHBOARD_BASE_URL` | Production dashboard origin (`https://dashboard.tracebud.com`, no trailing slash) |
+| `SUPABASE_URL` | Product Supabase project URL — **CI mints fresh smoke JWT each deploy smoke run** |
+| `SUPABASE_ANON_KEY` | Supabase anon key (verify step during mint) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role (**sensitive**) — admin mint only; restrict repo access |
+| `TRACEBUD_SMOKE_BEARER_TOKEN` | Optional legacy fallback — prefer Supabase mint secrets above |
 | `TRACEBUD_SMOKE_TENANT_ID` | Optional — set to `tenant_rwanda_001` for Playwright assertions |
 | `TRACEBUD_SMOKE_ROLE` | Optional — default `compliance_manager` |
 | `TRACEBUD_SMOKE_STEP_KEY` | Optional — default `create_first_campaign` |
 
-After secrets are set, move slice **2.5** from Blocked → Ready in `agent-queue.md`.
+**CI smoke auth:** `dashboard-deploy-smoke.yml` and `backend-deploy-smoke.yml` run `smoke-bearer-ci-preflight.mjs --github-env` to mint a fresh bearer — no hourly rotation.
 
-**Token rotation:** Supabase session JWTs expire (~1 hour). Re-mint and push to GitHub:
+**Local smoke:**
 
 ```bash
-npm run smoke:token:mint -w tracebud-backend -- --set-github-secret
+export TRACEBUD_SMOKE_BEARER_TOKEN="$(npm run smoke:token:mint -s -w tracebud-backend -- --stdout)"
+export DASHBOARD_BASE_URL="https://dashboard.tracebud.com"
+node apps/dashboard-product/scripts/launch-onboarding-proxy-smoke.mjs
 ```
-
-Manual alternative: Supabase Admin (`generate_link` + `verify`) then `gh secret set TRACEBUD_SMOKE_BEARER_TOKEN`.
 
 ---
 

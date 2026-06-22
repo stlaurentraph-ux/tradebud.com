@@ -10,6 +10,9 @@
 
 
 
+### 2026-06-21 (automation — smoke bearer CI mint, option 1)
+- **Deploy smokes** — mint fresh `TRACEBUD_SMOKE_BEARER_TOKEN` per workflow run via Supabase admin secrets (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`); legacy static bearer optional fallback.
+
 ### 2026-06-21 (automation — 3.2 Cursor Automation live)
 - **Sentry staging → fix regression** — Automations editor: Sentry Issue created; staging-only scope gate; Sentry MCP + fix-regression lane (Sonnet).
 - **Bundle D** — closed loops 3.1 + 3.2 both live.

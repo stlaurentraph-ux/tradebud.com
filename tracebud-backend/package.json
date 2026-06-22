@@ -40,6 +40,7 @@
     "deploy:smoke": "node scripts/run-backend-deploy-smoke.mjs",
     "deploy:smoke:assert": "node scripts/backend-deploy-smoke-guard.mjs",
     "smoke:token:mint": "node scripts/mint-smoke-bearer-token.mjs",
+    "smoke:bearer:ci-preflight": "node scripts/smoke-bearer-ci-preflight.mjs",
     "check:gfw": "node scripts/check-gfw-connectivity.mjs",
     "check:fdp": "node scripts/check-fdp-connectivity.mjs",
     "check:push": "node scripts/check-expo-push-readiness.mjs",
