@@ -129,6 +129,7 @@ export interface PlotAssignmentExportAuditEvent {
 export class PlotsService {
   private geometryCaptureColumnAvailable: boolean | null = null;
   private clientPlotIdColumnAvailable: boolean | null = null;
+  private geometryColumnAvailable: boolean | null = null;
 
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
@@ -176,6 +177,24 @@ export class PlotsService {
     );
     this.clientPlotIdColumnAvailable = (res.rowCount ?? 0) > 0;
     return this.clientPlotIdColumnAvailable;
+  }
+
+  private async plotHasGeometryColumn(): Promise<boolean> {
+    if (this.geometryColumnAvailable !== null) {
+      return this.geometryColumnAvailable;
+    }
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'plot'
+          AND column_name = 'geometry'
+        LIMIT 1
+      `,
+    );
+    this.geometryColumnAvailable = (res.rowCount ?? 0) > 0;
+    return this.geometryColumnAvailable;
   }
 
   private async findExistingPlotByClientPlotId(
@@ -2090,6 +2109,7 @@ export class PlotsService {
 
   async listByFarmer(farmerId: string) {
     const hasClientPlotId = await this.plotHasClientPlotIdColumn();
+    const hasGeometry = await this.plotHasGeometryColumn();
     const result = await this.pool.query(
       `
         SELECT
@@ -2106,8 +2126,8 @@ export class PlotsService {
           production_system,
           deforestation_screening,
           status,
-          created_at,
-          ST_AsGeoJSON(geometry) AS geometry_geojson
+          created_at
+          ${hasGeometry ? ',ST_AsGeoJSON(geometry) AS geometry_geojson' : ''}
         FROM plot
         WHERE farmer_id = $1
         ORDER BY created_at DESC
