@@ -99,6 +99,7 @@ describeIfDb('Consent sold-lineage revocation integration', () => {
         plot_id UUID NOT NULL,
         kg NUMERIC NOT NULL DEFAULT 100,
         harvest_date DATE NULL,
+        created_by UUID NULL,
         client_event_id TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
