@@ -1151,7 +1151,9 @@ jobs:
 
       - name: Field tenant isolation smoke (blocking)
         env:
-          FIELD_TENANT_SMOKE_STRICT: "1"
+          # Secrets are unavailable on Dependabot PRs; skip gracefully instead of failing.
+          # On human PRs and main pushes where SUPABASE_URL is injected, strict=1 stays blocking.
+          FIELD_TENANT_SMOKE_STRICT: ${{ secrets.SUPABASE_URL != '' && '1' || '' }}
           FIELD_TENANT_SMOKE_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

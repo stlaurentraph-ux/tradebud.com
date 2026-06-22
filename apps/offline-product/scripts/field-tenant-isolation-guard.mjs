@@ -93,11 +93,17 @@ function assertCiWiring(manifest) {
   if (!ci.includes('qa:tenant-isolation')) {
     throw new Error('ci.yml app job must run qa:tenant-isolation smoke');
   }
-  if (
-    !ci.includes(`${manifest.ciEnv.strictFlag}: 1`) &&
-    !ci.includes(`${manifest.ciEnv.strictFlag}: '1'`) &&
-    !ci.includes(`${manifest.ciEnv.strictFlag}: "1"`)
-  ) {
+  // Accept hardcoded "1" OR a secret-conditional expression that resolves to "1" when
+  // repository secrets are available. The conditional form allows Dependabot PRs to skip
+  // gracefully (no repo secrets injected) while keeping the step blocking on human PRs.
+  const hasHardcodedStrict =
+    ci.includes(`${manifest.ciEnv.strictFlag}: 1`) ||
+    ci.includes(`${manifest.ciEnv.strictFlag}: '1'`) ||
+    ci.includes(`${manifest.ciEnv.strictFlag}: "1"`);
+  const hasConditionalStrict =
+    ci.includes(`${manifest.ciEnv.strictFlag}: \${{`) &&
+    ci.includes(`secrets.SUPABASE_URL != '' && '1'`);
+  if (!hasHardcodedStrict && !hasConditionalStrict) {
     throw new Error(`ci.yml must set ${manifest.ciEnv.strictFlag}=1 on tenant isolation step`);
   }
   if (ci.includes('Tenant isolation smoke (optional)')) {
