@@ -52,9 +52,15 @@ function loadManifest() {
 }
 
 const manifest = loadManifest();
+// Dependabot cannot access repository secrets by GitHub design. Strict mode is
+// downgraded to skip when running as dependabot[bot] with missing credentials so
+// library-version bumps are not blocked by a smoke test that requires live credentials
+// unrelated to the change.
+const isDependabotRun = process.env.GITHUB_ACTOR === 'dependabot[bot]';
 const strict =
-  process.argv.includes('--strict') ||
-  process.env[manifest.ciEnv?.strictFlag ?? 'FIELD_TENANT_SMOKE_STRICT'] === '1';
+  !isDependabotRun &&
+  (process.argv.includes('--strict') ||
+    process.env[manifest.ciEnv?.strictFlag ?? 'FIELD_TENANT_SMOKE_STRICT'] === '1');
 
 const API_URL = (
   process.env.FIELD_TENANT_SMOKE_API_URL?.trim() ||
