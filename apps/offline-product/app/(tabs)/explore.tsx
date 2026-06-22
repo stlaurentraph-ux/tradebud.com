@@ -11,12 +11,10 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
-import { fetchVouchersForFarmer } from '@/features/api/postPlot';
-import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
-import { countVouchersForPlot } from '@/features/harvest/voucherPlotCounts';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { buildDeliveryReceiptCatalog } from '@/features/harvest/buildDeliveryReceiptCatalog';
+import { countDeliveryReceiptsForPlots } from '@/features/harvest/localDeliveryReceipts';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
@@ -66,6 +64,7 @@ export default function PlotsScreen() {
 
   const [backendPlots, setBackendPlots] = useState<any[]>([]);
   const [vouchers, setVouchers] = useState<any[]>([]);
+  const [deliveryCountByPlotId, setDeliveryCountByPlotId] = useState<Record<string, number>>({});
   const [photoCountByPlotId, setPhotoCountByPlotId] = useState<Record<string, number>>({});
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});
   const [selectedPlotId, setSelectedPlotId] = useState<string | undefined>(plots[0]?.id);
@@ -73,41 +72,44 @@ export default function PlotsScreen() {
   const [pickerIntent, setPickerIntent] = useState<PlotPickerIntent | null>(null);
   const clearingFocusRef = useRef(false);
 
-  const refreshVouchers = useCallback(() => {
-    if (!farmer?.id) {
-      setVouchers([]);
-      return Promise.resolve();
-    }
-    return fetchVouchersForFarmer(farmer.id)
-      .then((rows) => setVouchers(rows ?? []))
-      .catch(() => setVouchers([]));
-  }, [farmer?.id]);
-
-  const refreshFromBackend = useCallback(
+  const refreshPlotDeliveryData = useCallback(
     (force = false) => {
-      if (!farmer?.id) return Promise.resolve();
-      return fetchServerPlotListForUi({
-        profileFarmerId: farmer.id,
+      if (!farmer?.id) {
+        setBackendPlots([]);
+        setVouchers([]);
+        setDeliveryCountByPlotId({});
+        return Promise.resolve();
+      }
+      return buildDeliveryReceiptCatalog({
+        farmerId: farmer.id,
         localPlots: plots,
-        force,
+        t,
+        forcePlotFetch: force,
       })
-        .then((rows) => setBackendPlots(rows ?? []))
-        .catch(() => setBackendPlots([]));
+        .then((catalog) => {
+          setBackendPlots(catalog.backendPlots);
+          setVouchers(catalog.vouchers);
+          setDeliveryCountByPlotId(
+            countDeliveryReceiptsForPlots({
+              plots,
+              receipts: catalog.receipts,
+              backendPlots: catalog.backendPlots,
+              plotServerLinks: catalog.plotServerLinks,
+            }),
+          );
+        })
+        .catch(() => {
+          setBackendPlots([]);
+          setVouchers([]);
+          setDeliveryCountByPlotId({});
+        });
     },
-    [farmer?.id, plots],
+    [farmer?.id, plots, t],
   );
 
-  const harvestCountForPlot = useCallback(
-    (plot: Plot) => {
-      const backend = findBackendPlotForLocal(plot, backendPlots) as { id?: unknown } | null;
-      const backendId = backend?.id != null ? String(backend.id) : null;
-      return countVouchersForPlot({
-        vouchers,
-        backendPlotId: backendId,
-        localPlotId: plot.id,
-      });
-    },
-    [vouchers, backendPlots],
+  const deliveryCountForPlot = useCallback(
+    (plot: Plot) => deliveryCountByPlotId[plot.id] ?? 0,
+    [deliveryCountByPlotId],
   );
 
   // Capture Home deep-link intent once, then drop sticky ?focus= from the tab URL.
@@ -135,12 +137,12 @@ export default function PlotsScreen() {
   // Home → receipts with multiple plots: skip list when only one plot has deliveries.
   useEffect(() => {
     if (pickerIntent !== 'receipts' || plots.length === 0) return;
-    const withVouchers = plots.filter((plot) => harvestCountForPlot(plot) > 0);
+    const withVouchers = plots.filter((plot) => deliveryCountForPlot(plot) > 0);
     if (withVouchers.length !== 1) return;
     const targetId = withVouchers[0]!.id;
     setPickerIntent(null);
     router.replace(`/plot/${encodeURIComponent(targetId)}?sub=deliveries`);
-  }, [pickerIntent, plots, vouchers, backendPlots, harvestCountForPlot]);
+  }, [pickerIntent, plots, deliveryCountForPlot]);
 
   const openPlotDetail = useCallback(
     (plotId: string) => {
@@ -162,17 +164,15 @@ export default function PlotsScreen() {
       setVouchers([]);
       return;
     }
-    void refreshFromBackend(false);
-    void refreshVouchers();
-  }, [farmer?.id, refreshFromBackend, refreshVouchers]);
+    void refreshPlotDeliveryData(false);
+  }, [farmer?.id, refreshPlotDeliveryData]);
 
   useFocusEffect(
     useCallback(() => {
       if (farmer?.id) {
-        void refreshFromBackend(false);
-        void refreshVouchers();
+        void refreshPlotDeliveryData(false);
       }
-    }, [farmer?.id, refreshFromBackend, refreshVouchers]),
+    }, [farmer?.id, refreshPlotDeliveryData]),
   );
 
   const refreshPlotChecklists = useCallback(async () => {
@@ -257,7 +257,7 @@ export default function PlotsScreen() {
               : t('finish_setup_chip');
           const badgeVariant = needsBoundaryFix ? 'error' : isComplete ? 'success' : 'warning';
           const photosCount = photoCountByPlotId[plot.id] ?? 0;
-          const harvestCount = harvestCountForPlot(plot);
+          const harvestCount = deliveryCountForPlot(plot);
           return (
             <Pressable
               key={plot.id}

@@ -5,7 +5,8 @@ import type {
 import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
 import type { TranslateFn } from '@/features/i18n/translate';
 import { formatDeliveryRecipientLabel } from '@/features/harvest/formatDeliveryRecipientLabel';
-import type { PlotServerLinks } from '@/features/plots/plotServerLink';
+import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
 
 export type LocalDeliveryReceipt = {
   id: string;
@@ -46,6 +47,58 @@ export function receiptMatchesPlotFilter(
 ): boolean {
   if (filterIds.size === 0) return true;
   return filterIds.has(String(receipt.plotId));
+}
+
+/** All local/server plot ids used to match receipts for a farmer's plot list. */
+export function buildAllPlotReceiptFilterIds(params: {
+  plots: ReadonlyArray<{ id: string }>;
+  backendPlots: readonly unknown[];
+  plotServerLinks: PlotServerLinks;
+}): Set<string> {
+  const ids = new Set<string>();
+  for (const plot of params.plots) {
+    const backend = findBackendPlotForLocal(plot as { id: string }, params.backendPlots) as
+      | { id?: unknown }
+      | null;
+    const serverPlotId =
+      resolveServerPlotIdForLocal(plot as { id: string }, params.backendPlots, params.plotServerLinks) ??
+      (backend?.id != null ? String(backend.id) : null);
+    for (const id of resolvePlotReceiptFilterIds({
+      localPlotId: plot.id,
+      serverPlotId,
+      plotServerLinks: params.plotServerLinks,
+    })) {
+      ids.add(id);
+    }
+  }
+  return ids;
+}
+
+/** Count merged device + pending + synced receipts per on-device plot id. */
+export function countDeliveryReceiptsForPlots(params: {
+  plots: ReadonlyArray<{ id: string }>;
+  receipts: readonly DeliveryReceiptRecord[];
+  backendPlots: readonly unknown[];
+  plotServerLinks: PlotServerLinks;
+}): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const plot of params.plots) {
+    const backend = findBackendPlotForLocal(plot as { id: string }, params.backendPlots) as
+      | { id?: unknown }
+      | null;
+    const serverPlotId =
+      resolveServerPlotIdForLocal(plot as { id: string }, params.backendPlots, params.plotServerLinks) ??
+      (backend?.id != null ? String(backend.id) : null);
+    const filterIds = new Set(
+      resolvePlotReceiptFilterIds({
+        localPlotId: plot.id,
+        serverPlotId,
+        plotServerLinks: params.plotServerLinks,
+      }),
+    );
+    counts[plot.id] = params.receipts.filter((row) => receiptMatchesPlotFilter(row, filterIds)).length;
+  }
+  return counts;
 }
 
 /** Resolve a plot receipt group when screen plot id is local but receipts use server id (or vice versa). */

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  buildAllPlotReceiptFilterIds,
+  countDeliveryReceiptsForPlots,
   dedupeDeliveryReceipts,
   enrichAndDedupeDeliveryReceipts,
   findPlotReceiptGroupForScreen,
@@ -144,5 +146,66 @@ describe('dedupeDeliveryReceipts', () => {
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe('voucher-1');
     expect(rows[0]?.qrCodeRef).toBe('QR-123');
+  });
+});
+
+describe('countDeliveryReceiptsForPlots', () => {
+  it('counts device, pending, and synced receipts per local plot', () => {
+    const receipts = enrichAndDedupeDeliveryReceipts({
+      deviceReceipts: [
+        {
+          id: 'local-a',
+          plotId: 'server-a',
+          plotName: 'Plot A',
+          kg: 50,
+          createdAt: '2026-06-16T10:00:00.000Z',
+          qrCodeRef: null,
+          buyerLabel: 'buyer',
+          pendingSync: true,
+        },
+        {
+          id: 'local-b',
+          plotId: 'local-b',
+          plotName: 'Plot B',
+          kg: 80,
+          createdAt: '2026-06-16T11:00:00.000Z',
+          qrCodeRef: null,
+          buyerLabel: 'buyer',
+          pendingSync: true,
+        },
+      ],
+      pendingReceipts: [],
+      synced: [
+        {
+          id: 'voucher-c',
+          plotId: 'server-c',
+          plotName: 'Plot C',
+          kg: 30,
+          createdAt: '2026-06-16T12:00:00.000Z',
+          qrCodeRef: 'QR-C',
+          buyerLabel: 'buyer',
+        },
+      ],
+      plotServerLinks: {
+        'local-a': 'server-a',
+        'local-c': 'server-c',
+      },
+    });
+
+    const counts = countDeliveryReceiptsForPlots({
+      plots: [{ id: 'local-a' }, { id: 'local-b' }, { id: 'local-c' }],
+      receipts,
+      backendPlots: [],
+      plotServerLinks: {
+        'local-a': 'server-a',
+        'local-c': 'server-c',
+      },
+    });
+
+    expect(counts).toEqual({
+      'local-a': 1,
+      'local-b': 1,
+      'local-c': 1,
+    });
   });
 });
