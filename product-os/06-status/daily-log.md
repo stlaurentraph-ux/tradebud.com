@@ -10,6 +10,13 @@
 
 
 
+### 2026-06-22 (weekly health — automation 3.3)
+
+- **Release health** — GO — https://github.com/stlaurentraph-ux/tradebud.com/actions/runs/27923243984 — signals: `ci_main` [pass] 4 required CI jobs green on run 27922769988; `marketing_post_deploy_smoke` [pass]; `uptime_probes` [pass]; `sentry_clean_window` [pass] 0 unresolved issues in 15m window.
+- **Main CI** — https://github.com/stlaurentraph-ux/tradebud.com/actions/runs/27923280827 — Required: Field auth ✓, Marketing ✓. Non-required failures (non-blocking): Workspace root Next app lint ✗ (ESLint v10 from Dependabot PR #180), Backend integration tests ✗ (PostGIS). Dashboard, Contracts, Expo ✓.
+- **Regressions** — Sentry 7d: gate `sentry_clean_window` shows 0 issues in 15m window (Sentry API not directly available). Open fix-lane PRs: 8 DRAFT `[fix]` PRs (#187, #189, #190, #191, #192, #195, #196, #197) — all CI regressions from Dependabot ESLint v10 bump (PR #180) and labeler v6 bump (PR #162).
+- **Next ops** — Resolve ESLint v10 workspace-root lint regression; close the oldest open fix PRs for that class. Parked: 2.9, 2.10, 2.11, 3.5, 3.7–3.10 (Phase 5).
+
 ### 2026-06-22 (automation — 3.3 runbook merged, PR #194)
 - **Weekly health summary** — manifest + `weekly-health-summary` command + CI guard; human: create Cursor Automation Mon 09:30 UTC per `weekly-health-automation.md`.
 
