@@ -99,6 +99,24 @@ Blocking E2E on `main` is slice **3.O.1** — golden path job in `offline-maestr
 
 ---
 
+## Mobile rollout SLO (4.O.1)
+
+Weekly field-app health without Vercel/marketing smoke. Uses Sentry `tracebud/react-native` session stats + analytics failure proxies.
+
+| Command | Purpose |
+|---------|---------|
+| `npm run mobile:slo:collect -- --report=mobile-rollout-slo-report.json` | Pull Sentry metrics (skips when token unset) |
+| `npm run mobile:slo:gate -- --report=mobile-rollout-slo-report.json` | Evaluate thresholds (`release-rollout-slo-gate.mjs`) |
+| `npm run mobile:slo:assert` | CI wiring guard |
+
+**Workflow:** `.github/workflows/offline-mobile-slo-gate.yml` — Monday 10:00 UTC (reuses `SENTRY_RELEASE_HEALTH_AUTH_TOKEN`).
+
+**Manifest:** `product-os/04-quality/mobile-rollout-slo.json`
+
+**Nightly Maestro:** `tenure-evidence.yaml` added to slice 4.8 manifest (3 flows nightly).
+
+---
+
 ## Agent rules
 
 - **Lane 3** waits while **1.O.*** guardrails PR is open on `apps/offline-product/`.

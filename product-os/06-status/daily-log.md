@@ -10,6 +10,67 @@
 
 
 
+### 2026-06-22 (offline automation — Maestro tenure + mobile SLO gate 4.O.1)
+
+- **Maestro nightly** — Added `tenure-evidence.yaml` to slice 4.8 manifest (3 flows nightly).
+- **Mobile SLO** — `mobile-rollout-slo-collect.mjs` + weekly `offline-mobile-slo-gate.yml` (Sentry `react-native` sessions; reuses `SENTRY_RELEASE_HEALTH_AUTH_TOKEN`); CI `mobile:slo:assert`.
+- **Tenant isolation** — Optional `qa:tenant-isolation` step in Expo CI job (skips when `FIELD_TENANT_SMOKE_*` secrets unset).
+
+### 2026-06-22 (offline — Why Tracebud in-app screen)
+
+- **Screen** — `/why-tracebud` with farmer-facing mission copy, 5 benefit rows, livelihood card; Settings entry; analytics `why_tracebud_viewed`.
+
+### 2026-06-22 (offline — receipts navigation + plot not found)
+
+- **Receipts tab** — Plot groups drill down inline on Deliveries (no plot-detail detour); back from receipt returns to harvests receipts (with plot filter preserved via `receiptsPlot`).
+- **Plot deliveries** — Wait for server plot links before showing “Plot not found” (avoids false negative on server UUID routes).
+
+### 2026-06-22 (backend — duplicate welcome email fix)
+
+- **Root cause** — Farmer welcome used check-then-send with no row lock; bootstrap + first plot upload could race and each send Resend mail (Hector saw 3×).
+- **Fix** — Atomic `UPDATE … WHERE welcome_email_sent_at IS NULL` claim before send; release claim on Resend failure; same pattern for dashboard workspace welcome; bootstrap welcome centralized in `PlotsService`.
+
+### 2026-06-22 (offline — Why Tracebud polish + home teaser)
+
+- **Screen** — Gradient hero with logo + stacked tagline; mission card; section heading; benefit list with dividers; accent livelihood card; actions hint.
+- **Home** — Compact “Why Tracebud?” teaser below welcome card; analytics `why_tracebud_home_teaser_clicked`; view event includes `source` param.
+
+### 2026-06-22 (offline — plot name landing flash + suggestion)
+
+- **Fix** — Wait for `isAppReady` before seeding landing plot name; auto-fill first unused `Plot N` via `proposeUniqueDefaultPlotName`; duplicate error only after name is ready (no startup flash).
+- **UX** — When user types a duplicate, show tappable “Use \"Plot N\" instead” suggestion.
+
+### 2026-06-22 (offline — plot name duplicate at registration step 1)
+
+- **Fix** — Register plot landing blocks Start mapping when plot name duplicates an existing plot (inline error + disabled CTA); save-time check unchanged as safety net.
+
+### 2026-06-22 (offline — branded splash + boot gate)
+
+- **Splash** — Green `#0A7F59` background; `splash-icon.png` with logo + tagline “Record plots. Prove origin. Access markets.” (3 lines); `imageWidth` 300.
+- **Boot gate** — `AppStateProvider.isAppReady`; `SplashGate` hides native splash after SQLite/disk load with optional fade.
+
+### 2026-06-22 (offline — receipt detail flash / not found)
+
+- **Root cause** — Receipt screen re-fetched on every focus with loading flash; early render before farmer boot showed not-found; pending receipt ids (`pending-*`) were excluded from full catalog; dedupe could drop the id the list displayed.
+- **Fix** — `resolveDeliveryReceiptById` with local/voucher fallbacks; pending harvest rows included when plot filter empty; silent focus refresh + generation guard; stay on loading until farmer profile is ready.
+
+### 2026-06-22 (offline — stack screen header colors)
+
+- **Root cause** — Plot detail header used theme `link` / `linkStrong` (bright mint in dark mode) instead of frozen `HEADER_GRADIENT_COLORS`; document preview modal had no gradient header.
+- **Fix** — Added `StackGradientHeader`; wired plot detail, documents, receipt, offline maps, and `DocumentPreviewModal` to shared green gradient.
+
+### 2026-06-22 (offline — Deliveries receipt → plot not found)
+
+- **Root cause** — Deliveries plot cards navigated with server plot UUID from vouchers; plot detail resolves plots by on-device id only.
+- **Fix** — `resolveLocalPlotIdForRoute` maps server ids via `plot_server_links` and `client_plot_id`; `DeliveryReceiptsBrowser` uses it before `/plot/...`; plot detail waits for backend links before showing not-found.
+- **Tests** — `mergeHarvestPlotOptions.test.ts` (server id + `client_plot_id` rekey suffix).
+
+### 2026-06-22 (offline — Settings sync false “plots need upload”)
+
+- **Root cause** — Settings pending count used a different plot-fetch path than Sync now; stale `plot_server_links` were never cleared when reconciliation dropped invalid mappings; farmer scope was not always resolved to the linked profile (`dcdd88e5…`) before counting.
+- **Fix** — `measureTotalSyncPending` now uses merged `fetchBackendPlotsForSyncScope`, returns reconciled links/backend, clears removed links in `persistPlotServerLinks`; Settings `refreshSyncMetrics` resolves scope once, reloads disk after rekey, publishes reconciled links.
+- **Tests** — `measureTotalSyncPending.test.ts` (Hector rekey suffix scenario + API owned-id fallback).
+
 ### 2026-06-22 (weekly health — automation 3.3)
 
 - **Release health** — GO — https://github.com/stlaurentraph-ux/tradebud.com/actions/runs/27923243984 — signals: `ci_main` [pass] 4 required CI jobs green on run 27922769988; `marketing_post_deploy_smoke` [pass]; `uptime_probes` [pass]; `sentry_clean_window` [pass] 0 unresolved issues in 15m window.
