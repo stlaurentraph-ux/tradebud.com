@@ -250,7 +250,7 @@ npm run build -w dashboard-product
 |----|------|------|
 | 3.1 | Cursor Automation: CI failed on open PR → `fix-regression` agent | Cursor | **done** — Automations editor 2026-06-21 |
 | 3.2 | Cursor Automation: new Sentry issue (staging) → triage → `fix/*` PR | Cursor + Sentry MCP | **done** — Automations editor 2026-06-21 |
-| 3.3 | Cursor Automation: weekly health cron → smoke summary → `daily-log.md` | Cursor |
+| 3.3 | Cursor Automation: weekly health cron → smoke summary → `daily-log.md` | Cursor | **ready** — runbook + guard PR; human: Automations editor |
 | 3.4 | Dependabot (`/.github/dependabot.yml`) npm + GitHub Actions | GitHub | **done** (PR pending) |
 | 3.5 | Cursor Automation: Dependabot PR → run affected `check:*`, fix breakages | Cursor |
 | 3.6 | Auto PR labels: `lane:*`, `app:*`, `risk:spatial` via `labeler.yml` | GitHub | **done** — PR #159 |

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "slice": "3.3",
+  "name": "Weekly health summary",
+  "repo": "stlaurentraph-ux/tradebud.com",
+  "defaultBranch": "main",
+  "commandFile": ".cursor/commands/weekly-health-summary.md",
+  "activationRunbook": "product-os/04-quality/weekly-health-automation.md",
+  "releaseHealthWorkflow": ".github/workflows/release-health-gate.yml",
+  "dailyLogFile": "product-os/06-status/daily-log.md",
+  "schedule": {
+    "cron": "30 9 * * 1",
+    "timezoneNote": "UTC — runs 30 minutes after release-health-gate (Monday 09:00 UTC)"
+  },
+  "branchPattern": "chore/weekly-health-YYYY-MM-DD",
+  "prTitlePattern": "[ops] weekly health summary YYYY-MM-DD"
+}

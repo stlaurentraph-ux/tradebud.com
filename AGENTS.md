@@ -86,5 +86,6 @@ See `.cursor/rules/quality-gates.mdc` and `build-feature.md`: permissions, trans
 | Start feature | `start-agent-task` |
 | Build feature | `build-feature` |
 | Fix regression | `fix-regression` |
+| Weekly health digest | `weekly-health-summary` |
 | Review | `review-feature` |
 | Session end | `session-close` |
