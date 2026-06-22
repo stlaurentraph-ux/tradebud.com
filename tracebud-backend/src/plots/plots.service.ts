@@ -2112,9 +2112,11 @@ export class PlotsService {
     );
 
     return result.rows.map((row) => {
-      const { geometry_geojson, ...rest } = row as Record<string, unknown> & {
+      const raw = row as Record<string, unknown> & {
         geometry_geojson?: string | null;
+        id: string;
       };
+      const { geometry_geojson, ...rest } = raw;
       let geometry: Record<string, unknown> | null = null;
       if (typeof geometry_geojson === 'string' && geometry_geojson.trim()) {
         try {
