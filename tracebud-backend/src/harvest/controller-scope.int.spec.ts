@@ -7,6 +7,7 @@ import { PlotsController } from '../plots/plots.controller';
 import { PlotsService } from '../plots/plots.service';
 import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
+import { createPlotsServiceForIntTest } from '../testing/plots-service.mock';
 import { ConsentService } from '../consent/consent.service';
 
 function makeConsentPassthrough(pool: Pool) {
@@ -117,10 +118,10 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
     `);
 
     harvestService = new HarvestService(pool, createBillingServiceMock());
-    plotsService = new PlotsService(pool, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any);
+    plotsService = createPlotsServiceForIntTest(pool);
     const consentService = makeConsentPassthrough(pool);
-    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService);
-    plotsController = new PlotsController(plotsService, consentService);
+    harvestController = new HarvestController(harvestService, createLaunchServiceMock(), consentService, pool);
+    plotsController = new PlotsController(plotsService, consentService, pool);
   }, 20_000);
 
   afterAll(async () => {

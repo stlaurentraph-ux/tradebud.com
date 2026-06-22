@@ -132,6 +132,14 @@
     {
       "file": "20260620140000_founder_os_gtm_expansion.sql",
       "reason": "Founder OS GTM expansion; CRM schema only, no tb_v16 mirror"
+    },
+    {
+      "file": "202606221430_fix_sso_auth_user_null_token_columns.sql",
+      "reason": "Supabase auth SSO data fix; no backend mirror"
+    },
+    {
+      "file": "202606221500_fix_postgis_search_path.sql",
+      "reason": "Supabase database search_path for extensions schema; no backend mirror"
     }
   ]
 }

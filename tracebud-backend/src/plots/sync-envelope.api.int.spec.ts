@@ -5,8 +5,16 @@ import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { GfwService } from '../compliance/gfw.service';
+import { GfwContextService } from '../compliance/gfw-context.service';
+import { FdpCommodityService } from '../compliance/fdp-commodity.service';
+import { ConsentService } from '../consent/consent.service';
+import { PushNotificationService } from '../consent/push-notification.service';
+import { OnboardingEmailService } from '../launch/onboarding-email.service';
 import { PlotsController } from './plots.controller';
 import { PlotsService } from './plots.service';
+import { PlotGeometryValidationService } from './plot-geometry-validation.service';
+import { TenureParseService } from './tenure-parse.service';
+import { EvidenceDocumentsService } from './evidence-documents.service';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
@@ -114,6 +122,20 @@ describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
             runGeometryQuery: jest.fn(),
             runRaddFallback: jest.fn(),
             runHistoricalDeforestationQuery: jest.fn(),
+          },
+        },
+        { provide: GfwContextService, useValue: {} },
+        { provide: FdpCommodityService, useValue: {} },
+        { provide: PlotGeometryValidationService, useValue: {} },
+        { provide: TenureParseService, useValue: {} },
+        { provide: EvidenceDocumentsService, useValue: {} },
+        { provide: PushNotificationService, useValue: {} },
+        { provide: OnboardingEmailService, useValue: {} },
+        {
+          provide: ConsentService,
+          useValue: {
+            registerDevice: jest.fn(),
+            notifyFarmerConsentRequest: jest.fn(),
           },
         },
       ],
