@@ -384,6 +384,7 @@
   "harvest_receipt_not_found_body": "This receipt may still be uploading or was removed. Try Sync now from Settings, then open Receipts again.",
   "harvest_receipts_all_plots": "All plots",
   "harvest_receipts_col_plot": "Plot",
+  "harvest_receipts_col_date": "Date",
   "harvest_receipts_col_recipient": "Buyer / QR",
   "harvest_receipts_col_weight": "Weight",
   "harvest_receipts_plot_count": "{n} receipts",

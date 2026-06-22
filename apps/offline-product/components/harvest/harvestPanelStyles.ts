@@ -287,15 +287,15 @@ export function createDeliveryReceiptsBrowserStyles(c: AppColors) {
       backgroundColor: c.backgroundSecondary,
     },
     tableColPlot: {
-      flex: 1.15,
+      flex: 1,
       minWidth: 0,
     },
-    tableColWeight: {
-      width: 72,
+    tableColDate: {
+      width: 58,
       alignItems: 'flex-end',
     },
-    tableColWeightWide: {
-      width: 88,
+    tableColWeight: {
+      width: 64,
       alignItems: 'flex-end',
     },
     tableColRecipient: {
@@ -312,13 +312,13 @@ export function createDeliveryReceiptsBrowserStyles(c: AppColors) {
     tableKg: {
       color: c.link,
       textAlign: 'right',
+      fontVariant: ['tabular-nums'],
     },
     tableDate: {
       color: c.textMuted,
-      marginTop: 2,
-    },
-    tableDateRight: {
-      textAlign: 'right',
+      fontVariant: ['tabular-nums'],
+      fontSize: 12,
+      letterSpacing: -0.2,
     },
     recipientRow: {
       flexDirection: 'row',

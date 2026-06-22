@@ -154,11 +154,14 @@ function ReceiptsTable({
             {t('harvest_receipts_col_plot')}
           </ThemedText>
         ) : null}
+        <ThemedText type="caption" style={[styles.tableHeaderCell, styles.tableColDate]}>
+          {t('harvest_receipts_col_date')}
+        </ThemedText>
         <ThemedText
           type="caption"
           style={[
             styles.tableHeaderCell,
-            showPlotColumn ? styles.tableColWeight : styles.tableColWeightWide,
+            styles.tableColWeight,
           ]}
         >
           {t('harvest_receipts_col_weight')}
@@ -222,24 +225,17 @@ function ReceiptTableRow({
           <ThemedText type="defaultSemiBold" numberOfLines={1} style={styles.tablePlotName}>
             {receipt.plotName}
           </ThemedText>
-          <ThemedText type="caption" numberOfLines={1} style={styles.tableDate}>
-            {formatReceiptDateLabel(receipt.createdAt)}
-          </ThemedText>
         </View>
       ) : null}
-      <View style={showPlotColumn ? styles.tableColWeight : styles.tableColWeightWide}>
+      <View style={styles.tableColDate}>
+        <ThemedText type="caption" numberOfLines={1} style={styles.tableDate}>
+          {formatReceiptDateLabel(receipt.createdAt)}
+        </ThemedText>
+      </View>
+      <View style={styles.tableColWeight}>
         <ThemedText type="defaultSemiBold" style={styles.tableKg}>
           {`${Math.round(receipt.kg).toLocaleString()} kg`}
         </ThemedText>
-        {!showPlotColumn ? (
-          <ThemedText
-            type="caption"
-            numberOfLines={1}
-            style={[styles.tableDate, styles.tableDateRight]}
-          >
-            {formatReceiptDateLabel(receipt.createdAt)}
-          </ThemedText>
-        ) : null}
       </View>
       <View style={styles.tableColRecipient}>
         <View style={styles.recipientRow}>
