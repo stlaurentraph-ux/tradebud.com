@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-20T14:22:40.298Z",
-  "mobilePathCount": 24,
-  "openApiPathCount": 116,
+  "generatedAt": "2026-06-22T14:30:55.183Z",
+  "mobilePathCount": 26,
+  "openApiPathCount": 118,
   "mobilePaths": [
     "/v1/audit",
     "/v1/harvest",
@@ -11,6 +11,7 @@
     "/v1/harvest/packages/{id}/traces-json",
     "/v1/harvest/vouchers",
     "/v1/harvest/vouchers/by-qr",
+    "/v1/harvest/vouchers/{id}/delivery-date",
     "/v1/integrations/assessments/requests",
     "/v1/integrations/assessments/requests/{id}/status",
     "/v1/me/consent-grants",
@@ -27,6 +28,7 @@
     "/v1/plots/{id}/gfw-check",
     "/v1/plots/{id}/legal-sync",
     "/v1/plots/{id}/photos-sync",
+    "/v1/plots/{id}/synced-evidence",
     "/v1/plots/{id}/tenure-verification"
   ],
   "missingInOpenApi": [
@@ -36,6 +38,7 @@
     "/v1/harvest/packages/{id}/traces-json",
     "/v1/harvest/vouchers",
     "/v1/harvest/vouchers/by-qr",
+    "/v1/harvest/vouchers/{id}/delivery-date",
     "/v1/me/consent-grants",
     "/v1/me/consent-grants/{id}/approve",
     "/v1/me/consent-grants/{id}/deny",
@@ -46,6 +49,7 @@
     "/v1/plots/{id}",
     "/v1/plots/{id}/compliance-check",
     "/v1/plots/{id}/gfw-check",
+    "/v1/plots/{id}/synced-evidence",
     "/v1/plots/{id}/tenure-verification"
   ],
   "unusedByMobile": [
@@ -117,6 +121,8 @@
     "/v1/integrations/eudr/dds/status",
     "/v1/integrations/eudr/echo",
     "/v1/launch/commercial-profile",
+    "/v1/launch/onboarding",
+    "/v1/launch/onboarding/complete",
     "/v1/launch/signup",
     "/v1/organisations",
     "/v1/organisations/{id}/members/invitations",
