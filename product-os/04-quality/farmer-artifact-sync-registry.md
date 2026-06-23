@@ -3,14 +3,19 @@
 Canonical inventory of everything a farmer **uploads or generates** in the field app. Every row must have symmetric **upload** and **restore** paths before merge.
 
 **Code mirror:** `apps/offline-product/features/sync/farmerArtifactRegistry.ts`  
-**CI guard:** `npm run qa:regression` → `sync-parity-guard.mjs`
+**CI guard:** `npm run qa:structural` (see `structural-contracts-runbook.md`)
 
 ## How to use
 
 1. New farmer-facing data? Add a row here **and** in `farmerArtifactRegistry.ts`.
 2. Wire upload (queue or immediate audit) and restore (called from `restoreFarmerCloudState`).
 3. Add/extend unit test + DEVICE_SMOKE §12 checkbox if cross-device.
-4. Run `node scripts/sync-parity-guard.mjs` locally.
+4. Run `npm run qa:structural` locally.
+
+## Guards
+
+- `sync-parity-guard.mjs` — pipeline ↔ registry wiring
+- Full bundle: `npm run qa:structural` (`run-structural-guards.mjs`)
 
 ## Registry
 
@@ -30,7 +35,7 @@ Canonical inventory of everything a farmer **uploads or generates** in the field
 | **Declaration GPS + prefs** | `farmer` + `settings` | `audit_sync` | `field_device_preferences_updated` | `restoreLocalFieldDevicePreferencesFromServer` | settings advanced |
 | **Farmer profile photo** | settings + `farmer` | `audit_sync` + Storage | `farmer_profile_photo_synced` | `restoreLocalFarmerProfilePhotoFromServer` | settings profile |
 | **Offline map packs** | filesystem packs | `audit_sync` (manifest) | prefs audit + local re-download | `restoreMissingOfflineTilePacksFromServer` | walk/map |
-| **In-progress walk trace** | `plot_mapping_drafts` | `audit_sync` | `plot_mapping_draft_saved` | `restorePlotMappingDraftFromServer` | walk perimeter |
+| **In-progress walk trace** | `plot_mapping_drafts` | `audit_sync` | `plot_mapping_draft_saved` / `plot_mapping_draft_cleared` | `restorePlotMappingDraftFromServer` | walk perimeter |
 
 ## Supabase / API subtleties
 

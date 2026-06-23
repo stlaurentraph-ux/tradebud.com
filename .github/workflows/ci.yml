@@ -1131,6 +1131,9 @@ jobs:
       - name: Field regression guard
         run: node ./scripts/field-regression-guard.mjs
 
+      - name: Structural contract guards
+        run: npm run qa:structural:ci
+
       - name: Device QA wiring preflight
         run: npm run qa:preflight
 

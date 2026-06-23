@@ -64,6 +64,14 @@ npm ci
 - [ ] Acceptance criteria updated in feature doc
 - [ ] Field regression: `field-app-regression-ledger.md` row if bug class fix
 
+### Structural contracts (offline sync / features)
+
+- [ ] Registry updated if farmer artifact or sync path changed (`farmer-artifact-sync-registry.md` + `farmerArtifactRegistry.ts`)
+- [ ] Restore wired via `restoreFarmerCloudState` (not screen-only patch)
+- [ ] UI reload on affected screens (sync bus / focus restore)
+- [ ] `npm run qa:structural` green (`qa:structural:ci` in CI)
+- [ ] Cross-device step in `DEVICE_SMOKE_CHECKLIST.md` §12 when artifact is cross-device
+
 ### v1.6 (when relevant)
 
 - [ ] GEOGRAPHY / ST_MakeValid / area variance
@@ -81,6 +89,7 @@ npm ci
 ```bash
 cd apps/offline-product
 npm run qa:regression
+npm run qa:structural
 npm run qa:automation:phase1
 ```
 

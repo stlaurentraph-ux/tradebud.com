@@ -1,0 +1,48 @@
+---
+description: Cross-device sync invariants for offline field app
+globs:
+  - apps/offline-product/features/sync/**
+  - apps/offline-product/features/evidence/**
+  - apps/offline-product/features/state/**
+  - apps/offline-product/app/**
+---
+
+# Cross-device sync (offline field app)
+
+Canonical registry: `product-os/04-quality/farmer-artifact-sync-registry.md`  
+Code mirror: `apps/offline-product/features/sync/farmerArtifactRegistry.ts`
+
+## Invariant
+
+**Sync success = device B SQLite matches device A’s cloud truth**, not merely “queue empty”.
+
+Every farmer-owned artifact needs all five:
+
+1. **Upload** — mutation enqueues `pending_sync` and/or field cloud audit
+2. **Server store** — Supabase audit row and/or storage object
+3. **Restore** — module called from `restoreFarmerCloudState`
+4. **UI reload** — screen subscribes to `subscribeServerPlotSyncChanged` and/or focus-restore
+5. **Registry row** — markdown + `farmerArtifactRegistry.ts` + guard coverage
+
+## Do not
+
+- Patch a single screen without checking restore + registry
+- Add audit events without `restoreFarmerCloudState` wiring
+- Add restore without UI reload on plot/documents/settings surfaces
+- Skip `npm run qa:structural` before PR
+
+## Orchestrator entry points
+
+- Full restore: `restoreFarmerCloudState` (pipeline + sign-in)
+- Media-only: `restoreCloudMediaFromServer` → orchestrator with `mediaOnly: true`
+- Pipeline: `runFieldSyncPipeline` → restore then `enqueueFarmerCloudSyncActions`
+
+## New artifact workflow
+
+```bash
+cd apps/offline-product
+node scripts/scaffold-farmer-artifact.mjs --id <slug> --audit <audit_event>
+npm run qa:structural
+```
+
+Update `DEVICE_SMOKE_CHECKLIST.md` §12 for cross-device verification.

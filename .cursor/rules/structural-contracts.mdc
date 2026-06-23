@@ -1,0 +1,30 @@
+---
+description: Structural contract registries and CI guards for Tracebud
+alwaysApply: true
+---
+
+# Structural contracts
+
+When changing behavior in `apps/offline-product/features/` or sync/evidence/state:
+
+1. Check whether a **registry** already owns the invariant:
+   - Farmer artifacts: `product-os/04-quality/farmer-artifact-sync-registry.md`
+   - Field regressions: `product-os/04-quality/field-app-regression-ledger.md`
+2. Prefer fixing **class problems** in registry/orchestrator/guards, not one-off screen patches.
+3. Run structural guards before PR:
+
+```bash
+cd apps/offline-product
+npm run qa:structural
+```
+
+4. Update product-os when behavior changes: feature doc, `daily-log.md`, registry row, smoke checklist.
+
+Guards bundled in `qa:structural`:
+
+- `sync-parity-guard.mjs` — pipeline ↔ registry wiring
+- `registry-md-parity-guard.mjs` — markdown ↔ TypeScript registry
+- `pending-sync-registry-guard.mjs` — SQLite action types ↔ queue handlers
+- `feature-doc-guard.mjs` — feature code ↔ product-os docs (strict in CI)
+
+Runbook: `product-os/04-quality/structural-contracts-runbook.md`

@@ -88,6 +88,10 @@ import {
   listSyncedPlotNamesWithLocalLandDocsOnly,
 } from '@/features/sync/landDocUploadReminder';
 import { shouldShowBackupAttentionPanel } from '@/features/sync/backupAttentionSummary';
+import {
+  formatCloudParityHint,
+  measureCloudParitySummary,
+} from '@/features/sync/measureCloudParitySummary';
 import { isLocalLanSyncApi } from '@/features/dev/syncApiTarget';
 import {
   isNetworkReachabilityFailure,
@@ -167,6 +171,7 @@ export default function SettingsScreen() {
   const styles = useThemedStyles(createSettingsScreenStyles);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncMessageKind, setSyncMessageKind] = useState<'success' | 'error' | null>(null);
+  const [cloudParityHint, setCloudParityHint] = useState<string | null>(null);
   const [syncSupportMailto, setSyncSupportMailto] = useState<string | null>(null);
   const [syncOpenPlotId, setSyncOpenPlotId] = useState<string | null>(null);
   const [syncNowBusy, setSyncNowBusy] = useState(false);
@@ -482,11 +487,27 @@ export default function SettingsScreen() {
     }
   }, [farmer, plots, reloadFromDisk]);
 
+  const refreshCloudParity = useCallback(
+    async (plotSnapshot?: Plot[]) => {
+      if (!isSignedIn || !farmer?.id) {
+        setCloudParityHint(null);
+        return;
+      }
+      const summary = await measureCloudParitySummary({
+        profileFarmerId: farmer.id,
+        localPlots: plotSnapshot ?? plots,
+      }).catch(() => null);
+      setCloudParityHint(summary ? formatCloudParityHint(summary, t) : null);
+    },
+    [farmer?.id, isSignedIn, plots, t],
+  );
+
   useFocusEffect(
     useCallback(() => {
       void (async () => {
         await refreshSavedSyncEmail();
         await refreshSyncMetrics();
+        await refreshCloudParity();
         await refreshPushPermission();
         const storedAttemptScope = await getSetting('syncQueueAttemptScope').catch(() => null);
         if (
@@ -508,7 +529,7 @@ export default function SettingsScreen() {
           setQueueSmartSweepCap(Number(storedSmartSweepCap) as 25 | 50 | 100 | 200);
         }
       })();
-    }, [refreshSavedSyncEmail, refreshSyncMetrics, refreshPushPermission]),
+    }, [refreshSavedSyncEmail, refreshSyncMetrics, refreshCloudParity, refreshPushPermission]),
   );
 
   useEffect(() => {
@@ -1088,6 +1109,9 @@ export default function SettingsScreen() {
               ownedFarmerIds: farmerScopeIds,
               plots: diskState.plots.length > 0 ? diskState.plots : syncPlots,
             });
+            await refreshCloudParity(
+              diskState.plots.length > 0 ? diskState.plots : syncPlots,
+            );
 
             const attention = resolveSyncAttentionMessage({
               pending: {
@@ -1327,6 +1351,11 @@ export default function SettingsScreen() {
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
+                {cloudParityHint && isSignedIn ? (
+                  <ThemedText type="caption" style={styles.uploadIssueSummary}>
+                    {cloudParityHint}
+                  </ThemedText>
+                ) : null}
                 {syncUsesLocalApi ? (
                   <ThemedText type="caption" style={styles.uploadIssueSummary}>
                     {resolveSyncConnectivityUserMessage(t, syncApiBaseUrl)}

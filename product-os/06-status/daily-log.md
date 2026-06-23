@@ -1,3 +1,11 @@
+### 2026-06-19 (offline — structural contract automation)
+
+- **Guards** — `run-structural-guards.mjs` bundles sync-parity, registry-md-parity, pending-sync-registry, feature-doc; `npm run qa:structural` / `qa:structural:ci`; wired into `qa:regression` + CI Expo job.
+- **Scaffold** — `scaffold-farmer-artifact.mjs` checklist + restore stub for new cross-device artifacts.
+- **Agent rules** — `.cursor/rules/cross-device-sync.mdc`, `.cursor/rules/structural-contracts.mdc` (always-on).
+- **Runbook** — `product-os/04-quality/structural-contracts-runbook.md`; PR template structural checklist.
+- **Settings** — cloud parity hint via `measureCloudParitySummary` (server plot/voucher vs local after sync).
+
 ### 2026-06-23 (offline — farmer artifact sync registry Phase 1e)
 
 - **Registry** — `product-os/04-quality/farmer-artifact-sync-registry.md` + `farmerArtifactRegistry.ts`; CI `sync-parity-guard.mjs` in `qa:regression`.
