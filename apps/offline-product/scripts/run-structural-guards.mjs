@@ -21,6 +21,7 @@ const guards = [
   'pending-sync-drain-order-guard.mjs',
   'field-sync-mode-guard.mjs',
   'push-only-restore-guard.mjs',
+  'device-sync-markers-guard.mjs',
   'role-permission-guard.mjs',
   'state-transition-guard.mjs',
   'feature-doc-guard.mjs',

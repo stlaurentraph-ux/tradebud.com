@@ -3,6 +3,7 @@ import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import { loadAppState } from '@/features/state/persistence';
 import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import { restoreCloudMediaFromServer } from '@/features/sync/restoreCloudMediaFromServer';
+import { hydrateLocalSyncMarkersFromServer } from '@/features/sync/hydrateLocalSyncMarkersFromServer';
 import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
 import { pruneRedundantPendingUploadActions } from '@/features/sync/pruneRedundantPendingUploadActions';
 import { emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
@@ -85,6 +86,13 @@ export async function restoreCloudStateOnFocus(options?: {
       ownedFarmerIds,
       localPlots: media.activePlots,
     });
+
+    await hydrateLocalSyncMarkersFromServer({
+      apiFarmerId: farmerId,
+      ownedFarmerIds,
+      localFarmer,
+      localPlots: media.activePlots,
+    }).catch(() => undefined);
 
     await pruneRedundantPendingUploadActions({ farmerId }).catch(() => 0);
 

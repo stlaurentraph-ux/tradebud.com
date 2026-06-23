@@ -633,6 +633,18 @@ export async function updatePlotTitlePhotoAfterUpload(
   );
 }
 
+export async function updatePlotGroundPhotoAfterUpload(
+  photoId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE plot_photos SET uri = ?, storagePath = ? WHERE id = ?;', [
+    params.uri,
+    params.storagePath,
+    photoId,
+  ]);
+}
+
 export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitlePhoto[]> {
   const db = await getDb();
   const rows = await db.getAllAsync<any>(
@@ -1175,6 +1187,13 @@ export async function setSetting(key: string, value: string): Promise<void> {
 export async function deleteSetting(key: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM settings WHERE key = ?;', [key]);
+}
+
+export async function deleteSettingsByPrefix(prefix: string): Promise<void> {
+  const trimmed = prefix.trim();
+  if (!trimmed) return;
+  const db = await getDb();
+  await db.runAsync('DELETE FROM settings WHERE key LIKE ?;', [`${trimmed}%`]);
 }
 
 export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<void> {

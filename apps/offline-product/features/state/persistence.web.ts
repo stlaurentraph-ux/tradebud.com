@@ -157,6 +157,15 @@ export async function updatePlotTitlePhotoAfterUpload(
   );
 }
 
+export async function updatePlotGroundPhotoAfterUpload(
+  photoId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
+  memPhotos = memPhotos.map((row) =>
+    row.id === photoId ? { ...row, uri: params.uri, storagePath: params.storagePath } : row,
+  );
+}
+
 export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitlePhoto[]> {
   return memTitlePhotos.filter((p) => p.plotId === plotId);
 }
@@ -531,6 +540,16 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 export async function deleteSetting(key: string): Promise<void> {
   delete memSettings[key];
+}
+
+export async function deleteSettingsByPrefix(prefix: string): Promise<void> {
+  const trimmed = prefix.trim();
+  if (!trimmed) return;
+  for (const key of Object.keys(memSettings)) {
+    if (key.startsWith(trimmed)) {
+      delete memSettings[key];
+    }
+  }
 }
 
 export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<void> {

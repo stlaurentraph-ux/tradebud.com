@@ -16,6 +16,7 @@ const restoreMocks = vi.hoisted(() => ({
   fetchBackendPlotsForSyncScope: vi.fn(),
   backfillServerHarvestDatesFromLocal: vi.fn(),
   restoreLinkedLocalPlotMediaFromServer: vi.fn(),
+  hydrateLocalSyncMarkersFromServer: vi.fn(),
 }));
 
 vi.mock('@/features/sync/processPendingSyncQueue', () => ({
@@ -93,6 +94,10 @@ vi.mock('@/features/sync/restoreLinkedLocalPlotMediaFromServer', () => ({
   restoreLinkedLocalPlotMediaFromServer: restoreMocks.restoreLinkedLocalPlotMediaFromServer,
 }));
 
+vi.mock('@/features/sync/hydrateLocalSyncMarkersFromServer', () => ({
+  hydrateLocalSyncMarkersFromServer: restoreMocks.hydrateLocalSyncMarkersFromServer,
+}));
+
 vi.mock('@/features/state/persistence', () => ({
   loadPendingSyncActions: restoreMocks.loadPendingSyncActions,
   loadPlotServerLinks: restoreMocks.loadPlotServerLinks,
@@ -144,6 +149,15 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
     vi.clearAllMocks();
     restoreMocks.loadPlotServerLinks.mockResolvedValue({ 'plot-1': 'server-plot-1' });
     restoreMocks.pruneRedundantPendingUploadActions.mockResolvedValue(0);
+    restoreMocks.hydrateLocalSyncMarkersFromServer.mockResolvedValue({
+      declarationProducerMarked: false,
+      declarationPlotsMarked: 0,
+      fieldCloudMarked: 0,
+      mediaMarked: 0,
+      receiptsReconciled: 0,
+      inboundScopesMarked: 0,
+      fetchFailed: false,
+    });
     restoreMocks.warmPlotServerLinksForSync.mockResolvedValue(undefined);
     restoreMocks.enqueuePlotDependentSyncForLinkedPlots.mockResolvedValue(undefined);
     restoreMocks.enqueueFarmerCloudSyncActions.mockResolvedValue({

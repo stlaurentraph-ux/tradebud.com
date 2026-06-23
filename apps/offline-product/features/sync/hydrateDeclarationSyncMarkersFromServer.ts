@@ -1,8 +1,12 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
-import { fetchMergedAuditEventsForFarmer } from '@/features/sync/fetchMergedAuditEventsForFarmer';
+import {
+  fetchMergedAuditEventsForFarmer,
+  type AuditLogRow,
+} from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
+import { markFieldCloudAuditSynced } from '@/features/sync/queueFieldCloudAuditSync';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import { loadPlotServerLinks } from '@/features/state/persistence';
 
@@ -24,6 +28,7 @@ export async function hydrateDeclarationSyncMarkersFromServer(params: {
   ownedFarmerIds: string[];
   localFarmer: FarmerProfile | undefined;
   localPlots: Plot[];
+  auditRows?: AuditLogRow[];
 }): Promise<{ producerMarked: boolean; plotsMarked: number; fetchFailed: boolean }> {
   const apiFarmerId = params.apiFarmerId.trim();
   const localFarmer = params.localFarmer;
@@ -31,11 +36,13 @@ export async function hydrateDeclarationSyncMarkersFromServer(params: {
     return { producerMarked: false, plotsMarked: 0, fetchFailed: false };
   }
 
-  let auditRows: Awaited<ReturnType<typeof fetchMergedAuditEventsForFarmer>> = [];
-  try {
-    auditRows = await fetchMergedAuditEventsForFarmer([apiFarmerId, ...params.ownedFarmerIds]);
-  } catch {
-    return { producerMarked: false, plotsMarked: 0, fetchFailed: true };
+  let auditRows = params.auditRows;
+  if (auditRows == null) {
+    try {
+      auditRows = await fetchMergedAuditEventsForFarmer([apiFarmerId, ...params.ownedFarmerIds]);
+    } catch {
+      return { producerMarked: false, plotsMarked: 0, fetchFailed: true };
+    }
   }
 
   let producerMarked = false;
@@ -56,6 +63,10 @@ export async function hydrateDeclarationSyncMarkersFromServer(params: {
         selfDeclaredAt:
           localFarmer.selfDeclaredAt ?? parseTimestampMs(latestProducer.payload.selfDeclaredAt),
       },
+    }).catch(() => undefined);
+    await markFieldCloudAuditSynced({
+      eventType: 'producer_attestations_updated',
+      scopeId: localFarmer.id,
     }).catch(() => undefined);
     producerMarked = true;
   }
@@ -94,6 +105,10 @@ export async function hydrateDeclarationSyncMarkersFromServer(params: {
         noDeforestationDeclared: true,
         source: 'hydrate',
       },
+    }).catch(() => undefined);
+    await markFieldCloudAuditSynced({
+      eventType: 'plot_compliance_declared',
+      scopeId: localFarmer.id,
     }).catch(() => undefined);
     plotsMarked += 1;
   }

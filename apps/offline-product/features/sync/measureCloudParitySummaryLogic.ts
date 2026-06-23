@@ -76,6 +76,9 @@ export type CloudParityCounts = {
 };
 
 export type CloudParitySummary = ExtendedCloudParityCounts & {
+  /** Server has artifacts this device has not pulled yet. */
+  needsInboundRestore: boolean;
+  /** @deprecated Use needsInboundRestore */
   needsRestore: boolean;
   plotGap: number;
   receiptGap: number;
@@ -87,7 +90,7 @@ export type CloudParitySummary = ExtendedCloudParityCounts & {
 
 export function summarizeCloudParityCounts(input: ExtendedCloudParityCounts): CloudParitySummary {
   const gaps = extendedParityGaps(input);
-  const needsRestore =
+  const needsInboundRestore =
     shouldOfferPostAuthSync({
       localPlotCount: input.localPlotCount,
       unsyncedPlotCount: 0,
@@ -104,7 +107,8 @@ export function summarizeCloudParityCounts(input: ExtendedCloudParityCounts): Cl
 
   return {
     ...input,
-    needsRestore,
+    needsInboundRestore,
+    needsRestore: needsInboundRestore,
     ...gaps,
   };
 }
@@ -122,23 +126,26 @@ export function formatCloudParityHint(
 export function formatCloudParityHints(
   summary: CloudParitySummary,
   t: TranslateFn,
-  options?: { queueMediaPendingCount?: number },
+  options?: { queueMediaPendingCount?: number; unsyncedPlotCount?: number; queuePendingCount?: number },
 ): string[] {
-  if (!summary.needsRestore) return [];
+  if (!summary.needsInboundRestore && (options?.queueMediaPendingCount ?? 0) === 0) {
+    return [];
+  }
 
   const hints: string[] = [];
   const queueMediaPendingCount = Math.max(0, options?.queueMediaPendingCount ?? 0);
+  const showInbound = summary.needsInboundRestore;
 
-  if (summary.plotGap > 0 && summary.receiptGap > 0) {
+  if (showInbound && summary.plotGap > 0 && summary.receiptGap > 0) {
     hints.push(
       t('settings_cloud_parity_both', {
         plots: summary.plotGap,
         receipts: summary.receiptGap,
       }),
     );
-  } else if (summary.plotGap > 0) {
+  } else if (showInbound && summary.plotGap > 0) {
     hints.push(t('settings_cloud_parity_plots', { n: summary.plotGap }));
-  } else if (summary.receiptGap > 0) {
+  } else if (showInbound && summary.receiptGap > 0) {
     hints.push(t('settings_cloud_parity_receipts', { n: summary.receiptGap }));
   }
 
@@ -146,20 +153,26 @@ export function formatCloudParityHints(
     hints.push(
       t('settings_cloud_parity_media_upload_pending', { n: queueMediaPendingCount }),
     );
-  } else if (summary.mediaGap > 0) {
+  }
+  if (showInbound && summary.mediaGap > 0) {
     hints.push(t('settings_cloud_parity_media', { n: summary.mediaGap }));
   }
-  if (summary.declarationGap > 0) {
+  if (showInbound && summary.declarationGap > 0) {
     hints.push(t('settings_cloud_parity_declarations', { n: summary.declarationGap }));
   }
-  if (summary.profilePhotoGap) {
+  if (showInbound && summary.profilePhotoGap) {
     hints.push(t('settings_cloud_parity_profile_photo'));
   }
-  if (summary.walkDraftGap) {
+  if (showInbound && summary.walkDraftGap) {
     hints.push(t('settings_cloud_parity_walk_draft'));
   }
 
-  if (hints.length === 0) {
+  const unsyncedPlotCount = Math.max(0, options?.unsyncedPlotCount ?? 0);
+  if (unsyncedPlotCount > 0) {
+    hints.push(t('settings_cloud_parity_plots_upload_pending', { n: unsyncedPlotCount }));
+  }
+
+  if (hints.length === 0 && showInbound) {
     hints.push(t('settings_cloud_parity_generic'));
   }
 

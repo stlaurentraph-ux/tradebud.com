@@ -31,6 +31,19 @@ Implemented in `runFieldSyncPipeline.ts`. Do not skip `restoring_plots` before u
 | `audit_decl_synced:plot:{plotId}` | same | `plot_compliance_declared` |
 | `audit_cloud_synced:{eventType}:{scopeId}` | `queueFieldCloudAuditSync` | `field_device_preferences_updated`, `farmer_profile_photo_synced`, `plot_mapping_draft_saved`, `plot_mapping_draft_cleared` |
 
+**Inbound (cloud → device, SQLite settings):** set by `hydrateLocalSyncMarkersFromServer` / media restore — never stored on server.
+
+| Marker prefix | Set when |
+| --- | --- |
+| `cloud_inbound_hydrated:plot:{localPlotId}` | Plot linked to server row on this device |
+| `cloud_inbound_hydrated:plot_media:{localPlotId}` | Server media metadata fetched/hydrated for plot |
+| `cloud_inbound_hydrated:declaration:producer:{farmerId}` | Producer declaration known from server audit |
+| `cloud_inbound_hydrated:declaration:plot:{plotId}` | Plot attestation known from server audit |
+| `cloud_inbound_hydrated:farmer:{farmerId}` | Farmer-scoped cloud audit hydrated |
+| `cloud_inbound_hydrated:receipts:{farmerId}` | Local receipts reconciled to server vouchers |
+
+Cleared on device sign-out via `clearAllInboundHydratedMarkers()`.
+
 **Sync prep rule:** during `runFieldSyncPipeline` preparing phase, `enqueueFarmerCloudSyncActions` enqueues farmer-scoped cloud audit rows with `FARMER_CLOUD_SYNC_PREP_OPTIONS` (defer POST until `processing_queue`) to avoid 401/429 bursts.
 
 ## Plot readiness gates

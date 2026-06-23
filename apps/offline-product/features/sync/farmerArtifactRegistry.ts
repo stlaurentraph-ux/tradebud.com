@@ -78,6 +78,12 @@ export const PLOT_MAPPING_DRAFT_CLEARED_AUDIT = 'plot_mapping_draft_cleared' as 
 
 /** Device marker prefix for farmer-scoped cloud audit rows (see field-state-transition-registry.md). */
 export const FIELD_CLOUD_AUDIT_SYNC_MARKER_PREFIX = 'audit_cloud_synced:' as const;
+export const INBOUND_HYDRATED_MARKER_PREFIX = 'cloud_inbound_hydrated:' as const;
+export const OUTBOUND_DECL_PRODUCER_PREFIX = 'audit_decl_synced:producer:' as const;
+export const OUTBOUND_DECL_PLOT_PREFIX = 'audit_decl_synced:plot:' as const;
+
+/** Pre-enqueue pass: outbound + inbound device markers from server truth. */
+export const DEVICE_SYNC_MARKER_HYDRATE_MODULE = 'hydrateLocalSyncMarkersFromServer' as const;
 
 /** Sync prep enqueues farmer cloud audit rows once; queue drain POSTs (avoids 401/429 bursts). */
 export const FARMER_CLOUD_SYNC_PREP_OPTIONS = {

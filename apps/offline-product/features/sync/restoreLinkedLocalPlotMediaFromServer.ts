@@ -1,6 +1,11 @@
 import type { Plot } from '@/features/state/AppStateContext';
+import {
+  inboundPlotMediaKey,
+  markInboundHydrated,
+} from '@/features/sync/deviceSyncMarkers';
 import { restoreLocalEvidenceFromServer } from '@/features/sync/restoreLocalEvidenceFromServer';
 import { restoreLocalPlotPhotosFromServerAudit } from '@/features/sync/restoreLocalGroundTruthPhotosFromServer';
+import { loadPlotServerLinks } from '@/features/state/persistence';
 
 export type RestoreLinkedLocalPlotMediaResult = {
   evidenceRestored: number;
@@ -29,6 +34,16 @@ export async function restoreLinkedLocalPlotMediaFromServer(params: {
   }
 
   const evidence = await restoreLocalEvidenceFromServer(params);
+  if (!evidence.fetchFailed) {
+    const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<
+      string,
+      string
+    >;
+    for (const plot of params.localPlots) {
+      if (!plotServerLinks[plot.id]?.trim()) continue;
+      await markInboundHydrated(inboundPlotMediaKey(plot.id)).catch(() => undefined);
+    }
+  }
   if (params.includeAuditPhotos === false) {
     return {
       evidenceRestored: evidence.restoredCount,

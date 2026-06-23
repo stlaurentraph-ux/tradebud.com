@@ -617,6 +617,9 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     onSuccessRef.current = undefined;
     clearFieldProducerBootstrapCache();
     void clearPersistedSyncAuth().catch(() => undefined);
+    void import('@/features/sync/deviceSyncMarkers').then(({ clearAllInboundHydratedMarkers }) =>
+      clearAllInboundHydratedMarkers(),
+    );
   }, []);
 
   const openSignIn = useCallback((options?: OpenSignInOptions) => {

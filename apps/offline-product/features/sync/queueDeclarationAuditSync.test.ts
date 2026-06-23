@@ -34,6 +34,11 @@ vi.mock('@/features/sync/resolveFieldSyncScope', () => ({
   fetchBackendPlotsForSyncScope,
 }));
 
+vi.mock('@/features/sync/queueFieldCloudAuditSync', () => ({
+  markFieldCloudAuditSynced: vi.fn(async () => undefined),
+  isFieldCloudAuditSynced: vi.fn(async () => false),
+}));
+
 vi.mock('@/features/state/persistence', () => ({
   enqueuePendingSync,
   loadPendingSyncActions,
@@ -140,7 +145,7 @@ describe('queueDeclarationAuditSync', () => {
     expect(postAuditEventToBackend).not.toHaveBeenCalled();
   });
 
-  it('skips plot backfill when server audit already exists (hydrate markers)', async () => {
+  it('skips plot backfill when declaration markers were hydrated from server audit', async () => {
     fetchMergedAuditEventsForFarmer.mockResolvedValue([
       {
         id: 'evt-plot',
@@ -154,6 +159,22 @@ describe('queueDeclarationAuditSync', () => {
         },
       },
     ]);
+    const hydrateModule = await import('./hydrateDeclarationSyncMarkersFromServer');
+    await hydrateModule.hydrateDeclarationSyncMarkersFromServer({
+      apiFarmerId: 'farmer-1',
+      ownedFarmerIds: [],
+      localFarmer: { id: 'farmer-1', role: 'farmer' },
+      localPlots: [
+        {
+          id: 'plot-1',
+          farmerId: 'farmer-1',
+          landTenureDeclared: true,
+          noDeforestationDeclared: true,
+        },
+      ],
+      auditRows: await fetchMergedAuditEventsForFarmer(['farmer-1']),
+    });
+
     const { enqueuePendingDeclarationAuditsForDevice } = await loadModule();
 
     const result = await enqueuePendingDeclarationAuditsForDevice({
@@ -166,8 +187,6 @@ describe('queueDeclarationAuditSync', () => {
           noDeforestationDeclared: true,
         },
       ],
-      apiFarmerId: 'farmer-1',
-      ownedFarmerIds: [],
     });
 
     expect(result.plots).toBe(0);

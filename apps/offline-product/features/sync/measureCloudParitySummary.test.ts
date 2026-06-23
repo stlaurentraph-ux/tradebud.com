@@ -127,6 +127,15 @@ describe('formatCloudParityHints', () => {
       queueMediaPendingCount: 2,
     });
     expect(hints.some((h) => h.startsWith('settings_cloud_parity_media_upload_pending:'))).toBe(true);
+    expect(hints.some((h) => h.startsWith('settings_cloud_parity_media:'))).toBe(true);
+  });
+
+  it('can show upload-only hints when nothing needs inbound restore', () => {
+    const summary = summarizeCloudParityCounts(baseCounts());
+    const hints = formatCloudParityHints(summary, (key, params) => `${key}:${JSON.stringify(params ?? {})}`, {
+      queueMediaPendingCount: 1,
+    });
+    expect(hints.some((h) => h.startsWith('settings_cloud_parity_media_upload_pending:'))).toBe(true);
     expect(hints.some((h) => h.startsWith('settings_cloud_parity_media:'))).toBe(false);
   });
 });

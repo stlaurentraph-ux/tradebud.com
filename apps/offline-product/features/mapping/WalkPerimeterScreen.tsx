@@ -73,6 +73,7 @@ import {
   assessPlotGeometryQuality,
   localPlotRefsForGeometry,
   localPolygonQualityMessage,
+  type LocalGeometryQualityIssue,
 } from '@/features/compliance/plotGeometryQuality';
 import {
   hasUnsavedMappingProgress,
@@ -107,6 +108,32 @@ function geometryQualityAlertTitle(
   return blockingIssues.some((issue) => issue.code === 'GEO-105')
     ? t('geo_quality_overlap_title')
     : t('walk_invalid_boundary_title');
+}
+
+function promptBlockingPlotGeometryIssues(params: {
+  blockingIssues: LocalGeometryQualityIssue[];
+  t: (key: string) => string;
+  onWalkAgain: () => void;
+  onTraceOnMap: () => void;
+}): boolean {
+  const { blockingIssues, t, onWalkAgain, onTraceOnMap } = params;
+  const message = localPolygonQualityMessage(blockingIssues, t);
+  const title = geometryQualityAlertTitle(blockingIssues, t);
+  const recoverable = blockingIssues.some(
+    (issue) => issue.code === 'GEO-104' || issue.code === 'GEO-105',
+  );
+
+  if (!recoverable) {
+    Alert.alert(title, message);
+    return true;
+  }
+
+  Alert.alert(title, message, [
+    { text: t('cancel'), style: 'cancel' },
+    { text: t('walk_geometry_walk_again'), onPress: onWalkAgain },
+    { text: t('walk_geo_confidence_cta_trace'), onPress: onTraceOnMap },
+  ]);
+  return true;
 }
 
 type CaptureMethod = 'walk' | 'draw' | 'centroid' | 'pin';
@@ -167,7 +194,6 @@ export function WalkPerimeterScreen() {
   const [cornerHoldAnchor, setCornerHoldAnchor] = useState(0);
   const [pinHoldAnchor, setPinHoldAnchor] = useState(0);
   const wasRecordingRef = useRef(false);
-  const [showGpsWarning, setShowGpsWarning] = useState(false);
   const [deviceRegion, setDeviceRegion] = useState<Region | null>(null);
   const [manualTraceImagery, setManualTraceImagery] = useState<{
     imagerySource: ManualTraceImagerySource;
@@ -284,23 +310,9 @@ export function WalkPerimeterScreen() {
 
   useEffect(() => {
     if (!isRecording) return;
-    const t = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
   }, [isRecording]);
-
-  useEffect(() => {
-    if (!isRecording) return;
-    if (precisionMeters != null && precisionMeters > 10) {
-      setShowGpsWarning(true);
-      const to = setTimeout(() => setShowGpsWarning(false), 2200);
-      return () => clearTimeout(to);
-    }
-    if (recordingSeconds > 0 && recordingSeconds % 8 === 0 && Math.random() > 0.7) {
-      setShowGpsWarning(true);
-      const to = setTimeout(() => setShowGpsWarning(false), 2200);
-      return () => clearTimeout(to);
-    }
-  }, [isRecording, precisionMeters, recordingSeconds]);
 
   const boundaryPointCount = points.length;
 
@@ -915,6 +927,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     // Stay in trace mode so the map does not flip marker/overlay modes while clearing.
   }, [safeClearBoundary]);
 
+  const restartWalkedBoundaryCapture = useCallback(() => {
+    safeClearBoundary();
+    if (captureMethod === 'walk' && selectedMethodPage === 'walk') {
+      void startRecording();
+    }
+  }, [captureMethod, safeClearBoundary, selectedMethodPage, startRecording]);
+
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
   const resolvedLandingPlotName = useMemo(
@@ -1465,10 +1484,12 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       phase: 'save',
     });
     if (pointGeometryQuality.blockingIssues.length > 0) {
-      Alert.alert(
-        geometryQualityAlertTitle(pointGeometryQuality.blockingIssues, t),
-        localPolygonQualityMessage(pointGeometryQuality.blockingIssues, t),
-      );
+      promptBlockingPlotGeometryIssues({
+        blockingIssues: pointGeometryQuality.blockingIssues,
+        t,
+        onWalkAgain: restartWalkedBoundaryCapture,
+        onTraceOnMap: openManualTraceFromConfidence,
+      });
       return;
     }
 
@@ -1560,10 +1581,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
 
-    if (precisionMeters != null && precisionMeters > 10) {
-      Alert.alert(t('walk_poor_gps_title'), t('walk_poor_gps_body'));
-    }
-
     const polygonGeometryQuality = assessPlotGeometryQuality({
       kind: 'polygon',
       points,
@@ -1573,10 +1590,12 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       phase: 'save',
     });
     if (polygonGeometryQuality.blockingIssues.length > 0) {
-      Alert.alert(
-        geometryQualityAlertTitle(polygonGeometryQuality.blockingIssues, t),
-        localPolygonQualityMessage(polygonGeometryQuality.blockingIssues, t),
-      );
+      promptBlockingPlotGeometryIssues({
+        blockingIssues: polygonGeometryQuality.blockingIssues,
+        t,
+        onWalkAgain: restartWalkedBoundaryCapture,
+        onTraceOnMap: openManualTraceFromConfidence,
+      });
       return;
     }
 
@@ -1736,7 +1755,15 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           detail: localPolygonQualityMessage(polygonGeometryQuality.warnings, t),
         }),
         [
-          { text: t('geo_quality_fix_boundary'), style: 'cancel' },
+          {
+            text: t('geo_quality_fix_boundary'),
+            style: 'cancel',
+            onPress: restartWalkedBoundaryCapture,
+          },
+          {
+            text: t('walk_geo_confidence_cta_trace'),
+            onPress: openManualTraceFromConfidence,
+          },
           { text: t('geo_quality_save_on_phone'), onPress: completePolygonSave },
         ],
       );

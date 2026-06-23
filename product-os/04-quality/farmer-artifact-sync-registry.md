@@ -62,6 +62,10 @@ Guard: `ui-reload-guard.mjs` — each screen must subscribe to sync bus and/or f
 - **Audit is append-only:** restore uses **latest** event per `(farmerId, kind)` or `(serverPlotId, photo kind)`.
 - **Plot link gate:** without `plot_server_links`, plot-scoped restore skips (`skippedUnlinked`).
 - **Queue prune:** after restore, `pruneRedundantPendingUploadActions` drops stale `photos_sync`, `evidence_sync`, `harvest`, and `audit_sync` rows when local state is already synced.
+- **Device markers (per device, SQLite settings — not on server):**
+  - **Outbound** (pushed to Tracebud): `audit_decl_synced:*`, `audit_cloud_synced:*`, media row `storagePath`, plot `plot_server_links`, receipt `pendingSync: false`.
+  - **Inbound** (pulled/hydrated on this device): `cloud_inbound_hydrated:plot:*`, `plot_media:*`, `declaration:*`, `farmer:*`, `receipts:*`.
+  - **Pre-enqueue:** `hydrateLocalSyncMarkersFromServer` sets outbound markers from server truth, then inbound scopes, before `pruneRedundantPendingUploadActions`.
 - **Sync prep (farmer cloud audit):** `enqueueFarmerCloudSyncActions` uses `FARMER_CLOUD_SYNC_PREP_OPTIONS` (`deferPost: true`, `skipIfSynced: true`) so Sync now enqueues farmer prefs/photo/mapping-draft audit rows once; `processPendingSyncQueue` POSTs during `processing_queue`. Device marker: `audit_cloud_synced:{eventType}:{scopeId}`.
 - **Delivery buyer invite:** harvest POST may return `buyerInvite: { email, pending, inviteSent }` when buyer email is not yet on a dashboard tenant; field app shows invite alert and preserves `deliverToEmail` in queued harvest payload.
 - **Farmer scope:** always `prepareFieldSyncContext` / `ownedFarmerIds`.

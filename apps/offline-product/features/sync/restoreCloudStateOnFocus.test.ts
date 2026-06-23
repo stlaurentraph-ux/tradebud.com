@@ -6,6 +6,15 @@ const mocks = vi.hoisted(() => ({
   prepareFieldSyncContext: vi.fn(),
   restoreCloudMediaFromServer: vi.fn(),
   restoreLocalDeliveryReceiptsFromServer: vi.fn(),
+  hydrateLocalSyncMarkersFromServer: vi.fn(async () => ({
+    declarationProducerMarked: false,
+    declarationPlotsMarked: 0,
+    fieldCloudMarked: 0,
+    mediaMarked: 0,
+    receiptsReconciled: 0,
+    inboundScopesMarked: 0,
+    fetchFailed: false,
+  })),
   pruneRedundantPendingUploadActions: vi.fn(async () => 0),
   emitServerPlotSyncChanged: vi.fn(),
   withFieldSyncSession: vi.fn(),
@@ -29,6 +38,10 @@ vi.mock('@/features/sync/restoreCloudMediaFromServer', () => ({
 
 vi.mock('@/features/sync/restoreLocalDeliveryReceiptsFromServer', () => ({
   restoreLocalDeliveryReceiptsFromServer: mocks.restoreLocalDeliveryReceiptsFromServer,
+}));
+
+vi.mock('@/features/sync/hydrateLocalSyncMarkersFromServer', () => ({
+  hydrateLocalSyncMarkersFromServer: mocks.hydrateLocalSyncMarkersFromServer,
 }));
 
 vi.mock('@/features/sync/pruneRedundantPendingUploadActions', () => ({

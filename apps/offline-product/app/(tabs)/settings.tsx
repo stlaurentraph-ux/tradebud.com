@@ -529,11 +529,13 @@ export default function SettingsScreen() {
         localPlots: plotSnapshot ?? plots,
         localFarmer: farmer,
       }).catch(() => null);
-      setCloudParityNeedsRestore(summary?.needsRestore === true);
+      setCloudParityNeedsRestore(summary?.needsInboundRestore === true);
       setCloudParityHints(
         summary
           ? formatCloudParityHints(summary, t, {
               queueMediaPendingCount: measuredSyncPendingRef.current?.queueMediaPendingCount ?? 0,
+              unsyncedPlotCount: measuredSyncPendingRef.current?.unsyncedPlotCount ?? 0,
+              queuePendingCount: measuredSyncPendingRef.current?.queuePendingCount ?? 0,
             })
           : [],
       );
@@ -1229,6 +1231,8 @@ export default function SettingsScreen() {
               paritySummary
                 ? formatCloudParityHints(paritySummary, t, {
                     queueMediaPendingCount: freshPending?.queueMediaPendingCount ?? 0,
+                    unsyncedPlotCount: freshPending?.unsyncedPlotCount ?? 0,
+                    queuePendingCount: freshPending?.queuePendingCount ?? 0,
                   })
                 : [],
             );

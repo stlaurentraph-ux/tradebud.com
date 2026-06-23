@@ -172,7 +172,6 @@ export async function enqueuePlotDependentSyncForLinkedPlots(params: {
   await enqueuePendingDeclarationAuditsForDevice({
     farmer: params.farmer,
     plots: params.plots,
-    apiFarmerId: params.farmerId,
   }).catch(() => undefined);
 
   return { plotsProcessed, producerEvidence };

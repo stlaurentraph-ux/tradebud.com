@@ -42,6 +42,7 @@ import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabi
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import { restoreLinkedLocalPlotMediaFromServer } from '@/features/sync/restoreLinkedLocalPlotMediaFromServer';
+import { hydrateLocalSyncMarkersFromServer } from '@/features/sync/hydrateLocalSyncMarkersFromServer';
 import type { FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
 import {
   beginSyncPipelineHttpTelemetry,
@@ -261,6 +262,13 @@ async function runFieldSyncPipelineBody(
     }).catch(() => undefined);
     plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
   }
+
+  await hydrateLocalSyncMarkersFromServer({
+    apiFarmerId,
+    ownedFarmerIds: farmerScopeIds,
+    localFarmer: syncFarmer,
+    localPlots: activePlots,
+  }).catch(() => undefined);
 
   await pruneRedundantPendingUploadActions({ farmerId: apiFarmerId }).catch(() => 0);
 
