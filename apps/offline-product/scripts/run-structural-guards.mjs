@@ -16,6 +16,7 @@ const guards = [
   'pending-sync-registry-guard.mjs',
   'ui-reload-guard.mjs',
   'cross-device-smoke-wiring-guard.mjs',
+  'field-auth-backup-guard.mjs',
   'cloud-audit-sync-guard.mjs',
   'pending-sync-drain-order-guard.mjs',
   'field-sync-mode-guard.mjs',

@@ -4,6 +4,8 @@ import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { pendingSyncDedupKey } from '@/features/sync/pendingSyncDedup';
 import { invalidateAuditFetchCache } from '@/features/sync/fetchMergedAuditEventsForFarmer';
+import { hydrateDeclarationSyncMarkersFromServer } from '@/features/sync/hydrateDeclarationSyncMarkersFromServer';
+import { fetchOwnedFarmerIdsFromApi, getBootstrapOwnedFarmerIds } from '@/features/api/fieldAppBootstrap';
 import {
   deletePendingSyncAction,
   enqueuePendingSync,
@@ -200,10 +202,24 @@ export async function queuePlotComplianceAuditSync(params: {
 export async function enqueuePendingDeclarationAuditsForDevice(params: {
   farmer: FarmerProfile | undefined;
   plots: Plot[];
+  apiFarmerId?: string;
+  ownedFarmerIds?: string[];
 }): Promise<{ producer: boolean; plots: number }> {
   let producer = false;
   let plots = 0;
   const farmer = params.farmer;
+
+  if (farmer?.id) {
+    const ownedFarmerIds =
+      params.ownedFarmerIds ??
+      (await fetchOwnedFarmerIdsFromApi().catch(() => getBootstrapOwnedFarmerIds()));
+    await hydrateDeclarationSyncMarkersFromServer({
+      apiFarmerId: params.apiFarmerId ?? farmer.id,
+      ownedFarmerIds,
+      localFarmer: farmer,
+      localPlots: params.plots,
+    }).catch(() => undefined);
+  }
 
   if (farmer?.id && hasProducerAttestationsComplete(farmer)) {
     const payload = {

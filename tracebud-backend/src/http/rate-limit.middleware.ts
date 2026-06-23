@@ -37,6 +37,10 @@ export function isRateLimitExempt(req: Request): boolean {
     return true;
   }
 
+  if (method === 'POST' && (url.includes('/v1/audit/batch') || url.includes('/v1/audit'))) {
+    return true;
+  }
+
   return false;
 }
 

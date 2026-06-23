@@ -39,6 +39,28 @@ function main() {
   if (!pipeline.includes("syncMode === 'full'")) {
     issues.push('runFieldSyncPipeline must branch restore on syncMode full');
   }
+  if (!pipeline.includes('includeAuditPhotos: false')) {
+    issues.push('push_only linked media restore must skip audit_log photo fan-out');
+  }
+
+  const evidenceRestore = fs.readFileSync(
+    path.join(root, 'features/sync/restoreLocalEvidenceFromServer.ts'),
+    'utf8',
+  );
+  if (evidenceRestore.includes('for (const row of backendPlots)')) {
+    issues.push(
+      'restoreLocalEvidenceFromServer must not fan out to every server plot — linked local plots only',
+    );
+  }
+
+  const settingsPath = path.join(root, 'app/(tabs)/settings.tsx');
+  const settings = fs.readFileSync(settingsPath, 'utf8');
+  if (!settings.includes("syncMode === 'push_only'")) {
+    issues.push('settings.tsx must skip heavy post-sync work when syncMode is push_only');
+  }
+  if (!settings.includes('forcePlotFetch: syncMode !== \'push_only\'')) {
+    issues.push('settings.tsx must avoid forcePlotFetch after push_only sync');
+  }
 
   if (issues.length === 0) {
     console.log('push-only-restore-guard: OK');

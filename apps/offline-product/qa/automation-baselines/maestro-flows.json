@@ -9,6 +9,7 @@
     "land-title-photo.yaml",
     "mark-three-corners.yaml",
     "settings-sync-smoke.yaml",
+    "signed-out-backup-status-smoke.yaml",
     "tenure-evidence.yaml"
   ]
 }

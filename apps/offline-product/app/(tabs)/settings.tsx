@@ -77,7 +77,7 @@ import {
   isPlotFetchReachabilityFailure,
 } from '@/features/sync/plotFetchFailure';
 import { subscribeSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
-import { syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
+import { syncTimedOutMessage, resolveUnexpectedSyncErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { resolveSyncOpenPlotId, resolveSyncSupportMailto } from '@/features/sync/formatSyncNowUserMessage';
 import { resolveSyncAttentionMessage } from '@/features/sync/resolveSyncAttentionMessage';
 import { resolveBackupStatusDisplay } from '@/features/sync/backupStatusDisplay';
@@ -238,6 +238,7 @@ export default function SettingsScreen() {
   const [pushMessage, setPushMessage] = useState<string | null>(null);
   /** Keep backup status chip stable until sync finishes (avoid per-plot/queue flicker). */
   const freezeSyncMetricsDisplayRef = useRef(false);
+  const lastSyncModeRef = useRef<'push_only' | 'full' | null>(null);
   const measuredSyncPendingRef = useRef<TotalSyncPendingSnapshot | null>(null);
 
   useEffect(() => {
@@ -374,13 +375,20 @@ export default function SettingsScreen() {
     const canQueryServer = Boolean(profileFarmerId && hasSyncAuthSession());
     if (!canQueryServer) {
       const links = await loadPlotServerLinks().catch(() => ({}));
+      const offlineAttention = estimatePlotSyncAttention({
+        localPlots: plotSnapshot,
+        backendPlots: [],
+        plotServerLinks: links,
+        t,
+      });
       const pending: TotalSyncPendingSnapshot = {
         queuePendingCount: rows.length,
-        unsyncedPlotCount: 0,
-        blockedPlotCount: 0,
-        total: rows.length,
-        unsyncedPlotNames: [],
-        blockedPlots: [],
+        unsyncedPlotCount: offlineAttention.needsUploadPlots.length,
+        blockedPlotCount: offlineAttention.blockedPlots.length,
+        total: rows.length + offlineAttention.totalPlotAttention,
+        unsyncedPlotNames: offlineAttention.unsyncedPlotNames,
+        blockedPlots: offlineAttention.blockedPlots,
+        plotServerLinks: links,
       };
       if (applyDisplay) {
         publishSyncMetricsDisplay({
@@ -537,13 +545,15 @@ export default function SettingsScreen() {
     useCallback(() => {
       void (async () => {
         await reloadFromDisk();
-        if (isSignedIn && farmer?.id) {
+        if (isSignedIn && farmer?.id && !getSyncQueueLockSnapshot().locked) {
           await restoreCloudStateOnFocus().catch(() => undefined);
           await reloadFromDisk();
         }
         await refreshSavedSyncEmail();
         await refreshSyncMetrics();
-        await refreshCloudParity();
+        if (!getSyncQueueLockSnapshot().locked) {
+          await refreshCloudParity();
+        }
         await refreshPushPermission();
         const storedAttemptScope = await getSetting('syncQueueAttemptScope').catch(() => null);
         if (
@@ -571,7 +581,7 @@ export default function SettingsScreen() {
   useReloadOnServerPlotSyncChanged({
     reloadFromDisk,
     onSyncChanged: async () => {
-      if (freezeSyncMetricsDisplayRef.current) return;
+      if (freezeSyncMetricsDisplayRef.current || getSyncQueueLockSnapshot().locked) return;
       await refreshSyncMetrics();
       await refreshCloudParity();
     },
@@ -601,12 +611,12 @@ export default function SettingsScreen() {
   }, [farmer?.id, farmerDisplayName]);
 
   const plotAttentionEstimate = useMemo(() => {
-    if (measuredSyncPending != null || !isSignedIn || plots.length === 0) {
+    if (measuredSyncPending != null || plots.length === 0) {
       return null;
     }
     return estimatePlotSyncAttention({
       localPlots: plots,
-      backendPlots,
+      backendPlots: isSignedIn ? backendPlots : [],
       plotServerLinks,
       t,
     });
@@ -1071,10 +1081,10 @@ export default function SettingsScreen() {
         text: t('sign_out_device'),
         style: 'destructive',
         onPress: () => {
+          setSyncEmail('');
           void (async () => {
             try {
               await signOutOnDevice();
-              setSyncEmail('');
               setSyncMessage(null);
               void refreshSyncMetrics();
               Alert.alert(t('sign_out_device'), t('signed_out_device'));
@@ -1162,6 +1172,7 @@ export default function SettingsScreen() {
                 plotsFetchState === 'failed',
             });
             setLastSyncMode(syncMode);
+            lastSyncModeRef.current = syncMode;
             if (__DEV__) {
               setLastSyncHttpSummary(null);
             }
@@ -1190,6 +1201,10 @@ export default function SettingsScreen() {
               return;
             }
 
+            if (__DEV__) {
+              setLastSyncHttpSummary(formatSyncRunHttpSummary(pipeline.httpSummary ?? null));
+            }
+
             const outcome = pipeline.outcome;
 
             await reloadFromDisk();
@@ -1197,16 +1212,19 @@ export default function SettingsScreen() {
             const restoredPlots =
               diskState.plots.length > 0 ? diskState.plots : syncPlots;
             const freshPending = await refreshSyncMetrics({
-              forcePlotFetch: true,
+              forcePlotFetch: syncMode !== 'push_only',
               farmerId: apiFarmerId,
               ownedFarmerIds: farmerScopeIds,
               plots: restoredPlots,
             });
-            const paritySummary = await measureCloudParitySummary({
-              profileFarmerId: apiFarmerId,
-              localPlots: restoredPlots,
-              localFarmer: diskState.farmer ?? syncFarmer,
-            }).catch(() => null);
+            const paritySummary =
+              syncMode === 'push_only'
+                ? null
+                : await measureCloudParitySummary({
+                    profileFarmerId: apiFarmerId,
+                    localPlots: restoredPlots,
+                    localFarmer: diskState.farmer ?? syncFarmer,
+                  }).catch(() => null);
             setCloudParityHints(
               paritySummary
                 ? formatCloudParityHints(paritySummary, t, {
@@ -1248,7 +1266,7 @@ export default function SettingsScreen() {
               finalSyncMessage = t('sync_result_restore_partial_failed');
               finalSyncKind = 'error';
             }
-            if (finalSyncKind === 'success') {
+            if (finalSyncKind === 'success' && syncMode !== 'push_only') {
               const plotsForLandCheck = restoredPlots;
               const cachedBackend =
                 peekServerPlotListCache({
@@ -1277,17 +1295,17 @@ export default function SettingsScreen() {
             }
             const message = e instanceof Error ? e.message : String(e);
             setSyncMessage(
-              isNetworkReachabilityFailure(message)
-                ? resolveSyncReachFailedShortMessage(t, syncApiBaseUrl)
-                : t('sync_result_incomplete', { n: totalSyncPending }),
+              resolveUnexpectedSyncErrorMessage(message, totalSyncPending, t, {
+                apiBase: syncApiBaseUrl,
+                isNetworkReachabilityFailure,
+                resolveSyncReachFailedShortMessage,
+                surface: 'settings',
+              }),
             );
             setSyncMessageKind('error');
           } finally {
             if (sessionOpened?.ok) {
-              const ended = sessionOpened.end();
-              if (__DEV__) {
-                setLastSyncHttpSummary(formatSyncRunHttpSummary(ended.httpSummary));
-              }
+              sessionOpened.end();
             }
           }
             })(),
@@ -1309,17 +1327,23 @@ export default function SettingsScreen() {
       }
       const message = e instanceof Error ? e.message : String(e);
       setSyncMessage(
-        isNetworkReachabilityFailure(message)
-          ? resolveSyncReachFailedShortMessage(t, syncApiBaseUrl)
-          : t('sync_result_incomplete', { n: totalSyncPending }),
+        resolveUnexpectedSyncErrorMessage(message, totalSyncPending, t, {
+          apiBase: syncApiBaseUrl,
+          isNetworkReachabilityFailure,
+          resolveSyncReachFailedShortMessage,
+          surface: 'settings',
+        }),
       );
       setSyncMessageKind('error');
     } finally {
       freezeSyncMetricsDisplayRef.current = false;
       setSyncNowBusy(false);
       await reloadFromDisk();
-      await refreshSyncMetrics({ forcePlotFetch: true });
-      await refreshCloudParity();
+      const skipHeavyPostSync = lastSyncModeRef.current === 'push_only';
+      await refreshSyncMetrics({ forcePlotFetch: !skipHeavyPostSync });
+      if (!skipHeavyPostSync) {
+        await refreshCloudParity();
+      }
     }
   };
 
@@ -1363,6 +1387,7 @@ export default function SettingsScreen() {
                 {isSignedIn ? (
                   <View style={styles.profileAccountSection}>
                     <Pressable
+                      testID="settings-sign-out-device"
                       accessibilityRole="button"
                       onPress={onSignOutSync}
                       hitSlop={8}

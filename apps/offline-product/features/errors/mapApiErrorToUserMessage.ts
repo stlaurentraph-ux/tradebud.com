@@ -189,3 +189,27 @@ export function syncTimedOutMessage(
 ): string {
   return t(surfaceKey('sync_failed_try_later', surface));
 }
+
+/** Fallback when Sync now throws — never show "0 items still waiting". */
+export function resolveUnexpectedSyncErrorMessage(
+  message: string,
+  pendingCount: number,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  options: {
+    apiBase: string;
+    isNetworkReachabilityFailure: (msg: string) => boolean;
+    resolveSyncReachFailedShortMessage: (
+      translate: (key: string, params?: Record<string, string | number>) => string,
+      apiBase: string,
+    ) => string;
+    surface?: UserMessageSurface;
+  },
+): string {
+  if (options.isNetworkReachabilityFailure(message)) {
+    return options.resolveSyncReachFailedShortMessage(t, options.apiBase);
+  }
+  if (pendingCount > 0) {
+    return t('sync_result_incomplete', { n: pendingCount });
+  }
+  return t(surfaceKey('sync_failed_try_later', options.surface ?? 'settings'));
+}

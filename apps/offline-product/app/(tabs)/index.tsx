@@ -26,6 +26,7 @@ import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { estimatePlotSyncAttention } from '@/features/sync/plotServerSync';
+import { summarizeHomeBackupAttention } from '@/features/sync/homeBackupAttention';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -111,18 +112,26 @@ export default function HomeScreen() {
     }, [refreshAuth]),
   );
 
-  const unsyncedPlotCount = useMemo(() => {
-    if (!isSignedIn || plots.length === 0) return 0;
+  const plotAttentionEstimate = useMemo(() => {
+    if (plots.length === 0) return null;
     return estimatePlotSyncAttention({
       localPlots: plots,
-      backendPlots,
+      backendPlots: isSignedIn ? backendPlots : [],
       plotServerLinks,
       t,
-    }).needsUploadPlots.length;
+    });
   }, [plots, backendPlots, plotServerLinks, isSignedIn, t]);
 
-  const totalPendingSync = pendingCount + unsyncedPlotCount;
-  const needsBackupAttention = isSignedIn && totalPendingSync > 0;
+  const { totalPendingSync, needsBackupAttention, plotsBackedUpOnDevice } = useMemo(
+    () =>
+      summarizeHomeBackupAttention({
+        plotCount: plots.length,
+        pendingQueueCount: pendingCount,
+        unsyncedPlotCount: plotAttentionEstimate?.needsUploadPlots.length ?? 0,
+        blockedPlotCount: plotAttentionEstimate?.blockedPlots.length ?? 0,
+      }),
+    [plots.length, pendingCount, plotAttentionEstimate],
+  );
 
   const openBackupFlow = useCallback(() => {
     if (!isSignedIn) {
@@ -434,6 +443,7 @@ export default function HomeScreen() {
 
         {plotsCount > 0 ? (
         <Pressable
+          testID="home-backup-sync-card"
           onPress={openBackupFlow}
           accessibilityRole="button"
           accessibilityLabel={
@@ -451,7 +461,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name={needsBackupAttention ? 'cloud-upload-outline' : 'cloud-done-outline'}
                   size={16}
-                  color={needsBackupAttention ? Brand.warning : isSignedIn ? Brand.success : Brand.primary}
+                  color={needsBackupAttention ? Brand.warning : plotsBackedUpOnDevice || isSignedIn ? Brand.success : Brand.primary}
                 />
                 <ThemedText type="defaultSemiBold">{t('sync_status')}</ThemedText>
               </View>
@@ -477,6 +487,7 @@ export default function HomeScreen() {
               </View>
             ) : null}
             <ThemedText
+              testID="home-backup-status-caption"
               type="caption"
               style={[
                 styles.syncCaption,
@@ -489,7 +500,7 @@ export default function HomeScreen() {
             >
               {needsBackupAttention
                 ? t('backup_waiting', { n: totalPendingSync })
-                : isSignedIn
+                : plotsBackedUpOnDevice || isSignedIn
                   ? t('backup_up_to_date')
                   : t('home_sign_in_backup_caption')}
             </ThemedText>

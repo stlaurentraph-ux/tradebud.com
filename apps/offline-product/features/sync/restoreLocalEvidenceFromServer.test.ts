@@ -134,4 +134,33 @@ describe('restoreLocalEvidenceFromServer', () => {
     expect(result.restoredCount).toBe(0);
     expect(mocks.downloadEvidenceFileFromStorage).not.toHaveBeenCalled();
   });
+
+  it('does not fetch evidence for server plots without a local link', async () => {
+    mocks.loadPlotServerLinks.mockResolvedValue({});
+    mocks.fetchBackendPlotsForSyncScope.mockResolvedValue([
+      { id: 'server-remote', client_plot_id: 'remote-plot' },
+      { id: 'server-local', client_plot_id: 'local-1' },
+    ]);
+
+    const result = await restoreLocalEvidenceFromServer({
+      apiFarmerId: 'farmer-1',
+      ownedFarmerIds: [],
+      localPlots: [
+        {
+          id: 'local-1',
+          farmerId: 'farmer-1',
+          name: 'Plot A',
+          createdAt: 1,
+          areaSquareMeters: 1000,
+          areaHectares: 0.1,
+          kind: 'polygon',
+          points: [{ latitude: 1, longitude: 2 }],
+        },
+      ],
+    });
+
+    expect(result.restoredCount).toBe(0);
+    expect(mocks.fetchPlotSyncedEvidence).not.toHaveBeenCalled();
+    expect(mocks.fetchPlotTenureVerification).not.toHaveBeenCalled();
+  });
 });

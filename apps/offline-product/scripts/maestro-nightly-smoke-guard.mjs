@@ -139,6 +139,24 @@ function assertPackageScripts() {
   }
 }
 
+function assertSignedOutBackupFlow(manifest) {
+  const signedOut = manifest.nightlyFlows.find(
+    (item) => item.flowFile === 'signed-out-backup-status-smoke.yaml',
+  );
+  if (!signedOut) {
+    throw new Error(
+      'nightly smoke must include signed-out-backup-status-smoke.yaml (DEVICE_SMOKE §10 subset)',
+    );
+  }
+  if (signedOut.seedProfile !== 'backed_up_offline') {
+    throw new Error('signed-out-backup-status-smoke must use seedProfile backed_up_offline');
+  }
+  const seed = read('scripts/seed-maestro-simulator.mjs');
+  if (!seed.includes('backed_up_offline')) {
+    throw new Error('seed-maestro-simulator.mjs must support backed_up_offline profile');
+  }
+}
+
 function assertCrossDeviceRestoreFlow(manifest) {
   const crossDevice = manifest.nightlyFlows.find((item) => item.flowFile === 'cross-device-restore-smoke.yaml');
   if (!crossDevice) {
@@ -162,6 +180,7 @@ function main() {
   assertManifestShape(manifest);
   assertFlowsBaseline(manifest);
   assertCrossDeviceRestoreFlow(manifest);
+  assertSignedOutBackupFlow(manifest);
   assertRunnerScripts(manifest);
   assertWorkflowSchedule(manifest);
   assertPackageScripts();

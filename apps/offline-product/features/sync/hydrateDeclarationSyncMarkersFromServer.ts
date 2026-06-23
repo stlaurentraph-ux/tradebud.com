@@ -1,0 +1,102 @@
+import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
+import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
+import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
+import { fetchMergedAuditEventsForFarmer } from '@/features/sync/fetchMergedAuditEventsForFarmer';
+import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
+import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
+import { loadPlotServerLinks } from '@/features/state/persistence';
+
+function parseTimestampMs(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+  if (typeof raw === 'string' && raw.trim()) {
+    const ms = Date.parse(raw);
+    return Number.isFinite(ms) ? ms : 0;
+  }
+  return 0;
+}
+
+/**
+ * Sets local `audit_decl_synced:*` markers when server audit_log already has declarations.
+ * Push-only sync skips full declaration restore — without this, every Sync re-queues audit POSTs.
+ */
+export async function hydrateDeclarationSyncMarkersFromServer(params: {
+  apiFarmerId: string;
+  ownedFarmerIds: string[];
+  localFarmer: FarmerProfile | undefined;
+  localPlots: Plot[];
+}): Promise<{ producerMarked: boolean; plotsMarked: number; fetchFailed: boolean }> {
+  const apiFarmerId = params.apiFarmerId.trim();
+  const localFarmer = params.localFarmer;
+  if (!apiFarmerId || !localFarmer?.id) {
+    return { producerMarked: false, plotsMarked: 0, fetchFailed: false };
+  }
+
+  let auditRows: Awaited<ReturnType<typeof fetchMergedAuditEventsForFarmer>> = [];
+  try {
+    auditRows = await fetchMergedAuditEventsForFarmer([apiFarmerId, ...params.ownedFarmerIds]);
+  } catch {
+    return { producerMarked: false, plotsMarked: 0, fetchFailed: true };
+  }
+
+  let producerMarked = false;
+  let plotsMarked = 0;
+
+  const latestProducer = auditRows.find(
+    (row) => row.event_type === 'producer_attestations_updated',
+  );
+  if (hasProducerAttestationsComplete(localFarmer) && latestProducer?.payload) {
+    await markDeclarationAuditSynced({
+      eventType: 'producer_attestations_updated',
+      payload: {
+        farmerId: localFarmer.id,
+        fpicConsent: localFarmer.fpicConsent === true,
+        laborNoChildLabor: localFarmer.laborNoChildLabor === true,
+        laborNoForcedLabor: localFarmer.laborNoForcedLabor === true,
+        selfDeclared: true,
+        selfDeclaredAt:
+          localFarmer.selfDeclaredAt ?? parseTimestampMs(latestProducer.payload.selfDeclaredAt),
+      },
+    }).catch(() => undefined);
+    producerMarked = true;
+  }
+
+  const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<
+    string,
+    string
+  >;
+  const backendPlots = await fetchBackendPlotsForSyncScope({
+    farmerId: apiFarmerId,
+    ownedFarmerIds: params.ownedFarmerIds,
+  }).catch(() => []);
+
+  for (const plot of params.localPlots) {
+    if (!(plot.landTenureDeclared && plot.noDeforestationDeclared)) continue;
+    const hasAudit = auditRows.some((row) => {
+      if (row.event_type !== 'plot_compliance_declared' || !row.payload) return false;
+      const payloadPlotId = String(row.payload.plotId ?? '').trim();
+      if (!payloadPlotId) return false;
+      if (payloadPlotId === plot.id) return true;
+      const resolvedLocalPlotId = resolveLocalPlotIdForServerPlot({
+        serverPlotId: payloadPlotId,
+        localPlots: params.localPlots,
+        plotServerLinks,
+        backendPlots,
+      });
+      return resolvedLocalPlotId === plot.id;
+    });
+    if (!hasAudit) continue;
+    await markDeclarationAuditSynced({
+      eventType: 'plot_compliance_declared',
+      payload: {
+        plotId: plot.id,
+        farmerId: localFarmer.id,
+        landTenureDeclared: true,
+        noDeforestationDeclared: true,
+        source: 'hydrate',
+      },
+    }).catch(() => undefined);
+    plotsMarked += 1;
+  }
+
+  return { producerMarked, plotsMarked, fetchFailed: false };
+}

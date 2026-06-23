@@ -102,24 +102,28 @@ export async function drainPendingSyncQueueForManualSync(params: {
     fetchFailed: false,
   };
 
-  if (uploadTypes.length > 0) {
-    mergePass(
-      merged,
-      await drainActionTypesForManualSync({
-        ...params,
-        actionTypes: uploadTypes,
-        maxPasses,
-      }),
-    );
-  }
-
-  for (const actionTypes of [otherTypes, auditTypes]) {
+  // Declarations first — avoid burning the write rate limit on uploads/restore reads.
+  for (const actionTypes of [auditTypes, otherTypes]) {
     if (actionTypes.length === 0) continue;
     mergePass(
       merged,
       await drainActionTypesForManualSync({
         ...params,
         actionTypes,
+        maxPasses,
+      }),
+    );
+    if (merged.syncFailure?.cause === 'rate_limit') {
+      return merged;
+    }
+  }
+
+  if (uploadTypes.length > 0) {
+    mergePass(
+      merged,
+      await drainActionTypesForManualSync({
+        ...params,
+        actionTypes: uploadTypes,
         maxPasses,
       }),
     );

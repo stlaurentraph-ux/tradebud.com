@@ -43,6 +43,10 @@ describe('plotSyncPending', () => {
     expect(isLocalPlotConfirmedOnServer(plot1, backend, { 'farmer-1': 'server-1' })).toBe(true);
   });
 
+  it('trusts persisted device links when the server list is unavailable', () => {
+    expect(isLocalPlotConfirmedOnServer(plot1, [], { 'farmer-1': 'server-1' })).toBe(true);
+  });
+
   it('does not list synced plots in pending upload names', () => {
     const backend = [
       { id: 'server-1', client_plot_id: 'farmer-1', name: 'Plot 1', kind: 'polygon' },

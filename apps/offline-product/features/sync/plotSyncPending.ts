@@ -57,6 +57,9 @@ export function isLocalPlotConfirmedOnServer(
 
   const ids = localPlotIds ?? new Set([localPlot.id]);
   const persisted = plotServerLinks?.[localPlot.id]?.trim();
+  if (persisted && backendPlots.length === 0) {
+    return true;
+  }
   if (!persisted || backendPlots.length === 0) {
     return false;
   }

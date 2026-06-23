@@ -43,11 +43,23 @@ vi.mock('@/features/sync/runFieldSyncSession', () => ({
   withFieldSyncSession: mocks.withFieldSyncSession,
 }));
 
+vi.mock('@/features/sync/syncQueueMutex', () => ({
+  getSyncQueueLockSnapshot: vi.fn(() => ({ locked: false, phase: 'idle', lockStartedAt: null, waitingSince: null, waiterCount: 0 })),
+}));
+
+import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
 import { restoreCloudStateOnFocus } from './restoreCloudStateOnFocus';
 
 describe('restoreCloudStateOnFocus', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getSyncQueueLockSnapshot).mockReturnValue({
+      locked: false,
+      phase: 'idle',
+      lockStartedAt: null,
+      waitingSince: null,
+      waiterCount: 0,
+    });
     mocks.hasSyncAuthSession.mockReturnValue(true);
     mocks.withFieldSyncSession.mockImplementation(async (fn: () => Promise<unknown>) => ({
       ok: true,
@@ -88,6 +100,18 @@ describe('restoreCloudStateOnFocus', () => {
   it('returns null when not signed in', async () => {
     mocks.hasSyncAuthSession.mockReturnValue(false);
     await expect(restoreCloudStateOnFocus({ force: true })).resolves.toBeNull();
+  });
+
+  it('returns null while sync queue lock is held', async () => {
+    vi.mocked(getSyncQueueLockSnapshot).mockReturnValue({
+      locked: true,
+      phase: 'processing_queue',
+      lockStartedAt: Date.now(),
+      waitingSince: null,
+      waiterCount: 0,
+    });
+    await expect(restoreCloudStateOnFocus({ force: true })).resolves.toBeNull();
+    expect(mocks.withFieldSyncSession).not.toHaveBeenCalled();
   });
 
   it('pulls media and receipts then emits sync changed when restored', async () => {

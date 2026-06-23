@@ -6,6 +6,7 @@ import {
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
 import { isExistingAuthUserAtSignup } from '@/features/auth/oauthExistingAccount';
+import { deriveDisplayNameFromEmail } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile, getFieldAppEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import { fieldAppBlocksDashboardOAuthSignIn } from '@/features/auth/fieldAppEligibility';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
@@ -97,7 +98,10 @@ export async function completeOAuthFarmerSession(params: {
   }
 
   const nameFromSession =
-    params.fullName || getNameFromSession(params.session) || '';
+    params.fullName ||
+    getNameFromSession(params.session) ||
+    deriveDisplayNameFromEmail(email) ||
+    '';
 
   await saveAndApplyOAuthSyncAuth(
     email,

@@ -128,9 +128,11 @@ Use a plot with **land title photos or tenure documents** queued locally, plus *
 ## 10. Tenant & session (field-app scope)
 
 - [ ] Signed-in upload only affects the authenticated farmer’s server plots (no cross-account bleed on one device)
-- [ ] Sign out → local SQLite plots/harvests remain; server session cleared
+- [ ] Sign out → local SQLite plots/harvests remain; server session cleared; Settings email clears immediately (no ~30s spinner)
+- [ ] After sign-out with plots already uploaded → Home sync card shows **Backed up** (not “sign in to upload”); no spurious auto-backup retries while signed out
 - [ ] Sign in as different user → backup consent only offers **local** unsynced plots for upload
 - [ ] OAuth user: Settings unsynced plot count matches My Plots (not stuck at 0)
+- [ ] **Simulator (Maestro):** `MAESTRO_SEED_PROFILE=backed_up_offline npm run test:maestro:seed` then `npm run test:maestro:signed-out-backup` — asserts `signed-out-backup-status-smoke.yaml`
 
 ## 11. Flaky network & recovery
 

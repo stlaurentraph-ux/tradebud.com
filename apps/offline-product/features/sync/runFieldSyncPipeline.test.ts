@@ -15,6 +15,7 @@ const restoreMocks = vi.hoisted(() => ({
   pruneRedundantPendingUploadActions: vi.fn(),
   fetchBackendPlotsForSyncScope: vi.fn(),
   backfillServerHarvestDatesFromLocal: vi.fn(),
+  restoreLinkedLocalPlotMediaFromServer: vi.fn(),
 }));
 
 vi.mock('@/features/sync/processPendingSyncQueue', () => ({
@@ -86,6 +87,10 @@ vi.mock('@/features/harvest/reconcileUnuploadedLocalDeliveryReceipts', () => ({
 
 vi.mock('@/features/harvest/backfillServerHarvestDatesFromLocal', () => ({
   backfillServerHarvestDatesFromLocal: restoreMocks.backfillServerHarvestDatesFromLocal,
+}));
+
+vi.mock('@/features/sync/restoreLinkedLocalPlotMediaFromServer', () => ({
+  restoreLinkedLocalPlotMediaFromServer: restoreMocks.restoreLinkedLocalPlotMediaFromServer,
 }));
 
 vi.mock('@/features/state/persistence', () => ({
@@ -162,6 +167,13 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
       plotsFetchFailed: false,
     });
     restoreMocks.loadPendingSyncActions.mockResolvedValue([]);
+    restoreMocks.restoreLinkedLocalPlotMediaFromServer.mockResolvedValue({
+      evidenceRestored: 0,
+      groundTruthRestored: 0,
+      landTitleRestored: 0,
+      fetchFailed: false,
+      downloadFailed: 0,
+    });
   });
 
   it('does not invoke cloud restore helpers when syncMode is push_only', async () => {
@@ -179,6 +191,9 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
     expect(restoreMocks.backfillServerHarvestDatesFromLocal).not.toHaveBeenCalled();
     expect(restoreMocks.enqueueFarmerCloudSyncActions).not.toHaveBeenCalled();
     expect(restoreMocks.drainPendingSyncQueueForManualSync).toHaveBeenCalled();
+    expect(restoreMocks.restoreLinkedLocalPlotMediaFromServer).toHaveBeenCalledWith(
+      expect.objectContaining({ includeAuditPhotos: false }),
+    );
   });
 
   it('runs cloud restore helpers when syncMode is full', async () => {
@@ -223,5 +238,6 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
     expect(restoreMocks.restoreLocalDeliveryReceiptsFromServer).toHaveBeenCalled();
     expect(restoreMocks.restoreFarmerCloudState).toHaveBeenCalled();
     expect(restoreMocks.enqueueFarmerCloudSyncActions).toHaveBeenCalled();
+    expect(restoreMocks.restoreLinkedLocalPlotMediaFromServer).not.toHaveBeenCalled();
   });
 });

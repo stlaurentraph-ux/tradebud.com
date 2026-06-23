@@ -7,6 +7,7 @@ export type SignInErrorCode =
   | 'sign_in_email_not_confirmed'
   | 'sign_up_email_already_exists'
   | 'sign_in_failed'
+  | 'sign_in_auth_not_configured'
   | 'sign_in_dashboard_account'
   | 'settings_password_too_short'
   | 'settings_password_mismatch'
@@ -85,6 +86,13 @@ export function normalizeSignInErrorCode(raw: string): SignInErrorCode | string 
   if (lower.includes('already registered') || lower.includes('user already exists')) {
     return 'sign_up_email_already_exists';
   }
+  if (
+    lower.includes('sign_in_auth_not_configured') ||
+    lower.includes('anon key not configured') ||
+    lower.includes('supabase url or anon')
+  ) {
+    return 'sign_in_auth_not_configured';
+  }
   if (lower.includes('supabase login failed') || lower.includes('supabase session')) {
     return 'sign_in_failed';
   }
@@ -107,6 +115,8 @@ export function formatSignInErrorMessage(
       return t('sign_up_email_already_exists');
     case 'sign_in_failed':
       return t('sign_in_failed');
+    case 'sign_in_auth_not_configured':
+      return t('sign_in_auth_not_configured');
     case 'sign_in_dashboard_account':
       return t('sign_in_dashboard_account');
     case 'settings_password_too_short':

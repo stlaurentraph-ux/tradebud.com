@@ -96,13 +96,18 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | `mark-three-corners.yaml` | §2 mark corners | Needs location; best on device or simulator with mocked GPS |
 | `settings-sync-smoke.yaml` | Settings → Backup | Requires Backup section; Sync now or sign-in CTA |
 | `cross-device-restore-smoke.yaml` | DEVICE_SMOKE §12 subset | Device B seed (`cross_device_b`): plot linked, no local media; restore entry points |
+| `signed-out-backup-status-smoke.yaml` | DEVICE_SMOKE §10 subset | Seed (`backed_up_offline`): signed-out farmer with device-remembered server plot links; Home shows **Backed up** |
 
 ## testID map
 
 | testID | Screen |
 |--------|--------|
+| `tab-home` | Bottom tab → Home |
 | `tab-my-plots` | Bottom tab → My Plots |
 | `tab-settings` | Bottom tab → Settings |
+| `home-backup-sync-card` | Home → Backup / sync status card |
+| `home-backup-status-caption` | Home → sync caption (“Backed up”, pending count, etc.) |
+| `settings-sign-out-device` | Settings → Sign out on this device |
 | `settings-sync-now` | Settings → Sync now (signed in) |
 | `settings-cloud-parity-section` | Settings → Backup / sync card |
 | `settings-cloud-parity-hint-0` | Cloud parity hint (when server > local) |

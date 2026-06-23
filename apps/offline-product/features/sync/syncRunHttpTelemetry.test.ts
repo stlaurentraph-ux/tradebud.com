@@ -5,7 +5,9 @@ vi.mock('@/features/api/runtimeGuards', () => ({
 }));
 
 import {
+  beginSyncPipelineHttpTelemetry,
   beginSyncRunHttpTelemetry,
+  endSyncPipelineHttpTelemetry,
   endSyncRunHttpTelemetry,
   formatSyncRunHttpSummary,
   normalizeSyncHttpRouteLabel,
@@ -34,14 +36,39 @@ describe('syncRunHttpTelemetry', () => {
     const originalFetch = vi.fn(async () => new Response('{}', { status: 200 }));
     globalThis.fetch = originalFetch as typeof fetch;
 
-    beginSyncRunHttpTelemetry();
+    beginSyncPipelineHttpTelemetry();
     await fetch('https://api.tracebud.com/api/v1/audit?farmerId=f1');
     await fetch('https://api.tracebud.com/api/v1/audit/batch', { method: 'POST' });
-    const summary = endSyncRunHttpTelemetry();
+    const summary = endSyncPipelineHttpTelemetry();
 
     expect(summary?.total).toBe(2);
     expect(summary?.byRoute['GET /v1/audit']).toBe(1);
     expect(summary?.byRoute['POST /v1/audit/batch']).toBe(1);
     expect(formatSyncRunHttpSummary(summary)).toContain('2 (');
+  });
+
+  it('does not count requests outside pipeline telemetry scope', async () => {
+    const originalFetch = vi.fn(async () => new Response('{}', { status: 200 }));
+    globalThis.fetch = originalFetch as typeof fetch;
+
+    await fetch('https://api.tracebud.com/api/v1/plots?farmerId=f1');
+    beginSyncPipelineHttpTelemetry();
+    await fetch('https://api.tracebud.com/api/v1/audit/batch', { method: 'POST' });
+    const summary = endSyncPipelineHttpTelemetry();
+
+    expect(summary?.total).toBe(1);
+    expect(summary?.byRoute['POST /v1/audit/batch']).toBe(1);
+  });
+
+  it('keeps deprecated session aliases wired to pipeline scope', async () => {
+    const originalFetch = vi.fn(async () => new Response('{}', { status: 200 }));
+    globalThis.fetch = originalFetch as typeof fetch;
+
+    beginSyncRunHttpTelemetry();
+    await fetch('https://api.tracebud.com/api/v1/harvest/vouchers/mine');
+    const summary = endSyncRunHttpTelemetry();
+
+    expect(summary?.total).toBe(1);
+    expect(summary?.byRoute['GET /v1/harvest/vouchers/mine']).toBe(1);
   });
 });

@@ -173,5 +173,12 @@ assertIncludes('app/(tabs)/settings.tsx', 'testID="settings-sync-now"', 'Setting
 assertIncludes('features/sync/processPendingSyncQueue.ts', 'reportSyncFailure', 'queue drain reports failures');
 assertIncludes('features/evidence/syncGroundTruthPhotosWithFiles.ts', 'syncFailureFromEvidenceUpload', 'photo storage typed failures');
 assertFile('.maestro/flows/settings-sync-smoke.yaml', 'settings sync Maestro smoke');
+assertFile('.maestro/flows/signed-out-backup-status-smoke.yaml', 'signed-out backup Maestro smoke');
+assertIncludes('scripts/run-structural-guards.mjs', 'field-auth-backup-guard.mjs', 'structural guards include field auth backup');
+assertIncludes('package.json', 'qa:field-readiness:assert', 'field readiness assert script');
+assertIncludes('app/(tabs)/index.tsx', 'testID="home-backup-sync-card"', 'home backup sync card testID');
+assertIncludes('app/(tabs)/settings.tsx', 'testID="settings-sign-out-device"', 'settings sign-out testID');
+assertIncludes('scripts/seed-maestro-simulator.mjs', 'backed_up_offline', 'Maestro backed-up-offline seed profile');
+assertIncludes('qa/automation-baselines/maestro-nightly-smoke.json', 'signed-out-backup-status-smoke.yaml', 'nightly smoke signed-out backup flow');
 
 console.log('\nStatic wiring OK. Run `npm run qa:full` before `release:production:safe`.');

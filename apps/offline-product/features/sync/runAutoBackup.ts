@@ -1,5 +1,6 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import type { PendingSyncAction } from '@/features/state/persistence';
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import {
   type ProcessPendingSyncQueueResult,
 } from '@/features/sync/processPendingSyncQueue';
@@ -70,6 +71,15 @@ export async function runAutoBackup(params: {
   skipQueueDrain?: boolean;
   syncMode?: FieldSyncMode;
 }): Promise<RunAutoBackupResult> {
+  if (!hasSyncAuthSession()) {
+    return {
+      plotResult: null,
+      queueResult: emptyQueueResult({
+        fetchFailed: true,
+        firstError: 'not_signed_in',
+      }),
+    };
+  }
   try {
     return await withSyncQueueLock(async () => {
       const work = (async () => {

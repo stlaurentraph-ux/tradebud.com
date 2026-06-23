@@ -7,6 +7,7 @@ import {
   activateSyncAuthOnSignIn,
   clearSyncAuthCredentials,
   isSyncAuthDismissedOnDevice,
+  persistSyncAuthSignOutLatch,
   loadSyncAuthCredentials,
   saveOAuthSyncAuthCredentials,
   saveSyncAuthCredentials,
@@ -111,7 +112,7 @@ function isLocalhostApi(url: string): boolean {
 
 export function getSupabaseAuthClient(): SupabaseClient {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Supabase URL or ANON key not configured');
+    throw new Error('sign_in_auth_not_configured');
   }
   if (!supabaseClient) {
     supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -419,14 +420,19 @@ export function abortSyncAuthForSignOut(): void {
   authUiGeneration += 1;
   syncAuthDismissedByUser = true;
   clearInMemorySyncAuth();
+  void persistSyncAuthSignOutLatch().catch(() => undefined);
 }
 
 export async function hydrateSyncAuthFromSettings(): Promise<void> {
   return runAuthStateMutation(async () => {
     try {
+      if (syncAuthDismissedByUser) {
+        clearInMemorySyncAuth();
+        return;
+      }
       const dismissed = await isSyncAuthDismissedOnDevice();
-      syncAuthDismissedByUser = dismissed;
       if (dismissed) {
+        syncAuthDismissedByUser = true;
         clearInMemorySyncAuth();
         return;
       }

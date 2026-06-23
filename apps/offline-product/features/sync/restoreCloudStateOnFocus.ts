@@ -43,6 +43,8 @@ function countFocusRestore(result: Omit<FocusCloudRestoreResult, 'totalRestored'
   );
 }
 
+import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
+
 /**
  * Pull-only cross-device restore for tab/screen focus (no upload or queue drain).
  * Matches the restore phase of `runFieldSyncPipeline` without push steps.
@@ -51,6 +53,7 @@ export async function restoreCloudStateOnFocus(options?: {
   force?: boolean;
 }): Promise<FocusCloudRestoreResult | null> {
   if (!hasSyncAuthSession()) return null;
+  if (getSyncQueueLockSnapshot().locked) return null;
 
   const now = Date.now();
   if (!options?.force && now - lastFocusPullAt < FOCUS_PULL_MIN_INTERVAL_MS) {

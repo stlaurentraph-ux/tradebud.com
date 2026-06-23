@@ -8,6 +8,9 @@ const markPendingSyncAttempt = vi.fn();
 const getSetting = vi.fn();
 const setSetting = vi.fn();
 const deletePendingSyncAction = vi.fn();
+const fetchMergedAuditEventsForFarmer = vi.fn();
+const loadPlotServerLinks = vi.fn();
+const fetchBackendPlotsForSyncScope = vi.fn();
 
 vi.mock('@/features/api/audit', () => ({
   postAuditEventToBackend,
@@ -17,8 +20,18 @@ vi.mock('@/features/api/syncAuthSession', () => ({
   hasSyncAuthSession,
 }));
 
+vi.mock('@/features/api/fieldAppBootstrap', () => ({
+  fetchOwnedFarmerIdsFromApi: vi.fn(async () => []),
+  getBootstrapOwnedFarmerIds: vi.fn(() => []),
+}));
+
 vi.mock('@/features/sync/fetchMergedAuditEventsForFarmer', () => ({
   invalidateAuditFetchCache: vi.fn(),
+  fetchMergedAuditEventsForFarmer,
+}));
+
+vi.mock('@/features/sync/resolveFieldSyncScope', () => ({
+  fetchBackendPlotsForSyncScope,
 }));
 
 vi.mock('@/features/state/persistence', () => ({
@@ -28,6 +41,7 @@ vi.mock('@/features/state/persistence', () => ({
   getSetting,
   setSetting,
   deletePendingSyncAction,
+  loadPlotServerLinks,
 }));
 
 async function loadModule() {
@@ -45,13 +59,22 @@ describe('queueDeclarationAuditSync', () => {
     getSetting.mockReset();
     setSetting.mockReset();
     deletePendingSyncAction.mockReset();
+    fetchMergedAuditEventsForFarmer.mockReset();
+    loadPlotServerLinks.mockReset();
+    fetchBackendPlotsForSyncScope.mockReset();
 
     hasSyncAuthSession.mockReturnValue(true);
-    getSetting.mockResolvedValue(null);
-    setSetting.mockResolvedValue(undefined);
+    const markerStore = new Map<string, string>();
+    getSetting.mockImplementation(async (key: string) => markerStore.get(key) ?? null);
+    setSetting.mockImplementation(async (key: string, value: string) => {
+      markerStore.set(key, value);
+    });
     deletePendingSyncAction.mockResolvedValue(undefined);
     markPendingSyncAttempt.mockResolvedValue(undefined);
     loadPendingSyncActions.mockResolvedValue([]);
+    loadPlotServerLinks.mockResolvedValue({});
+    fetchBackendPlotsForSyncScope.mockResolvedValue([]);
+    fetchMergedAuditEventsForFarmer.mockResolvedValue([]);
     enqueuePendingSync.mockImplementation(async (row) => {
       loadPendingSyncActions.mockResolvedValue([
         {
@@ -115,5 +138,39 @@ describe('queueDeclarationAuditSync', () => {
     expect(result).toBe('synced');
     expect(enqueuePendingSync).not.toHaveBeenCalled();
     expect(postAuditEventToBackend).not.toHaveBeenCalled();
+  });
+
+  it('skips plot backfill when server audit already exists (hydrate markers)', async () => {
+    fetchMergedAuditEventsForFarmer.mockResolvedValue([
+      {
+        id: 'evt-plot',
+        event_type: 'plot_compliance_declared',
+        timestamp: '2026-06-19T12:00:00.000Z',
+        payload: {
+          plotId: 'plot-1',
+          farmerId: 'farmer-1',
+          landTenureDeclared: true,
+          noDeforestationDeclared: true,
+        },
+      },
+    ]);
+    const { enqueuePendingDeclarationAuditsForDevice } = await loadModule();
+
+    const result = await enqueuePendingDeclarationAuditsForDevice({
+      farmer: { id: 'farmer-1', role: 'farmer' },
+      plots: [
+        {
+          id: 'plot-1',
+          farmerId: 'farmer-1',
+          landTenureDeclared: true,
+          noDeforestationDeclared: true,
+        },
+      ],
+      apiFarmerId: 'farmer-1',
+      ownedFarmerIds: [],
+    });
+
+    expect(result.plots).toBe(0);
+    expect(enqueuePendingSync).not.toHaveBeenCalled();
   });
 });

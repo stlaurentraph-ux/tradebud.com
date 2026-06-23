@@ -4,6 +4,7 @@ import { useContext, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { LocaleContext } from "@/lib/locale-context";
 import { getAuthCopy } from "@/lib/workflow-terminology-labels";
@@ -59,11 +60,12 @@ export function LoginForm({ onLogin, error }: LoginFormProps) {
               <label htmlFor="password" className="text-sm font-medium text-foreground">
                 {getAuthCopy("field_password", t)}
               </label>
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                showPasswordLabel={getAuthCopy('show_password', t)}
+                hidePasswordLabel={getAuthCopy('hide_password', t)}
                 required
               />
             </div>

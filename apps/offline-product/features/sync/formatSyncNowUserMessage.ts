@@ -105,6 +105,10 @@ export function formatPendingSyncSummary(
     return t('sync_result_incomplete_plot_count', { n: pending.unsyncedPlotCount });
   }
 
+  if (pending.total <= 0) {
+    return t('sync_result_complete');
+  }
+
   return t('sync_result_incomplete', { n: pending.total });
 }
 

@@ -20,6 +20,10 @@ import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile } from '@/features/auth/oauthSession';
 import {
+  hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
+} from '@/features/api/syncAuthSession';
+import {
   signUpWithEmailAndSyncPlots,
   signUpWithOAuthAndSyncPlots,
 } from '@/features/auth/farmerSignUp';
@@ -130,17 +134,31 @@ export function CreateAccountWizard({
         localPlots,
       });
       if (!result.ok) {
+        await hydrateSyncAuthFromSettings().catch(() => undefined);
+        if (hasSyncAuthSession()) {
+          finishSuccess({ existingAccount: true });
+          return;
+        }
         setHint(resolveMessage(result.message));
         return;
       }
       if (result.missingName) {
+        if (result.existingAccount) {
+          finishSuccess({ existingAccount: true });
+          return;
+        }
         setOauthBusy(null);
-        setPendingExistingAccount(result.existingAccount === true);
+        setPendingExistingAccount(false);
         setStep('name');
         return;
       }
       finishSuccess({ existingAccount: result.existingAccount });
     } catch (e) {
+      await hydrateSyncAuthFromSettings().catch(() => undefined);
+      if (hasSyncAuthSession()) {
+        finishSuccess({ existingAccount: true });
+        return;
+      }
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
       oauthInFlightRef.current = false;
@@ -272,6 +290,9 @@ export function CreateAccountWizard({
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  showPasswordToggle
+                  showPasswordAccessibilityLabel={t('show_password')}
+                  hidePasswordAccessibilityLabel={t('hide_password')}
                   placeholder="••••••••"
                   dense
                 />

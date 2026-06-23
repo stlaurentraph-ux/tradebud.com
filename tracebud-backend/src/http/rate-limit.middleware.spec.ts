@@ -34,10 +34,13 @@ describe('rate-limit middleware', () => {
     ).toBe(true);
   });
 
-  it('does not exempt audit POST', () => {
+  it('exempts audit POST routes', () => {
     expect(
       isRateLimitExempt(mockReq({ method: 'POST', originalUrl: '/api/v1/audit' })),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      isRateLimitExempt(mockReq({ method: 'POST', originalUrl: '/api/v1/audit/batch' })),
+    ).toBe(true);
   });
 
   it('resolves user bucket from JWT sub', () => {
@@ -57,7 +60,7 @@ describe('rate-limit middleware', () => {
     const middleware = createRateLimitMiddleware();
     const req = mockReq({
       method: 'POST',
-      originalUrl: '/api/v1/audit',
+      originalUrl: '/api/v1/harvest',
       headers: { authorization: 'Bearer test' },
       ip: '9.9.9.9',
     });

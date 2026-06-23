@@ -41,7 +41,13 @@ import { classifyPlotListFailure, classifySyncFailure } from '@/features/sync/sy
 import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabilityMessage';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
+import { restoreLinkedLocalPlotMediaFromServer } from '@/features/sync/restoreLinkedLocalPlotMediaFromServer';
 import type { FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import {
+  beginSyncPipelineHttpTelemetry,
+  endSyncPipelineHttpTelemetry,
+  type SyncRunHttpSummary,
+} from '@/features/sync/syncRunHttpTelemetry';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 export type FieldSyncPipelineParams = {
@@ -80,6 +86,8 @@ export type FieldSyncPipelineResult = {
   stoppedForAuth?: boolean;
   /** Plots merged from server during restore — caller should reload local state when > 0. */
   plotsRestored?: number;
+  /** Dev-only: Tracebud API calls during pipeline execution only. */
+  httpSummary?: SyncRunHttpSummary | null;
 };
 
 function mergeQueueResult(
@@ -123,6 +131,19 @@ function reportPlotUploadFailure(
  * Token verification and plot-fetch de-duplication belong to {@link openFieldSyncSession}.
  */
 export async function runFieldSyncPipeline(
+  params: FieldSyncPipelineParams,
+): Promise<FieldSyncPipelineResult> {
+  beginSyncPipelineHttpTelemetry();
+  try {
+    const result = await runFieldSyncPipelineBody(params);
+    return { ...result, httpSummary: endSyncPipelineHttpTelemetry() };
+  } catch (error) {
+    endSyncPipelineHttpTelemetry();
+    throw error;
+  }
+}
+
+async function runFieldSyncPipelineBody(
   params: FieldSyncPipelineParams,
 ): Promise<FieldSyncPipelineResult> {
   const {
@@ -409,6 +430,41 @@ export async function runFieldSyncPipeline(
 
   if (syncMode !== 'push_only') {
     await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
+  }
+
+  if (syncMode === 'push_only' && activePlots.length > 0) {
+    setPhase('restoring_plots');
+    reportSyncStepStart('plot_list', {
+      phase: 'linked_media_restore',
+      plotCount: activePlots.length,
+    });
+    const mediaRestore = await restoreLinkedLocalPlotMediaFromServer({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: activePlots,
+      includeAuditPhotos: false,
+    }).catch(() => ({
+      evidenceRestored: 0,
+      groundTruthRestored: 0,
+      landTitleRestored: 0,
+      fetchFailed: true,
+      downloadFailed: 0,
+    }));
+    if (mediaRestore.groundTruthRestored > 0) {
+      outcome.groundTruthPhotosRestored =
+        (outcome.groundTruthPhotosRestored ?? 0) + mediaRestore.groundTruthRestored;
+    }
+    const evidencePullCount = mediaRestore.evidenceRestored + mediaRestore.landTitleRestored;
+    if (evidencePullCount > 0) {
+      outcome.evidenceRestored = (outcome.evidenceRestored ?? 0) + evidencePullCount;
+    }
+    if (mediaRestore.fetchFailed) {
+      outcome.evidenceFetchFailed = true;
+    }
+    if (mediaRestore.downloadFailed > 0) {
+      outcome.evidenceDownloadFailed =
+        (outcome.evidenceDownloadFailed ?? 0) + mediaRestore.downloadFailed;
+    }
   }
 
   if (syncMode === 'full') {

@@ -5,7 +5,8 @@ export type SyncRunHttpSummary = {
   byRoute: Record<string, number>;
 };
 
-let active = false;
+/** Only counts HTTP while pipeline depth > 0 (not whole sync session / Settings refresh). */
+let pipelineDepth = 0;
 let originalFetch: typeof fetch | null = null;
 const counts = new Map<string, number>();
 
@@ -59,7 +60,7 @@ export function normalizeSyncHttpRouteLabel(method: string, url: string): string
 }
 
 function recordRequest(method: string, url: string): void {
-  if (!active) return;
+  if (pipelineDepth <= 0) return;
   const apiBase = getTracebudApiBaseUrl().replace(/\/$/, '');
   if (!url.startsWith(apiBase) && !url.includes('/v1/')) {
     return;
@@ -76,10 +77,8 @@ function buildSummary(): SyncRunHttpSummary {
   return { total, byRoute };
 }
 
-export function beginSyncRunHttpTelemetry(): void {
-  if (!isDevRuntime() || active) return;
-  counts.clear();
-  active = true;
+function ensureFetchPatch(): void {
+  if (originalFetch) return;
   originalFetch = globalThis.fetch.bind(globalThis);
   globalThis.fetch = ((input: RequestInfo | URL, init?: RequestInit) => {
     const method = init?.method ?? (input instanceof Request ? input.method : 'GET');
@@ -88,16 +87,42 @@ export function beginSyncRunHttpTelemetry(): void {
   }) as typeof fetch;
 }
 
-export function endSyncRunHttpTelemetry(): SyncRunHttpSummary | null {
-  if (!isDevRuntime() || !active) {
+function releaseFetchPatchIfIdle(): void {
+  if (pipelineDepth > 0 || !originalFetch) return;
+  globalThis.fetch = originalFetch;
+  originalFetch = null;
+}
+
+/** Count Tracebud API calls made inside {@link runFieldSyncPipeline} only. */
+export function beginSyncPipelineHttpTelemetry(): void {
+  if (!isDevRuntime()) return;
+  if (pipelineDepth === 0) {
+    counts.clear();
+  }
+  pipelineDepth += 1;
+  ensureFetchPatch();
+}
+
+export function endSyncPipelineHttpTelemetry(): SyncRunHttpSummary | null {
+  if (!isDevRuntime() || pipelineDepth <= 0) {
     return null;
   }
-  active = false;
-  if (originalFetch) {
-    globalThis.fetch = originalFetch;
-    originalFetch = null;
+  pipelineDepth -= 1;
+  releaseFetchPatchIfIdle();
+  if (pipelineDepth > 0) {
+    return null;
   }
   return buildSummary();
+}
+
+/** @deprecated Prefer beginSyncPipelineHttpTelemetry — session-wide counts include parity/metrics noise. */
+export function beginSyncRunHttpTelemetry(): void {
+  beginSyncPipelineHttpTelemetry();
+}
+
+/** @deprecated Prefer endSyncPipelineHttpTelemetry. */
+export function endSyncRunHttpTelemetry(): SyncRunHttpSummary | null {
+  return endSyncPipelineHttpTelemetry();
 }
 
 export function formatSyncRunHttpSummary(summary: SyncRunHttpSummary | null): string | null {
@@ -108,7 +133,7 @@ export function formatSyncRunHttpSummary(summary: SyncRunHttpSummary | null): st
 
 /** Test helper. */
 export function resetSyncRunHttpTelemetryForTests(): void {
-  active = false;
+  pipelineDepth = 0;
   counts.clear();
   if (originalFetch) {
     globalThis.fetch = originalFetch;

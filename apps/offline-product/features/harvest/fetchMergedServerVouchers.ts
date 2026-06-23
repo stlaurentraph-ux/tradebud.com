@@ -4,6 +4,7 @@ import {
   getTracebudApiBaseUrl,
 } from '@/features/api/syncAuthSession';
 import { TRACEBUD_NO_CACHE_HEADERS, cacheBustUrl, isSuccessfulApiResponse } from '@/features/network/apiFetchResponse';
+import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { supplementVoucherHarvestDatesFromSupabase } from '@/features/harvest/supplementVoucherHarvestDates';
 import { voucherId } from '@/features/harvest/voucherRowFields';
@@ -97,8 +98,28 @@ function mergeVoucherRows(into: Map<string, unknown>, payload: unknown): void {
   }
 }
 
+const VOUCHERS_FETCH_CACHE_MS = 45_000;
+let vouchersFetchCache: { at: number; rows: unknown[] } | null = null;
+
+/** Test hook. */
+export function resetMergedServerVouchersCacheForTests(): void {
+  vouchersFetchCache = null;
+}
+
 /** Merges voucher rows from /vouchers/mine and every linked farmer profile. */
 export async function fetchMergedServerVouchers(farmerIds: readonly string[]): Promise<unknown[]> {
+  if (getSyncQueueLockSnapshot().locked) {
+    if (vouchersFetchCache) {
+      return [...vouchersFetchCache.rows];
+    }
+    return [];
+  }
+
+  const now = Date.now();
+  if (vouchersFetchCache && now - vouchersFetchCache.at < VOUCHERS_FETCH_CACHE_MS) {
+    return [...vouchersFetchCache.rows];
+  }
+
   const merged = new Map<string, unknown>();
   let mineUnsupported = false;
   let mineError: unknown = null;
@@ -122,8 +143,11 @@ export async function fetchMergedServerVouchers(farmerIds: readonly string[]): P
   }
 
   if (merged.size === 0 && mineUnsupported) {
+    vouchersFetchCache = { at: now, rows: [] };
     return [];
   }
 
-  return supplementVoucherHarvestDatesFromSupabase([...merged.values()]);
+  const rows = await supplementVoucherHarvestDatesFromSupabase([...merged.values()]);
+  vouchersFetchCache = { at: now, rows };
+  return rows;
 }

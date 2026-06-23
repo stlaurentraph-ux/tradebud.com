@@ -1,7 +1,6 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { fetchPlotSyncedEvidence } from '@/features/api/postPlot';
-import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
 import {
   countServerDeclarationSignals,
   countServerPhotosFromAudit,
@@ -9,10 +8,7 @@ import {
   serverHasProfilePhotoAudit,
 } from '@/features/sync/cloudParityArtifactCounts';
 import type { AuditLogRow } from '@/features/sync/fetchMergedAuditEventsForFarmer';
-import {
-  fetchBackendPlotsForSyncScope,
-  prepareFieldSyncContext,
-} from '@/features/sync/resolveFieldSyncScope';
+import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import {
   loadEvidenceForPlot,
   loadPhotosForPlot,
@@ -52,32 +48,19 @@ export async function countServerEvidenceDocs(params: {
   localPlots: Plot[];
 }): Promise<number | null> {
   try {
-    const backendPlots = await fetchBackendPlotsForSyncScope({
-      farmerId: params.apiFarmerId,
-      ownedFarmerIds: params.ownedFarmerIds,
-    });
     const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<
       string,
       string
     >;
     const serverPlotIds = new Set<string>();
-    for (const row of backendPlots) {
-      const serverPlotId = String((row as { id?: string }).id ?? '').trim();
-      if (!serverPlotId) continue;
-      const localPlotId = resolveLocalPlotIdForServerPlot({
-        serverPlotId,
-        localPlots: params.localPlots,
-        plotServerLinks,
-        backendPlots,
-      });
-      if (localPlotId || params.localPlots.length === 0) {
-        serverPlotIds.add(serverPlotId);
-      }
+    for (const plot of params.localPlots) {
+      const serverPlotId = plotServerLinks[plot.id]?.trim();
+      if (serverPlotId) serverPlotIds.add(serverPlotId);
     }
     if (serverPlotIds.size === 0) return 0;
 
     const counts = await Promise.all(
-      [...serverPlotIds].slice(0, 40).map(async (serverPlotId) => {
+      [...serverPlotIds].map(async (serverPlotId) => {
         const rows = await fetchPlotSyncedEvidence(serverPlotId).catch(() => []);
         return rows.length;
       }),
