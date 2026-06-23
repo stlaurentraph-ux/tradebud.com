@@ -122,6 +122,7 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
       if (reason) return reason;
       return resolveSyncReachFailedShortMessage(t, getTracebudApiBaseUrl());
     }
+    return t('sync_result_restore_partial_failed');
   }
 
   if (remainingPending === 0) {

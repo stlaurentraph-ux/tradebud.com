@@ -156,7 +156,7 @@ export async function runFieldSyncPipeline(
     outcome.plotsRestored = restoreResult.restoredCount;
     invalidateServerPlotListCache();
   }
-  if (restoreResult.fetchFailed && activePlots.length === 0) {
+  if (restoreResult.fetchFailed) {
     outcome.plotsFetchFailed = true;
   }
 
@@ -175,6 +175,9 @@ export async function runFieldSyncPipeline(
   });
   if (receiptRestoreResult.restoredCount > 0) {
     outcome.receiptsRestored = receiptRestoreResult.restoredCount;
+  }
+  if (receiptRestoreResult.fetchFailed) {
+    outcome.plotsFetchFailed = true;
   }
 
   const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;

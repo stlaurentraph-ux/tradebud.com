@@ -27,6 +27,7 @@ async function bootstrap() {
       req.method === 'GET' &&
       (url.includes('/v1/me/field-farmer-ids') ||
         url.includes('/v1/plots') ||
+        url.includes('/v1/audit') ||
         url === '/api/health' ||
         url.startsWith('/api/health?') ||
         url === '/health')
@@ -54,7 +55,11 @@ async function bootstrap() {
     buckets.set(ip, bucket);
 
     const maxRequests =
-      process.env.NODE_ENV === 'production' ? MAX_REQUESTS : Math.max(MAX_REQUESTS, 600);
+      process.env.NODE_ENV === 'production'
+        ? req.headers.authorization
+          ? 240
+          : MAX_REQUESTS
+        : Math.max(MAX_REQUESTS, 600);
 
     if (bucket.count > maxRequests) {
       res.status(429).json({ message: 'Too many requests, please slow down.' });

@@ -10,6 +10,7 @@ function baseCounts(overrides: Partial<ExtendedCloudParityCounts> = {}): Extende
   return {
     localPlotCount: 0,
     serverPlotCount: null,
+    serverPlotsMissingOnDevice: null,
     localReceiptCount: 0,
     serverVoucherCount: null,
     localGroundPhotos: 0,
@@ -46,10 +47,22 @@ describe('extendedParityGaps', () => {
 describe('summarizeCloudParityCounts', () => {
   it('flags restore when server has more plots than local', () => {
     const summary = summarizeCloudParityCounts(
-      baseCounts({ localPlotCount: 1, serverPlotCount: 3 }),
+      baseCounts({ localPlotCount: 1, serverPlotsMissingOnDevice: 2 }),
     );
     expect(summary.needsRestore).toBe(true);
     expect(summary.plotGap).toBe(2);
+  });
+
+  it('does not flag plot restore when server extras already match local links', () => {
+    const summary = summarizeCloudParityCounts(
+      baseCounts({
+        localPlotCount: 2,
+        serverPlotCount: 4,
+        serverPlotsMissingOnDevice: 0,
+      }),
+    );
+    expect(summary.plotGap).toBe(0);
+    expect(summary.needsRestore).toBe(false);
   });
 
   it('flags restore when server has more media than local', () => {

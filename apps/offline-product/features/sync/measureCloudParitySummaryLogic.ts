@@ -4,6 +4,8 @@ import { gapCount } from '@/features/sync/cloudParityArtifactCounts';
 export type ExtendedCloudParityCounts = {
   localPlotCount: number;
   serverPlotCount: number | null;
+  /** Restore-accurate missing plot count (linked/client id match), when available. */
+  serverPlotsMissingOnDevice: number | null;
   localReceiptCount: number;
   serverVoucherCount: number | null;
   localGroundPhotos: number;
@@ -30,7 +32,10 @@ export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
   profilePhotoGap: boolean;
   walkDraftGap: boolean;
 } {
-  const plotGap = gapCount(counts.serverPlotCount, counts.localPlotCount);
+  const plotGap =
+    counts.serverPlotsMissingOnDevice != null
+      ? Math.max(0, counts.serverPlotsMissingOnDevice)
+      : gapCount(counts.serverPlotCount, counts.localPlotCount);
   const receiptGap = gapCount(counts.serverVoucherCount, counts.localReceiptCount);
   const groundGap = gapCount(counts.serverGroundPhotos, counts.localGroundPhotos);
   const landGap = gapCount(counts.serverLandTitlePhotos, counts.localLandTitlePhotos);
@@ -88,6 +93,7 @@ export function summarizeCloudParityCounts(input: ExtendedCloudParityCounts): Cl
       unsyncedPlotCount: 0,
       pendingQueueCount: 0,
       serverPlotCount: input.serverPlotCount,
+      serverPlotsMissingOnDevice: input.serverPlotsMissingOnDevice,
       localReceiptCount: input.localReceiptCount,
       serverVoucherCount: input.serverVoucherCount,
     }) ||

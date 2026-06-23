@@ -1159,14 +1159,21 @@ export default function SettingsScreen() {
 
             await reloadFromDisk();
             diskState = await loadAppState().catch(() => ({ plots: syncPlots }));
+            const restoredPlots =
+              diskState.plots.length > 0 ? diskState.plots : syncPlots;
             const freshPending = await refreshSyncMetrics({
               forcePlotFetch: true,
               farmerId: apiFarmerId,
               ownedFarmerIds: farmerScopeIds,
-              plots: diskState.plots.length > 0 ? diskState.plots : syncPlots,
+              plots: restoredPlots,
             });
-            await refreshCloudParity(
-              diskState.plots.length > 0 ? diskState.plots : syncPlots,
+            const paritySummary = await measureCloudParitySummary({
+              profileFarmerId: apiFarmerId,
+              localPlots: restoredPlots,
+              localFarmer: diskState.farmer ?? syncFarmer,
+            }).catch(() => null);
+            setCloudParityHints(
+              paritySummary ? formatCloudParityHints(paritySummary, t) : [],
             );
 
             const attention = resolveSyncAttentionMessage({
@@ -1190,10 +1197,19 @@ export default function SettingsScreen() {
                 (freshPending?.unsyncedPlotCount ?? 0) > 0,
             });
 
-            let finalSyncMessage = attention.message;
-            if (attention.kind === 'success') {
-              const plotsForLandCheck =
-                diskState.plots.length > 0 ? diskState.plots : syncPlots;
+            let finalSyncMessage =
+              attention.kind === 'success' ? pipeline.syncResultMessage : attention.message;
+            let finalSyncKind = attention.kind;
+            if (
+              paritySummary?.needsRestore &&
+              finalSyncKind === 'success' &&
+              finalSyncMessage === t('sync_result_complete')
+            ) {
+              finalSyncMessage = t('sync_result_restore_partial_failed');
+              finalSyncKind = 'error';
+            }
+            if (finalSyncKind === 'success') {
+              const plotsForLandCheck = restoredPlots;
               const cachedBackend =
                 peekServerPlotListCache({
                   farmerId: apiFarmerId,
@@ -1212,7 +1228,7 @@ export default function SettingsScreen() {
             setSyncMessage(finalSyncMessage);
             setSyncSupportMailto(resolveSyncSupportMailto(outcome) ?? null);
             setSyncOpenPlotId(resolveSyncOpenPlotId(outcome) ?? null);
-            setSyncMessageKind(attention.kind);
+            setSyncMessageKind(finalSyncKind);
           } catch (e) {
             if (e instanceof SyncOperationTimeoutError) {
               setSyncMessage(syncTimedOutMessage(t, 'settings'));
@@ -1258,7 +1274,9 @@ export default function SettingsScreen() {
     } finally {
       freezeSyncMetricsDisplayRef.current = false;
       setSyncNowBusy(false);
+      await reloadFromDisk();
       await refreshSyncMetrics({ forcePlotFetch: true });
+      await refreshCloudParity();
     }
   };
 
@@ -1408,7 +1426,7 @@ export default function SettingsScreen() {
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
-                {cloudParityHints.length > 0 && isSignedIn
+                {cloudParityHints.length > 0 && isSignedIn && !isSyncInProgress
                   ? cloudParityHints.map((hint, index) => (
                       <ThemedText
                         key={hint}

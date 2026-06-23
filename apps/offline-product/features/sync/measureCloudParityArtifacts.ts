@@ -115,7 +115,7 @@ export function buildExtendedCountsFromAudit(params: {
   auditRows: AuditLogRow[] | null;
   localPlots: Plot[];
   localReceiptCount: number;
-  serverPlotCount: number | null;
+  serverPlotsMissingOnDevice: number | null;
   serverVoucherCount: number | null;
   localMedia: { groundTruth: number; landTitle: number; evidence: number };
   serverEvidenceDocs: number | null;
@@ -129,7 +129,8 @@ export function buildExtendedCountsFromAudit(params: {
 
   return {
     localPlotCount: params.localPlots.length,
-    serverPlotCount: params.serverPlotCount,
+    serverPlotCount: params.serverPlotsMissingOnDevice,
+    serverPlotsMissingOnDevice: params.serverPlotsMissingOnDevice,
     localReceiptCount: params.localReceiptCount,
     serverVoucherCount: params.serverVoucherCount,
     localGroundPhotos: params.localMedia.groundTruth,
