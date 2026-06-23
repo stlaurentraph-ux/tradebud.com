@@ -155,13 +155,13 @@ export async function restoreLocalDeclarationsFromServer(params: {
     }
 
     if (row.payload.informalTenure === true || row.payload.informalTenure === false) {
-      await savePlotTenure(
-        localPlotId,
-        row.payload.informalTenure === true,
-        row.payload.informalTenureNote != null
-          ? String(row.payload.informalTenureNote)
-          : null,
-      ).catch(() => undefined);
+      await savePlotTenure(localPlotId, {
+        informalTenure: row.payload.informalTenure === true,
+        informalTenureNote:
+          row.payload.informalTenureNote != null
+            ? String(row.payload.informalTenureNote)
+            : null,
+      }).catch(() => undefined);
     }
   }
 

@@ -26,7 +26,7 @@ import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createExploreScreenStyles } from '@/app/(tabs)/exploreScreenStyles';
+import { createExploreScreenStyles } from '@/app/(tabs)/_exploreScreenStyles';
 
 type PlotListTranslate = (key: string, values?: Record<string, string | number>) => string;
 
@@ -274,7 +274,7 @@ export default function PlotsScreen() {
             <ThemedText type="caption" style={styles.emptyPlotsBody}>
               {t('my_plots_empty')}
             </ThemedText>
-            <Pressable style={styles.emptyPlotsCta} onPress={() => router.push('/record')}>
+            <Pressable style={styles.emptyPlotsCta} onPress={() => router.push('/(tabs)/record')}>
               <ThemedText type="defaultSemiBold" style={styles.emptyPlotsCtaText}>
                 {t('walk_start_mapping')}
               </ThemedText>
@@ -364,7 +364,7 @@ export default function PlotsScreen() {
           );
         })}
 
-        <Pressable style={styles.registerNewPlotCard} onPress={() => router.push('/record')}>
+        <Pressable style={styles.registerNewPlotCard} onPress={() => router.push('/(tabs)/record')}>
           <Ionicons name="add" size={24} color={colors.link} />
           <ThemedText type="defaultSemiBold" style={{ color: colors.link }}>
             {t('register_new_plot')}

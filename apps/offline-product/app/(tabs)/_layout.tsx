@@ -84,6 +84,12 @@ export default function TabLayout() {
 
       {/* Hidden routes that Home tiles navigate to */}
       <Tabs.Screen
+        name="explore.web"
+        options={{
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="explore.v0"
         options={{
           href: null,

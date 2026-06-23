@@ -98,7 +98,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brand } from '@/constants/theme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createSettingsScreenStyles } from '@/app/(tabs)/settingsScreenStyles';
+import { createSettingsScreenStyles } from '@/app/(tabs)/_settingsScreenStyles';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { SetPasswordCard } from '@/components/auth/SetPasswordCard';
 import {

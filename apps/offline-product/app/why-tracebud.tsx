@@ -15,7 +15,7 @@ import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics
 import { goBackOrHome } from '@/features/navigation/routes';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createWhyTracebudScreenStyles } from '@/app/whyTracebudScreenStyles';
+import { createWhyTracebudScreenStyles } from '@/app/_whyTracebudScreenStyles';
 
 const BENEFIT_ROWS = [
   {

@@ -57,12 +57,12 @@ export function ${exportName}(c: AppColors) {
 generateThemedStyles(
   'app/data-sharing.tsx',
   'createDataSharingScreenStyles',
-  'app/dataSharingScreenStyles.ts',
+  'app/_dataSharingScreenStyles.ts',
 );
 generateThemedStyles(
   'app/documents.tsx',
   'createDocumentsScreenStyles',
-  'app/documentsScreenStyles.ts',
+  'app/_documentsScreenStyles.ts',
 );
 generateThemedStyles(
   'components/plot-photo-vault/GroundTruthPhotoCapture.tsx',

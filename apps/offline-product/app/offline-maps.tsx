@@ -22,7 +22,7 @@ import {
 } from '@/features/offlineTiles/offlineTiles';
 import { goBackOrHome } from '@/features/navigation/routes';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createOfflineMapsScreenStyles } from '@/app/offlineMapsScreenStyles';
+import { createOfflineMapsScreenStyles } from '@/app/_offlineMapsScreenStyles';
 
 export default function OfflineMapsScreen() {
   const colors = useAppColors();

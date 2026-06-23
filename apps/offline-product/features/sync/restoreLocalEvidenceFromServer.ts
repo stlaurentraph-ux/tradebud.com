@@ -113,6 +113,9 @@ function resolveLocalTargetPlotId(params: {
   localPlotId: string;
 }): string {
   const normalized = normalizeKind(params.kind);
+  if (normalized === 'land_title') {
+    return params.localPlotId;
+  }
   if (isProducerEvidenceKind(normalized)) {
     return producerEvidenceScopeId(params.apiFarmerId);
   }
@@ -236,9 +239,8 @@ export async function restoreLocalEvidenceFromServer(params: {
     } else {
       await persistPlotEvidenceItem({
         plotId: targetPlotId,
-        kind: isProducerEvidenceKind(normalizedKind)
-          ? normalizedKind
-          : normalizedKind === 'land_title'
+        kind:
+          normalizedKind === 'land_title'
             ? 'tenure_evidence'
             : normalizedKind,
         uri: persistedUri,

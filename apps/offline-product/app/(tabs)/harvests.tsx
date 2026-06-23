@@ -13,7 +13,7 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { Button } from '@/components/ui/button';
 import { HEADER_GRADIENT_COLORS, HEADER_GRADIENT_TEXT } from '@/constants/compactTabHeader';
 import { useThemedStyles, useAppColors } from '@/features/theme/useThemedStyles';
-import { createHarvestScreenStyles } from '@/app/(tabs)/harvestScreenStyles';
+import { createHarvestScreenStyles } from '@/app/(tabs)/_harvestScreenStyles';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';

@@ -14,7 +14,7 @@ import { HEADER_GRADIENT_COLORS } from '@/constants/compactTabHeader';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createHomeScreenStyles } from '@/app/(tabs)/homeScreenStyles';
+import { createHomeScreenStyles } from '@/app/(tabs)/_homeScreenStyles';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';

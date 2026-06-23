@@ -90,7 +90,7 @@ import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { resolvePlotAreaHa } from '@/features/harvest/plotYieldCapacity';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createPlotDetailScreenStyles } from '@/app/plot/plotDetailScreenStyles';
+import { createPlotDetailScreenStyles } from '@/app/plot/_plotDetailScreenStyles';
 
 type Sub = 'photos' | 'documents' | 'deliveries';
 type SetupTarget = Sub | 'settings';

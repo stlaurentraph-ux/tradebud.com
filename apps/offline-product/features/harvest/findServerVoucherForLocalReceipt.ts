@@ -40,7 +40,7 @@ export function findServerVoucherForLocalReceipt(params: {
     },
     vouchers: [...params.vouchers],
     localPlots: params.localPlots,
-    backendPlots: params.backendPlots,
+    backendPlots: [...params.backendPlots],
     plotServerLinks: params.plotServerLinks,
   });
   if (!matchedQr) {

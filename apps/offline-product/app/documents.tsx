@@ -36,7 +36,7 @@ import {
   type PlotEvidenceKind,
 } from '@/features/state/persistence';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createDocumentsScreenStyles } from '@/app/documentsScreenStyles';
+import { createDocumentsScreenStyles } from '@/app/_documentsScreenStyles';
 import {
   hasSyncedPlotForFarmer,
   producerSupportingHasPendingSync,
