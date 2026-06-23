@@ -1,5 +1,5 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
-import { loadLocalDeliveryReceiptsForFarmer } from '@/features/harvest/localDeliveryReceipts';
+import { loadLocalDeliveryReceiptsForFarmer } from '@/features/state/persistence';
 import {
   countServerPlotsForPostAuthRestore,
   countServerVouchersForPostAuthRestore,

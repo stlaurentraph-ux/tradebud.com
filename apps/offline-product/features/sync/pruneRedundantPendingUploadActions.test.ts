@@ -1,10 +1,14 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { PENDING_SYNC_UPLOAD_ACTION_TYPES } from '@/features/sync/farmerArtifactRegistry';
+import type { LocalDeliveryReceiptRow, PendingSyncAction } from '@/features/state/persistence';
 
 const deletePendingSyncAction = vi.fn(async () => undefined);
-const loadPendingSyncActions = vi.fn(async () => []);
-const loadAllLocalDeliveryReceipts = vi.fn(async () => []);
+const loadPendingSyncActions = vi.fn(async (): Promise<PendingSyncAction[]> => []);
+const loadAllLocalDeliveryReceipts = vi.fn(async (): Promise<LocalDeliveryReceiptRow[]> => []);
 const loadPhotosForPlot = vi.fn(async () => []);
 const loadTitlePhotosForPlot = vi.fn(async () => []);
 const loadEvidenceForPlot = vi.fn(async () => []);
@@ -33,14 +37,18 @@ vi.mock('@/features/sync/queueDeclarationAuditSync', () => ({
   isDeclarationAuditSynced,
 }));
 
+const pruneSourcePath = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  'pruneRedundantPendingUploadActions.ts',
+);
+
 describe('pruneRedundantPendingUploadActions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('covers every pending sync upload action type from the farmer artifact registry', async () => {
-    const source = await import('./pruneRedundantPendingUploadActions?raw');
-    const raw = String(source.default ?? source);
+  it('covers every pending sync upload action type from the farmer artifact registry', () => {
+    const raw = fs.readFileSync(pruneSourcePath, 'utf8');
     for (const actionType of PENDING_SYNC_UPLOAD_ACTION_TYPES) {
       expect(raw).toContain(`actionType === '${actionType}'`);
     }

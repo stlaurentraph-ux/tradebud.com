@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { LocalDeliveryReceiptRow } from '@/features/state/persistence';
+
 const updateLocalDeliveryReceipt = vi.fn(async () => undefined);
-const loadAllLocalDeliveryReceipts = vi.fn(async () => []);
+const loadAllLocalDeliveryReceipts = vi.fn(async (): Promise<LocalDeliveryReceiptRow[]> => []);
 
 vi.mock('@/features/state/persistence', () => ({
   loadAllLocalDeliveryReceipts,
