@@ -51,6 +51,7 @@ import { fetchServerPlotListForUi, peekServerPlotListCache } from '@/features/sy
 import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
 import { resolveFieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import { formatSyncRunHttpSummary } from '@/features/sync/syncRunHttpTelemetry';
 import { reportSyncFailure } from '@/features/sync/reportSyncFailure';
 import {
   formatSyncFailureStepLabel,
@@ -176,6 +177,7 @@ export default function SettingsScreen() {
   const [cloudParityHints, setCloudParityHints] = useState<string[]>([]);
   const [cloudParityNeedsRestore, setCloudParityNeedsRestore] = useState(false);
   const [lastSyncMode, setLastSyncMode] = useState<'push_only' | 'full' | null>(null);
+  const [lastSyncHttpSummary, setLastSyncHttpSummary] = useState<string | null>(null);
   const [syncSupportMailto, setSyncSupportMailto] = useState<string | null>(null);
   const [syncOpenPlotId, setSyncOpenPlotId] = useState<string | null>(null);
   const [syncNowBusy, setSyncNowBusy] = useState(false);
@@ -1160,6 +1162,9 @@ export default function SettingsScreen() {
                 plotsFetchState === 'failed',
             });
             setLastSyncMode(syncMode);
+            if (__DEV__) {
+              setLastSyncHttpSummary(null);
+            }
 
             const pipeline = await runFieldSyncPipeline({
               accessToken: syncAccess.token,
@@ -1279,7 +1284,10 @@ export default function SettingsScreen() {
             setSyncMessageKind('error');
           } finally {
             if (sessionOpened?.ok) {
-              sessionOpened.end();
+              const ended = sessionOpened.end();
+              if (__DEV__) {
+                setLastSyncHttpSummary(formatSyncRunHttpSummary(ended.httpSummary));
+              }
             }
           }
             })(),
@@ -1623,6 +1631,13 @@ export default function SettingsScreen() {
                             {lastSyncMode === 'push_only'
                               ? t('settings_sync_mode_push_only')
                               : t('settings_sync_mode_full')}
+                          </ThemedText>
+                        ) : null}
+                        {__DEV__ && lastSyncHttpSummary ? (
+                          <ThemedText type="caption" style={styles.backupTechDetailText}>
+                            {t('settings_dev_sync_requests_this_run', {
+                              summary: lastSyncHttpSummary,
+                            })}
                           </ThemedText>
                         ) : null}
                         {queueSyncFailure ? (

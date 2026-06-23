@@ -3,9 +3,10 @@ import { HarvestService } from '../harvest/harvest.service';
 import { claimPendingDeliveryBuyerInvitesOnSignup } from '../harvest/claim-delivery-buyer-invites-on-signup';
 import { resolveTenantIdForContactEmail } from './email-to-tenant-resolution';
 import { createBillingServiceMock } from '../testing/billing-service.mock';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_network_routing_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, targetSchema: string) {
@@ -14,7 +15,7 @@ function withSearchPath(connectionString: string, targetSchema: string) {
   return `${connectionString}${separator}options=${options}`;
 }
 
-describeIfDb('Network routing — delivery to buyer tenant integration', () => {
+describe('Network routing — delivery to buyer tenant integration', () => {
   jest.setTimeout(60_000);
 
   let pool: Pool;

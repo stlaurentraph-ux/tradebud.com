@@ -33,8 +33,8 @@ function main() {
   if (!pipeline.includes('syncMode')) {
     issues.push('runFieldSyncPipeline must accept syncMode');
   }
-  if (!pipeline.includes("syncMode === 'full'")) {
-    issues.push('runFieldSyncPipeline must branch on syncMode full vs push_only');
+  if (!pipeline.includes("syncMode !== 'push_only'")) {
+    issues.push('runFieldSyncPipeline must skip enqueueFarmerCloudSyncActions on push_only sync');
   }
 
   if (issues.length === 0) {

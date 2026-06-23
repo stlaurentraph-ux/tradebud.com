@@ -1,9 +1,7 @@
 import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { postHarvestToBackend, syncPlotLegalToBackend } from '@/features/api/postPlot';
-import { postAuditEventToBackend } from '@/features/api/audit';
-import { markDeclarationAuditSynced, isDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
-import { invalidateAuditFetchCache } from '@/features/sync/fetchMergedAuditEventsForFarmer';
-import { markFieldCloudAuditSynced, isFieldCloudAuditSynced } from '@/features/sync/queueFieldCloudAuditSync';
+import { MAX_AUDIT_SYNC_ACTIONS_PER_PASS } from '@/features/sync/auditSyncLimits';
+import { processAuditSyncActionsBatch } from '@/features/sync/processAuditSyncActionsBatch';
 import { fetchMergedServerPlots } from '@/features/sync/resolveFieldSyncScope';
 import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
@@ -205,8 +203,19 @@ export async function processPendingSyncQueue(params: {
     params.maxActions != null && Number.isFinite(params.maxActions)
       ? Math.max(0, Math.floor(params.maxActions))
       : null;
-  const actions = maxActions == null ? scopedActions : scopedActions.slice(0, maxActions);
-  for (const a of actions) {
+  let auditBudget = MAX_AUDIT_SYNC_ACTIONS_PER_PASS;
+  const cappedActions: PendingSyncAction[] = [];
+  for (const row of scopedActions) {
+    if (row.actionType === 'audit_sync') {
+      if (auditBudget <= 0) continue;
+      auditBudget -= 1;
+    }
+    cappedActions.push(row);
+    if (maxActions != null && cappedActions.length >= maxActions) break;
+  }
+  const uploadActions = cappedActions.filter((row) => row.actionType !== 'audit_sync');
+  const auditActions = cappedActions.filter((row) => row.actionType === 'audit_sync');
+  for (const a of uploadActions) {
     let payload: Record<string, unknown> | null = null;
     try {
       payload = JSON.parse(a.payloadJson) as Record<string, unknown>;
@@ -404,49 +413,6 @@ export async function processPendingSyncQueue(params: {
             await updatePlotEvidenceUri(item.id, remoteUri);
           },
         });
-      } else if (a.actionType === 'audit_sync') {
-        const eventType = String(payload?.eventType ?? '').trim();
-        const auditPayload = payload?.payload;
-        if (
-          !eventType ||
-          !auditPayload ||
-          typeof auditPayload !== 'object' ||
-          Array.isArray(auditPayload)
-        ) {
-          await deletePendingSyncAction(a.id);
-          droppedInvalid += 1;
-          continue;
-        }
-        const auditPayloadObj = auditPayload as Record<string, unknown>;
-        const scopeId = String(auditPayloadObj.farmerId ?? '').trim();
-        const alreadyDeclaration = await isDeclarationAuditSynced({
-          eventType,
-          payload: auditPayloadObj,
-        }).catch(() => false);
-        const alreadyCloud =
-          scopeId.length > 0
-            ? await isFieldCloudAuditSynced({ eventType, scopeId }).catch(() => false)
-            : false;
-        if (alreadyDeclaration || alreadyCloud) {
-          await deletePendingSyncAction(a.id);
-          completed += 1;
-          continue;
-        }
-        const result = await postAuditEventToBackend({
-          eventType,
-          payload: auditPayload as Record<string, unknown>,
-        });
-        if (!result.ok) {
-          throw new Error(result.message ?? result.reason ?? 'Declaration audit sync failed');
-        }
-        await markDeclarationAuditSynced({
-          eventType,
-          payload: auditPayload as Record<string, unknown>,
-        });
-        invalidateAuditFetchCache();
-        if (scopeId) {
-          await markFieldCloudAuditSynced({ eventType, scopeId });
-        }
       } else {
         await deletePendingSyncAction(a.id);
         await logAuditEvent({
@@ -503,6 +469,19 @@ export async function processPendingSyncQueue(params: {
         // Stop this pass; upload-phase drain runs audit rows separately afterward.
         break;
       }
+    }
+  }
+
+  if (auditActions.length > 0) {
+    const auditBatchResult = await processAuditSyncActionsBatch({ actions: auditActions });
+    completed += auditBatchResult.completed;
+    failedActions += auditBatchResult.failedActions;
+    droppedInvalid += auditBatchResult.droppedInvalid;
+    firstError = firstError ?? auditBatchResult.firstError;
+    firstFailedActionType = firstFailedActionType ?? (auditBatchResult.failedActions > 0 ? 'audit_sync' : undefined);
+    firstSyncFailure = firstSyncFailure ?? auditBatchResult.syncFailure;
+    if (auditBatchResult.rateLimited) {
+      // Stop this pass; remaining audit rows stay queued for the next Sync now tap.
     }
   }
 

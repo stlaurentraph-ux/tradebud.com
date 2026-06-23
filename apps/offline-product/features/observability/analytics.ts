@@ -31,6 +31,7 @@ export const ANALYTICS_EVENTS = {
   MULTI_PLOT_DELIVERY_SUBMITTED: 'multi_plot_delivery_submitted',
   DELIVERY_RECEIPT_REMOVED_FROM_DEVICE: 'delivery_receipt_removed_from_device',
   SYNC_QUEUE_DRAINED: 'sync_queue_drained',
+  SYNC_RUN_COMPLETED: 'sync_run_completed',
   SYNC_ACTION_FAILED: 'sync_action_failed',
   UI_ACTION_FAILED: 'ui_action_failed',
   REACT_RENDER_ERROR: 'react_render_error',

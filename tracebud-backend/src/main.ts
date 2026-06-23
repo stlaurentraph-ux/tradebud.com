@@ -4,9 +4,11 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { buildCorsOriginOption } from './cors-origins';
+import { createRateLimitMiddleware } from './http/rate-limit.middleware';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
+  app.enableShutdownHooks();
 
   app.enableCors({
     origin: buildCorsOriginOption(),
@@ -14,60 +16,9 @@ async function bootstrap() {
     allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // Very simple in-memory rate limiting (per-process, per-IP).
-  const WINDOW_MS = 60_000;
-  const MAX_REQUESTS = 120;
-  const buckets = new Map<string, { count: number; resetAt: number }>();
-
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.set('trust proxy', 1);
-  expressApp.use((req: any, res: any, next: () => void) => {
-    const url = String(req.originalUrl ?? req.url ?? '');
-    if (
-      req.method === 'GET' &&
-      (url.includes('/v1/me/field-farmer-ids') ||
-        url.includes('/v1/plots') ||
-        url.includes('/v1/audit') ||
-        url === '/api/health' ||
-        url.startsWith('/api/health?') ||
-        url === '/health')
-    ) {
-      next();
-      return;
-    }
-    if (req.method === 'POST' && url.includes('/v1/me/field-app-bootstrap')) {
-      next();
-      return;
-    }
-
-    const ip =
-      req.ip ||
-      req.headers['x-forwarded-for'] ||
-      req.connection?.remoteAddress ||
-      'unknown';
-    const now = Date.now();
-    const bucket = buckets.get(ip) ?? { count: 0, resetAt: now + WINDOW_MS };
-    if (now > bucket.resetAt) {
-      bucket.count = 0;
-      bucket.resetAt = now + WINDOW_MS;
-    }
-    bucket.count += 1;
-    buckets.set(ip, bucket);
-
-    const maxRequests =
-      process.env.NODE_ENV === 'production'
-        ? req.headers.authorization
-          ? 240
-          : MAX_REQUESTS
-        : Math.max(MAX_REQUESTS, 600);
-
-    if (bucket.count > maxRequests) {
-      res.status(429).json({ message: 'Too many requests, please slow down.' });
-      return;
-    }
-
-    next();
-  });
+  expressApp.use(createRateLimitMiddleware());
 
   app.setGlobalPrefix('api');
 

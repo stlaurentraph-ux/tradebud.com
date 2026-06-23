@@ -48,8 +48,15 @@ function main() {
       issues.push(`queueFieldCloudAuditSync.ts must export ${fn}`);
     }
   }
-  if (!processQueue.includes('markFieldCloudAuditSynced')) {
-    issues.push('processPendingSyncQueue must mark field cloud audit synced on success');
+  if (!processQueue.includes('processAuditSyncActionsBatch')) {
+    issues.push('processPendingSyncQueue must batch audit_sync via processAuditSyncActionsBatch');
+  }
+  const batchProcessor = read('features/sync/processAuditSyncActionsBatch.ts');
+  if (!batchProcessor.includes('markFieldCloudAuditSynced')) {
+    issues.push('processAuditSyncActionsBatch must mark field cloud audit synced on success');
+  }
+  if (!batchProcessor.includes('markDeclarationAuditSynced')) {
+    issues.push('processAuditSyncActionsBatch must mark declaration audit synced on success');
   }
 
   if (!fs.existsSync(mdPath)) {

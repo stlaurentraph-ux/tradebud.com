@@ -5,10 +5,11 @@ import {
   ForbiddenException,
   Get,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PlotsService } from './plots.service';
 
@@ -65,5 +66,24 @@ export class FieldAppController {
     });
     const ownedFarmerIds = await this.plotsService.listFarmerProfileIdsForAuthUser(userId);
     return { ok: true, farmer_id: farmerId, owned_farmer_ids: ownedFarmerIds };
+  }
+
+  @Get('v1/me/field-sync-delta')
+  @ApiOperation({
+    summary: 'Compact field restore cursor (plots, vouchers, audit watermarks)',
+    description:
+      'Optional `since` epoch-ms filters plot updates; vouchers and audit watermarks are always included for linked farmers.',
+  })
+  @ApiQuery({
+    name: 'since',
+    required: false,
+    description: 'Epoch milliseconds — return plots updated on/after this instant',
+  })
+  async fieldSyncDelta(@Query('since') sinceRaw: string | undefined, @Req() req: any) {
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    return this.plotsService.buildFieldSyncDeltaForAuthUser(userId, sinceRaw);
   }
 }

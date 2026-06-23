@@ -3,16 +3,17 @@ import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createPlotsServiceForIntTest } from '../testing/plots-service.mock';
 import { HarvestService } from './harvest.service';
 import { PlotsService } from '../plots/plots.service';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = 'tb_scope_test';
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
   return connectionString;
 }
 
-describeIfDb('Ownership scope integration: farmer/profile joins', () => {
+describe('Ownership scope integration: farmer/profile joins', () => {
   let pool: Pool;
   let harvestService: HarvestService;
   let plotsService: PlotsService;

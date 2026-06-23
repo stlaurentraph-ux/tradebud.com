@@ -10,6 +10,11 @@ import {
   endServerPlotFetchRun,
 } from '@/features/sync/serverPlotFetchCache';
 import {
+  beginSyncRunHttpTelemetry,
+  endSyncRunHttpTelemetry,
+  type SyncRunHttpSummary,
+} from '@/features/sync/syncRunHttpTelemetry';
+import {
   classifyTokenVerifyFailure,
   type SyncFailure,
 } from '@/features/sync/syncFailure';
@@ -20,7 +25,7 @@ export type FieldSyncSession = {
 };
 
 export type FieldSyncSessionOpenResult =
-  | { ok: true; session: FieldSyncSession; end: () => void }
+  | { ok: true; session: FieldSyncSession; end: () => { httpSummary: SyncRunHttpSummary | null } }
   | { ok: false; failure: SyncFailure; verify: VerifySyncAccessTokenResult };
 
 function failureFromVerify(result: Extract<VerifySyncAccessTokenResult, { ok: false }>): SyncFailure {
@@ -45,6 +50,7 @@ export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult
 
   beginServerPlotFetchRun();
   beginSyncAccessTokenRun(verify.token);
+  beginSyncRunHttpTelemetry();
 
   return {
     ok: true,
@@ -53,8 +59,10 @@ export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult
       apiBaseUrl: getTracebudApiBaseUrl(),
     },
     end: () => {
+      const httpSummary = endSyncRunHttpTelemetry();
       endSyncAccessTokenRun();
       endServerPlotFetchRun();
+      return { httpSummary };
     },
   };
 }

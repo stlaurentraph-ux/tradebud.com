@@ -1,16 +1,17 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { CoolFarmSaiV2Controller } from './coolfarm-sai-v2.controller';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = 'tb_coolfarm_sai_v2_controller_test';
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
   return connectionString;
 }
 
-describeIfDb('CoolFarmSaiV2Controller integration', () => {
+describe('CoolFarmSaiV2Controller integration', () => {
   let pool: Pool;
   let controller: CoolFarmSaiV2Controller;
 

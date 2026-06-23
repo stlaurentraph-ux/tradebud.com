@@ -29,12 +29,21 @@ function main() {
   const registry = extractTsArray(fs.readFileSync(registryTs, 'utf8'), 'PENDING_SYNC_UPLOAD_ACTION_TYPES');
   const persistence = extractPersistenceActionTypes(fs.readFileSync(persistenceNative, 'utf8'));
   const queueSource = fs.readFileSync(queueTs, 'utf8');
+  const auditBatchSource = fs.readFileSync(
+    path.join(root, 'features/sync/processAuditSyncActionsBatch.ts'),
+    'utf8',
+  );
 
   for (const action of registry) {
     if (!persistence.includes(action)) {
       issues.push(`persistence.native.ts missing actionType: ${action}`);
     }
-    if (!queueSource.includes(`a.actionType === '${action}'`)) {
+    const handlerInQueue = queueSource.includes(`a.actionType === '${action}'`);
+    const handlerInAuditBatch =
+      action === 'audit_sync' &&
+      auditBatchSource.includes('processAuditSyncActionsBatch') &&
+      queueSource.includes('processAuditSyncActionsBatch');
+    if (!handlerInQueue && !handlerInAuditBatch) {
       issues.push(`processPendingSyncQueue.ts missing handler for: ${action}`);
     }
   }

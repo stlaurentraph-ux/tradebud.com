@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-06-22T14:30:55.340Z",
-  "canonicalEventCount": 37,
+  "canonicalEventCount": 38,
   "canonicalEvents": [
     "backup_confirmed",
     "backup_declined",
@@ -37,6 +37,7 @@
     "sign_in_success",
     "sync_action_failed",
     "sync_queue_drained",
+    "sync_run_completed",
     "ui_action_failed",
     "why_tracebud_home_teaser_clicked",
     "why_tracebud_viewed"
@@ -74,6 +75,7 @@
     "SIGN_IN_SUCCESS",
     "SYNC_ACTION_FAILED",
     "SYNC_QUEUE_DRAINED",
+    "SYNC_RUN_COMPLETED",
     "UI_ACTION_FAILED",
     "WHY_TRACEBUD_HOME_TEASER_CLICKED",
     "WHY_TRACEBUD_VIEWED"

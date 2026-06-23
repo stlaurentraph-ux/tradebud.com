@@ -27,8 +27,8 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <AppErrorBoundary>
-      <LanguageProvider>
+    <LanguageProvider>
+      <AppErrorBoundary>
         <AppStateProvider>
           <SplashGate>
             <SignInProvider>
@@ -52,7 +52,7 @@ export default function RootLayout() {
             </SignInProvider>
           </SplashGate>
         </AppStateProvider>
-      </LanguageProvider>
-    </AppErrorBoundary>
+      </AppErrorBoundary>
+    </LanguageProvider>
   );
 }

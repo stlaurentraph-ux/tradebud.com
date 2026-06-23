@@ -19,12 +19,20 @@ describe('HealthController', () => {
   });
 
   it('returns default benchmark-admin claim requirements', () => {
+    process.env.DATABASE_URL =
+      'postgresql://postgres.uzsktajlnofosxeqwdwl:pw@aws-1-eu-central-1.pooler.supabase.com:6543/postgres';
     const controller = new HealthController();
     const result = controller.getHealth();
     expect(result).toEqual(
       expect.objectContaining({
         status: 'ok',
         warnings: expect.any(Array),
+        database: expect.objectContaining({
+          projectRef: 'uzsktajlnofosxeqwdwl',
+          expectedProdProjectRef: 'uzsktajlnofosxeqwdwl',
+          matchesProdProject: true,
+          usesSupabasePooler: true,
+        }),
         tenureParse: expect.objectContaining({
           ready: true,
           viaGateway: true,
@@ -36,6 +44,22 @@ describe('HealthController', () => {
           requiredClaims: ['ADMIN', 'COMPLIANCE_MANAGER'],
         },
       }),
+    );
+  });
+
+  it('warns when DATABASE_URL project ref is not prod', () => {
+    process.env.DATABASE_URL =
+      'postgresql://postgres.atisrfxsjjvjekwqcbjk:pw@aws-1-eu-west-2.pooler.supabase.com:6543/postgres';
+    const controller = new HealthController();
+    const result = controller.getHealth();
+    expect(result.database).toEqual(
+      expect.objectContaining({
+        projectRef: 'atisrfxsjjvjekwqcbjk',
+        matchesProdProject: false,
+      }),
+    );
+    expect(result.warnings).toContain(
+      'DATABASE_URL project ref atisrfxsjjvjekwqcbjk does not match Tracebud prod (uzsktajlnofosxeqwdwl).',
     );
   });
 

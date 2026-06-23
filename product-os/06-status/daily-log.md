@@ -8,6 +8,7 @@
 - **Invite flow** — unknown dashboard email creates voucher with `intended_recipient_email`, `voucher_buyer_invites` row, optional Resend invite; returns `buyerInvite` on harvest POST.
 - **Signup claim** — `claimPendingDeliveryBuyerInvitesOnSignup` runs on dashboard signup + workspace setup; sets `intended_recipient_tenant_id`, activates consent, marks invite `claimed`; buyer sees voucher in dashboard.
 - **Ship ops** — `db:apply:voucher-buyer-invites`, Supabase mirror `20260623120000`, `DEPLOY_PRODUCTION.md` §2d, device checklist §5a.
+- **Postgres connection hygiene** — default `PG_POOL_MAX=5`, pool drain on shutdown, shared `migration-db-client.mjs` + `check:db-connection`, Railway/docs updated.
 - **Field UX** — clearer Deliver to copy; legacy unknown-email Alert → QR-only retry; invite success Alert → receipt.
 - **Tests** — integration unknown-email path; `deliveryBuyerInviteMessages.test.ts`.
 

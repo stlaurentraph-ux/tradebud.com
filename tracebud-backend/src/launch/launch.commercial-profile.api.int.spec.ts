@@ -8,20 +8,21 @@ import { LaunchService } from './launch.service';
 import { OnboardingEmailService } from './onboarding-email.service';
 import { InboxService } from '../inbox/inbox.service';
 import { PG_POOL } from '../db/db.module';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(),
 }));
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = 'tb_launch_commercial_profile_api_int_test';
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
   return connectionString;
 }
 
-describeIfDb('Launch commercial-profile API integration', () => {
+describe('Launch commercial-profile API integration', () => {
   let pool: Pool;
   let app: INestApplication;
   const createClientMock = createClient as jest.MockedFunction<typeof createClient>;

@@ -3,12 +3,13 @@ import { Pool } from 'pg';
 import { InboxService } from '../inbox/inbox.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_requests_controller_test_${process.pid}_${Date.now().toString(36)}`;
 
-describeIfDb('RequestsController integration: decision timeline', () => {
+describe('RequestsController integration: decision timeline', () => {
   let pool: Pool;
   let controller: RequestsController;
 

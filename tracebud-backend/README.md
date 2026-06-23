@@ -20,12 +20,15 @@ Create a `.env` file in `tracebud-backend` with:
 
 ```bash
 PORT=4001
+# Prod (Tracebud) — migrations, verify scripts, local API against prod DB
 DATABASE_URL=postgresql://postgres.uzsktajlnofosxeqwdwl:YOUR_PASSWORD@aws-1-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true
+# Test project — integration tests only (see .env.local.example)
+TEST_DATABASE_URL=postgresql://postgres.atisrfxsjjvjekwqcbjk:YOUR_PASSWORD@aws-1-eu-west-2.pooler.supabase.com:6543/postgres?pgbouncer=true
 SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
 SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
 ```
 
-> The `DATABASE_URL` should match the **pooling** URL from Supabase. For migrations you can also keep a `DIRECT_URL` if needed, but the app only uses `DATABASE_URL`.
+> `DATABASE_URL` is always production tooling. `TEST_DATABASE_URL` is used only by `npm run test:integration` (via `run-with-root-test-db.mjs`). See `.env.local.example` and `npm run check:db-connection`.
 
 ### 4. Install & run
 

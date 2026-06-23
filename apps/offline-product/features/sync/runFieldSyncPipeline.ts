@@ -42,6 +42,7 @@ import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabi
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import type { FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 export type FieldSyncPipelineParams = {
   accessToken: string;
@@ -406,7 +407,9 @@ export async function runFieldSyncPipeline(
     }
   }
 
-  await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
+  if (syncMode !== 'push_only') {
+    await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
+  }
 
   if (syncMode === 'full') {
     const dateBackfillResult = await backfillServerHarvestDatesFromLocal({
@@ -494,6 +497,15 @@ export async function runFieldSyncPipeline(
   }
 
   const syncResultMessage = formatSyncNowUserMessage(outcome, t);
+
+  trackEvent(ANALYTICS_EVENTS.SYNC_RUN_COMPLETED, {
+    syncMode,
+    queueCompleted: outcome.queueCompleted ?? 0,
+    queueFailed: outcome.queueFailed ?? 0,
+    remainingPending: outcome.remainingPending ?? 0,
+    plotsRestored: outcome.plotsRestored ?? 0,
+    skipQueueDrain,
+  });
 
   // Refresh Harvests / My Plots after every completed sync, including restore-only runs.
   emitServerPlotSyncChanged();

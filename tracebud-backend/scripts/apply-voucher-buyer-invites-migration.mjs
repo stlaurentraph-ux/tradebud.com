@@ -1,8 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Client } from 'pg';
-import { describeDatabaseUrl, resolveDatabaseUrl } from './db-url-from-env.mjs';
+import { withMigrationClient } from './migration-db-client.mjs';
 
 function loadSql() {
   const sqlPath = resolve(process.cwd(), 'sql', 'tb_v16_054_voucher_buyer_invites.sql');
@@ -22,12 +21,8 @@ async function verify(client) {
 
 async function main() {
   const verifyOnly = process.argv.includes('--verify-only');
-  const dbUrl = resolveDatabaseUrl();
-  console.log(`Using DATABASE_URL host: ${describeDatabaseUrl(dbUrl)}`);
-  const client = new Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } });
-  await client.connect();
 
-  try {
+  await withMigrationClient(async (client) => {
     if (verifyOnly) {
       const ok = await verify(client);
       if (!ok) {
@@ -44,9 +39,7 @@ async function main() {
       throw new Error('Migration ran but voucher_buyer_invites still missing.');
     }
     console.log('Applied voucher buyer invites migration.');
-  } finally {
-    await client.end();
-  }
+  });
 }
 
 main().catch((error) => {

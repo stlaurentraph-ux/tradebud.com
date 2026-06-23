@@ -1126,6 +1126,7 @@
   "sync_now_syncing": "Syncing…",
   "sync_local_api_warning": "Sync is pointed at a local dev API ({api}). Production account data (e.g. Hector) is on api.tracebud.com — stop Metro and run: npm run dev:metro:production",
   "settings_dev_runtime_metro": "Dev build (Metro)",
+  "settings_dev_sync_requests_this_run": "Requests this run: {summary}",
   "sync_now_busy": "Sync is still finishing. Wait a moment and try again.",
   "sync_action_failed_generic": "Couldn't send this item right now. It's still saved on your device — try again later.",
   "sync_action_failed_generic_settings": "Couldn't send this item right now. It's still saved on your device — tap Sync now to try again.",

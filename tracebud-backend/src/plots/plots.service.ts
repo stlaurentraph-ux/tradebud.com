@@ -3208,5 +3208,109 @@ export class PlotsService {
       geometryGeoJson: row.geometry_geojson,
     };
   }
+
+  /**
+   * Compact restore cursor for field-app pull: plots, vouchers, and audit watermarks per farmer.
+   */
+  async buildFieldSyncDeltaForAuthUser(userId: string, sinceRaw?: string) {
+    const authUserId = userId.trim();
+    if (!authUserId) {
+      return { serverTime: new Date().toISOString(), farmers: [] as Array<Record<string, unknown>> };
+    }
+
+    const sinceMs = sinceRaw ? Number(sinceRaw) : NaN;
+    const sinceIso =
+      Number.isFinite(sinceMs) && sinceMs > 0
+        ? new Date(sinceMs).toISOString()
+        : null;
+
+    const farmerIds = await this.listFarmerProfileIdsForAuthUser(authUserId);
+    if (farmerIds.length === 0) {
+      return { serverTime: new Date().toISOString(), farmers: [] };
+    }
+
+    const plotsRes = await this.pool.query<{
+      farmer_id: string;
+      plot_id: string;
+      updated_at: string;
+    }>(
+      `
+        SELECT p.farmer_id, p.id AS plot_id, p.updated_at
+        FROM plot p
+        WHERE p.farmer_id = ANY($1::uuid[])
+          ${sinceIso ? 'AND p.updated_at >= $2::timestamptz' : ''}
+        ORDER BY p.updated_at DESC
+      `,
+      sinceIso ? [farmerIds, sinceIso] : [farmerIds],
+    );
+
+    const auditRes = await this.pool.query<{
+      farmer_id: string;
+      latest_audit_at: string | null;
+    }>(
+      `
+        SELECT
+          payload ->> 'farmerId' AS farmer_id,
+          MAX(timestamp)::text AS latest_audit_at
+        FROM audit_log
+        WHERE payload ->> 'farmerId' = ANY(
+          SELECT unnest($1::text[])
+        )
+        GROUP BY payload ->> 'farmerId'
+      `,
+      [farmerIds.map((id) => String(id))],
+    );
+
+    const voucherRes = await this.pool.query<{
+      farmer_id: string;
+      voucher_id: string;
+      created_at: string;
+    }>(
+      `
+        SELECT DISTINCT ON (v.id)
+          v.farmer_id,
+          v.id AS voucher_id,
+          v.created_at
+        FROM voucher v
+        LEFT JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        WHERE tx.created_by = $1::uuid
+           OR v.farmer_id = ANY($2::uuid[])
+           OR tx.farmer_id = ANY($2::uuid[])
+           OR p.farmer_id = ANY($2::uuid[])
+        ORDER BY v.id, v.created_at DESC
+      `,
+      [authUserId, farmerIds],
+    );
+
+    const auditByFarmer = new Map(
+      auditRes.rows.map((row) => [row.farmer_id, row.latest_audit_at]),
+    );
+    const plotsByFarmer = new Map<string, Array<{ id: string; updatedAt: string }>>();
+    for (const row of plotsRes.rows) {
+      const bucket = plotsByFarmer.get(row.farmer_id) ?? [];
+      bucket.push({ id: row.plot_id, updatedAt: row.updated_at });
+      plotsByFarmer.set(row.farmer_id, bucket);
+    }
+    const vouchersByFarmer = new Map<string, string[]>();
+    for (const row of voucherRes.rows) {
+      const bucket = vouchersByFarmer.get(row.farmer_id) ?? [];
+      bucket.push(row.voucher_id);
+      vouchersByFarmer.set(row.farmer_id, bucket);
+    }
+
+    const farmers = farmerIds.map((farmerId) => ({
+      farmerId,
+      plots: plotsByFarmer.get(farmerId) ?? [],
+      voucherIds: vouchersByFarmer.get(farmerId) ?? [],
+      latestAuditAt: auditByFarmer.get(farmerId) ?? null,
+    }));
+
+    return {
+      serverTime: new Date().toISOString(),
+      since: sinceIso,
+      farmers,
+    };
+  }
 }
 

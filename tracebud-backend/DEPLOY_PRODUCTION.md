@@ -39,6 +39,7 @@ In Railway → **Variables**, add (from `tracebud-backend/.env.production.exampl
 |----------|--------|
 | `NODE_ENV` | `production` |
 | `DATABASE_URL` | Supabase → Settings → Database → **Connection string** (pooler, same as local) |
+| `PG_POOL_MAX` | `5` per API replica (optional; defaults to 5 in code) |
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase anon key |
 | `GFW_API_KEY` | [GFW Data API](https://data-api.globalforestwatch.org/user/login) → API keys |
@@ -156,7 +157,31 @@ Redeploy backend after env + migration.
 
 Device checklist: `apps/offline-product/DEVICE_SMOKE_CHECKLIST.md` §5a.
 
-### 2c.1 Enable Expo push (geometry + consent alerts)
+### 2e. Postgres connection hygiene (Supabase)
+
+Before scaling Railway replicas or running many local migration scripts:
+
+```bash
+cd tracebud-backend
+npm run check:db-connection
+```
+
+Railway variables:
+
+| Variable | Recommended |
+|----------|-------------|
+| `DATABASE_URL` | Transaction pooler `:6543` + `?pgbouncer=true` |
+| `PG_POOL_MAX` | `5` per replica (hard cap 20 in code) |
+
+**Local only** (not on Railway): set `TEST_DATABASE_URL` to the Supabase **Test** project pooler (`atisrfxsjjvjekwqcbjk`) for `npm run test:integration`. All `db:apply:*` / `db:verify:*` scripts use `DATABASE_URL` (prod) only. Copy from repo root with `npm run db:sync:test-env` — see `.env.local.example`.
+
+```bash
+curl -sS https://api.tracebud.com/api/health | jq '.database'
+```
+
+Expect `matchesProdProject: true` and `projectRef: "uzsktajlnofosxeqwdwl"`. A test-project ref in production means Railway `DATABASE_URL` is misconfigured.
+
+See `RAILWAY_QUICKSTART.md` §Connection hygiene.
 
 **1. Database** — same step as above (`farmer_push_devices` via `db:apply:consent-sovereignty-v11`).
 
