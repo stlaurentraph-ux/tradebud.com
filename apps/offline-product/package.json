@@ -78,7 +78,7 @@
     "ota:skew:assert": "node ./scripts/eas-ota-skew-guard.mjs",
     "ota:production:preflight": "node ./scripts/ota-production-preflight.mjs",
     "ota:production:assert": "node ./scripts/ota-production-gate-guard.mjs",
-    "release:preview": "npx eas-cli build --platform ios --profile preview",
+    "release:preview": "node scripts/eas-build.mjs --platform ios --profile preview --non-interactive",
     "release:preview:android": "node scripts/eas-build.mjs --platform android --profile preview --non-interactive",
     "release:production": "npx eas-cli build --platform all --profile production",
     "release:preview:safe": "npm run qa:full && npm run release:preflight:preview && npm run release:preview",
