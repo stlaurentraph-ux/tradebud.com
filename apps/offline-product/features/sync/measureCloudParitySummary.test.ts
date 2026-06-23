@@ -114,6 +114,19 @@ describe('formatCloudParityHints', () => {
       }),
     );
     const hints = formatCloudParityHints(summary, (key, params) => `${key}:${JSON.stringify(params ?? {})}`);
-    expect(hints.some((h) => h.startsWith('settings_cloud_parity_media'))).toBe(true);
+    expect(hints.some((h) => h.startsWith('settings_cloud_parity_media:'))).toBe(true);
+  });
+
+  it('prefers upload pending hint over restore when media queue rows exist', () => {
+    const summary = summarizeCloudParityCounts(
+      baseCounts({
+        serverLandTitlePhotos: 2,
+      }),
+    );
+    const hints = formatCloudParityHints(summary, (key, params) => `${key}:${JSON.stringify(params ?? {})}`, {
+      queueMediaPendingCount: 2,
+    });
+    expect(hints.some((h) => h.startsWith('settings_cloud_parity_media_upload_pending:'))).toBe(true);
+    expect(hints.some((h) => h.startsWith('settings_cloud_parity_media:'))).toBe(false);
   });
 });

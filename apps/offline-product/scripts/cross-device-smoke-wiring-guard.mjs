@@ -26,6 +26,8 @@ function main() {
       'Field photos',
       'profile photo',
       'Walk my plot',
+      'upload before declaration',
+      'audit_sync rate limit',
     ];
     for (const phrase of requiredPhrases) {
       if (!smoke.toLowerCase().includes(phrase.toLowerCase())) {

@@ -122,10 +122,12 @@ export function formatCloudParityHint(
 export function formatCloudParityHints(
   summary: CloudParitySummary,
   t: TranslateFn,
+  options?: { queueMediaPendingCount?: number },
 ): string[] {
   if (!summary.needsRestore) return [];
 
   const hints: string[] = [];
+  const queueMediaPendingCount = Math.max(0, options?.queueMediaPendingCount ?? 0);
 
   if (summary.plotGap > 0 && summary.receiptGap > 0) {
     hints.push(
@@ -140,7 +142,11 @@ export function formatCloudParityHints(
     hints.push(t('settings_cloud_parity_receipts', { n: summary.receiptGap }));
   }
 
-  if (summary.mediaGap > 0) {
+  if (queueMediaPendingCount > 0) {
+    hints.push(
+      t('settings_cloud_parity_media_upload_pending', { n: queueMediaPendingCount }),
+    );
+  } else if (summary.mediaGap > 0) {
     hints.push(t('settings_cloud_parity_media', { n: summary.mediaGap }));
   }
   if (summary.declarationGap > 0) {

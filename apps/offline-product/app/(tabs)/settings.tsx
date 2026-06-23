@@ -515,7 +515,13 @@ export default function SettingsScreen() {
         localPlots: plotSnapshot ?? plots,
         localFarmer: farmer,
       }).catch(() => null);
-      setCloudParityHints(summary ? formatCloudParityHints(summary, t) : []);
+      setCloudParityHints(
+        summary
+          ? formatCloudParityHints(summary, t, {
+              queueMediaPendingCount: measuredSyncPendingRef.current?.queueMediaPendingCount ?? 0,
+            })
+          : [],
+      );
     },
     [farmer, isSignedIn, plots, t],
   );
@@ -1173,7 +1179,11 @@ export default function SettingsScreen() {
               localFarmer: diskState.farmer ?? syncFarmer,
             }).catch(() => null);
             setCloudParityHints(
-              paritySummary ? formatCloudParityHints(paritySummary, t) : [],
+              paritySummary
+                ? formatCloudParityHints(paritySummary, t, {
+                    queueMediaPendingCount: freshPending?.queueMediaPendingCount ?? 0,
+                  })
+                : [],
             );
 
             const attention = resolveSyncAttentionMessage({

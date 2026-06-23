@@ -1,9 +1,9 @@
 import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { postHarvestToBackend, syncPlotLegalToBackend } from '@/features/api/postPlot';
 import { postAuditEventToBackend } from '@/features/api/audit';
-import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
+import { markDeclarationAuditSynced, isDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
 import { invalidateAuditFetchCache } from '@/features/sync/fetchMergedAuditEventsForFarmer';
-import { markFieldCloudAuditSynced } from '@/features/sync/queueFieldCloudAuditSync';
+import { markFieldCloudAuditSynced, isFieldCloudAuditSynced } from '@/features/sync/queueFieldCloudAuditSync';
 import { fetchMergedServerPlots } from '@/features/sync/resolveFieldSyncScope';
 import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
@@ -417,6 +417,21 @@ export async function processPendingSyncQueue(params: {
           droppedInvalid += 1;
           continue;
         }
+        const auditPayloadObj = auditPayload as Record<string, unknown>;
+        const scopeId = String(auditPayloadObj.farmerId ?? '').trim();
+        const alreadyDeclaration = await isDeclarationAuditSynced({
+          eventType,
+          payload: auditPayloadObj,
+        }).catch(() => false);
+        const alreadyCloud =
+          scopeId.length > 0
+            ? await isFieldCloudAuditSynced({ eventType, scopeId }).catch(() => false)
+            : false;
+        if (alreadyDeclaration || alreadyCloud) {
+          await deletePendingSyncAction(a.id);
+          completed += 1;
+          continue;
+        }
         const result = await postAuditEventToBackend({
           eventType,
           payload: auditPayload as Record<string, unknown>,
@@ -429,7 +444,6 @@ export async function processPendingSyncQueue(params: {
           payload: auditPayload as Record<string, unknown>,
         });
         invalidateAuditFetchCache();
-        const scopeId = String((auditPayload as Record<string, unknown>).farmerId ?? '').trim();
         if (scopeId) {
           await markFieldCloudAuditSynced({ eventType, scopeId });
         }

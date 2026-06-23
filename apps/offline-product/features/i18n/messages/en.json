@@ -1114,6 +1114,7 @@
   "settings_cloud_parity_receipts": "Tracebud has {n} delivery receipt(s) not on this device — tap Sync now to restore.",
   "settings_cloud_parity_both": "Tracebud has {plots} plot(s) and {receipts} delivery receipt(s) not on this device — tap Sync now to restore.",
   "settings_cloud_parity_media": "Tracebud has {n} photo or document(s) not on this device — tap Sync now to restore.",
+  "settings_cloud_parity_media_upload_pending": "{n} photo or document(s) waiting to upload — tap Sync now.",
   "settings_cloud_parity_declarations": "Producer or plot declarations on Tracebud are not on this device — tap Sync now to restore.",
   "settings_cloud_parity_profile_photo": "Profile photo on Tracebud is not on this device — tap Sync now to restore.",
   "settings_cloud_parity_walk_draft": "An in-progress plot walk on Tracebud is not on this device — open Walk my plot after Sync now.",

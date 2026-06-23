@@ -95,6 +95,16 @@ Use a **second email** not yet on Tracebud dashboard (e.g. `buyer-smoke+DATE@you
 - [ ] FPIC / tenure / permit sections: add document → thumbnail or row appears; auto-upload status message
 - [ ] Title photo or tenure evidence attaches locally
 
+### 7b. Sync now — land docs upload before declarations
+
+Use a plot with **land title photos or tenure documents** queued locally, plus **producer/plot declarations** pending (`audit_sync` rows). Point at production API (`https://api.tracebud.com/api`).
+
+- [ ] Settings → Technical details: after Sync now, **Failed step** is **not** `Photo file upload` / `Document upload` when land docs were pending
+- [ ] Land title / evidence rows drain **before** declaration audit (`photos_sync` / `evidence_sync` upload before `audit_sync`)
+- [ ] If declaration audit hits **audit_sync rate limit**, yellow banner says declaration failed — **not** generic “Tracebud is busy”
+- [ ] With media still in the upload queue, brown hint says **waiting to upload** — not “not on this device”
+- [ ] Wait 60s → Sync now again → declaration audit completes (or pending count drops)
+
 ## 8. Settings — backup, notifications, advanced
 
 - [ ] Backup & sync: sign-in, **Sync now**, queue diagnostics when pending

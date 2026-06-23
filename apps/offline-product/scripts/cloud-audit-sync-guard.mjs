@@ -39,9 +39,9 @@ function main() {
     issues.push('runFieldSyncPipeline must call processPendingSyncQueue after sync prep');
   }
   const enqueueIdx = pipeline.indexOf('enqueueFarmerCloudSyncActions');
-  const processIdx = pipeline.indexOf('processPendingSyncQueue');
-  if (enqueueIdx >= 0 && processIdx >= 0 && enqueueIdx > processIdx) {
-    issues.push('enqueueFarmerCloudSyncActions must run before processPendingSyncQueue');
+  const drainIdx = pipeline.indexOf('drainPendingSyncQueueForManualSync');
+  if (enqueueIdx >= 0 && drainIdx >= 0 && enqueueIdx < drainIdx) {
+    issues.push('enqueueFarmerCloudSyncActions must run after drainPendingSyncQueueForManualSync');
   }
   for (const fn of ['isFieldCloudAuditSynced', 'markFieldCloudAuditSynced']) {
     if (!cloudQueue.includes(`export async function ${fn}`)) {
