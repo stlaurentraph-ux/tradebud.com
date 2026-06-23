@@ -7,6 +7,8 @@ import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import { type UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
 import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
+import { resolveFieldSyncMode, type FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import { measureTotalSyncPending } from '@/features/sync/measureTotalSyncPending';
 import {
   evaluateConservativeAutoBackup,
   recordAutoBackupAttempt,
@@ -66,6 +68,7 @@ export async function runAutoBackup(params: {
   farmerDisplayName?: string;
   /** When true, uploads plots + consent only — skips harvest/photo/evidence queue drain. */
   skipQueueDrain?: boolean;
+  syncMode?: FieldSyncMode;
 }): Promise<RunAutoBackupResult> {
   try {
     return await withSyncQueueLock(async () => {
@@ -103,6 +106,7 @@ export async function runAutoBackup(params: {
               name: params.farmerDisplayName,
             },
             syncPlots: params.localPlots,
+            syncMode: params.syncMode ?? 'full',
             t: noopTranslate,
             selectedQueueActionTypes,
             allQueueActionTypes: ALL_AUTO_BACKUP_ACTION_TYPES,
@@ -161,10 +165,23 @@ export async function runConservativeAutoBackup(params: {
 
   recordAutoBackupAttempt();
   try {
+    const prePending = await measureTotalSyncPending({
+      farmerId: params.farmerId,
+      plots: params.localPlots,
+      isSignedIn: true,
+    }).catch(() => null);
+    const syncMode = resolveFieldSyncMode({
+      unsyncedPlotCount: prePending?.unsyncedPlotCount ?? 0,
+      blockedPlotCount: prePending?.blockedPlotCount ?? 0,
+      queuePendingCount: prePending?.queuePendingCount ?? 0,
+      plotsFetchFailed: prePending?.plotsFetchFailed === true,
+    });
+
     const result = await runAutoBackup({
       farmerId: params.farmerId,
       localPlots: params.localPlots,
       skipQueueDrain,
+      syncMode,
     });
     const plotFailed =
       (result.plotResult?.failed ?? 0) > 0 ||

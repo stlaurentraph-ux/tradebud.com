@@ -104,6 +104,7 @@ Use a plot with **land title photos or tenure documents** queued locally, plus *
 - [ ] If declaration audit hits **audit_sync rate limit**, yellow banner says declaration failed — **not** generic “Tracebud is busy”
 - [ ] With media still in the upload queue, brown hint says **waiting to upload** — not “not on this device”
 - [ ] Wait 60s → Sync now again → declaration audit completes (or pending count drops)
+- [ ] **Second Sync now** (queue only, plots already linked, no parity restore): Technical details shows **upload queue only (skipped cloud restore)** — not a full pull from cloud
 
 ## 8. Settings — backup, notifications, advanced
 

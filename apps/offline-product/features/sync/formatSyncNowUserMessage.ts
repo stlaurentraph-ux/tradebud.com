@@ -1,6 +1,7 @@
 import type { TranslateFn } from '@/features/i18n/translate';
 import type { PlotSyncBlockInfo } from '@/features/sync/plotSyncPending';
 import type { SyncFailure } from '@/features/sync/syncFailure';
+import type { FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabilityMessage';
 import { formatSyncFailureUserMessage } from '@/features/sync/mapSyncFailureMessage';
@@ -34,6 +35,8 @@ export type SyncNowUserOutcome = {
   evidenceFetchFailed?: boolean;
   evidenceDownloadFailed?: number;
   declarationsFetchFailed?: boolean;
+  /** push_only skipped cloud restore; full ran pull + push. */
+  syncMode?: FieldSyncMode;
   /** Measured after the run — queue + plots still needing attention on device. */
   remainingPending?: number;
   unsyncedPlotCount?: number;

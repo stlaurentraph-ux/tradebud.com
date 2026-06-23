@@ -18,6 +18,7 @@ const guards = [
   'cross-device-smoke-wiring-guard.mjs',
   'cloud-audit-sync-guard.mjs',
   'pending-sync-drain-order-guard.mjs',
+  'field-sync-mode-guard.mjs',
   'role-permission-guard.mjs',
   'state-transition-guard.mjs',
   'feature-doc-guard.mjs',

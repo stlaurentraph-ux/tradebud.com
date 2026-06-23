@@ -50,6 +50,7 @@ import {
 import { fetchServerPlotListForUi, peekServerPlotListCache } from '@/features/sync/serverPlotListCache';
 import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
+import { resolveFieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
 import { reportSyncFailure } from '@/features/sync/reportSyncFailure';
 import {
   formatSyncFailureStepLabel,
@@ -173,6 +174,8 @@ export default function SettingsScreen() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncMessageKind, setSyncMessageKind] = useState<'success' | 'error' | null>(null);
   const [cloudParityHints, setCloudParityHints] = useState<string[]>([]);
+  const [cloudParityNeedsRestore, setCloudParityNeedsRestore] = useState(false);
+  const [lastSyncMode, setLastSyncMode] = useState<'push_only' | 'full' | null>(null);
   const [syncSupportMailto, setSyncSupportMailto] = useState<string | null>(null);
   const [syncOpenPlotId, setSyncOpenPlotId] = useState<string | null>(null);
   const [syncNowBusy, setSyncNowBusy] = useState(false);
@@ -508,6 +511,7 @@ export default function SettingsScreen() {
     async (plotSnapshot?: Plot[]) => {
       if (!isSignedIn || !farmer?.id) {
         setCloudParityHints([]);
+        setCloudParityNeedsRestore(false);
         return;
       }
       const summary = await measureCloudParitySummary({
@@ -515,6 +519,7 @@ export default function SettingsScreen() {
         localPlots: plotSnapshot ?? plots,
         localFarmer: farmer,
       }).catch(() => null);
+      setCloudParityNeedsRestore(summary?.needsRestore === true);
       setCloudParityHints(
         summary
           ? formatCloudParityHints(summary, t, {
@@ -1138,12 +1143,31 @@ export default function SettingsScreen() {
               await adoptOnDeviceFarmerScope(apiFarmerId).catch(() => false);
             }
 
+            const preSyncPending = await measureTotalSyncPending({
+              farmerId: apiFarmerId,
+              ownedFarmerIds: farmerScopeIds,
+              plots: syncPlots,
+              isSignedIn: true,
+            }).catch(() => null);
+            const syncMode = resolveFieldSyncMode({
+              needsCloudRestore: cloudParityNeedsRestore,
+              unsyncedPlotCount: preSyncPending?.unsyncedPlotCount ?? measuredSyncPending?.unsyncedPlotCount ?? 0,
+              blockedPlotCount: preSyncPending?.blockedPlotCount ?? measuredSyncPending?.blockedPlotCount ?? 0,
+              queuePendingCount: preSyncPending?.queuePendingCount ?? queuePendingCount,
+              plotsFetchFailed:
+                preSyncPending?.plotsFetchFailed === true ||
+                measuredSyncPending?.plotsFetchFailed === true ||
+                plotsFetchState === 'failed',
+            });
+            setLastSyncMode(syncMode);
+
             const pipeline = await runFieldSyncPipeline({
               accessToken: syncAccess.token,
               apiFarmerId,
               farmerScopeIds,
               syncFarmer,
               syncPlots,
+              syncMode,
               t,
               selectedQueueActionTypes: selectedQueueActionTypes,
               allQueueActionTypes: ALL_QUEUE_ACTION_TYPES,
@@ -1592,6 +1616,13 @@ export default function SettingsScreen() {
                         {queuePendingBreakdown ? (
                           <ThemedText type="caption" style={styles.backupTechDetailText}>
                             {queuePendingBreakdown}
+                          </ThemedText>
+                        ) : null}
+                        {lastSyncMode ? (
+                          <ThemedText type="caption" style={styles.backupTechDetailText}>
+                            {lastSyncMode === 'push_only'
+                              ? t('settings_sync_mode_push_only')
+                              : t('settings_sync_mode_full')}
                           </ThemedText>
                         ) : null}
                         {queueSyncFailure ? (

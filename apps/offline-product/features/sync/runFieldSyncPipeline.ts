@@ -41,6 +41,7 @@ import { classifyPlotListFailure, classifySyncFailure } from '@/features/sync/sy
 import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabilityMessage';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
+import type { FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
 
 export type FieldSyncPipelineParams = {
   accessToken: string;
@@ -49,6 +50,11 @@ export type FieldSyncPipelineParams = {
   syncFarmer: FarmerProfile;
   syncPlots: Plot[];
   t: TranslateFn;
+  /**
+   * full: pull from cloud then push pending work (sign-in, parity restore, empty refresh).
+   * push_only: incremental upload — warm links, prune, enqueue, drain queue only.
+   */
+  syncMode?: FieldSyncMode;
   /** When empty, all queue action types are considered selected. */
   selectedQueueActionTypes: PendingSyncAction['actionType'][];
   allQueueActionTypes: PendingSyncAction['actionType'][];
@@ -133,90 +139,105 @@ export async function runFieldSyncPipeline(
     queueSmartSweepCap = 100,
     maxQueuePasses = 4,
     onPhase,
+    syncMode = 'full',
   } = params;
 
   const setPhase = (phase: SyncQueuePhase) => {
     onPhase?.(phase);
   };
 
-  const outcome: SyncNowUserOutcome = {};
+  const outcome: SyncNowUserOutcome = { syncMode };
   let plotUploadFirstError: string | undefined;
   let skipQueueDrain = false;
 
-  setPhase('restoring_plots');
-  reportSyncStepStart('plot_list', { phase: 'restore', plotCount: syncPlots.length });
   let activePlots = syncPlots;
-  const restoreResult = await restoreLocalPlotsFromServer({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: syncPlots,
-  });
-  if (restoreResult.restoredCount > 0) {
-    activePlots = restoreResult.mergedPlots;
-    outcome.plotsRestored = restoreResult.restoredCount;
-    invalidateServerPlotListCache();
-  }
-  if (restoreResult.fetchFailed) {
-    outcome.plotsFetchFailed = true;
-  }
+  let plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+  let backendPlotsForReceipts: unknown[] = [];
 
-  // Reconcile local↔server plot ids before pulling receipts, evidence, or declarations.
-  await warmPlotServerLinksForSync({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
+  if (syncMode === 'full') {
+    setPhase('restoring_plots');
+    reportSyncStepStart('plot_list', { phase: 'restore', plotCount: syncPlots.length });
+    const restoreResult = await restoreLocalPlotsFromServer({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: syncPlots,
+    });
+    if (restoreResult.restoredCount > 0) {
+      activePlots = restoreResult.mergedPlots;
+      outcome.plotsRestored = restoreResult.restoredCount;
+      invalidateServerPlotListCache();
+    }
+    if (restoreResult.fetchFailed) {
+      outcome.plotsFetchFailed = true;
+    }
 
-  const receiptRestoreResult = await restoreLocalDeliveryReceiptsFromServer({
-    apiFarmerId,
-    profileFarmerId: syncFarmer.id,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
-  if (receiptRestoreResult.restoredCount > 0) {
-    outcome.receiptsRestored = receiptRestoreResult.restoredCount;
-  }
-  if (receiptRestoreResult.fetchFailed) {
-    outcome.plotsFetchFailed = true;
-  }
+    // Reconcile local↔server plot ids before pulling receipts, evidence, or declarations.
+    await warmPlotServerLinksForSync({
+      farmerId: apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: activePlots,
+    });
 
-  const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
-  const backendPlotsForReceipts = await fetchBackendPlotsForSyncScope({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-  }).catch(() => []);
-  const receiptReconcileResult = await reconcileUnuploadedLocalDeliveryReceipts({
-    farmerId: syncFarmer.id,
-    localPlots: activePlots,
-    backendPlots: backendPlotsForReceipts,
-    plotServerLinks,
-    vouchers: receiptRestoreResult.fetchFailed ? undefined : receiptRestoreResult.vouchers,
-  }).catch(() => ({ requeuedCount: 0, unmatchedCount: 0, fetchFailed: true }));
-  if (receiptReconcileResult.requeuedCount > 0) {
-    outcome.receiptsRequeued = receiptReconcileResult.requeuedCount;
-  }
+    const receiptRestoreResult = await restoreLocalDeliveryReceiptsFromServer({
+      apiFarmerId,
+      profileFarmerId: syncFarmer.id,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: activePlots,
+    });
+    if (receiptRestoreResult.restoredCount > 0) {
+      outcome.receiptsRestored = receiptRestoreResult.restoredCount;
+    }
+    if (receiptRestoreResult.fetchFailed) {
+      outcome.plotsFetchFailed = true;
+    }
 
-  const cloudRestoreResult = await restoreFarmerCloudState({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localFarmer: syncFarmer,
-    localPlots: activePlots,
-  });
-  if (cloudRestoreResult.declarationsRestored > 0) {
-    outcome.declarationsRestored = cloudRestoreResult.declarationsRestored;
-  }
-  if (cloudRestoreResult.groundTruthRestored > 0) {
-    outcome.groundTruthPhotosRestored = cloudRestoreResult.groundTruthRestored;
-  }
-  if (cloudRestoreResult.evidenceRestored > 0) {
-    outcome.evidenceRestored = cloudRestoreResult.evidenceRestored;
-  }
-  if (cloudRestoreResult.fetchFailed) {
-    outcome.evidenceFetchFailed = true;
-    outcome.declarationsFetchFailed = true;
-  }
-  if (cloudRestoreResult.downloadFailed > 0) {
-    outcome.evidenceDownloadFailed = cloudRestoreResult.downloadFailed;
+    plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+    backendPlotsForReceipts = await fetchBackendPlotsForSyncScope({
+      farmerId: apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+    }).catch(() => []);
+    const receiptReconcileResult = await reconcileUnuploadedLocalDeliveryReceipts({
+      farmerId: syncFarmer.id,
+      localPlots: activePlots,
+      backendPlots: backendPlotsForReceipts,
+      plotServerLinks,
+      vouchers: receiptRestoreResult.fetchFailed ? undefined : receiptRestoreResult.vouchers,
+    }).catch(() => ({ requeuedCount: 0, unmatchedCount: 0, fetchFailed: true }));
+    if (receiptReconcileResult.requeuedCount > 0) {
+      outcome.receiptsRequeued = receiptReconcileResult.requeuedCount;
+    }
+
+    const cloudRestoreResult = await restoreFarmerCloudState({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localFarmer: syncFarmer,
+      localPlots: activePlots,
+    });
+    if (cloudRestoreResult.declarationsRestored > 0) {
+      outcome.declarationsRestored = cloudRestoreResult.declarationsRestored;
+    }
+    if (cloudRestoreResult.groundTruthRestored > 0) {
+      outcome.groundTruthPhotosRestored = cloudRestoreResult.groundTruthRestored;
+    }
+    if (cloudRestoreResult.evidenceRestored > 0) {
+      outcome.evidenceRestored = cloudRestoreResult.evidenceRestored;
+    }
+    if (cloudRestoreResult.fetchFailed) {
+      outcome.evidenceFetchFailed = true;
+      outcome.declarationsFetchFailed = true;
+    }
+    if (cloudRestoreResult.downloadFailed > 0) {
+      outcome.evidenceDownloadFailed = cloudRestoreResult.downloadFailed;
+    }
+  } else {
+    setPhase('processing_queue');
+    reportSyncStepStart('queue', { phase: 'push_only' });
+    await warmPlotServerLinksForSync({
+      farmerId: apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: activePlots,
+    }).catch(() => undefined);
+    plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
   }
 
   await pruneRedundantPendingUploadActions({ farmerId: apiFarmerId }).catch(() => 0);
@@ -238,7 +259,9 @@ export async function runFieldSyncPipeline(
   setPhase(activePlots.length > 0 ? 'uploading_plots' : 'processing_queue');
 
   let lastPlotUploadResult: UploadUnsyncedPlotsResult | null = null;
-  if (activePlots.length === 0) {
+  if (syncMode === 'push_only') {
+    outcome.plotsAlreadySynced = true;
+  } else if (activePlots.length === 0) {
     outcome.plotsNone = true;
   } else {
     let syncRes = await uploadUnsyncedPlotsForFarmer({
@@ -385,14 +408,16 @@ export async function runFieldSyncPipeline(
 
   await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
 
-  const dateBackfillResult = await backfillServerHarvestDatesFromLocal({
-    farmerId: syncFarmer.id,
-    localPlots: activePlots,
-    backendPlots: backendPlotsForReceipts,
-    plotServerLinks,
-  }).catch(() => ({ updatedCount: 0, vouchers: [] as unknown[] }));
-  if (dateBackfillResult.updatedCount > 0) {
-    outcome.receiptsRestored = (outcome.receiptsRestored ?? 0) + dateBackfillResult.updatedCount;
+  if (syncMode === 'full') {
+    const dateBackfillResult = await backfillServerHarvestDatesFromLocal({
+      farmerId: syncFarmer.id,
+      localPlots: activePlots,
+      backendPlots: backendPlotsForReceipts,
+      plotServerLinks,
+    }).catch(() => ({ updatedCount: 0, vouchers: [] as unknown[] }));
+    if (dateBackfillResult.updatedCount > 0) {
+      outcome.receiptsRestored = (outcome.receiptsRestored ?? 0) + dateBackfillResult.updatedCount;
+    }
   }
 
   invalidateServerPlotListCache();
@@ -401,7 +426,7 @@ export async function runFieldSyncPipeline(
     ownedFarmerIds: farmerScopeIds,
     plots: activePlots,
     isSignedIn: true,
-    forcePlotFetch: true,
+    forcePlotFetch: syncMode === 'full',
   });
   outcome.remainingPending = pendingAfter.total;
   outcome.unsyncedPlotCount = pendingAfter.unsyncedPlotCount;

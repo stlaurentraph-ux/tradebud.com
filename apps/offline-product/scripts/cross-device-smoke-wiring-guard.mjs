@@ -28,6 +28,7 @@ function main() {
       'Walk my plot',
       'upload before declaration',
       'audit_sync rate limit',
+      'upload queue only',
     ];
     for (const phrase of requiredPhrases) {
       if (!smoke.toLowerCase().includes(phrase.toLowerCase())) {
