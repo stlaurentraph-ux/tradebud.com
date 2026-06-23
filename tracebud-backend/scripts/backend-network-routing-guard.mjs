@@ -95,6 +95,33 @@ function main() {
     issues.push('Missing src/harvest/delivery-buyer-invite.ts');
   }
 
+  const launchPath = path.join(root, 'src/launch/launch.service.ts');
+  if (fs.existsSync(launchPath)) {
+    const launchSource = fs.readFileSync(launchPath, 'utf8');
+    if (!launchSource.includes('claim-delivery-buyer-invites-on-signup')) {
+      issues.push('launch.service.ts must claim delivery buyer invites on signup');
+    }
+  } else {
+    issues.push('Missing src/launch/launch.service.ts');
+  }
+
+  const fieldSurfaceMatch = registrySource.match(
+    /fieldAppSurfaces:\s*\[([\s\S]*?)\]/,
+  );
+  if (fieldSurfaceMatch) {
+    const deliverySurfaces = fieldSurfaceMatch[1];
+    for (const required of [
+      'completeHarvestSubmitFlow.ts',
+      'deliveryBuyerInviteMessages.ts',
+    ]) {
+      if (!deliverySurfaces.includes(required)) {
+        issues.push(
+          `networkRoutingRegistry fieldAppSurfaces must include ${required} for field_delivery_to_buyer_tenant`,
+        );
+      }
+    }
+  }
+
   if (issues.length > 0) {
     console.error('backend-network-routing-guard: FAILED');
     for (const issue of issues) {

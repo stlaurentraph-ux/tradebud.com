@@ -48,8 +48,36 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 ## 5. Harvest (online + offline queue)
 
 - [ ] Harvests → select plot → record weight → receipt created when online
+- [ ] Deliver to **known buyer tenant** (consent picker) → receipt syncs; no buyer invite alert
+- [ ] Deliver to **unknown buyer email** → receipt created + buyer invite alert (saved or emailed copy); QR on receipt remains backup
 - [ ] Airplane mode → record harvest → **queued** message (not fake success)
 - [ ] Back online → Settings → Sync now → harvest appears; queue count clears
+
+### 5a. Delivery routing (buyer email / invite)
+
+Use a **second email** not yet on Tracebud dashboard (e.g. `buyer-smoke+DATE@yourdomain.com`).
+
+**Field app (producer device)**
+
+- [ ] Harvests → Deliver to → enter unknown buyer email → submit → **invite success** alert (not hard error)
+- [ ] Receipt shows directed email; voucher syncs when online
+- [ ] Optional: legacy API “unknown org” path → Alert offers **Continue with QR only**
+
+**Backend / Resend (engineering)**
+
+- [ ] `npm run check:resend` OK on deployed backend
+- [ ] `npm run db:verify:voucher-buyer-invites` OK on production DB
+- [ ] Resend dashboard shows `delivery-buyer-invite` email to test address
+
+**Dashboard (buyer signup claim)**
+
+- [ ] Open invite link or sign up with **same email** → complete workspace setup
+- [ ] Buyer dashboard → harvest vouchers → delivery from producer appears (no QR scan)
+- [ ] `voucher_buyer_invites.status` = `claimed` for that voucher (Supabase / SQL check)
+
+**Known buyer (regression)**
+
+- [ ] Deliver to email already linked to a Tracebud workspace → buyer sees voucher without invite flow
 
 ## 6. Plot setup & detail
 

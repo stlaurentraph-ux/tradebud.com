@@ -117,6 +117,45 @@ This adds:
 - RLS policies on `consent_grants` (defense-in-depth)
 - `farmer_push_devices` (Expo push tokens for consent-request alerts)
 
+### 2d. Delivery buyer invites (unknown email → Resend → signup claim)
+
+Required for field-app **Deliver to email** when the buyer is not on Tracebud yet.
+
+**1. Database**
+
+```bash
+cd tracebud-backend
+# DATABASE_URL = Supabase pooler URL in .env.local
+npm run db:apply:voucher-buyer-invites
+npm run db:verify:voucher-buyer-invites
+```
+
+Supabase CLI alternative: `supabase/migrations/20260623120000_voucher_buyer_invites.sql`.
+
+**2. Railway env** (transactional email)
+
+| Variable | Purpose |
+|----------|---------|
+| `RESEND_API_KEY` | Resend API key |
+| `RESEND_FROM_EMAIL` | Verified sender domain |
+| `RESEND_FROM_NAME` | Display name (optional) |
+| `RESEND_REPLY_TO_EMAIL` | Reply-to (optional) |
+| `TRACEBUD_DASHBOARD_PUBLIC_URL` | Signup/login links in invite email |
+
+```bash
+npm run check:resend
+```
+
+Redeploy backend after env + migration.
+
+**3. Smoke**
+
+- Field app: deliver to a fresh email → invite alert on device.
+- Resend dashboard: `delivery-buyer-invite` received.
+- Dashboard: sign up with that email → delivery appears in buyer vouchers (`voucher_buyer_invites.status = claimed`).
+
+Device checklist: `apps/offline-product/DEVICE_SMOKE_CHECKLIST.md` §5a.
+
 ### 2c.1 Enable Expo push (geometry + consent alerts)
 
 **1. Database** — same step as above (`farmer_push_devices` via `db:apply:consent-sovereignty-v11`).

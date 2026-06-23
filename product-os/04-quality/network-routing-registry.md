@@ -28,11 +28,14 @@ Farmer records harvest with buyer picker, email, or QR-only.
 | 1 | Field app `DeliveryRecipientFields` | Pick buyer, enter email, or QR-only |
 | 2 | Backend `resolveVoucherDeliveryRecipient` | Email → tenant via shared resolver |
 | 3 | Backend `ensureActiveConsentForDirectedDelivery` | Auto-create/activate `SHIPMENT_PREPARATION` grant when tenant resolves |
-| 3b | Backend `queueDeliveryBuyerInvite` | Unknown dashboard email → store on voucher + invite row + optional Resend email |
-| 4 | Backend harvest create | Sets `voucher.intended_recipient_tenant_id` |
+| 3b | Backend `queueDeliveryBuyerInvite` | Unknown dashboard email → store on voucher + `voucher_buyer_invites` row + optional Resend email |
+| 3c | Backend `claimDeliveryBuyerInvitesOnSignup` | New buyer signup claims pending invites (`launch.service.ts`) |
+| 4 | Backend harvest create | Sets `voucher.intended_recipient_tenant_id` or `intended_recipient_email`; returns `buyerInvite` |
 | 5 | Buyer dashboard vouchers | Farmer in tenant scope **and** intended recipient match |
 
-**Tenant farmer scope** (`resolveFarmerIdsForTenant`) includes farmers with **active consent** even when not yet in CRM contacts.
+**Field app surfaces:** `DeliveryRecipientFields`, `submitHarvest`, `completeHarvestSubmitFlow`, `deliveryBuyerInviteMessages`, `MultiPlotDeliveryWizard`, `harvests.tsx`.
+
+**Invite row lifecycle:** `voucher_buyer_invites.status` — `pending` → `sent` (Resend) → `claimed` (buyer signup).
 
 **Integration test:** `src/network/network-routing-delivery.int.spec.ts`
 

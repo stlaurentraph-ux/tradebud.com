@@ -33,6 +33,19 @@ Must match offline `farmerArtifactRegistry.ts` `FIELD_CLOUD_AUDIT_EVENT_TYPES`:
 - `plot_mapping_draft_saved`
 - `plot_mapping_draft_cleared`
 
+## Harvest / delivery buyer invite audit events
+
+Registered in `backendAuditEventRegistry.ts` (backend-only; not field cloud parity list):
+
+- `delivery_buyer_invite_queued`
+- `delivery_buyer_invite_sent`
+- `delivery_buyer_invite_send_skipped`
+- `delivery_buyer_invite_send_failed`
+- `delivery_buyer_invite_claimed`
+- `delivery_buyer_invite_claim_skipped`
+
+`harvest_recorded` payload may include `pendingBuyerInvite: true`.
+
 ## Platform audit events
 
 Full categorized list in `backendAuditEventRegistry.ts` (dashboard, DDS filing, plot, chat, workflow, integrations, consent, inbox, launch, benchmarks). CI strict mode fails on unregistered `audit_log` emit literals in `src/`.

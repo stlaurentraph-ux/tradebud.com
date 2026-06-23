@@ -23,6 +23,16 @@ Implemented in `runFieldSyncPipeline.ts`. Do not skip `restoring_plots` before u
 | evidence_sync | syncPlotEvidenceWithFiles | storage path |
 | audit_sync | postAuditEventToBackend | audit dedup key |
 
+## Field cloud audit sync markers
+
+| Marker prefix | Module | Events |
+|---------------|--------|--------|
+| `audit_decl_synced:producer:{farmerId}` | `queueDeclarationAuditSync` | `producer_attestations_updated` |
+| `audit_decl_synced:plot:{plotId}` | same | `plot_compliance_declared` |
+| `audit_cloud_synced:{eventType}:{scopeId}` | `queueFieldCloudAuditSync` | `field_device_preferences_updated`, `farmer_profile_photo_synced`, `plot_mapping_draft_saved`, `plot_mapping_draft_cleared` |
+
+**Sync prep rule:** during `runFieldSyncPipeline` preparing phase, `enqueueFarmerCloudSyncActions` enqueues farmer-scoped cloud audit rows with `FARMER_CLOUD_SYNC_PREP_OPTIONS` (defer POST until `processing_queue`) to avoid 401/429 bursts.
+
 ## Plot readiness gates
 
 Evaluated in `plotChecklist.ts` / `loadPlotReadiness`:

@@ -38,6 +38,11 @@
       "purpose": "voucher_delivery_routing"
     },
     {
+      "supabase": "20260623120000_voucher_buyer_invites.sql",
+      "backend": "tb_v16_054_voucher_buyer_invites.sql",
+      "purpose": "voucher_buyer_invites"
+    },
+    {
       "supabase": "202606170002_processing_facility_subtypes.sql",
       "backend": "tb_v16_047_processing_facility_subtypes.sql",
       "purpose": "processing_facility_subtypes"

@@ -23,6 +23,8 @@ Living list of **bug classes that have reached preview/production more than once
 | FR-009 | Device B missing docs/photos after sync | Restore path missing for audit/storage source | `sync-parity-guard.mjs` + registry | §12 cross-device |
 | FR-010 | Restore succeeded but UI empty | Screen did not reload SQLite after sync | UI subscription guard in sync-parity | §12 plot detail |
 | FR-011 | iPad missing land docs/photos | Plot count parity OK but media not compared | `measureCloudParitySummary` media + `ui-reload-guard` | §12 documents + field photos |
+| FR-012 | Unknown buyer email blocks harvest | Pre-invite API returned 400 | `deliveryBuyerInviteMessages.test.ts` + `network-routing-delivery.int.spec.ts` | §5 buyer invite |
+| FR-013 | Sync now floods audit 401/429 / duplicate audit_sync rows | Immediate POST + re-enqueue during sync prep | `cloud-audit-sync-guard.mjs` + `queueFieldCloudAuditSync.test.ts` | §8 Sync now |
 
 ## Release gate (preview OTA)
 

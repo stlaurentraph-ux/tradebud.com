@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Offline + backend **buyer invite + cloud audit defer structural safeguards** (2026-06-23): registries, `cloud-audit-sync-guard`, network routing guard extensions, regression ledger FR-012/FR-013, DEVICE smoke §5.
 - Backend **farmer-initiated delivery consent** (2026-06-19): directed email/tenant delivery auto-grants `SHIPMENT_PREPARATION`; pending→active on deliver; revoked/denied blocked.
 - Backend **cross-surface network routing** (2026-06-19): shared `email-to-tenant-resolution.ts` (delivery + inbox fan-out); consent farmers in `resolveFarmerIdsForTenant`; registry + guard + integration test.
 - Dashboard **compliance issues + exporter workflow structural contracts** (2026-06-19): registries, guards, PermissionGates, analytics, Playwright paths #5–#6; backend `requests_operational_issues` entry.

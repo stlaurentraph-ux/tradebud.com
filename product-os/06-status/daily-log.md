@@ -1,6 +1,13 @@
+### 2026-06-23 (field + backend — structural safeguards for invite + cloud audit defer)
+
+- **Buyer invite guards** — expanded `networkRoutingRegistry` field surfaces; `backend-network-routing-guard` checks signup claim + invite UX modules; DEVICE smoke §5 buyer invite; FR-012 regression ledger row.
+- **Cloud audit defer guards** — `FARMER_CLOUD_SYNC_PREP_OPTIONS` in `farmerArtifactRegistry.ts`; new `cloud-audit-sync-guard.mjs`; `enqueueFarmerCloudSyncActions.test.ts`; FR-013 regression ledger row; registry docs for markers and sync prep.
+
 ### 2026-06-19 (field + backend — unknown buyer email delivery)
 
 - **Invite flow** — unknown dashboard email creates voucher with `intended_recipient_email`, `voucher_buyer_invites` row, optional Resend invite; returns `buyerInvite` on harvest POST.
+- **Signup claim** — `claimPendingDeliveryBuyerInvitesOnSignup` runs on dashboard signup + workspace setup; sets `intended_recipient_tenant_id`, activates consent, marks invite `claimed`; buyer sees voucher in dashboard.
+- **Ship ops** — `db:apply:voucher-buyer-invites`, Supabase mirror `20260623120000`, `DEPLOY_PRODUCTION.md` §2d, device checklist §5a.
 - **Field UX** — clearer Deliver to copy; legacy unknown-email Alert → QR-only retry; invite success Alert → receipt.
 - **Tests** — integration unknown-email path; `deliveryBuyerInviteMessages.test.ts`.
 
