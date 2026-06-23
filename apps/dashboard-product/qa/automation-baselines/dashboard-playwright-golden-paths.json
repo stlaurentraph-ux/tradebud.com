@@ -26,6 +26,13 @@
       "specFile": "e2e/golden-paths.spec.ts",
       "testName": "onboarding proxy read/write uses golden smoke role and step key",
       "mockedApi": "/api/launch/onboarding"
+    },
+    {
+      "id": "outreach_send_archive",
+      "route": "/outreach",
+      "specFile": "e2e/outreach-campaign-actions.spec.ts",
+      "testName": "outreach table sends and archives draft campaign with mocked APIs",
+      "mockedApi": "/api/requests/campaigns"
     }
   ]
 }

@@ -21,6 +21,7 @@ import {
   type ContactRecord,
   type ContactStatus,
 } from '@/lib/contact-service';
+import { DASHBOARD_CONTACT_STATUSES } from '@/lib/dashboardCrmOutreachRegistry';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs } from '@/lib/nav-labels';
@@ -36,7 +37,7 @@ import {
 } from '@/lib/workflow-terminology-labels';
 import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
-const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
+const CONTACT_STATUSES: ContactStatus[] = [...DASHBOARD_CONTACT_STATUSES];
 
 export default function ContactOrganizationPage() {
   return (

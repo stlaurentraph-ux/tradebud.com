@@ -33,6 +33,18 @@ export const DASHBOARD_EVENTS = {
   BULK_PLOT_IMPORT_PACKAGE_UNSIGNED: 'dashboard_bulk_plot_import_package_unsigned',
   BULK_PLOT_IMPORT_POLICY_UPDATED: 'dashboard_bulk_plot_import_policy_updated',
   INBOUND_CAMPAIGN_REQUEST_VIEWED: 'inbound_campaign_request_viewed',
+  CAMPAIGN_CREATE_SUCCESS: 'dashboard_campaign_create_success',
+  CAMPAIGN_CREATE_FAILURE: 'dashboard_campaign_create_failure',
+  CAMPAIGN_SEND_SUCCESS: 'dashboard_campaign_send_success',
+  CAMPAIGN_SEND_FAILURE: 'dashboard_campaign_send_failure',
+  INBOX_RESPOND_SUCCESS: 'dashboard_inbox_respond_success',
+  INBOX_RESPOND_FAILURE: 'dashboard_inbox_respond_failure',
+  CAMPAIGN_ARCHIVE_SUCCESS: 'dashboard_campaign_archive_success',
+  CAMPAIGN_ARCHIVE_FAILURE: 'dashboard_campaign_archive_failure',
+  CONTACT_STATUS_CHANGED: 'dashboard_contact_status_changed',
+  CONTACT_STATUS_CHANGE_FAILURE: 'dashboard_contact_status_change_failure',
+  CONTACT_CREATE_SUCCESS: 'dashboard_contact_create_success',
+  CONTACT_CREATE_FAILURE: 'dashboard_contact_create_failure',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -46,6 +58,12 @@ const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.UI_ACTION_FAILED,
   DASHBOARD_EVENTS.REACT_RENDER_ERROR,
   DASHBOARD_EVENTS.BULK_PLOT_IMPORT_FAILURE,
+  DASHBOARD_EVENTS.CAMPAIGN_CREATE_FAILURE,
+  DASHBOARD_EVENTS.CAMPAIGN_SEND_FAILURE,
+  DASHBOARD_EVENTS.INBOX_RESPOND_FAILURE,
+  DASHBOARD_EVENTS.CAMPAIGN_ARCHIVE_FAILURE,
+  DASHBOARD_EVENTS.CONTACT_STATUS_CHANGE_FAILURE,
+  DASHBOARD_EVENTS.CONTACT_CREATE_FAILURE,
 ]);
 
 function compactProps(properties?: DashboardEventProps): Record<string, string | number | boolean> {

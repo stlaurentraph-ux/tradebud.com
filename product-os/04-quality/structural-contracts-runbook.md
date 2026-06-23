@@ -19,7 +19,10 @@ How Tracebud encodes cross-cutting invariants as **contract-as-code** so agents 
 
 | Domain | Markdown | Code mirror | Guard |
 |--------|----------|-------------|-------|
-| RBAC + shipment states | `dashboard-rbac-registry.md` | `lib/dashboardRbacRegistry.ts`, `lib/rbac.ts` | `dashboard-rbac-guard.mjs`, `dashboard-shipment-transition-guard.mjs` |
+| RBAC + shipment states | `dashboard-rbac-registry.md` | `lib/dashboardRbacRegistry.ts`, `lib/rbac.ts` | `dashboard-rbac-guard.mjs`, `dashboard-shipment-transition-guard.mjs`, `dashboard-permission-matrix-guard.mjs`, `dashboard-backend-role-parity-guard.mjs` |
+| Legal workflow + DDS | `dashboard-legal-workflow-registry.md` | `lib/dashboardLegalWorkflowRegistry.ts` | `dashboard-legal-workflow-guard.mjs` |
+| CRM + outreach | `dashboard-crm-outreach-registry.md` | `lib/dashboardCrmOutreachRegistry.ts` | `dashboard-crm-guard.mjs`, `dashboard-campaign-guard.mjs`, `dashboard-network-permission-guard.mjs`, `dashboard-backend-network-parity-guard.mjs` |
+| Analytics events | — | `lib/observability/analytics.ts` | `dashboard-analytics-slice-guard.mjs` (strict in `qa:structural:ci`) |
 | API regressions / proxy / e2e | — | baselines under `scripts/` | bundled in `run-structural-guards.mjs` |
 
 ### Backend (`tracebud-backend`)

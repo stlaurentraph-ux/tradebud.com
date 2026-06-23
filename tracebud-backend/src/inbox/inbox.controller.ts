@@ -44,7 +44,7 @@ export class InboxController {
   ) {
     const tenantId = this.requireTenantId(req);
     const role = deriveRoleFromSupabaseUser(req.user ?? {});
-    if (!['exporter', 'admin', 'compliance_manager', 'agent'].includes(role)) {
+    if (!['exporter', 'admin', 'compliance_manager', 'agent', 'cooperative', 'importer', 'country_reviewer'].includes(role)) {
       throw new ForbiddenException('Only organization operators can fulfill inbox requests.');
     }
     const userId = typeof req.user?.id === 'string' ? req.user.id : null;

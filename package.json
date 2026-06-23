@@ -32,7 +32,7 @@
     "typecheck:dashboard": "npm run typecheck -w dashboard-product",
     "typecheck:marketing": "npm run typecheck -w tracebud-marketing",
     "build:dashboard": "npm run build -w dashboard-product",
-    "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run regression:routes:assert -w dashboard-product && npm run build:dashboard",
+    "check:dashboard": "npm run lint:dashboard && npm run typecheck:dashboard && npm test -w dashboard-product && npm run regression:routes:assert -w dashboard-product && npm run qa:structural -w dashboard-product && npm run build:dashboard",
     "check:marketing": "npm run lint:marketing && npm run typecheck:marketing && npm run i18n:parity:assert -w tracebud-marketing && npm run routes:publication:assert -w tracebud-marketing && npm run build:marketing && npm run api:trace:size:assert -w tracebud-marketing",
     "turbo:cache:report": "node scripts/turbo-remote-cache-guard.mjs",
     "sentry:env:assert": "node scripts/sentry-env-tags-guard.mjs",

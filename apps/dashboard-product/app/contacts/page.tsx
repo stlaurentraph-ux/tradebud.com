@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
+import { DASHBOARD_CONTACT_STATUSES } from '@/lib/dashboardCrmOutreachRegistry';
 import type { ContactActivityType } from '@/lib/contact-activity-types';
 import { listContactActivityTypesForRole } from '@/lib/contact-activity-types';
 import { useAuth } from '@/lib/auth-context';
@@ -37,24 +38,9 @@ import { Plus, Upload } from 'lucide-react';
 import { SupplierOrganizationList } from '@/components/contacts/supplier-organization-list';
 import { groupContactsByOrganization } from '@/lib/contact-directory';
 
-const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
-const _CONTACT_TABLE_COLUMN_KEYS = [
-  'name',
-  'email',
-  'organization',
-  'activity',
-  'status',
-  'consent',
-  'last_activity',
-  'update_status',
-] as const;
-type ContactTableColumnKey = (typeof _CONTACT_TABLE_COLUMN_KEYS)[number];
+const CONTACT_STATUSES: ContactStatus[] = [...DASHBOARD_CONTACT_STATUSES];
 
-const CONTACT_TABLE_COLUMNS: Array<{
-  key: ContactTableColumnKey;
-  minWidth: number;
-  defaultWidth: number;
-}> = [
+const CONTACT_TABLE_COLUMNS = [
   { key: 'name', minWidth: 140, defaultWidth: 180 },
   { key: 'email', minWidth: 180, defaultWidth: 240 },
   { key: 'organization', minWidth: 140, defaultWidth: 180 },
@@ -63,7 +49,8 @@ const CONTACT_TABLE_COLUMNS: Array<{
   { key: 'consent', minWidth: 120, defaultWidth: 130 },
   { key: 'last_activity', minWidth: 180, defaultWidth: 220 },
   { key: 'update_status', minWidth: 160, defaultWidth: 180 },
-];
+] as const;
+type ContactTableColumnKey = (typeof CONTACT_TABLE_COLUMNS)[number]['key'];
 
 export default function ContactsPage() {
   const localeContext = useContext(LocaleContext);

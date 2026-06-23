@@ -26,19 +26,21 @@ import {
   getInboxStatusLabel,
   getInboxTableColumnLabel,
 } from '@/lib/workflow-terminology-labels';
+import {
+  DASHBOARD_INBOX_UI_STATUSES,
+  mapInboxStatusToUi,
+  type DashboardInboxUiStatus,
+} from '@/lib/dashboardCrmOutreachRegistry';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
 
-type InboxStatus = 'Pending' | 'Fulfilled';
+type InboxStatus = DashboardInboxUiStatus;
 
-const INBOX_STATUS_TABS: InboxStatus[] = ['Pending', 'Fulfilled'];
+const INBOX_STATUS_TABS: InboxStatus[] = [...DASHBOARD_INBOX_UI_STATUSES];
 
 const statusBadgeClass: Record<InboxStatus, string> = {
   Pending: 'bg-amber-500/15 text-amber-700',
   Fulfilled: 'bg-emerald-500/15 text-emerald-700',
 };
-
-function mapStatus(request: InboxRequest): InboxStatus {
-  return request.status === 'PENDING' ? 'Pending' : 'Fulfilled';
-}
 
 export default function InboxPage() {
   const localeContext = useContext(LocaleContext);
@@ -57,7 +59,7 @@ export default function InboxPage() {
     () =>
       backendRequests.map((request) => ({
         ...request,
-        displayStatus: mapStatus(request),
+        displayStatus: mapInboxStatusToUi(request.status),
       })),
     [backendRequests],
   );
@@ -76,8 +78,20 @@ export default function InboxPage() {
     requestId: string,
     payload: { notes?: string; evidencePlotIds?: string[]; evidencePackageIds?: string[] },
   ) => {
-    await respond(requestId, payload);
-    await reload();
+    const request = backendRequests.find((item) => item.id === requestId);
+    try {
+      await respond(requestId, payload);
+      trackDashboardEvent(DASHBOARD_EVENTS.INBOX_RESPOND_SUCCESS, {
+        request_type: request?.request_type ?? 'unknown',
+      });
+      await reload();
+    } catch (error) {
+      trackDashboardEvent(DASHBOARD_EVENTS.INBOX_RESPOND_FAILURE, {
+        request_type: request?.request_type ?? 'unknown',
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
+      throw error;
+    }
   };
 
   const pageTitle = getInboxPageTitle(role, t);
