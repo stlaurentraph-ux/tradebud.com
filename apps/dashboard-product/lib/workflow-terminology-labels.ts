@@ -5190,6 +5190,18 @@ export function getOutreachViewTimelineLabel(t?: TranslateFn): string {
   return wf('workflow.outreach.action.view_timeline', 'View timeline', t);
 }
 
+export function getOutreachSendDraftLabel(role?: SupplyChainRole, t?: TranslateFn): string {
+  return wf(
+    'workflow.outreach.action.send_draft',
+    role === 'importer' ? 'Launch draft' : 'Send draft',
+    t,
+  );
+}
+
+export function getOutreachArchiveLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.action.archive', 'Archive', t);
+}
+
 export function getOutreachWizardDescription(role?: SupplyChainRole, t?: TranslateFn): string {
   const key = role === 'importer' ? 'workflow.outreach.wizard.desc.importer' : 'workflow.outreach.wizard.desc.default';
   return wf(
@@ -8206,7 +8218,6 @@ export function getIntegrationsSchedulerLoadingLabel(t?: TranslateFn): string {
 }
 
 type IntegrationRunStatus = 'started' | 'completed' | 'failed';
-type IntegrationRunType = 'validation' | 'scoring';
 type IntegrationTimelineEvent =
   | 'draft_saved'
   | 'submitted'

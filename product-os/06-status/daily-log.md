@@ -1,3 +1,36 @@
+### 2026-06-19 (dashboard — CRM/outreach phase 4)
+
+- **Contact create analytics** — success/failure in `createContact`.
+- **Programmes page** — uses `useRequestCampaigns` + registry mappers + campaign client actions (removed duplicate POST).
+- **Playwright** — `outreach-campaign-actions.spec.ts` golden path for send/archive; manifest + guard updated (4 paths).
+
+### 2026-06-19 (dashboard — CRM/outreach phase 3)
+
+- **Outreach actions** — send draft + archive on `/outreach` table; `request-campaign-client.ts`; `requests:send` PermissionGate.
+- **Contact analytics** — status change events in `updateContactStatus`.
+- **Parity** — sponsor + country_reviewer bindings; backend widened for compliance_manager/country_reviewer network access.
+
+### 2026-06-19 (dashboard — CRM/outreach phase 2)
+
+- **Analytics** — 6 campaign/inbox events wired in wizard + inbox; baseline updated (23 canonical events).
+- **Permission gates** — `requests:send` on wizard review step; `requests:create` on save draft.
+- **Backend parity** — `dashboard-backend-network-parity-guard.mjs`; widened backend campaign/inbox roles for cooperative + importer.
+
+### 2026-06-19 (dashboard — CRM/outreach structural contracts)
+
+- **Registry** — `dashboardCrmOutreachRegistry.ts` (contact/campaign/inbox statuses, request types, UI mappers, network page contracts).
+- **Guards** — `dashboard-crm-guard`, `dashboard-campaign-guard`, `dashboard-network-permission-guard` wired in orchestrator.
+- **UI** — outreach uses registry mapper + `requests:create` PermissionGate; inbox uses `mapInboxStatusToUi`; contact pages import `DASHBOARD_CONTACT_STATUSES`.
+- **Docs** — `dashboard-crm-outreach-registry.md`, runbook + cursor rule updated.
+
+### 2026-06-19 (dashboard — structural automation phase 2)
+
+- **Legal/DDS registry** — `dashboardLegalWorkflowRegistry.ts` + guard (roles, workflows, DDS/compliance statuses).
+- **Permission matrix** — `dashboard-permission-matrix-guard.mjs` (commercial permissions, nav, onboarding).
+- **Backend parity** — `dashboard-backend-role-parity-guard.mjs` (TenantRole ↔ backend AppRole).
+- **Analytics** — `dashboard-analytics-slice-guard.mjs` with baseline; strict in `qa:structural:ci`.
+- **check:dashboard** — includes `qa:structural`.
+
 ### 2026-06-19 (backend — structural automation phase 2)
 
 - **Audit registry v2** — 117 `audit_log` events categorized; strict `--ci` src scan for unregistered emits.

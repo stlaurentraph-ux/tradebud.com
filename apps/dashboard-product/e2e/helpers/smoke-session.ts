@@ -47,6 +47,16 @@ export function buildSmokeUser() {
 export async function seedSmokeSession(page: Page): Promise<void> {
   const token = buildSmokeAccessToken();
   const user = buildSmokeUser();
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3000';
+
+  await page.context().addCookies([
+    {
+      name: 'tracebud_session',
+      value: token,
+      url: baseURL,
+      sameSite: 'Lax',
+    },
+  ]);
 
   await page.addInitScript(({ tokenValue, userValue, userId }) => {
     sessionStorage.setItem('tracebud_token', tokenValue);

@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Building2, UserPlus } from 'lucide-react';
@@ -21,6 +21,7 @@ import {
   type ContactRecord,
   type ContactStatus,
 } from '@/lib/contact-service';
+import { DASHBOARD_CONTACT_STATUSES } from '@/lib/dashboardCrmOutreachRegistry';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs } from '@/lib/nav-labels';
@@ -36,7 +37,7 @@ import {
 } from '@/lib/workflow-terminology-labels';
 import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
-const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
+const CONTACT_STATUSES: ContactStatus[] = [...DASHBOARD_CONTACT_STATUSES];
 
 export default function ContactOrganizationPage() {
   return (
@@ -58,7 +59,7 @@ function ContactOrganizationPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshContacts = async () => {
+  const refreshContacts = useCallback(async () => {
     try {
       setError(null);
       const data = await listContacts();
@@ -69,11 +70,29 @@ function ContactOrganizationPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
-    void refreshContacts();
-  }, []);
+    let cancelled = false;
+    listContacts()
+      .then((data) => {
+        if (!cancelled) setContacts(data);
+      })
+      .catch((nextError) => {
+        if (!cancelled) {
+          setError(
+            nextError instanceof Error ? nextError.message : getContactsErrorMessage('load', t),
+          );
+          setContacts([]);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const group = useMemo(
     () => (organizationName ? findOrganizationGroup(contacts, organizationName) : null),
