@@ -199,7 +199,7 @@ export default async function PrivacyPolicy({ params }: Props) {
             <ul className="list-disc list-inside space-y-2">
               <li>Provide plot mapping, document storage, harvest logging, and traceability features</li>
               <li>Run compliance checks required for EUDR and buyer due diligence</li>
-              <li>Sync data between your phone and your organization&apos;s Tracebud workspace</li>
+              <li>Sync data between your device and your organization&apos;s Tracebud workspace</li>
               <li>Authenticate users and prevent fraud or abuse</li>
               <li>Respond to support requests and improve product reliability</li>
               <li>Meet legal, tax, and regulatory obligations</li>

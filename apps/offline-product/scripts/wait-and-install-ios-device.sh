@@ -69,7 +69,8 @@ pick_udid_from_xctrace() {
   fi
   line="$(xcrun xctrace list devices 2>/dev/null | grep -E "^(${kind_filter})" | grep -v Simulator | head -1 || true)"
   [[ -n "$line" ]] || return 1
-  echo "$line" | grep -Eo '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' | head -1
+  # xctrace hardware UDIDs: 00008027-000A15620E22002E (8+16) or UUID-shaped IDs from devicectl
+  echo "$line" | grep -Eo '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-F]{8}-[0-9A-F]{16}' | head -1
 }
 
 resolve_udid() {

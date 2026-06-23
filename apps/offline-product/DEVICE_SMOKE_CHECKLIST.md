@@ -128,3 +128,5 @@ This writes `DEVICE_SMOKE_SIGNOFF.json` (must match `git HEAD` for `npm run upda
 | | | | | | |
 
 **Engineering follow-up:** file issues for any failed row; attach Sentry event or Settings error text.
+
+**Automated subset (nightly Maestro):** `cross-device-restore-smoke.yaml` with `MAESTRO_SEED_PROFILE=cross_device_b` validates restore UX entry points on simulator (full two-device check remains manual).

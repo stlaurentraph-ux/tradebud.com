@@ -23,6 +23,12 @@
       "id": "mark_three_corners",
       "flowFile": "mark-three-corners.yaml",
       "description": "Mapping mark-corners entry smoke (optional plot seeding)"
+    },
+    {
+      "id": "cross_device_restore",
+      "flowFile": "cross-device-restore-smoke.yaml",
+      "seedProfile": "cross_device_b",
+      "description": "DEVICE_SMOKE §12 subset — Device B empty media, restore entry points"
     }
   ]
 }

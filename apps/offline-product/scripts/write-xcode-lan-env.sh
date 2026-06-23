@@ -6,11 +6,37 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IP="${1:-}"
 
+has_online_ios_device() {
+  xcrun xctrace list devices 2>/dev/null | awk '
+    /^== Devices ==$/ { on=1; next }
+    /^== / { on=0 }
+    on && /^(iPad|iPhone)/ && !/Simulator/ { found=1; exit }
+    END { exit !found }
+  '
+}
+
+detect_usb_packager_ip() {
+  # USB iPhone/iPad gives the Mac a link-local address the device can reach (169.254.x.x).
+  if ! has_online_ios_device; then
+    return 1
+  fi
+  ifconfig 2>/dev/null | awk '/inet 169\.254\.[0-9]+\.[0-9]+/ {print $2; exit}'
+}
+
+detect_wifi_packager_ip() {
+  ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true
+}
+
 if [[ -z "$IP" ]]; then
-  IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
+  IP="$(detect_usb_packager_ip || true)"
+  if [[ -n "$IP" ]]; then
+    echo "Using USB link-local packager IP ${IP} (physical iOS device connected)" >&2
+  else
+    IP="$(detect_wifi_packager_ip)"
+  fi
 fi
 if [[ -z "$IP" ]]; then
-  echo "Could not detect Mac LAN IP (en0/en1). Connect to Wi‑Fi."
+  echo "Could not detect Mac LAN IP (en0/en1). Connect to Wi‑Fi or plug in the iOS device via USB."
   exit 1
 fi
 
@@ -18,6 +44,7 @@ NODE_BIN="$(command -v node)"
 cat >"$ROOT/ios/.xcode.env.local" <<EOF
 export NODE_BINARY=$NODE_BIN
 export REACT_NATIVE_PACKAGER_HOSTNAME=$IP
+export SKIP_BUNDLING_METRO_IP=1
 export SENTRY_DISABLE_AUTO_UPLOAD=true
 EOF
 

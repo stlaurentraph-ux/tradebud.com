@@ -24,7 +24,9 @@
     "mock:prod:assert": "node scripts/dashboard-mock-vs-real-guard.mjs",
     "e2e:golden-paths": "playwright test",
     "e2e:golden-paths:assert": "node scripts/dashboard-playwright-guard.mjs",
-    "e2e:golden-paths:install": "playwright install chromium"
+    "e2e:golden-paths:install": "playwright install chromium",
+    "qa:structural": "node ./scripts/run-structural-guards.mjs",
+    "qa:structural:ci": "node ./scripts/run-structural-guards.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

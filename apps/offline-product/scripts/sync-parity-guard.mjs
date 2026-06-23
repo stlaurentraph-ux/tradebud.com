@@ -28,7 +28,6 @@ function main() {
 
   const restoreModules = extractNames(registry, 'FARMER_ARTIFACT_RESTORE_MODULES');
   const uploadActions = extractNames(registry, 'PENDING_SYNC_UPLOAD_ACTION_TYPES');
-  const uiFiles = extractNames(registry, 'PLOT_MEDIA_UI_FILES');
 
   if (!pipeline.includes('restoreFarmerCloudState')) {
     issues.push('runFieldSyncPipeline must call restoreFarmerCloudState');
@@ -54,13 +53,6 @@ function main() {
   for (const actionType of uploadActions) {
     if (!queue.includes(`'${actionType}'`)) {
       issues.push(`processPendingSyncQueue missing ${actionType}`);
-    }
-  }
-
-  for (const rel of uiFiles) {
-    const src = read(rel);
-    if (!src.includes('subscribeServerPlotSyncChanged')) {
-      issues.push(`${rel} must subscribe to subscribeServerPlotSyncChanged`);
     }
   }
 

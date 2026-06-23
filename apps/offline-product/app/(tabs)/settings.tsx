@@ -89,7 +89,7 @@ import {
 } from '@/features/sync/landDocUploadReminder';
 import { shouldShowBackupAttentionPanel } from '@/features/sync/backupAttentionSummary';
 import {
-  formatCloudParityHint,
+  formatCloudParityHints,
   measureCloudParitySummary,
 } from '@/features/sync/measureCloudParitySummary';
 import { isLocalLanSyncApi } from '@/features/dev/syncApiTarget';
@@ -171,7 +171,7 @@ export default function SettingsScreen() {
   const styles = useThemedStyles(createSettingsScreenStyles);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [syncMessageKind, setSyncMessageKind] = useState<'success' | 'error' | null>(null);
-  const [cloudParityHint, setCloudParityHint] = useState<string | null>(null);
+  const [cloudParityHints, setCloudParityHints] = useState<string[]>([]);
   const [syncSupportMailto, setSyncSupportMailto] = useState<string | null>(null);
   const [syncOpenPlotId, setSyncOpenPlotId] = useState<string | null>(null);
   const [syncNowBusy, setSyncNowBusy] = useState(false);
@@ -490,16 +490,17 @@ export default function SettingsScreen() {
   const refreshCloudParity = useCallback(
     async (plotSnapshot?: Plot[]) => {
       if (!isSignedIn || !farmer?.id) {
-        setCloudParityHint(null);
+        setCloudParityHints([]);
         return;
       }
       const summary = await measureCloudParitySummary({
         profileFarmerId: farmer.id,
         localPlots: plotSnapshot ?? plots,
+        localFarmer: farmer,
       }).catch(() => null);
-      setCloudParityHint(summary ? formatCloudParityHint(summary, t) : null);
+      setCloudParityHints(summary ? formatCloudParityHints(summary, t) : []);
     },
-    [farmer?.id, isSignedIn, plots, t],
+    [farmer, isSignedIn, plots, t],
   );
 
   useFocusEffect(
@@ -1326,6 +1327,7 @@ export default function SettingsScreen() {
               variant="outlined"
               padding="none"
               style={styles.card}
+              testID="settings-cloud-parity-section"
               onLayout={(e) => {
                 syncSectionY.current = e.nativeEvent.layout.y;
               }}
@@ -1351,11 +1353,18 @@ export default function SettingsScreen() {
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
-                {cloudParityHint && isSignedIn ? (
-                  <ThemedText type="caption" style={styles.uploadIssueSummary}>
-                    {cloudParityHint}
-                  </ThemedText>
-                ) : null}
+                {cloudParityHints.length > 0 && isSignedIn
+                  ? cloudParityHints.map((hint, index) => (
+                      <ThemedText
+                        key={hint}
+                        testID={`settings-cloud-parity-hint-${index}`}
+                        type="caption"
+                        style={styles.uploadIssueSummary}
+                      >
+                        {hint}
+                      </ThemedText>
+                    ))
+                  : null}
                 {syncUsesLocalApi ? (
                   <ThemedText type="caption" style={styles.uploadIssueSummary}>
                     {resolveSyncConnectivityUserMessage(t, syncApiBaseUrl)}

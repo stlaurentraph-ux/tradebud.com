@@ -37,6 +37,13 @@ function changedFiles(ci) {
   ];
 }
 
+function isSyncFeatureFile(file) {
+  return (
+    file.startsWith('apps/offline-product/features/sync/') &&
+    !file.endsWith('.test.ts')
+  );
+}
+
 function main() {
   const ci = process.argv.includes('--ci');
   const files = [...new Set(changedFiles(ci))];
@@ -66,7 +73,9 @@ function main() {
       f.includes('field-app-regression-ledger.md'),
   );
 
-  const syncTouched = files.some((f) => f.includes('apps/offline-product/features/sync/'));
+  const featDocTouched = files.some((f) => /^product-os\/02-features\/FEAT-/.test(f));
+  const ledgerTouched = files.some((f) => f.includes('field-app-regression-ledger.md'));
+  const syncTouched = files.some(isSyncFeatureFile);
   const registryTouched =
     files.includes('apps/offline-product/features/sync/farmerArtifactRegistry.ts') ||
     files.some((f) => f.includes('farmer-artifact-sync-registry.md'));
@@ -77,7 +86,12 @@ function main() {
       'Feature code changed without product-os / smoke / registry doc update — add FEAT doc row, daily-log, or registry entry',
     );
   }
-  if (syncTouched && !registryTouched && !docTouched) {
+  if (syncTouched && !featDocTouched && !ledgerTouched) {
+    issues.push(
+      'features/sync/ changed — update product-os/02-features/FEAT-*.md or field-app-regression-ledger.md',
+    );
+  }
+  if (syncTouched && !registryTouched) {
     issues.push('Sync code changed — update farmerArtifactRegistry.ts and farmer-artifact-sync-registry.md');
   }
 
@@ -88,7 +102,7 @@ function main() {
 
   if (!ci && issues.length > 0) {
     console.log('feature-doc-guard: WARN (local — not blocking)\n');
-    for (const issue of issues) console.log(`  → ${issue}`);
+    for (const issue of issues) console.error(`  → ${issue}`);
     process.exit(0);
   }
 

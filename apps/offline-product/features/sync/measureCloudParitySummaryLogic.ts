@@ -1,5 +1,68 @@
 import { shouldOfferPostAuthSync } from '@/features/sync/postAuthSyncOfferLogic';
+import { gapCount } from '@/features/sync/cloudParityArtifactCounts';
 
+export type ExtendedCloudParityCounts = {
+  localPlotCount: number;
+  serverPlotCount: number | null;
+  localReceiptCount: number;
+  serverVoucherCount: number | null;
+  localGroundPhotos: number;
+  serverGroundPhotos: number | null;
+  localLandTitlePhotos: number;
+  serverLandTitlePhotos: number | null;
+  localEvidenceDocs: number;
+  serverEvidenceDocs: number | null;
+  localProducerComplete: boolean;
+  serverHasProducerAudit: boolean | null;
+  localPlotAttestationsComplete: number;
+  serverPlotAttestationAudits: number | null;
+  localHasProfilePhoto: boolean;
+  serverHasProfilePhoto: boolean | null;
+  localHasWalkDraft: boolean;
+  serverHasWalkDraft: boolean | null;
+};
+
+export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
+  plotGap: number;
+  receiptGap: number;
+  mediaGap: number;
+  declarationGap: number;
+  profilePhotoGap: boolean;
+  walkDraftGap: boolean;
+} {
+  const plotGap = gapCount(counts.serverPlotCount, counts.localPlotCount);
+  const receiptGap = gapCount(counts.serverVoucherCount, counts.localReceiptCount);
+  const groundGap = gapCount(counts.serverGroundPhotos, counts.localGroundPhotos);
+  const landGap = gapCount(counts.serverLandTitlePhotos, counts.localLandTitlePhotos);
+  const evidenceGap = gapCount(counts.serverEvidenceDocs, counts.localEvidenceDocs);
+  const mediaGap = groundGap + landGap + evidenceGap;
+
+  let declarationGap = 0;
+  if (counts.serverHasProducerAudit === true && !counts.localProducerComplete) {
+    declarationGap += 1;
+  }
+  if (counts.serverPlotAttestationAudits != null) {
+    declarationGap += gapCount(
+      counts.serverPlotAttestationAudits,
+      counts.localPlotAttestationsComplete,
+    );
+  }
+
+  const profilePhotoGap =
+    counts.serverHasProfilePhoto === true && !counts.localHasProfilePhoto;
+  const walkDraftGap = counts.serverHasWalkDraft === true && !counts.localHasWalkDraft;
+
+  return {
+    plotGap,
+    receiptGap,
+    mediaGap,
+    declarationGap,
+    profilePhotoGap,
+    walkDraftGap,
+  };
+}
+
+/** @deprecated Use ExtendedCloudParityCounts — kept for backward-compatible imports. */
 export type CloudParityCounts = {
   localPlotCount: number;
   serverPlotCount: number | null;
@@ -7,28 +70,36 @@ export type CloudParityCounts = {
   serverVoucherCount: number | null;
 };
 
-export type CloudParitySummary = CloudParityCounts & {
+export type CloudParitySummary = ExtendedCloudParityCounts & {
   needsRestore: boolean;
   plotGap: number;
   receiptGap: number;
+  mediaGap: number;
+  declarationGap: number;
+  profilePhotoGap: boolean;
+  walkDraftGap: boolean;
 };
 
-export function summarizeCloudParityCounts(input: CloudParityCounts): CloudParitySummary {
-  const plotGap = Math.max(0, (input.serverPlotCount ?? 0) - input.localPlotCount);
-  const receiptGap = Math.max(0, (input.serverVoucherCount ?? 0) - input.localReceiptCount);
-  const needsRestore = shouldOfferPostAuthSync({
-    localPlotCount: input.localPlotCount,
-    unsyncedPlotCount: 0,
-    pendingQueueCount: 0,
-    serverPlotCount: input.serverPlotCount,
-    localReceiptCount: input.localReceiptCount,
-    serverVoucherCount: input.serverVoucherCount,
-  });
+export function summarizeCloudParityCounts(input: ExtendedCloudParityCounts): CloudParitySummary {
+  const gaps = extendedParityGaps(input);
+  const needsRestore =
+    shouldOfferPostAuthSync({
+      localPlotCount: input.localPlotCount,
+      unsyncedPlotCount: 0,
+      pendingQueueCount: 0,
+      serverPlotCount: input.serverPlotCount,
+      localReceiptCount: input.localReceiptCount,
+      serverVoucherCount: input.serverVoucherCount,
+    }) ||
+    gaps.mediaGap > 0 ||
+    gaps.declarationGap > 0 ||
+    gaps.profilePhotoGap ||
+    gaps.walkDraftGap;
+
   return {
     ...input,
     needsRestore,
-    plotGap,
-    receiptGap,
+    ...gaps,
   };
 }
 
@@ -38,18 +109,47 @@ export function formatCloudParityHint(
   summary: CloudParitySummary,
   t: TranslateFn,
 ): string | null {
-  if (!summary.needsRestore) return null;
+  const hints = formatCloudParityHints(summary, t);
+  return hints.length > 0 ? hints.join(' ') : null;
+}
+
+export function formatCloudParityHints(
+  summary: CloudParitySummary,
+  t: TranslateFn,
+): string[] {
+  if (!summary.needsRestore) return [];
+
+  const hints: string[] = [];
+
   if (summary.plotGap > 0 && summary.receiptGap > 0) {
-    return t('settings_cloud_parity_both', {
-      plots: summary.plotGap,
-      receipts: summary.receiptGap,
-    });
+    hints.push(
+      t('settings_cloud_parity_both', {
+        plots: summary.plotGap,
+        receipts: summary.receiptGap,
+      }),
+    );
+  } else if (summary.plotGap > 0) {
+    hints.push(t('settings_cloud_parity_plots', { n: summary.plotGap }));
+  } else if (summary.receiptGap > 0) {
+    hints.push(t('settings_cloud_parity_receipts', { n: summary.receiptGap }));
   }
-  if (summary.plotGap > 0) {
-    return t('settings_cloud_parity_plots', { n: summary.plotGap });
+
+  if (summary.mediaGap > 0) {
+    hints.push(t('settings_cloud_parity_media', { n: summary.mediaGap }));
   }
-  if (summary.receiptGap > 0) {
-    return t('settings_cloud_parity_receipts', { n: summary.receiptGap });
+  if (summary.declarationGap > 0) {
+    hints.push(t('settings_cloud_parity_declarations', { n: summary.declarationGap }));
   }
-  return null;
+  if (summary.profilePhotoGap) {
+    hints.push(t('settings_cloud_parity_profile_photo'));
+  }
+  if (summary.walkDraftGap) {
+    hints.push(t('settings_cloud_parity_walk_draft'));
+  }
+
+  if (hints.length === 0) {
+    hints.push(t('settings_cloud_parity_generic'));
+  }
+
+  return hints;
 }

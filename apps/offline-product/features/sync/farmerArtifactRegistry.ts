@@ -40,6 +40,37 @@ export const PLOT_MEDIA_UI_FILES = [
   'app/documents.tsx',
 ] as const;
 
+/**
+ * Screens that must reload after cross-device restore.
+ * Guard: ui-reload-guard.mjs — each entry needs every pattern (or useFocusEffect for focus-restore).
+ */
+export const FARMER_ARTIFACT_UI_RELOAD_FILES = [
+  {
+    file: 'app/plot/[id].tsx',
+    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect', 'restoreCloudMediaFromServer'],
+  },
+  {
+    file: 'app/documents.tsx',
+    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect', 'restoreCloudMediaFromServer'],
+  },
+  {
+    file: 'app/(tabs)/harvests.tsx',
+    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect'],
+  },
+  {
+    file: 'app/(tabs)/explore.tsx',
+    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect'],
+  },
+  {
+    file: 'app/(tabs)/settings.tsx',
+    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect'],
+  },
+  {
+    file: 'features/mapping/WalkPerimeterScreen.tsx',
+    patterns: ['useFocusEffect'],
+  },
+] as const;
+
 export const FIELD_DEVICE_PREFERENCES_AUDIT = 'field_device_preferences_updated' as const;
 export const FARMER_PROFILE_PHOTO_AUDIT = 'farmer_profile_photo_synced' as const;
 export const PLOT_MAPPING_DRAFT_AUDIT = 'plot_mapping_draft_saved' as const;

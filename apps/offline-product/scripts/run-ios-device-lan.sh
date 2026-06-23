@@ -36,7 +36,7 @@ if [[ -z "$DEVICE_UDID" ]]; then
     xcrun xctrace list devices 2>/dev/null \
       | grep -E "$PATTERN" \
       | grep -v Simulator \
-      | grep -Eo '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}' \
+      | grep -Eo '[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}|[0-9A-F]{8}-[0-9A-F]{16}' \
       | head -1 \
       || true
   )"

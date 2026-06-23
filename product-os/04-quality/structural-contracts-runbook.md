@@ -2,30 +2,66 @@
 
 How Tracebud encodes cross-cutting invariants as **contract-as-code** so agents and CI catch class regressions early.
 
-## Registries
+## Registries by surface
+
+### Offline field app (`apps/offline-product`)
 
 | Domain | Markdown | Code mirror | Guard |
 |--------|----------|-------------|-------|
-| Farmer cross-device artifacts | `farmer-artifact-sync-registry.md` | `features/sync/farmerArtifactRegistry.ts` | `sync-parity-guard.mjs`, `registry-md-parity-guard.mjs`, `pending-sync-registry-guard.mjs` |
+| Farmer cross-device artifacts | `farmer-artifact-sync-registry.md` | `features/sync/farmerArtifactRegistry.ts` | `sync-parity-guard.mjs`, `registry-md-parity-guard.mjs`, `pending-sync-registry-guard.mjs`, `ui-reload-guard.mjs` |
+| Cross-device smoke wiring | `DEVICE_SMOKE_CHECKLIST.md` §12 | `.maestro/flows/settings-sync-smoke.yaml` | `cross-device-smoke-wiring-guard.mjs` |
 | Field regressions | `field-app-regression-ledger.md` | — | `field-regression-guard.mjs` |
-| Analytics slices | — | — | `analytics-slice-guard.mjs` (report/strict via `run-automation-guards.mjs`) |
+| Analytics slices | — | `features/observability/analytics.ts` | `analytics-slice-guard.mjs` (strict in `qa:structural:ci`) |
+| Field roles | `field-role-permission-registry.md` | `fieldRolePermissionRegistry.ts` | `role-permission-guard.mjs` |
+| State transitions | `field-state-transition-registry.md` | `fieldStateTransitionRegistry.ts` | `state-transition-guard.mjs` |
+
+### Dashboard (`apps/dashboard-product`)
+
+| Domain | Markdown | Code mirror | Guard |
+|--------|----------|-------------|-------|
+| RBAC + shipment states | `dashboard-rbac-registry.md` | `lib/dashboardRbacRegistry.ts`, `lib/rbac.ts` | `dashboard-rbac-guard.mjs`, `dashboard-shipment-transition-guard.mjs` |
+| API regressions / proxy / e2e | — | baselines under `scripts/` | bundled in `run-structural-guards.mjs` |
+
+### Backend (`tracebud-backend`)
+
+| Domain | Markdown | Code mirror | Guard |
+|--------|----------|-------------|-------|
+| App roles | `backend-structural-contracts.md`, `backend-api-access-registry.md` | `backendRoleRegistry.ts`, `backendApiAccessRegistry.ts` | `backend-role-guard.mjs`, `backend-api-access-guard.mjs` |
+| Audit events | `backend-structural-contracts.md` | `backendAuditEventRegistry.ts` | `backend-audit-event-guard.mjs` (strict in CI) |
+| Filing states | `backend-structural-contracts.md` | `backendFilingStateRegistry.ts` | `backend-filing-state-guard.mjs` |
+| Plot compliance | `backend-plot-compliance-registry.md` | `backendPlotComplianceRegistry.ts` | `backend-plot-compliance-guard.mjs` |
+| Deploy / billing / tenure | — | — | bundled: deploy smoke, stripe webhook, tenure parse static, benchmark claims (CI) |
+
+### Marketing (`apps/marketing`)
+
+| Domain | Markdown | Guard |
+|--------|----------|-------|
+| Routes, i18n, analytics, SEO/a11y | `marketing-structural-contracts.md` | `run-structural-guards.mjs` (full locally; doc guard in CI) |
 
 ## Commands
 
 ```bash
+# Offline field app
 cd apps/offline-product
+npm run qa:structural          # local
+npm run qa:structural:ci       # CI strict
 
-# All structural guards (local: feature-doc warns only)
+# Dashboard
+cd apps/dashboard-product
 npm run qa:structural
 
-# CI mode (feature-doc blocks)
-npm run qa:structural:ci
+# Backend
+cd tracebud-backend
+npm run qa:structural
 
-# Full regression lane (lint + typecheck + test + field regression + structural)
-npm run qa:regression
+# Marketing
+cd apps/marketing
+npm run qa:structural          # all assert guards
+npm run qa:structural:ci       # doc guard only (CI)
 
-# Scaffold a new farmer artifact
-npm run scaffold:farmer-artifact -- --id my_artifact --audit my_artifact_synced
+# Monorepo fan-out (all surfaces)
+npm run qa:structural:monorepo
+npm run qa:structural:monorepo:ci
 ```
 
 ## Adding a farmer artifact (checklist)
@@ -50,13 +86,22 @@ Settings **cloud parity hint** (`measureCloudParitySummary`) compares server plo
 
 ## CI
 
-The Expo app job runs `npm run qa:structural:ci` after field regression guard.
+| Job | Structural step |
+|-----|-----------------|
+| Expo / offline | `qa:structural:ci` |
+| Backend | `qa:structural:ci` |
+| Dashboard | `qa:structural:ci` |
+| Marketing | `qa:structural:ci` (doc guard) |
 
 ## Agent rules
 
 - `.cursor/rules/structural-contracts.mdc` — always-on pointer
 - `.cursor/rules/cross-device-sync.mdc` — sync/evidence/state paths
 
+## Pre-commit
+
+`.husky/pre-commit` runs `scripts/pre-commit-structural-guard.mjs` for staged changes per app surface.
+
 ## PR template
 
-Lane 3 includes a **Structural contracts** subsection — complete when touching offline features or sync.
+Lane 3 includes a **Structural contracts** subsection — complete when touching offline features, sync, dashboard RBAC, backend audit/filing, or marketing routes/analytics.

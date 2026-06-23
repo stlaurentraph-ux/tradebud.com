@@ -1,3 +1,31 @@
+### 2026-06-19 (backend — structural automation phase 2)
+
+- **Audit registry v2** — 117 `audit_log` events categorized; strict `--ci` src scan for unregistered emits.
+- **Plot compliance** — `backendPlotComplianceRegistry.ts` + guard vs `plot-compliance-status.ts`.
+- **API access** — `backendApiAccessRegistry.ts` + guard for 12 controller role gates.
+- **Filing phases** — `backendFilingStateRegistry.ts` with expanded DDS audit phase events.
+- **Bundled guards** — stripe webhook, tenure parse static, benchmark claims (CI) in `qa:structural`.
+
+### 2026-06-19 (monorepo — structural automation extension)
+
+- **Backend** — `backendRoleRegistry.ts`, `backendAuditEventRegistry.ts`; guards for roles, audit parity with offline, filing states; `qa:structural` + CI backend job.
+- **Dashboard** — `dashboardRbacRegistry.ts`, `dashboard-rbac-guard.mjs`, shipment transition guard; orchestrator bundles existing dashboard asserts.
+- **Marketing** — `run-structural-guards.mjs` (full asserts locally; doc guard in CI).
+- **Root** — `scripts/run-monorepo-structural-guards.mjs`, `scripts/pre-commit-structural-guard.mjs` (all surfaces); runbook + cursor rule updated.
+
+### 2026-06-19 (offline — structural automation phase 3)
+
+- **Registries v2** — field role/permission + state transition registries with guards.
+- **Analytics** — `analytics-slice-guard` in structural bundle (`--strict` in CI).
+- **Maestro §12 CI** — `cross-device-restore-smoke.yaml` nightly with `cross_device_b` seed profile.
+
+### 2026-06-19 (offline — structural automation phase 2)
+
+- **Richer cloud parity** — `measureCloudParitySummary` compares plots, receipts, photos, documents, declarations, profile photo, walk draft (Settings hints).
+- **Guards** — `ui-reload-guard.mjs`, `cross-device-smoke-wiring-guard.mjs`; tighter `feature-doc-guard` for `features/sync/`.
+- **Pre-commit** — `pre-commit-structural-guard.mjs` runs `qa:structural` when offline-product files staged.
+- **Scaffold** — auto-patches `farmerArtifactRegistry.ts` + orchestrator TODO on new artifact.
+
 ### 2026-06-19 (offline — structural contract automation)
 
 - **Guards** — `run-structural-guards.mjs` bundles sync-parity, registry-md-parity, pending-sync-registry, feature-doc; `npm run qa:structural` / `qa:structural:ci`; wired into `qa:regression` + CI Expo job.

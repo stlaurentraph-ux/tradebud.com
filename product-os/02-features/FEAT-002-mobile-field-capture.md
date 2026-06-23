@@ -142,6 +142,19 @@ Full farmer artifact registry + symmetric upload/restore for device-scoped data.
 - **Upload queue** — `enqueueFarmerCloudSyncActions` before queue drain on Sync now.
 - **Tests** — `plotMappingDraft.test.ts`; DEVICE_SMOKE §12 extended; FR-009/FR-010 regression ledger.
 
+## Structural automation phase 3 (2026-06-19)
+
+- **Registries v2** — `field-role-permission-registry.md` + `fieldRolePermissionRegistry.ts`; `field-state-transition-registry.md` + `fieldStateTransitionRegistry.ts`.
+- **Guards** — `role-permission-guard.mjs`, `state-transition-guard.mjs`; `analytics-slice-guard` in `qa:structural:ci` (strict).
+- **Maestro §12 CI** — `cross-device-restore-smoke.yaml` + `MAESTRO_SEED_PROFILE=cross_device_b` in nightly manifest.
+
+## Structural automation phase 2 (2026-06-19)
+
+- **Richer cloud parity** — Settings compares plots, receipts, photos, documents, declarations, profile photo, walk draft via `measureCloudParitySummary`.
+- **Guards** — `ui-reload-guard.mjs`, `cross-device-smoke-wiring-guard.mjs`, tighter `feature-doc-guard` for `features/sync/`.
+- **Pre-commit** — `pre-commit-structural-guard.mjs` on offline-product staged files.
+- **Scaffold** — auto-patches registry + orchestrator TODO for new artifacts.
+
 ## Cross-device sync completeness — Phase 1d (2026-06-23)
 
 Closes remaining second-device gaps after Phase 1–1c.

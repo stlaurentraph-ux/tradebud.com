@@ -139,10 +139,29 @@ function assertPackageScripts() {
   }
 }
 
+function assertCrossDeviceRestoreFlow(manifest) {
+  const crossDevice = manifest.nightlyFlows.find((item) => item.flowFile === 'cross-device-restore-smoke.yaml');
+  if (!crossDevice) {
+    throw new Error('nightly smoke must include cross-device-restore-smoke.yaml (DEVICE_SMOKE §12 subset)');
+  }
+  if (crossDevice.seedProfile !== 'cross_device_b') {
+    throw new Error('cross-device-restore-smoke must use seedProfile cross_device_b');
+  }
+  const seed = read('scripts/seed-maestro-simulator.mjs');
+  if (!seed.includes('cross_device_b')) {
+    throw new Error('seed-maestro-simulator.mjs must support cross_device_b profile');
+  }
+  const nightly = read('scripts/maestro-ci-nightly-smoke.sh');
+  if (!nightly.includes('MAESTRO_SEED_PROFILE')) {
+    throw new Error('nightly runner must re-seed per flow seedProfile');
+  }
+}
+
 function main() {
   const manifest = loadJson('qa/automation-baselines/maestro-nightly-smoke.json');
   assertManifestShape(manifest);
   assertFlowsBaseline(manifest);
+  assertCrossDeviceRestoreFlow(manifest);
   assertRunnerScripts(manifest);
   assertWorkflowSchedule(manifest);
   assertPackageScripts();

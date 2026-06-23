@@ -95,6 +95,7 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | `tenure-evidence.yaml` | §7 tenure doc row | Same |
 | `mark-three-corners.yaml` | §2 mark corners | Needs location; best on device or simulator with mocked GPS |
 | `settings-sync-smoke.yaml` | Settings → Backup | Requires Backup section; Sync now or sign-in CTA |
+| `cross-device-restore-smoke.yaml` | DEVICE_SMOKE §12 subset | Device B seed (`cross_device_b`): plot linked, no local media; restore entry points |
 
 ## testID map
 
@@ -103,6 +104,8 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 | `tab-my-plots` | Bottom tab → My Plots |
 | `tab-settings` | Bottom tab → Settings |
 | `settings-sync-now` | Settings → Sync now (signed in) |
+| `settings-cloud-parity-section` | Settings → Backup / sync card |
+| `settings-cloud-parity-hint-0` | Cloud parity hint (when server > local) |
 | `plot-card` | My Plots list |
 | `plot-nav-documents` | Plot detail → Documents tab |
 | `plot-upload-land-proof` | Upload land proof (photo, file, or camera) |

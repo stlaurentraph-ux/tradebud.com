@@ -1,0 +1,34 @@
+appId: com.tracebud.app
+---
+# DEVICE_SMOKE §12 subset — simulates Device B (plot linked, no local media).
+# Bootstrap: MAESTRO_SEED_PROFILE=cross_device_b before this flow (nightly runner).
+- launchApp
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    text: ".*Backup.*"
+- assertVisible:
+    id: "settings-sync-now"
+- assertVisible:
+    id: "settings-cloud-parity-section"
+    optional: true
+- tapOn:
+    id: "tab-my-plots"
+- assertVisible:
+    text: "Finca Norte"
+- tapOn:
+    id: "plot-card"
+    index: 0
+- assertVisible:
+    id: "plot-nav-documents"
+- tapOn:
+    id: "plot-nav-documents"
+- assertVisible:
+    id: "plot-upload-land-proof"
+- back
+- back
+- tapOn:
+    id: "tab-settings"
+- tapOn:
+    id: "settings-sync-now"
+    optional: true

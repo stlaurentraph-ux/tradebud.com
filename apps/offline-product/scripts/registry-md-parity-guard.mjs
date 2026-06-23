@@ -55,6 +55,8 @@ function main() {
   const requiredSections = [
     'restoreFarmerCloudState',
     'sync-parity-guard.mjs',
+    'ui-reload-guard.mjs',
+    'FARMER_ARTIFACT_UI_RELOAD_FILES',
     'field_device_preferences_updated',
     'plot_mapping_draft_saved',
   ];

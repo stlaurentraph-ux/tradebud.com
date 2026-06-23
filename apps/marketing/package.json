@@ -32,7 +32,9 @@
     "email:templates:smoke": "node scripts/run-marketing-email-templates-smoke.mjs",
     "email:templates:smoke:assert": "node scripts/marketing-email-templates-smoke-guard.mjs",
     "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run analytics:slice:assert && npm run insights:lint:assert && npm run png:size:assert && npm run e2e:golden-paths:assert && npm run build && npm run api:trace:size:assert",
-    "sentry:env:assert": "node ../../scripts/sentry-env-tags-guard.mjs"
+    "sentry:env:assert": "node ../../scripts/sentry-env-tags-guard.mjs",
+    "qa:structural": "node ./scripts/run-structural-guards.mjs",
+    "qa:structural:ci": "node ./scripts/run-structural-guards.mjs --ci"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

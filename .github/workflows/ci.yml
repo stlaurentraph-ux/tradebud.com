@@ -772,14 +772,15 @@ jobs:
         working-directory: tracebud-backend
         run: npm test
 
-      - name: Stripe webhook replay guard
-        run: npm run billing:stripe:webhook:assert -w tracebud-backend
+      - name: Ensure benchmark-admin claims config exists
+        run: |
+          if [ -z "$BENCHMARK_ADMIN_ROLE_CLAIMS" ]; then
+            echo "BENCHMARK_ADMIN_ROLE_CLAIMS is required for benchmark-admin claim enforcement preflight."
+            exit 1
+          fi
 
-      - name: Backend deploy smoke manifest guard
-        run: npm run deploy:smoke:assert -w tracebud-backend
-
-      - name: Tenure parse static readiness
-        run: npm run check:tenure-parse:static -w tracebud-backend
+      - name: Backend structural contract guards
+        run: npm run qa:structural:ci -w tracebud-backend
 
       - name: Ensure integration DB secret exists
         run: |
@@ -794,9 +795,6 @@ jobs:
             echo "BENCHMARK_ADMIN_ROLE_CLAIMS is required for benchmark-admin claim enforcement preflight."
             exit 1
           fi
-
-      - name: Benchmark-admin claim preflight
-        run: npm run auth:benchmark-admin:claims:check -w tracebud-backend
 
       - name: Integration tests (PostGIS)
         working-directory: tracebud-backend
@@ -884,6 +882,9 @@ jobs:
 
       - name: Dashboard post-deploy smoke guard
         run: npm run deploy:smoke:assert -w dashboard-product
+
+      - name: Dashboard structural contract guards
+        run: npm run qa:structural:ci -w dashboard-product
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
@@ -1000,6 +1001,10 @@ jobs:
       - name: Marketing analytics slice guard
         if: env.CI_RUN == 'true'
         run: npm run analytics:slice:assert -w tracebud-marketing
+
+      - name: Marketing structural contract guards
+        if: env.CI_RUN == 'true'
+        run: npm run qa:structural:ci -w tracebud-marketing
 
       - name: Marketing insights markdown lint
         if: env.CI_RUN == 'true'

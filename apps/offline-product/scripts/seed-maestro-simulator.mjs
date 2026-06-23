@@ -3,6 +3,10 @@
  * Seeds the booted iOS simulator Tracebud SQLite DB for Maestro flows.
  * Usage: node scripts/seed-maestro-simulator.mjs
  *
+ * Profiles (MAESTRO_SEED_PROFILE):
+ *   default — farmer + plot (full local seed)
+ *   cross_device_b — plot + server link, no local media (Device B restore UX)
+ *
  * Requires Tracebud installed and booted once (creates tracebud_offline.db).
  */
 import { execSync } from 'node:child_process';
@@ -14,6 +18,7 @@ export const MAESTRO_SEED_PLOT_NAME = 'Finca Norte';
 
 const FARMER_ID = 'a0000000-0000-4000-8000-000000000001';
 const PLOT_ID = 'a0000000-0000-4000-8000-000000000011';
+const SERVER_PLOT_ID = 'a0000000-0000-4000-8000-000000000099';
 const NOW = Date.now();
 const DB_WAIT_MS = Number(process.env.MAESTRO_SEED_DB_WAIT_MS ?? 45_000);
 const DB_POLL_MS = 500;
@@ -69,7 +74,22 @@ function sql(dbPath, statement) {
   sh(`sqlite3 ${JSON.stringify(dbPath)} ${JSON.stringify(oneLine)}`);
 }
 
+function seedCrossDeviceBProfile(dbPath) {
+  sql(dbPath, 'DELETE FROM plot_photos;');
+  sql(dbPath, 'DELETE FROM plot_title_photos;');
+  sql(dbPath, 'DELETE FROM plot_evidence;');
+  sql(
+    dbPath,
+    `INSERT OR REPLACE INTO plot_legal (plotId, serverPlotId) VALUES ('${PLOT_ID}', '${SERVER_PLOT_ID}')`,
+  );
+  sql(
+    dbPath,
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('maestroSeedProfile', 'cross_device_b')`,
+  );
+}
+
 function main() {
+  const profile = (process.env.MAESTRO_SEED_PROFILE ?? 'default').trim();
   const deviceId = findBootedDeviceId();
   const dbPath = waitForTracebudDb(deviceId);
   const pointsJson = JSON.stringify([
@@ -90,9 +110,15 @@ function main() {
   );
   sql(dbPath, `INSERT OR REPLACE INTO settings (key, value) VALUES ('tracebudAppLanguage', 'en')`);
 
+  if (profile === 'cross_device_b') {
+    seedCrossDeviceBProfile(dbPath);
+  } else {
+    sql(dbPath, `DELETE FROM settings WHERE key = 'maestroSeedProfile'`);
+  }
+
   const plots = sql(dbPath, 'SELECT COUNT(*) FROM plots;');
   const farmer = sql(dbPath, 'SELECT name FROM farmer LIMIT 1;');
-  console.log(`Seeded ${dbPath}`);
+  console.log(`Seeded ${dbPath} (profile=${profile})`);
   console.log(`  farmer: ${farmer}`);
   console.log(`  plots: ${plots}`);
 }

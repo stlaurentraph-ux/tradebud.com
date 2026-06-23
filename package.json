@@ -35,6 +35,8 @@
     "check:marketing": "npm run lint:marketing && npm run typecheck:marketing && npm run i18n:parity:assert -w tracebud-marketing && npm run routes:publication:assert -w tracebud-marketing && npm run build:marketing && npm run api:trace:size:assert -w tracebud-marketing",
     "turbo:cache:report": "node scripts/turbo-remote-cache-guard.mjs",
     "sentry:env:assert": "node scripts/sentry-env-tags-guard.mjs",
+    "qa:structural:monorepo": "node scripts/run-monorepo-structural-guards.mjs",
+    "qa:structural:monorepo:ci": "node scripts/run-monorepo-structural-guards.mjs --ci",
     "smoke:marketing:post-deploy": "npm run smoke:post-deploy -w tracebud-marketing",
     "uptime:probes:manifest:assert": "node scripts/uptime-probes-manifest-guard.mjs",
     "uptime:probes:run": "node scripts/uptime-probes-run.mjs",

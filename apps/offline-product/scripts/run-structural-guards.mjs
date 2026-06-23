@@ -13,7 +13,12 @@ const guards = [
   'sync-parity-guard.mjs',
   'registry-md-parity-guard.mjs',
   'pending-sync-registry-guard.mjs',
+  'ui-reload-guard.mjs',
+  'cross-device-smoke-wiring-guard.mjs',
+  'role-permission-guard.mjs',
+  'state-transition-guard.mjs',
   'feature-doc-guard.mjs',
+  'analytics-slice-guard.mjs',
 ];
 
 const args = process.argv.slice(2);
@@ -23,7 +28,13 @@ let failed = 0;
 
 for (const guard of guards) {
   const guardPath = path.join(root, 'scripts', guard);
-  const guardArgs = ci ? ['--ci'] : [];
+  const guardArgs = [];
+  if (ci) {
+    guardArgs.push('--ci');
+    if (guard === 'analytics-slice-guard.mjs') {
+      guardArgs.push('--strict');
+    }
+  }
 
   console.log(`\n=== ${guard} ===`);
   const result = spawnSync(process.execPath, [guardPath, ...guardArgs], {

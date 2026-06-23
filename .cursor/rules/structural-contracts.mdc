@@ -1,30 +1,38 @@
 ---
-description: Structural contract registries and CI guards for Tracebud
+description: Structural contract registries and CI guards for Tracebud monorepo
 alwaysApply: true
 ---
 
 # Structural contracts
 
-When changing behavior in `apps/offline-product/features/` or sync/evidence/state:
+When changing behavior in app surfaces, check whether a **registry** owns the invariant and run the matching structural guards before PR.
 
-1. Check whether a **registry** already owns the invariant:
-   - Farmer artifacts: `product-os/04-quality/farmer-artifact-sync-registry.md`
-   - Field regressions: `product-os/04-quality/field-app-regression-ledger.md`
-2. Prefer fixing **class problems** in registry/orchestrator/guards, not one-off screen patches.
-3. Run structural guards before PR:
+## Surfaces
 
-```bash
-cd apps/offline-product
-npm run qa:structural
-```
+| Surface | Registry docs | Command |
+|---------|---------------|---------|
+| Offline field | `farmer-artifact-sync-registry.md`, `field-role-permission-registry.md`, `field-state-transition-registry.md` | `cd apps/offline-product && npm run qa:structural` |
+| Dashboard | `dashboard-rbac-registry.md` | `cd apps/dashboard-product && npm run qa:structural` |
+| Backend | `backend-structural-contracts.md` | `cd tracebud-backend && npm run qa:structural` |
+| Marketing | `marketing-structural-contracts.md` | `cd apps/marketing && npm run qa:structural` |
 
-4. Update product-os when behavior changes: feature doc, `daily-log.md`, registry row, smoke checklist.
+Monorepo fan-out: `npm run qa:structural:monorepo` from repo root.
 
-Guards bundled in `qa:structural`:
+## Offline guards (bundled in `qa:structural`)
 
 - `sync-parity-guard.mjs` — pipeline ↔ registry wiring
 - `registry-md-parity-guard.mjs` — markdown ↔ TypeScript registry
 - `pending-sync-registry-guard.mjs` — SQLite action types ↔ queue handlers
-- `feature-doc-guard.mjs` — feature code ↔ product-os docs (strict in CI)
+- `ui-reload-guard.mjs` — screen reload after restore
+- `cross-device-smoke-wiring-guard.mjs` — DEVICE_SMOKE §12 + Maestro wiring
+- `role-permission-guard.mjs`, `state-transition-guard.mjs`, `feature-doc-guard.mjs`, `analytics-slice-guard.mjs`
+
+## Principles
+
+1. Prefer fixing **class problems** in registry/orchestrator/guards, not one-off patches.
+2. Update product-os when behavior changes: feature doc, `daily-log.md`, registry row.
+3. Field cloud audit events must stay aligned across offline `farmerArtifactRegistry.ts` and backend `backendAuditEventRegistry.ts`.
+
+Pre-commit: `.husky/pre-commit` → `scripts/pre-commit-structural-guard.mjs` (per-app when staged).
 
 Runbook: `product-os/04-quality/structural-contracts-runbook.md`

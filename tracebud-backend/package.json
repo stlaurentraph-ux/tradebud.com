@@ -39,6 +39,8 @@
     "check:deploy-health": "node scripts/check-deploy-health.mjs",
     "deploy:smoke": "node scripts/run-backend-deploy-smoke.mjs",
     "deploy:smoke:assert": "node scripts/backend-deploy-smoke-guard.mjs",
+    "qa:structural": "node scripts/run-structural-guards.mjs",
+    "qa:structural:ci": "node scripts/run-structural-guards.mjs --ci",
     "smoke:token:mint": "node scripts/mint-smoke-bearer-token.mjs",
     "smoke:bearer:ci-preflight": "node scripts/smoke-bearer-ci-preflight.mjs",
     "check:gfw": "node scripts/check-gfw-connectivity.mjs",

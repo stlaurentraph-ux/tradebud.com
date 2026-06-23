@@ -15,7 +15,24 @@ Canonical inventory of everything a farmer **uploads or generates** in the field
 ## Guards
 
 - `sync-parity-guard.mjs` — pipeline ↔ registry wiring
+- `ui-reload-guard.mjs` — screen reload patterns after restore
+- `cross-device-smoke-wiring-guard.mjs` — DEVICE_SMOKE §12 + Maestro wiring
 - Full bundle: `npm run qa:structural` (`run-structural-guards.mjs`)
+- Pre-commit: `pre-commit-structural-guard.mjs` when offline-product files staged
+
+## UI reload registry
+
+Code mirror: `FARMER_ARTIFACT_UI_RELOAD_FILES` in `farmerArtifactRegistry.ts`  
+Guard: `ui-reload-guard.mjs` — each screen must subscribe to sync bus and/or focus-restore.
+
+| Screen | Reload patterns |
+|--------|-----------------|
+| `app/plot/[id].tsx` | sync bus + focus + `restoreCloudMediaFromServer` |
+| `app/documents.tsx` | sync bus + focus + `restoreCloudMediaFromServer` |
+| `app/(tabs)/harvests.tsx` | sync bus + focus |
+| `app/(tabs)/explore.tsx` | sync bus + focus |
+| `app/(tabs)/settings.tsx` | sync bus + focus |
+| `features/mapping/WalkPerimeterScreen.tsx` | focus (walk draft resume) |
 
 ## Registry
 

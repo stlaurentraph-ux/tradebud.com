@@ -24,3 +24,5 @@ Then update:
 - feature doc
 - quality docs (if changed)
 - status logs
+
+Offline sync / cross-device: run `npm run qa:structural` and update `product-os/04-quality/farmer-artifact-sync-registry.md` + `farmerArtifactRegistry.ts` (see `structural-contracts-runbook.md`).

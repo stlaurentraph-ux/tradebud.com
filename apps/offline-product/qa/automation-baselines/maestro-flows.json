@@ -5,6 +5,7 @@
   "flows": [
     "app-store-ipad-screenshots-nav.yaml",
     "app-store-ipad-screenshots.yaml",
+    "cross-device-restore-smoke.yaml",
     "land-title-photo.yaml",
     "mark-three-corners.yaml",
     "settings-sync-smoke.yaml",
