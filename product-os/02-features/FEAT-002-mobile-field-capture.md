@@ -129,6 +129,17 @@ Land papers, producer declarations, and plot compliance flags now restore after 
 - **Acceptance** — Sign in on iPad → Sync now → Documents/Declarations match phone; land papers open offline when downloaded.
 - **Tests:** `restoreLocalEvidenceFromServer.test.ts`, `restoreLocalDeclarationsFromServer.test.ts`.
 
+## Cross-device sync completeness — Phase 1d (2026-06-23)
+
+Closes remaining second-device gaps after Phase 1–1c.
+
+- **Ground-truth photos** — `restoreLocalGroundTruthPhotosFromServer` reads latest `plot_photos_synced` (ground_truth) audit per server plot; downloads Supabase bytes; `upsertPlotGroundPhoto` by direction.
+- **Declaration plot id** — `plot_compliance_declared` resolves server plot id via `resolveLocalPlotIdForServerPlot` (same as legal sync).
+- **Triggers** — Post-auth sync when server plots/vouchers **exceed** local counts; signed-in auto-backup runs hourly restore even without upload queue; OAuth sign-in awaits backup (timeout).
+- **UX** — Sync now surfaces partial restore failures; Documents screen refreshes on `emitServerPlotSyncChanged`.
+- **Acceptance** — DEVICE_SMOKE §12: second device matches plots, receipts, dates, land docs, field photos, declarations.
+- **Tests:** `restoreLocalGroundTruthPhotosFromServer.test.ts`, extended declaration/post-auth tests.
+
 ## Tasks checklist
 
 - [x] Confirm permissions and tenant boundaries

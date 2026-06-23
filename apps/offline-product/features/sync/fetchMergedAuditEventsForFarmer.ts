@@ -23,7 +23,10 @@ function uniqueIds(candidates: string[]): string[] {
 export async function fetchMergedAuditEventsForFarmer(
   farmerIds: string[],
   limit = 200,
+  eventTypes?: readonly string[],
 ): Promise<AuditLogRow[]> {
+  const typeFilter =
+    eventTypes && eventTypes.length > 0 ? new Set(eventTypes.map((t) => t.trim())) : null;
   const seen = new Set<string>();
   const merged: AuditLogRow[] = [];
   let lastError: unknown = null;
@@ -35,6 +38,7 @@ export async function fetchMergedAuditEventsForFarmer(
       const rows = (await fetchAuditForFarmer(farmerId)) as AuditLogRow[];
       const slice = Array.isArray(rows) ? rows.slice(0, limit) : [];
       for (const row of slice) {
+        if (typeFilter && !typeFilter.has(String(row.event_type ?? '').trim())) continue;
         const id = String(row?.id ?? `${row.event_type}:${row.timestamp}`).trim();
         if (!id || seen.has(id)) continue;
         seen.add(id);

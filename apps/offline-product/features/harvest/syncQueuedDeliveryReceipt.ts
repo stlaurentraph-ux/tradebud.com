@@ -1,4 +1,5 @@
-import { fetchVouchersForFarmer } from '@/features/api/postPlot';
+import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
+import { resolveFieldHarvestFarmerIds } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
 import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import type { DeliveryReceiptRecord } from '@/features/harvest/deliveryReceiptModels';
 import { findSyncedVoucherForLoggedDelivery } from '@/features/harvest/findSyncedVoucherForLoggedDelivery';
@@ -80,7 +81,11 @@ export async function syncQueuedDeliveryReceipt(params: {
     };
   }
 
-  const voucherPayload = await fetchVouchersForFarmer(farmerId).catch(() => []);
+  const { voucherFarmerIds } = await resolveFieldHarvestFarmerIds({
+    profileFarmerId: farmerId,
+    localPlots,
+  });
+  const voucherPayload = await fetchMergedServerVouchers(voucherFarmerIds).catch(() => []);
   const refreshedVouchers = normalizeVoucherRows(voucherPayload);
   const links = await loadPlotServerLinks();
   const plotsRows = await fetchServerPlotListForUi({

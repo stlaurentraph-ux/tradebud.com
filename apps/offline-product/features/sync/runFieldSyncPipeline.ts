@@ -31,6 +31,7 @@ import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreL
 import { reconcileUnuploadedLocalDeliveryReceipts } from '@/features/harvest/reconcileUnuploadedLocalDeliveryReceipts';
 import { backfillServerHarvestDatesFromLocal } from '@/features/harvest/backfillServerHarvestDatesFromLocal';
 import { restoreLocalEvidenceFromServer } from '@/features/sync/restoreLocalEvidenceFromServer';
+import { restoreLocalGroundTruthPhotosFromServer } from '@/features/sync/restoreLocalGroundTruthPhotosFromServer';
 import { restoreLocalDeclarationsFromServer } from '@/features/sync/restoreLocalDeclarationsFromServer';
 import { reportSyncFailure, reportSyncStepStart } from '@/features/sync/reportSyncFailure';
 import { emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
@@ -205,8 +206,27 @@ export async function runFieldSyncPipeline(
     outcome.declarationsRestored =
       (outcome.declarationsRestored ?? 0) + declarationRestoreResult.plotsRestored;
   }
+  if (declarationRestoreResult.legalRestored > 0) {
+    outcome.declarationsRestored =
+      (outcome.declarationsRestored ?? 0) + declarationRestoreResult.legalRestored;
+  }
   if (declarationRestoreResult.fetchFailed) {
     outcome.declarationsFetchFailed = true;
+  }
+
+  const groundTruthRestoreResult = await restoreLocalGroundTruthPhotosFromServer({
+    apiFarmerId,
+    ownedFarmerIds: farmerScopeIds,
+    localPlots: activePlots,
+  });
+  if (groundTruthRestoreResult.restoredCount > 0) {
+    outcome.groundTruthPhotosRestored = groundTruthRestoreResult.restoredCount;
+  }
+  if (groundTruthRestoreResult.fetchFailed) {
+    outcome.evidenceFetchFailed = true;
+  }
+  if (groundTruthRestoreResult.downloadFailed > 0) {
+    outcome.evidenceDownloadFailed = (outcome.evidenceDownloadFailed ?? 0) + groundTruthRestoreResult.downloadFailed;
   }
 
   const evidenceRestoreResult = await restoreLocalEvidenceFromServer({
@@ -215,10 +235,15 @@ export async function runFieldSyncPipeline(
     localPlots: activePlots,
   });
   if (evidenceRestoreResult.restoredCount > 0) {
-    outcome.evidenceRestored = evidenceRestoreResult.restoredCount;
+    outcome.evidenceRestored =
+      (outcome.evidenceRestored ?? 0) + evidenceRestoreResult.restoredCount;
   }
   if (evidenceRestoreResult.fetchFailed) {
     outcome.evidenceFetchFailed = true;
+  }
+  if (evidenceRestoreResult.downloadFailed > 0) {
+    outcome.evidenceDownloadFailed =
+      (outcome.evidenceDownloadFailed ?? 0) + evidenceRestoreResult.downloadFailed;
   }
 
   reportSyncStepStart('plot_upload', { plotCount: activePlots.length });

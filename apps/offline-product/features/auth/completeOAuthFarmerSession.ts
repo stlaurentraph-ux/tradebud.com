@@ -58,10 +58,15 @@ async function runPostOAuthConnectTasks(params: {
     void registerFarmerPushToken();
 
     if (params.farmerId && params.localPlots) {
-      void runAutoBackup({
-        farmerId: params.farmerId,
-        localPlots: params.localPlots,
-      });
+      await Promise.race([
+        runAutoBackup({
+          farmerId: params.farmerId,
+          localPlots: params.localPlots,
+        }),
+        new Promise<void>((resolve) => {
+          setTimeout(resolve, OAUTH_CONNECT_TIMEOUT_MS);
+        }),
+      ]);
     }
   } catch {
     // Post-connect work is best-effort and must never undo a successful OAuth sign-in.

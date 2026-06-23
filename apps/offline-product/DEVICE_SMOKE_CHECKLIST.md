@@ -96,6 +96,19 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 - [ ] Force-quit during walk capture → reopen app → plot data not corrupted (or clear recovery path)
 - [ ] Stuck sync: Settings queue shows last error; `INCIDENT_RUNBOOK.md` steps resolve or escalate
 
+## 12. Cross-device restore (second device)
+
+Use the same farmer account on a **second phone or tablet** after the first device has synced.
+
+- [ ] Device A: Sign in → Sync now → plots, harvests, land documents, and field photos upload
+- [ ] Device B: Fresh install or cleared app → Sign in with same account → accept backup/sync offer
+- [ ] Device B: My Plots shows the same plot count as Device A
+- [ ] Device B: Deliveries shows the same receipt count and **delivery dates** (not upload day)
+- [ ] Device B: Plot detail → Documents shows land title / tenure files from Device A
+- [ ] Device B: Plot detail → Field photos section shows ground-truth photos from Device A
+- [ ] Device B: Producer declarations and plot attestations match Device A
+- [ ] Device B: Settings → Sync now → "Backup complete" with no pending queue
+
 ## Sign-off
 
 Complete §2 and §7 on a **physical device**, then record sign-off:

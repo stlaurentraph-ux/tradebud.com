@@ -56,6 +56,32 @@ describe('shouldOfferPostAuthSync', () => {
       }),
     ).toBe(true);
   });
+
+  it('offers sync when server has more plots than local device', () => {
+    expect(
+      shouldOfferPostAuthSync({
+        localPlotCount: 1,
+        unsyncedPlotCount: 0,
+        pendingQueueCount: 0,
+        serverPlotCount: 3,
+        localReceiptCount: 2,
+        serverVoucherCount: 2,
+      }),
+    ).toBe(true);
+  });
+
+  it('offers sync when server has more vouchers than local device', () => {
+    expect(
+      shouldOfferPostAuthSync({
+        localPlotCount: 2,
+        unsyncedPlotCount: 0,
+        pendingQueueCount: 0,
+        serverPlotCount: 2,
+        localReceiptCount: 1,
+        serverVoucherCount: 4,
+      }),
+    ).toBe(true);
+  });
 });
 
 describe('postAuthSyncPlotCountHint', () => {

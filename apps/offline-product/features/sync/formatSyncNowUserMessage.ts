@@ -29,8 +29,10 @@ export type SyncNowUserOutcome = {
   receiptsRestored?: number;
   receiptsRequeued?: number;
   evidenceRestored?: number;
+  groundTruthPhotosRestored?: number;
   declarationsRestored?: number;
   evidenceFetchFailed?: boolean;
+  evidenceDownloadFailed?: number;
   declarationsFetchFailed?: boolean;
   /** Measured after the run — queue + plots still needing attention on device. */
   remainingPending?: number;
@@ -126,7 +128,32 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
     const restoredPlots = outcome.plotsRestored ?? 0;
     const restoredReceipts = outcome.receiptsRestored ?? 0;
     const restoredEvidence = outcome.evidenceRestored ?? 0;
+    const restoredGroundTruth = outcome.groundTruthPhotosRestored ?? 0;
     const restoredDeclarations = outcome.declarationsRestored ?? 0;
+    const partialRestoreFailed =
+      outcome.evidenceFetchFailed ||
+      outcome.declarationsFetchFailed ||
+      (outcome.evidenceDownloadFailed ?? 0) > 0;
+
+    if (partialRestoreFailed) {
+      if (outcome.declarationsFetchFailed && !outcome.evidenceFetchFailed) {
+        return t('sync_result_declarations_partial_failed');
+      }
+      if (outcome.evidenceFetchFailed && !outcome.declarationsFetchFailed) {
+        return t('sync_result_evidence_partial_failed');
+      }
+      return t('sync_result_restore_partial_failed');
+    }
+
+    if (restoredGroundTruth > 0 && restoredEvidence > 0) {
+      return t('sync_result_photos_and_documents_restored', {
+        photos: restoredGroundTruth,
+        documents: restoredEvidence,
+      });
+    }
+    if (restoredGroundTruth > 0) {
+      return t('sync_result_ground_truth_restored', { n: restoredGroundTruth });
+    }
     if (restoredEvidence > 0) {
       return t('sync_result_evidence_restored', { n: restoredEvidence });
     }
@@ -144,6 +171,9 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
     }
     if (restoredReceipts > 0) {
       return t('sync_result_receipts_restored', { n: restoredReceipts });
+    }
+    if ((outcome.receiptsRequeued ?? 0) > 0) {
+      return t('sync_result_receipts_requeued', { n: outcome.receiptsRequeued });
     }
     return t('sync_result_complete');
   }

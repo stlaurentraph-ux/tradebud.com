@@ -127,4 +127,56 @@ describe('restoreLocalDeclarationsFromServer', () => {
       }),
     ]);
   });
+
+  it('restores plot compliance flags when audit stores server plot id', async () => {
+    mocks.loadPlotServerLinks.mockResolvedValue({ 'local-1': 'server-plot-1' });
+    mocks.fetchBackendPlotsForSyncScope.mockResolvedValue([{ id: 'server-plot-1' }]);
+    mocks.fetchMergedAuditEventsForFarmer.mockResolvedValue([
+      {
+        id: 'evt-3',
+        event_type: 'plot_compliance_declared',
+        timestamp: '2026-06-19T12:00:00.000Z',
+        payload: {
+          plotId: 'server-plot-1',
+          farmerId: 'farmer-1',
+          landTenureDeclared: true,
+          noDeforestationDeclared: true,
+        },
+      },
+    ]);
+
+    const result = await restoreLocalDeclarationsFromServer({
+      apiFarmerId: 'farmer-1',
+      ownedFarmerIds: [],
+      localFarmer: {
+        id: 'farmer-1',
+        role: 'farmer',
+        selfDeclared: true,
+        fpicConsent: true,
+        laborNoChildLabor: true,
+        laborNoForcedLabor: true,
+      },
+      localPlots: [
+        {
+          id: 'local-1',
+          farmerId: 'farmer-1',
+          name: 'Plot A',
+          createdAt: 1,
+          areaSquareMeters: 1000,
+          areaHectares: 0.1,
+          kind: 'polygon',
+          points: [{ latitude: 1, longitude: 2 }],
+        },
+      ],
+    });
+
+    expect(result.plotsRestored).toBe(1);
+    expect(mocks.persistPlots).toHaveBeenCalledWith([
+      expect.objectContaining({
+        id: 'local-1',
+        landTenureDeclared: true,
+        noDeforestationDeclared: true,
+      }),
+    ]);
+  });
 });

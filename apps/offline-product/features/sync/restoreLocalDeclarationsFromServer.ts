@@ -109,9 +109,21 @@ export async function restoreLocalDeclarationsFromServer(params: {
 
   for (const row of auditRows) {
     if (row.event_type !== 'plot_compliance_declared' || !row.payload) continue;
-    const plotId = String(row.payload.plotId ?? '').trim();
-    if (!plotId) continue;
-    const plot = plotById.get(plotId);
+    const payloadPlotId = String(row.payload.plotId ?? '').trim();
+    if (!payloadPlotId) continue;
+
+    const localPlotId =
+      plotById.has(payloadPlotId)
+        ? payloadPlotId
+        : resolveLocalPlotIdForServerPlot({
+            serverPlotId: payloadPlotId,
+            localPlots: updatedPlots,
+            plotServerLinks,
+            backendPlots,
+          });
+    if (!localPlotId) continue;
+
+    const plot = plotById.get(localPlotId);
     if (!plot) continue;
     if (plot.landTenureDeclared && plot.noDeforestationDeclared) continue;
 
@@ -127,8 +139,8 @@ export async function restoreLocalDeclarationsFromServer(params: {
         at,
       ),
     };
-    plotById.set(plotId, nextPlot);
-    const index = updatedPlots.findIndex((candidate) => candidate.id === plotId);
+    plotById.set(localPlotId, nextPlot);
+    const index = updatedPlots.findIndex((candidate) => candidate.id === localPlotId);
     if (index >= 0) {
       updatedPlots[index] = nextPlot;
       plotsRestored += 1;

@@ -1,3 +1,9 @@
+### 2026-06-23 (offline — cross-device sync completeness)
+
+- **Gaps** — Ground-truth field photos never restored on second device; plot compliance declarations failed when audit stored server plot id; post-auth sync skipped partial restore (server > local); background sync skipped pull-only restore; OAuth sign-in fire-and-forgot backup; partial restore failures silent in Sync now message.
+- **Fix** — `restoreLocalGroundTruthPhotosFromServer` (audit `plot_photos_synced` + Supabase download); declaration restore resolves server plot id; pipeline wires ground-truth + legal restore counts; `formatSyncNowUserMessage` partial-failure copy; post-auth offer when server plots/vouchers exceed local; hourly signed-in restore check in auto-backup; OAuth awaits backup (timeout); Documents subscribes to sync bus; per-receipt sync uses merged vouchers; evidence restore uses all backend plot ids.
+- **Tests** — `restoreLocalGroundTruthPhotosFromServer.test.ts`, declaration server-plot-id case, post-auth partial-restore cases; DEVICE_SMOKE §12 cross-device restore.
+
 ### 2026-06-19 (offline — Phase 1c evidence + declaration restore)
 
 - **Gap** — Land papers and producer/plot declarations stayed on the first device after sign-in on iPad.

@@ -8,6 +8,9 @@ import type { Plot } from '@/features/state/AppStateContext';
 /** Minimum gap between automatic background backup runs. */
 export const AUTO_BACKUP_MIN_INTERVAL_MS = 15 * 60 * 1000;
 
+/** When signed in with no local upload work, still check cloud restore at this interval. */
+export const AUTO_RESTORE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+
 /** After repeated failures, wait at least this long before auto-trying again. */
 export const AUTO_BACKUP_FAILURE_BACKOFF_MS = 15 * 60 * 1000;
 
@@ -73,8 +76,19 @@ export function recordAutoBackupOutcome(params: {
 export function evaluateBackgroundAutoBackupGate(params: {
   nowMs: number;
   work: LocalSyncWorkSnapshot;
+  signedIn?: boolean;
 }): BackgroundAutoBackupDecision {
   if (!params.work.hasWork) {
+    if (params.signedIn) {
+      const sinceAttempt = params.nowMs - gateState.lastAttemptAt;
+      if (
+        gateState.lastAttemptAt === 0 ||
+        sinceAttempt >= AUTO_RESTORE_CHECK_INTERVAL_MS
+      ) {
+        return { allowed: true, reason: 'allowed' };
+      }
+      return { allowed: false, reason: 'interval_not_elapsed' };
+    }
     return { allowed: false, reason: 'no_local_work' };
   }
 
@@ -143,7 +157,10 @@ export async function evaluateConservativeAutoBackup(params: {
   const gate = evaluateBackgroundAutoBackupGate({
     nowMs: params.nowMs ?? Date.now(),
     work,
+    signedIn: true,
   });
-  const skipQueueDrain = await shouldSkipAutoQueueDrain();
+  const skipQueueDrain = params.work.hasWork
+    ? await shouldSkipAutoQueueDrain()
+    : true;
   return { work, gate, skipQueueDrain };
 }

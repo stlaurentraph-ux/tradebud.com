@@ -150,6 +150,10 @@ export async function restoreLocalEvidenceFromServer(params: {
     const serverPlotId = plotServerLinks[plot.id]?.trim();
     if (serverPlotId) linkedServerPlotIds.add(serverPlotId);
   }
+  for (const row of backendPlots) {
+    const serverPlotId = String((row as { id?: string }).id ?? '').trim();
+    if (serverPlotId) linkedServerPlotIds.add(serverPlotId);
+  }
 
   if (linkedServerPlotIds.size === 0) {
     return { restoredCount: 0, fetchFailed: false, skippedUnlinked: 0, downloadFailed: 0 };

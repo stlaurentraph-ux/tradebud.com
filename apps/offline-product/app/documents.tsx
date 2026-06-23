@@ -14,6 +14,7 @@ import { ActionButton as Button } from '@/components/ui/action-button';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
+import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import {
   loadAllPlotReadinessStates,
@@ -36,7 +37,7 @@ import {
   type PlotEvidenceKind,
 } from '@/features/state/persistence';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createDocumentsScreenStyles } from '@/app/_documentsScreenStyles';
+import { createDocumentsScreenStyles } from '@/screenStyles/documentsScreenStyles';
 import {
   hasSyncedPlotForFarmer,
   producerSupportingHasPendingSync,
@@ -164,6 +165,16 @@ export default function DocumentsScreen() {
   useEffect(() => {
     void refreshSupportingSyncMeta();
   }, [refreshSupportingSyncMeta]);
+
+  useEffect(() => {
+    return subscribeServerPlotSyncChanged(() => {
+      void reloadFromDisk().then(async () => {
+        await refreshProfileDocs();
+        await refreshSupportingSyncMeta();
+        await refreshPlotReadiness();
+      });
+    });
+  }, [reloadFromDisk, refreshPlotReadiness, refreshProfileDocs, refreshSupportingSyncMeta]);
 
   useFocusEffect(
     useCallback(() => {
