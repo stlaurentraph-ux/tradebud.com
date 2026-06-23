@@ -11,6 +11,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 const guards = [
   'sync-parity-guard.mjs',
+  'android-oauth-guard.mjs',
   'registry-md-parity-guard.mjs',
   'pending-sync-registry-guard.mjs',
   'ui-reload-guard.mjs',

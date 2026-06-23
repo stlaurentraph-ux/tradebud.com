@@ -51,7 +51,7 @@ if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_A
 if (googleIds.length < 2) {
   fail('Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID and EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID in .env.local');
 } else {
-  ok('Google OAuth client IDs present');
+  ok('Google OAuth client IDs present (web + iOS)');
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() ?? '';
   const schemeMatch = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(iosClientId);
   const plistPath = path.join(root, 'ios/TracebudOffline/Info.plist');
@@ -64,6 +64,23 @@ if (googleIds.length < 2) {
       fail(
         `Info.plist missing Google OAuth URL scheme. Run: node ./scripts/sync-ios-google-url-scheme.mjs`,
       );
+    }
+  }
+}
+
+const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim() ?? '';
+if (!androidClientId) {
+  warn('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID unset — run npm run oauth:verify:android before preview APK');
+} else {
+  ok('Google Android client ID present for cross-check');
+  const appConfigPath = path.join(root, 'app.config.js');
+  if (fs.existsSync(appConfigPath)) {
+    const appConfig = fs.readFileSync(appConfigPath, 'utf8');
+    const schemeMatch = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(androidClientId);
+    if (schemeMatch && appConfig.includes(`com.googleusercontent.apps.${schemeMatch[1]}`)) {
+      ok('app.config.js references Android Google OAuth reversed scheme');
+    } else {
+      fail('app.config.js missing Android Google OAuth reversed scheme wiring');
     }
   }
 }
