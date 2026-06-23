@@ -206,6 +206,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const backupConfirmedCallbackRef = useRef<(() => void | Promise<void>) | undefined>(undefined);
   const oauthSignInInFlightRef = useRef(false);
   const refreshAuthInFlightRef = useRef<Promise<void> | null>(null);
+  const createWizardVisibleRef = useRef(false);
 
   const countUnsyncedPlots = useCallback(async (): Promise<number> => {
     if (!farmer?.id || plots.length === 0) return 0;
@@ -390,6 +391,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     return true;
   }, [syncLocalFarmerFromAuth]);
 
+  useEffect(() => {
+    createWizardVisibleRef.current = createWizardVisible;
+  }, [createWizardVisible]);
+
   const refreshAuth = useCallback(async () => {
     if (oauthSignInInFlightRef.current) {
       return;
@@ -403,6 +408,14 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       const generationAtStart = getAuthUiGeneration();
       await hydrateSyncAuthFromSettings();
       if (oauthSignInInFlightRef.current) {
+        return;
+      }
+      if (createWizardVisibleRef.current) {
+        if (hasSyncAuthSession()) {
+          const { email: savedEmail } = getAuthCredentials();
+          if (savedEmail) setEmail(savedEmail);
+          setIsSignedIn(true);
+        }
         return;
       }
       if (!hasSyncAuthSession()) {
@@ -517,11 +530,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setCreateWizardVisible(true);
   }, [dismissWelcome]);
 
-  const showSignUpSuccess = () => {
-    setIsSignedIn(true);
+  const finishSuccessfulSignUp = useCallback(async () => {
+    setCreateWizardVisible(false);
+    if (!(await adoptHydratedAuthSession())) {
+      Alert.alert(t('sign_in'), t('sign_in_oauth_failed'));
+      return;
+    }
     Alert.alert(t('farmer_signup_success_title'), t('farmer_signup_success_body'));
     void offerBackupAfterAuth();
-  };
+  }, [adoptHydratedAuthSession, offerBackupAfterAuth, t]);
 
   const closeSignIn = useCallback(() => {
     setVisible(false);
@@ -757,11 +774,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         localPlots={plots}
         onClose={() => setCreateWizardVisible(false)}
         onSuccess={() => {
-          setCreateWizardVisible(false);
-          showSignUpSuccess();
-          void refreshAuth()
-            .then(() => syncLocalFarmerFromAuth())
-            .catch(() => undefined);
+          void finishSuccessfulSignUp();
         }}
         onSignInInstead={() => {
           setCreateWizardVisible(false);
