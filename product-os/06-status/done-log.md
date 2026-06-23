@@ -2,6 +2,7 @@
 
 Track completed milestones/features/docs updates.
 
+- Backend **farmer-initiated delivery consent** (2026-06-19): directed email/tenant delivery auto-grants `SHIPMENT_PREPARATION`; pending→active on deliver; revoked/denied blocked.
 - Backend **cross-surface network routing** (2026-06-19): shared `email-to-tenant-resolution.ts` (delivery + inbox fan-out); consent farmers in `resolveFarmerIdsForTenant`; registry + guard + integration test.
 - Dashboard **compliance issues + exporter workflow structural contracts** (2026-06-19): registries, guards, PermissionGates, analytics, Playwright paths #5–#6; backend `requests_operational_issues` entry.
 - Dashboard **CRM/outreach structural contracts phases 1–4** (2026-06-19): registry + 8 guards; send/archive campaign UI; backend network role parity; Playwright golden path #4; `requests:archive` permission; feature-gate + audit parity guards; FEAT doc.

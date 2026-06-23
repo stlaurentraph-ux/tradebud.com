@@ -1,16 +1,19 @@
 import { BadRequestException } from '@nestjs/common';
 import { Pool } from 'pg';
+import { ensureActiveConsentForDirectedDelivery } from '../consent/delivery-consent-grant';
 import { resolveTenantIdForContactEmail } from '../network/email-to-tenant-resolution';
 
 export interface VoucherDeliveryRecipientInput {
   farmerId: string;
   deliverToTenantId?: string | null;
   deliverToEmail?: string | null;
+  actorUserId?: string | null;
 }
 
 export interface ResolvedVoucherDeliveryRecipient {
   intendedRecipientTenantId: string | null;
   intendedRecipientEmail: string | null;
+  pendingBuyerInvite?: boolean;
 }
 
 function normalizeEmail(email: string | null | undefined): string | null {
@@ -64,9 +67,11 @@ export async function resolveVoucherDeliveryRecipient(
   if (!tenantId && deliverToEmail) {
     tenantId = await resolveTenantIdForBuyerEmail(pool, deliverToEmail);
     if (!tenantId) {
-      throw new BadRequestException(
-        'No buyer organisation found for that email. Pick a buyer from your list or share the QR code directly.',
-      );
+      return {
+        intendedRecipientTenantId: null,
+        intendedRecipientEmail: deliverToEmail,
+        pendingBuyerInvite: true,
+      };
     }
   }
 
@@ -74,12 +79,11 @@ export async function resolveVoucherDeliveryRecipient(
     throw new BadRequestException('Delivery recipient is required.');
   }
 
-  const allowed = await farmerCanDeliverToTenant(pool, input.farmerId, tenantId);
-  if (!allowed) {
-    throw new BadRequestException(
-      'You can only deliver to buyers who have an active data-sharing relationship with you.',
-    );
-  }
+  await ensureActiveConsentForDirectedDelivery(pool, {
+    farmerId: input.farmerId,
+    granteeTenantId: tenantId,
+    actorUserId: input.actorUserId,
+  });
 
   return {
     intendedRecipientTenantId: tenantId,

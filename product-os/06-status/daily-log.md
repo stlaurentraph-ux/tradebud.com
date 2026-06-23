@@ -1,3 +1,14 @@
+### 2026-06-19 (field + backend — unknown buyer email delivery)
+
+- **Invite flow** — unknown dashboard email creates voucher with `intended_recipient_email`, `voucher_buyer_invites` row, optional Resend invite; returns `buyerInvite` on harvest POST.
+- **Field UX** — clearer Deliver to copy; legacy unknown-email Alert → QR-only retry; invite success Alert → receipt.
+- **Tests** — integration unknown-email path; `deliveryBuyerInviteMessages.test.ts`.
+
+### 2026-06-19 (backend — farmer-initiated delivery consent)
+
+- **Directed delivery** — `ensureActiveConsentForDirectedDelivery` auto-creates/activates `SHIPMENT_PREPARATION` grants when farmer delivers to resolved buyer tenant/email; revoked/denied still block.
+- **Tests** — `delivery-consent-grant.spec.ts`; integration test for cold-email delivery path; field app copy updated.
+
 ### 2026-06-19 (backend — cross-surface network routing)
 
 - **Shared resolver** — `email-to-tenant-resolution.ts` (signup contacts + admin_users) used by delivery routing and inbox campaign fan-out.

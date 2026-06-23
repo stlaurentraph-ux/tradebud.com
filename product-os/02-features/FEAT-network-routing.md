@@ -17,8 +17,8 @@ Structural contract for field app ↔ dashboard handoffs (delivery, consent, cam
 
 | Gate | Artifact |
 |------|----------|
-| Permissions | Consent required before directed delivery; tenant-scoped voucher list |
-| State transitions | consent pending → active; voucher issued with intended recipient |
+| Permissions | Consent auto-granted on directed delivery; revoked/denied block; tenant-scoped voucher list |
+| State transitions | None → active SHIPMENT_PREPARATION on delivery; pending → active on delivery; voucher issued |
 | Exception handling | Unknown email, missing consent → 400 with farmer-readable copy |
 | Analytics | Existing harvest + consent audit events (no new events this slice) |
 | Acceptance | `network-routing-delivery.int.spec.ts` green with TEST_DATABASE_URL |

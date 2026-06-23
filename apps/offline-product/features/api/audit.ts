@@ -81,7 +81,8 @@ export async function postAuditEventToBackend(params: {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      if (res.status !== 429) {
+      // Queue/sync callers handle 401/429; logging here duplicated noise in dev LogBox.
+      if (res.status !== 429 && res.status !== 401) {
         logError(new Error(body.message ?? `Audit POST failed (${res.status})`), {
           context: 'postAuditEvent',
           statusCode: res.status,

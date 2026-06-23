@@ -21,7 +21,10 @@ export async function enqueueFarmerCloudSyncActions(
   };
   if (!farmer?.id?.trim()) return result;
 
-  const prefs = await queueFieldDevicePreferencesSync(farmer);
+  const prefs = await queueFieldDevicePreferencesSync(farmer, {
+    deferPost: true,
+    skipIfSynced: true,
+  });
   result.devicePreferences = prefs !== 'skipped';
 
   const photoUri = (await getSetting('farmerProfilePhotoUri').catch(() => null))?.trim();
@@ -29,13 +32,18 @@ export async function enqueueFarmerCloudSyncActions(
     const photo = await queueFarmerProfilePhotoSync({
       farmerId: farmer.id,
       localUri: photoUri,
+      deferPost: true,
+      skipIfSynced: true,
     });
     result.profilePhoto = photo !== 'skipped';
   }
 
   const draft = await loadPlotMappingDraft(farmer.id).catch(() => null);
   if (draft && draft.points.length > 0) {
-    const draftSync = await queuePlotMappingDraftSync(draft);
+    const draftSync = await queuePlotMappingDraftSync(draft, {
+      deferPost: true,
+      skipIfSynced: true,
+    });
     result.mappingDraft = draftSync !== 'skipped';
   }
 

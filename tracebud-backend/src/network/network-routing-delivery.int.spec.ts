@@ -1,5 +1,6 @@
 import { Pool } from 'pg';
 import { HarvestService } from '../harvest/harvest.service';
+import { claimPendingDeliveryBuyerInvitesOnSignup } from '../harvest/claim-delivery-buyer-invites-on-signup';
 import { resolveTenantIdForContactEmail } from './email-to-tenant-resolution';
 import { createBillingServiceMock } from '../testing/billing-service.mock';
 
@@ -61,7 +62,7 @@ describeIfDb('Network routing — delivery to buyer tenant integration', () => {
         invited_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE TABLE consent_grants (
-        id UUID PRIMARY KEY,
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         farmer_id UUID NOT NULL REFERENCES farmer_profile(id) ON DELETE CASCADE,
         grantee_tenant_id TEXT NOT NULL,
         grantee_org_name TEXT NULL,
@@ -69,6 +70,9 @@ describeIfDb('Network routing — delivery to buyer tenant integration', () => {
         purpose_code TEXT NOT NULL DEFAULT 'COMPLIANCE_COLLECTION',
         data_scope TEXT[] NOT NULL DEFAULT ARRAY['identity','plots','evidence']::TEXT[],
         status TEXT NOT NULL DEFAULT 'pending',
+        consent_mechanism TEXT NULL,
+        granted_at TIMESTAMPTZ NULL,
+        revoked_at TIMESTAMPTZ NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
@@ -110,6 +114,17 @@ describeIfDb('Network routing — delivery to buyer tenant integration', () => {
         claim_source TEXT NULL,
         PRIMARY KEY (voucher_id, tenant_id)
       );
+      CREATE TABLE voucher_buyer_invites (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        voucher_id UUID NOT NULL,
+        farmer_id UUID NOT NULL,
+        recipient_email TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        sent_at TIMESTAMPTZ NULL,
+        claimed_tenant_id TEXT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (voucher_id, recipient_email)
+      );
       CREATE TABLE audit_log (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         timestamp TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -129,6 +144,7 @@ describeIfDb('Network routing — delivery to buyer tenant integration', () => {
   });
 
   beforeEach(async () => {
+    await pool.query(`DELETE FROM voucher_buyer_invites`);
     await pool.query(`DELETE FROM voucher_buyer_claims`);
     await pool.query(`DELETE FROM voucher`);
     await pool.query(`DELETE FROM harvest_transaction`);
@@ -189,8 +205,128 @@ describeIfDb('Network routing — delivery to buyer tenant integration', () => {
     expect(buyerVouchers.some((row) => row.id === created.voucher.id)).toBe(true);
   });
 
-  it('rejects delivery when consent is missing', async () => {
+  it('auto-grants SHIPMENT_PREPARATION consent when delivering by email without prior grant', async () => {
     await pool.query(`DELETE FROM consent_grants`);
+    await pool.query(
+      `INSERT INTO tenant_signup_contacts (tenant_id, user_id, email) VALUES ($1, '', $2)`,
+      [buyerTenantId, buyerEmail],
+    );
+
+    const created = await harvestService.create(
+      {
+        farmerId,
+        plotId,
+        kg: 80,
+        deliverToEmail: buyerEmail,
+      },
+      farmerUserId,
+    );
+
+    const grants = await pool.query<{
+      status: string;
+      purpose_code: string;
+      grantee_tenant_id: string;
+    }>(`SELECT status, purpose_code, grantee_tenant_id FROM consent_grants WHERE farmer_id = $1`, [
+      farmerId,
+    ]);
+
+    expect(grants.rows).toHaveLength(1);
+    expect(grants.rows[0]?.status).toBe('active');
+    expect(grants.rows[0]?.purpose_code).toBe('SHIPMENT_PREPARATION');
+    expect(grants.rows[0]?.grantee_tenant_id).toBe(buyerTenantId);
+    expect(created.voucher.intended_recipient_tenant_id).toBe(buyerTenantId);
+
+    const buyerVouchers = await harvestService.listVouchersForTenant(buyerTenantId);
+    expect(buyerVouchers.some((row) => row.id === created.voucher.id)).toBe(true);
+  });
+
+  it('queues buyer invite when email is not on Tracebud dashboard yet', async () => {
+    await pool.query(`DELETE FROM consent_grants`);
+    const unknownEmail = 'future-buyer@coop.example';
+
+    const created = await harvestService.create(
+      {
+        farmerId,
+        plotId,
+        kg: 65,
+        deliverToEmail: unknownEmail,
+      },
+      farmerUserId,
+    );
+
+    expect(created.voucher.intended_recipient_tenant_id).toBeNull();
+    expect(created.voucher.intended_recipient_email).toBe(unknownEmail);
+    expect(created.buyerInvite).toEqual({
+      email: unknownEmail,
+      pending: true,
+      inviteSent: false,
+    });
+
+    const invites = await pool.query<{ recipient_email: string; status: string }>(
+      `SELECT recipient_email, status FROM voucher_buyer_invites WHERE voucher_id = $1`,
+      [created.voucher.id],
+    );
+    expect(invites.rows[0]?.recipient_email).toBe(unknownEmail);
+    expect(invites.rows[0]?.status).toBe('pending');
+  });
+
+  it('claims pending delivery invites when buyer signs up with invited email', async () => {
+    await pool.query(`DELETE FROM consent_grants`);
+    const unknownEmail = 'future-buyer@coop.example';
+    const newBuyerTenantId = 'tenant_future_buyer';
+
+    const created = await harvestService.create(
+      {
+        farmerId,
+        plotId,
+        kg: 70,
+        deliverToEmail: unknownEmail,
+      },
+      farmerUserId,
+    );
+
+    await pool.query(
+      `INSERT INTO tenant_signup_contacts (tenant_id, user_id, email) VALUES ($1, $2, $3)`,
+      [newBuyerTenantId, '22222222-2222-4222-8222-222222222222', unknownEmail],
+    );
+
+    const claimResult = await claimPendingDeliveryBuyerInvitesOnSignup(pool, {
+      recipientEmail: unknownEmail,
+      tenantId: newBuyerTenantId,
+      actorUserId: '22222222-2222-4222-8222-222222222222',
+      granteeOrgName: 'Future Buyer Coop',
+    });
+
+    expect(claimResult.claimedCount).toBe(1);
+    expect(claimResult.voucherIds).toContain(created.voucher.id);
+
+    const voucher = await pool.query<{ intended_recipient_tenant_id: string | null }>(
+      `SELECT intended_recipient_tenant_id FROM voucher WHERE id = $1`,
+      [created.voucher.id],
+    );
+    expect(voucher.rows[0]?.intended_recipient_tenant_id).toBe(newBuyerTenantId);
+
+    const invite = await pool.query<{ status: string; claimed_tenant_id: string | null }>(
+      `SELECT status, claimed_tenant_id FROM voucher_buyer_invites WHERE voucher_id = $1`,
+      [created.voucher.id],
+    );
+    expect(invite.rows[0]?.status).toBe('claimed');
+    expect(invite.rows[0]?.claimed_tenant_id).toBe(newBuyerTenantId);
+
+    const grants = await pool.query<{ status: string; grantee_tenant_id: string }>(
+      `SELECT status, grantee_tenant_id FROM consent_grants WHERE farmer_id = $1`,
+      [farmerId],
+    );
+    expect(grants.rows.some((row) => row.grantee_tenant_id === newBuyerTenantId && row.status === 'active')).toBe(
+      true,
+    );
+
+    const buyerVouchers = await harvestService.listVouchersForTenant(newBuyerTenantId);
+    expect(buyerVouchers.some((row) => row.id === created.voucher.id)).toBe(true);
+  });
+
+  it('rejects delivery when consent was revoked', async () => {
+    await pool.query(`UPDATE consent_grants SET status = 'revoked', revoked_at = NOW()`);
     await pool.query(
       `INSERT INTO tenant_signup_contacts (tenant_id, user_id, email) VALUES ($1, '', $2)`,
       [buyerTenantId, buyerEmail],
@@ -206,6 +342,6 @@ describeIfDb('Network routing — delivery to buyer tenant integration', () => {
         },
         farmerUserId,
       ),
-    ).rejects.toThrow(/data-sharing relationship/);
+    ).rejects.toThrow(/revoked data sharing/);
   });
 });

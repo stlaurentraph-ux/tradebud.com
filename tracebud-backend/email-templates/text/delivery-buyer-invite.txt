@@ -1,0 +1,30 @@
+Subject: A producer logged a delivery for you on Tracebud
+Preheader: Create your dashboard account to receive this delivery
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+A producer logged a delivery for your email on Tracebud.
+
+  Delivery for : {{recipientEmail}}
+  Logged by    : {{producerLabel}}
+
+Create your Tracebud dashboard account to receive directed deliveries, manage
+data-sharing consent, and prepare EUDR compliance paperwork.
+
+  Create your Tracebud account
+  {{signupUrl}}
+
+Already on Tracebud? Sign in with this email:
+  {{loginUrl}}
+
+──────────────────────────────────────────────────────
+Tracebud · EUDR compliance workspace
+dashboard.tracebud.com | tracebud.com
+
+Manage account: {{loginUrl}}
+
+© {{year}} Tracebud. All rights reserved.
+
+You received this because a producer entered your email when logging a
+delivery on Tracebud. If this wasn't expected, you can safely ignore this email.

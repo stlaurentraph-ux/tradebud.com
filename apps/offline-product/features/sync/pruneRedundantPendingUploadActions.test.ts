@@ -13,6 +13,7 @@ const loadPhotosForPlot = vi.fn(async () => []);
 const loadTitlePhotosForPlot = vi.fn(async () => []);
 const loadEvidenceForPlot = vi.fn(async () => []);
 const isDeclarationAuditSynced = vi.fn(async () => false);
+const isFieldCloudAuditSynced = vi.fn(async () => false);
 
 vi.mock('@/features/state/persistence', () => ({
   deletePendingSyncAction,
@@ -35,6 +36,10 @@ vi.mock('@/features/state/persistence', () => ({
 
 vi.mock('@/features/sync/queueDeclarationAuditSync', () => ({
   isDeclarationAuditSynced,
+}));
+
+vi.mock('@/features/sync/queueFieldCloudAuditSync', () => ({
+  isFieldCloudAuditSynced,
 }));
 
 const pruneSourcePath = path.join(

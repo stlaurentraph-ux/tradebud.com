@@ -59,7 +59,15 @@ export const BACKEND_PLOT_AUDIT_EVENT_TYPES = [
   'farmer_set',
 ] as const;
 
-export const BACKEND_HARVEST_AUDIT_EVENT_TYPES = ['harvest_recorded'] as const;
+export const BACKEND_HARVEST_AUDIT_EVENT_TYPES = [
+  'harvest_recorded',
+  'delivery_buyer_invite_queued',
+  'delivery_buyer_invite_sent',
+  'delivery_buyer_invite_send_skipped',
+  'delivery_buyer_invite_send_failed',
+  'delivery_buyer_invite_claimed',
+  'delivery_buyer_invite_claim_skipped',
+] as const;
 
 export const BACKEND_TENURE_AUDIT_EVENT_TYPES = [
   'tenure_parse_completed',

@@ -28,11 +28,14 @@ export const NETWORK_ROUTING_FLOWS: readonly NetworkRoutingFlow[] = [
       'Farmer records harvest with buyer email or tenant; voucher routes to buyer dashboard when consent is active.',
     emailResolver: EMAIL_TENANT_RESOLUTION_MODULE,
     preconditions: [
-      'active consent_grants (farmer_id, grantee_tenant_id)',
-      'contact email resolves to buyer tenant',
-      'buyer tenant scopes farmer via consent_grants or CRM link',
+      'contact email resolves to buyer tenant (or buyer tenant id from consent picker)',
+      'directed delivery auto-creates or activates consent_grants (SHIPMENT_PREPARATION)',
+      'revoked/denied grants block new directed delivery',
     ],
     backendModules: [
+      'consent/delivery-consent-grant.ts',
+      'harvest/delivery-buyer-invite.ts',
+      'harvest/claim-delivery-buyer-invites-on-signup.ts',
       'harvest/voucher-delivery-routing.ts',
       'harvest/harvest.service.ts',
       'common/tenant-farmer-scope.ts',

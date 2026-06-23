@@ -25,10 +25,12 @@ Farmer records harvest with buyer picker, email, or QR-only.
 
 | Step | Surface | Requirement |
 |------|---------|-------------|
-| 1 | Field app `DeliveryRecipientFields` | Active `consent_grants` for buyer tenant |
+| 1 | Field app `DeliveryRecipientFields` | Pick buyer, enter email, or QR-only |
 | 2 | Backend `resolveVoucherDeliveryRecipient` | Email → tenant via shared resolver |
-| 3 | Backend harvest create | Sets `voucher.intended_recipient_tenant_id` |
-| 4 | Buyer dashboard vouchers | Farmer in tenant scope **and** intended recipient match |
+| 3 | Backend `ensureActiveConsentForDirectedDelivery` | Auto-create/activate `SHIPMENT_PREPARATION` grant when tenant resolves |
+| 3b | Backend `queueDeliveryBuyerInvite` | Unknown dashboard email → store on voucher + invite row + optional Resend email |
+| 4 | Backend harvest create | Sets `voucher.intended_recipient_tenant_id` |
+| 5 | Buyer dashboard vouchers | Farmer in tenant scope **and** intended recipient match |
 
 **Tenant farmer scope** (`resolveFarmerIdsForTenant`) includes farmers with **active consent** even when not yet in CRM contacts.
 

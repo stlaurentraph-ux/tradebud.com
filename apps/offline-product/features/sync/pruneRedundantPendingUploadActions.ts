@@ -13,6 +13,7 @@ import {
   loadTitlePhotosForPlot,
 } from '@/features/state/persistence';
 import { isDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
+import { isFieldCloudAuditSynced } from '@/features/sync/queueFieldCloudAuditSync';
 
 /** Compile-time guard: extend prune branches when PENDING_SYNC_UPLOAD_ACTION_TYPES grows. */
 const PRUNE_BRANCH_COVERAGE: Record<PendingSyncUploadActionType, true> = {
@@ -65,11 +66,16 @@ export async function pruneRedundantPendingUploadActions(params: {
         dropped += 1;
         continue;
       }
-      const synced = await isDeclarationAuditSynced({
+      const syncedDeclaration = await isDeclarationAuditSynced({
         eventType,
         payload: auditPayload,
       }).catch(() => false);
-      if (synced) {
+      const scopeId = String(auditPayload.farmerId ?? '').trim();
+      const syncedCloud =
+        scopeId.length > 0
+          ? await isFieldCloudAuditSynced({ eventType, scopeId }).catch(() => false)
+          : false;
+      if (syncedDeclaration || syncedCloud) {
         await deletePendingSyncAction(row.id).catch(() => undefined);
         dropped += 1;
       }

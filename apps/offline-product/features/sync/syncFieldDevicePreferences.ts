@@ -74,6 +74,7 @@ export async function buildFieldDevicePreferencesPayload(
 
 export async function queueFieldDevicePreferencesSync(
   farmer: FarmerProfile,
+  options?: { deferPost?: boolean; skipIfSynced?: boolean },
 ): Promise<'synced' | 'queued' | 'skipped'> {
   if (!farmer.id?.trim()) return 'skipped';
   const payload = await buildFieldDevicePreferencesPayload(farmer);
@@ -81,6 +82,8 @@ export async function queueFieldDevicePreferencesSync(
     eventType: FIELD_DEVICE_PREFERENCES_AUDIT,
     scopeId: farmer.id,
     payload: payload as unknown as Record<string, unknown>,
+    deferPost: options?.deferPost,
+    skipIfSynced: options?.skipIfSynced,
   });
 }
 

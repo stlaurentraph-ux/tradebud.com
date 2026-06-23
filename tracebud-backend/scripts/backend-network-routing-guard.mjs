@@ -54,6 +54,14 @@ function main() {
     }
   }
 
+  const deliveryRoutingPath = path.join(root, 'src/harvest/voucher-delivery-routing.ts');
+  if (fs.existsSync(deliveryRoutingPath)) {
+    const source = fs.readFileSync(deliveryRoutingPath, 'utf8');
+    if (!source.includes('delivery-consent-grant')) {
+      issues.push('voucher-delivery-routing.ts must ensure delivery consent via delivery-consent-grant');
+    }
+  }
+
   if (!scopeSource.includes('consent_grants')) {
     issues.push('tenant-farmer-scope.ts must union active consent_grants farmers');
   }
@@ -80,6 +88,11 @@ function main() {
   const resolverPath = path.join(root, 'src/network/email-to-tenant-resolution.ts');
   if (!fs.existsSync(resolverPath)) {
     issues.push('Missing src/network/email-to-tenant-resolution.ts');
+  }
+
+  const invitePath = path.join(root, 'src/harvest/delivery-buyer-invite.ts');
+  if (!fs.existsSync(invitePath)) {
+    issues.push('Missing src/harvest/delivery-buyer-invite.ts');
   }
 
   if (issues.length > 0) {

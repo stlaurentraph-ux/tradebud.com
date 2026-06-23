@@ -10,6 +10,7 @@ The Supabase confirm template is pasted directly into the Supabase Dashboard and
 | ID       | Trigger                                          | Subject                                              |
 |----------|--------------------------------------------------|------------------------------------------------------|
 | A        | Workspace setup saved (wizard step 2)            | Welcome to Tracebud — your workspace is ready        |
+| D        | Farmer delivery to unknown dashboard email       | A producer logged a delivery for you on Tracebud   |
 | B        | Cron: signup +24 h, workspace incomplete         | Finish setting up your Tracebud workspace            |
 | C        | Cron: +48 h after B (max 2 nudges total)         | Reminder: your Tracebud workspace is almost ready    |
 | Supabase | Supabase Auth confirm signup                     | Confirm your Tracebud account                        |
@@ -23,11 +24,13 @@ email-templates/
   html/
     _layout.html               Shared header + footer snippet (reference / copy-paste)
     welcome.html               Email A — Welcome
+    delivery-buyer-invite.html Email D — Delivery buyer invite (adapted from welcome)
     resume-nudge-first.html    Email B — Resume nudge #1
     resume-nudge-final.html    Email C — Final reminder
     supabase-confirm-email.html Bonus — Supabase Auth confirm (paste into Supabase Dashboard)
   text/
     welcome.txt                Email A plain text
+    delivery-buyer-invite.txt  Email D plain text
     resume-nudge-first.txt     Email B plain text
     resume-nudge-final.txt     Email C plain text
   DESIGN_TOKENS.md             Full color, type, spacing, and merge-tag reference
@@ -56,6 +59,7 @@ email-templates/
 `OnboardingEmailService` loads these files at runtime via `src/launch/onboarding-email.templates.ts`.
 
 - **Welcome** → after wizard step 2 (`saveWorkspaceSetup`)
+- **Delivery buyer invite** → farmer harvest with unknown buyer email (`delivery-buyer-invite.ts`)
 - **Resume #1 / #2** → cron `POST /api/v1/launch/onboarding/remind-incomplete` (second send uses `resume-nudge-final.html`)
 
 Docker/Railway must include the `email-templates/` folder (see `Dockerfile`).

@@ -20,6 +20,10 @@ import { buildDeliveryReceiptCatalog } from '@/features/harvest/buildDeliveryRec
 import { loadFieldScopedDeliveryReceipts } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 import {
+  resolveHarvestSubmitWithUnknownBuyerFallback,
+  showBuyerInviteAlert,
+} from '@/features/harvest/completeHarvestSubmitFlow';
+import {
   buyerLabelForDeliveryRecipient,
   normalizeLocalDeliveryReceipts,
   resolvePlotReceiptFilterIds,
@@ -616,17 +620,26 @@ export default function HarvestsScreen() {
 
                   const plotName = String(localPlot.name ?? t('plot_fallback'));
 
-                  const result = await submitHarvestRecord({
-                    farmerId: farmer.id,
-                    selectedPlotId,
-                    kg: validation.value,
-                    localPlots,
-                    backendPlots,
-                    plotServerLinks,
-                    deliveryRecipient,
-                    plotName,
-                    buyerLabel: buyerLabelForDeliveryRecipient(deliveryRecipient, t),
+                  const runSubmit = (recipient: DeliveryRecipientSelection | null) =>
+                    submitHarvestRecord({
+                      farmerId: farmer.id,
+                      selectedPlotId,
+                      kg: validation.value,
+                      localPlots,
+                      backendPlots,
+                      plotServerLinks,
+                      deliveryRecipient: recipient,
+                      plotName,
+                      buyerLabel: buyerLabelForDeliveryRecipient(recipient, t),
+                    });
+
+                  let result = await runSubmit(deliveryRecipient);
+                  result = await resolveHarvestSubmitWithUnknownBuyerFallback({
+                    result,
+                    t,
+                    retryWithRecipient: runSubmit,
                   });
+
                   if (result.status === 'error') {
                     setMessage(
                       'messageKey' in result && result.messageKey
@@ -636,34 +649,62 @@ export default function HarvestsScreen() {
                     return;
                   }
 
-                  if (result.status === 'queued') {
+                  const finishSuccess = async (submitResult: typeof result) => {
+                    if (submitResult.status === 'queued') {
+                      void refreshHarvestData();
+                      setWeightInput('');
+                      setDeliveryRecipient(null);
+                      setShowRecordWeight(false);
+                      setShowNewHarvestLog(false);
+                      setMessage(null);
+                      router.push(
+                        deliveryReceiptHref(submitResult.receiptId, { fresh: true, from: 'harvests' }),
+                      );
+                      return;
+                    }
+
+                    if (submitResult.status !== 'synced') return;
+
+                    const receiptScope = await loadFieldScopedDeliveryReceipts({
+                      profileFarmerId: farmer.id,
+                      localPlots,
+                      isSignedIn: true,
+                    });
+                    const voucherPayload = await fetchMergedServerVouchers(
+                      receiptScope.voucherFarmerIds,
+                    );
+                    const refreshedVouchers = normalizeVoucherRows(voucherPayload);
+                    setVouchers(refreshedVouchers);
                     void refreshHarvestData();
                     setWeightInput('');
                     setDeliveryRecipient(null);
                     setShowRecordWeight(false);
                     setShowNewHarvestLog(false);
                     setMessage(null);
-                    router.push(deliveryReceiptHref(result.receiptId, { fresh: true, from: 'harvests' }));
+                    router.push(
+                      deliveryReceiptHref(submitResult.receiptId, { fresh: true, from: 'harvests' }),
+                    );
+                  };
+
+                  if (result.status === 'queued') {
+                    await finishSuccess(result);
                     return;
                   }
 
-                  const receiptScope = await loadFieldScopedDeliveryReceipts({
-                    profileFarmerId: farmer.id,
-                    localPlots,
-                    isSignedIn: true,
-                  });
-                  const voucherPayload = await fetchMergedServerVouchers(
-                    receiptScope.voucherFarmerIds,
-                  );
-                  const refreshedVouchers = normalizeVoucherRows(voucherPayload);
-                  setVouchers(refreshedVouchers);
-                  void refreshHarvestData();
-                  setWeightInput('');
-                  setDeliveryRecipient(null);
-                  setShowRecordWeight(false);
-                  setShowNewHarvestLog(false);
-                  setMessage(null);
-                  router.push(deliveryReceiptHref(result.receiptId, { fresh: true, from: 'harvests' }));
+                  if (result.status === 'synced' && result.buyerInvite?.pending) {
+                    showBuyerInviteAlert({
+                      t,
+                      invite: result.buyerInvite,
+                      onContinue: () => {
+                        void finishSuccess(result);
+                      },
+                    });
+                    return;
+                  }
+
+                  if (result.status === 'synced') {
+                    await finishSuccess(result);
+                  }
                 } catch (e) {
                   setMessage(e instanceof Error ? e.message : String(e));
                 }
