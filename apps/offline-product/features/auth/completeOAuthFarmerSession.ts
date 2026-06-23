@@ -5,6 +5,7 @@ import {
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
+import { isExistingAuthUserAtSignup } from '@/features/auth/oauthExistingAccount';
 import { ensureFarmerOAuthProfile, getFieldAppEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import { fieldAppBlocksDashboardOAuthSignIn } from '@/features/auth/fieldAppEligibility';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
@@ -78,6 +79,8 @@ export async function completeOAuthFarmerSession(params: {
   fullName?: string;
   farmerId?: string;
   localPlots?: Plot[];
+  /** Set when completing OAuth from the create-account wizard. */
+  signupFlowStartedAtMs?: number;
 }): Promise<SignInSyncResult> {
   if (fieldAppBlocksDashboardOAuthSignIn(params.session)) {
     return { ok: false, message: 'sign_in_dashboard_account' };
@@ -110,5 +113,9 @@ export async function completeOAuthFarmerSession(params: {
     localPlots: params.localPlots,
   });
 
-  return { ok: true, missingName: !nameFromSession };
+  const existingAccount =
+    params.signupFlowStartedAtMs != null &&
+    isExistingAuthUserAtSignup(params.session, params.signupFlowStartedAtMs);
+
+  return { ok: true, missingName: !nameFromSession, existingAccount };
 }

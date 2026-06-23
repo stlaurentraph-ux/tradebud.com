@@ -15,7 +15,7 @@ import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oau
 import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 export type SignInSyncResult =
-  | { ok: true; missingName?: boolean; apiUnreachable?: boolean }
+  | { ok: true; missingName?: boolean; apiUnreachable?: boolean; existingAccount?: boolean }
   | { ok: false; message: string };
 
 export { clearPersistedSyncAuth };

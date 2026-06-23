@@ -530,15 +530,22 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setCreateWizardVisible(true);
   }, [dismissWelcome]);
 
-  const finishSuccessfulSignUp = useCallback(async () => {
-    setCreateWizardVisible(false);
-    if (!(await adoptHydratedAuthSession())) {
-      Alert.alert(t('sign_in'), t('sign_in_oauth_failed'));
-      return;
-    }
-    Alert.alert(t('farmer_signup_success_title'), t('farmer_signup_success_body'));
-    void offerBackupAfterAuth();
-  }, [adoptHydratedAuthSession, offerBackupAfterAuth, t]);
+  const finishSuccessfulSignUp = useCallback(
+    async (options?: { existingAccount?: boolean }) => {
+      setCreateWizardVisible(false);
+      if (!(await adoptHydratedAuthSession())) {
+        Alert.alert(t('sign_in'), t('sign_in_oauth_failed'));
+        return;
+      }
+      if (options?.existingAccount) {
+        Alert.alert(t('sign_in'), t('sign_up_oauth_existing_account'));
+      } else {
+        Alert.alert(t('farmer_signup_success_title'), t('farmer_signup_success_body'));
+      }
+      void offerBackupAfterAuth();
+    },
+    [adoptHydratedAuthSession, offerBackupAfterAuth, t],
+  );
 
   const closeSignIn = useCallback(() => {
     setVisible(false);
@@ -773,8 +780,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         farmerId={farmer?.id}
         localPlots={plots}
         onClose={() => setCreateWizardVisible(false)}
-        onSuccess={() => {
-          void finishSuccessfulSignUp();
+        onSuccess={(options) => {
+          void finishSuccessfulSignUp(options);
         }}
         onSignInInstead={() => {
           setCreateWizardVisible(false);

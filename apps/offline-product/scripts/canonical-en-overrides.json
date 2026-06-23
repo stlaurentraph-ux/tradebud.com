@@ -562,6 +562,7 @@
   "farmer_signup_confirm_email": "Check your email to confirm your address, then sign in from Settings.",
   "farmer_signup_success_title": "Account created",
   "farmer_signup_success_body": "You are signed in. Your plots will back up when you are online.",
+  "sign_up_oauth_existing_account": "You already have a Tracebud account with this email. You're signed in now — next time, tap Sign in instead of Create account.",
   "why_tracebud_title": "Why Tracebud",
   "why_tracebud_hero_tagline": "Record plots. Prove origin. Access markets.",
   "why_tracebud_intro": "Tracebud is built so smallholder farmers are not left out of sustainability markets, with tools that work in the field, on your device, even without internet.",
