@@ -1,9 +1,9 @@
 import fs from 'fs';
 
 const JOBS = [
-  ['app/documents.tsx', '@/app/_documentsScreenStyles', 'createDocumentsScreenStyles'],
-  ['app/data-sharing.tsx', '@/app/_dataSharingScreenStyles', 'createDataSharingScreenStyles'],
-  ['app/plot/[id].tsx', '@/app/plot/_plotDetailScreenStyles', 'createPlotDetailScreenStyles'],
+  ['app/documents.tsx', '@/screenStyles/documentsScreenStyles', 'createDocumentsScreenStyles'],
+  ['app/data-sharing.tsx', '@/screenStyles/dataSharingScreenStyles', 'createDataSharingScreenStyles'],
+  ['app/plot/[id].tsx', '@/screenStyles/plotDetailScreenStyles', 'createPlotDetailScreenStyles'],
   ['components/mapping/CaptureInstructionsLink.tsx', '@/components/mapping/captureInstructionsLinkStyles', 'createCaptureInstructionsLinkStyles'],
   ['components/mapping/CornerMapOverlay.tsx', '@/components/mapping/cornerMapOverlayStyles', 'createCornerMapOverlayStyles'],
   ['components/mapping/GeometryConfidenceBanner.tsx', '@/components/mapping/geometryConfidenceBannerStyles', 'createGeometryConfidenceBannerStyles'],

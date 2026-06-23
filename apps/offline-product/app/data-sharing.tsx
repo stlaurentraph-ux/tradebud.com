@@ -37,7 +37,7 @@ import { goBackOrHome } from '@/features/navigation/routes';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createDataSharingScreenStyles } from '@/app/_dataSharingScreenStyles';
+import { createDataSharingScreenStyles } from '@/screenStyles/dataSharingScreenStyles';
 
 type ScopeItem = 'identity' | 'plots' | 'evidence';
 

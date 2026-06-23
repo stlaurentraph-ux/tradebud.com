@@ -63,7 +63,7 @@ function packTilesDir(packId: string) {
   return `${OFFLINE_TILES_PACKS_DIR}/${packId}/tiles`;
 }
 
-function packMetaPath(packId: string) {
+export function packMetaPath(packId: string) {
   return `${OFFLINE_TILES_PACKS_DIR}/${packId}/meta.json`;
 }
 

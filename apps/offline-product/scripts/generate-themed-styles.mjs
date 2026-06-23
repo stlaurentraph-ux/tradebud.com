@@ -180,9 +180,9 @@ export function ${exportName}(c: AppColors) {
 }
 
 const jobs = [
-  ['app/documents.tsx', 'createDocumentsScreenStyles', 'app/_documentsScreenStyles.ts'],
-  ['app/data-sharing.tsx', 'createDataSharingScreenStyles', 'app/_dataSharingScreenStyles.ts'],
-  ['app/plot/[id].tsx', 'createPlotDetailScreenStyles', 'app/plot/_plotDetailScreenStyles.ts'],
+  ['app/documents.tsx', 'createDocumentsScreenStyles', 'screenStyles/documentsScreenStyles.ts'],
+  ['app/data-sharing.tsx', 'createDataSharingScreenStyles', 'screenStyles/dataSharingScreenStyles.ts'],
+  ['app/plot/[id].tsx', 'createPlotDetailScreenStyles', 'screenStyles/plotDetailScreenStyles.ts'],
   ['components/mapping/CaptureInstructionsLink.tsx', 'createCaptureInstructionsLinkStyles', 'components/mapping/captureInstructionsLinkStyles.ts'],
   ['components/mapping/CornerMapOverlay.tsx', 'createCornerMapOverlayStyles', 'components/mapping/cornerMapOverlayStyles.ts'],
   ['components/mapping/GeometryConfidenceBanner.tsx', 'createGeometryConfidenceBannerStyles', 'components/mapping/geometryConfidenceBannerStyles.ts'],

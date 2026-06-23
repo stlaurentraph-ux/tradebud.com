@@ -14,7 +14,10 @@ import { ActionButton as Button } from '@/components/ui/action-button';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
-import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import { subscribeServerPlotSyncChanged, emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
+import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
+import { restoreCloudMediaFromServer } from '@/features/sync/restoreCloudMediaFromServer';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import {
   loadAllPlotReadinessStates,
@@ -176,12 +179,46 @@ export default function DocumentsScreen() {
     });
   }, [reloadFromDisk, refreshPlotReadiness, refreshProfileDocs, refreshSupportingSyncMeta]);
 
+  const restoreCloudMediaIfSignedIn = useCallback(async () => {
+    if (!farmer?.id || !hasSyncAuthSession()) return;
+    try {
+      const { farmerId, ownedFarmerIds } = await prepareFieldSyncContext({
+        profileFarmerId: farmer.id,
+        localPlots: plots,
+      });
+      const result = await restoreCloudMediaFromServer({
+        apiFarmerId: farmerId,
+        ownedFarmerIds,
+        localPlots: plots,
+        localFarmer: farmer,
+      });
+      const restored =
+        result.evidenceRestored +
+        result.groundTruthRestored +
+        result.landTitleRestored +
+        (result.devicePreferencesRestored ? 1 : 0) +
+        (result.profilePhotoRestored ? 1 : 0) +
+        (result.mappingDraftRestored ? 1 : 0) +
+        result.offlinePacksQueued;
+      if (restored > 0) {
+        emitServerPlotSyncChanged();
+      }
+    } catch {
+      // Non-blocking; Settings Sync now remains the full path.
+    }
+  }, [farmer?.id, plots]);
+
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
       void (async () => {
         await reloadFromDisk();
         if (cancelled) return;
+        if (isSignedIn && farmer?.id) {
+          await restoreCloudMediaIfSignedIn();
+          if (cancelled) return;
+          await reloadFromDisk();
+        }
         await refreshProfileDocs();
         await refreshSupportingSyncMeta();
         if (isSignedIn && farmer?.id) {
@@ -207,7 +244,7 @@ export default function DocumentsScreen() {
       return () => {
         cancelled = true;
       };
-    }, [farmer?.id, isSignedIn, plots, reloadFromDisk, refreshProfileDocs, refreshSupportingSyncMeta, tryUploadSupportingDocs]),
+    }, [farmer?.id, isSignedIn, plots, reloadFromDisk, refreshProfileDocs, refreshSupportingSyncMeta, restoreCloudMediaIfSignedIn, tryUploadSupportingDocs]),
   );
 
   useEffect(() => {

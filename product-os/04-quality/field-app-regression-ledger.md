@@ -20,6 +20,8 @@ Living list of **bug classes that have reached preview/production more than once
 | FR-006 | Walk plot: instructions below fold | Layout order | Manual | §2 Walk plot |
 | FR-007 | Upload button disabled despite reason filled | Validation order / empty state from FR-001 | FR-001 + smoke | §7 |
 | FR-008 | Waypoint vs corner confusion | Shared copy for different capture modes | Mode-specific stat keys + en copy pass | §2 terminology |
+| FR-009 | Device B missing docs/photos after sync | Restore path missing for audit/storage source | `sync-parity-guard.mjs` + registry | §12 cross-device |
+| FR-010 | Restore succeeded but UI empty | Screen did not reload SQLite after sync | UI subscription guard in sync-parity | §12 plot detail |
 
 ## Release gate (preview OTA)
 

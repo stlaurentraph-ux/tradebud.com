@@ -16,6 +16,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { buildGeometryFromLocalPlot, postPlotToBackend, type PostPlotToBackendResult } from '@/features/api/postPlot';
 import { useWalkPerimeter } from './useWalkPerimeter';
+import {
+  clearMappingDraftAfterPlotSave,
+  useMappingDraftCloudSync,
+} from '@/features/mapping/useMappingDraftCloudSync';
 import { alertLocationPermissionDenied } from '@/features/permissions/locationPermission';
 import { useAppState } from '@/features/state/AppStateContext';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -175,6 +179,20 @@ export function WalkPerimeterScreen() {
   const [alternateCaptureOpen, setAlternateCaptureOpen] = useState(false);
   const [mapScrollLock, setMapScrollLock] = useState(false);
   const [drawTracingActive, setDrawTracingActive] = useState(false);
+
+  useMappingDraftCloudSync({
+    farmerId: farmer?.id,
+    editPlotId,
+    plotName,
+    captureMethod,
+    isRecording,
+    drawTracingActive,
+    points,
+    replacePointsFromPlot,
+    t,
+    enabled: isAppReady,
+  });
+
   const [suppressBoundaryOverlays, setSuppressBoundaryOverlays] = useState(false);
   const [boundaryOverlayEpoch, setBoundaryOverlayEpoch] = useState(0);
   const walkMapRef = useRef<MapView>(null);
@@ -641,6 +659,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const finishNewPlotSave = useCallback(
     (name: string, plotId: string | null, tryServerUpload: () => void) => {
+      void clearMappingDraftAfterPlotSave(farmer?.id);
       const buttons: {
         text: string;
         onPress?: () => void;
@@ -671,7 +690,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       }
       Alert.alert(t('plot_saved_title'), t('plot_saved_message', { name }), buttons);
     },
-    [openSignIn, t],
+    [farmer?.id, openSignIn, t],
   );
 
   const hasFarmerAccess = farmer?.selfDeclared === true;

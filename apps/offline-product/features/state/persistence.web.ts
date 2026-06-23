@@ -513,6 +513,31 @@ export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<voi
   }
 }
 
+export type PlotMappingDraftRow = {
+  farmerId: string;
+  editPlotId: string | null;
+  plotName: string | null;
+  captureMethod: string | null;
+  isRecording: boolean;
+  drawTracingActive: boolean;
+  points: Array<{ latitude: number; longitude: number; timestamp?: number }>;
+  updatedAt: number;
+};
+
+let memPlotMappingDrafts: Record<string, PlotMappingDraftRow> = {};
+
+export async function persistPlotMappingDraft(row: PlotMappingDraftRow): Promise<void> {
+  memPlotMappingDrafts[row.farmerId] = row;
+}
+
+export async function loadPlotMappingDraft(farmerId: string): Promise<PlotMappingDraftRow | null> {
+  return memPlotMappingDrafts[farmerId] ?? null;
+}
+
+export async function clearPlotMappingDraft(farmerId: string): Promise<void> {
+  delete memPlotMappingDrafts[farmerId];
+}
+
 export async function deletePlotLocalData(plotId: string): Promise<void> {
   const links = await loadPlotServerLinks().catch((): Record<string, string> => ({}));
   const serverPlotId = links[plotId]?.trim();

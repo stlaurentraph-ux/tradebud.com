@@ -38,13 +38,15 @@ import {
   persistPlots,
   saveFarmerProfilePhotoUri,
 } from './persistence';
+import { queueFieldDevicePreferencesSync } from '@/features/sync/syncFieldDevicePreferences';
+import { queueFarmerProfilePhotoSync } from '@/features/sync/syncFarmerProfilePhoto';
 
 export type Role = 'farmer';
 
 export type FarmerProfile = {
   id: string;
   name?: string;
-  /** Local file URI for profile photo (settings-backed, not sent to backend by default). */
+  /** Local file URI for profile photo (synced via audit + Supabase Storage when signed in). */
   profilePhotoUri?: string | null;
   role: Role;
   selfDeclared: boolean;
@@ -227,6 +229,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         declarationGeoCapturedAt: nextFarmer.declarationGeoCapturedAt ?? null,
       },
     }).catch(() => undefined);
+    void queueFieldDevicePreferencesSync(nextFarmer).catch(() => undefined);
   }, [persistMergedFarmer]);
 
   const saveFarmer = useCallback(async (nextFarmer: FarmerProfile) => {
@@ -260,6 +263,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!prev) return prev;
       const next = { ...prev, profilePhotoUri: uri ?? undefined };
       saveFarmerProfilePhotoUri(uri).catch(() => undefined);
+      void queueFarmerProfilePhotoSync({ farmerId: prev.id, localUri: uri }).catch(() => undefined);
       return next;
     });
   }, []);

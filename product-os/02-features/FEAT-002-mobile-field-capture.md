@@ -129,6 +129,19 @@ Land papers, producer declarations, and plot compliance flags now restore after 
 - **Acceptance** — Sign in on iPad → Sync now → Documents/Declarations match phone; land papers open offline when downloaded.
 - **Tests:** `restoreLocalEvidenceFromServer.test.ts`, `restoreLocalDeclarationsFromServer.test.ts`.
 
+## Cross-device sync completeness — Phase 1e (2026-06-23)
+
+Full farmer artifact registry + symmetric upload/restore for device-scoped data.
+
+- **Registry** — `product-os/04-quality/farmer-artifact-sync-registry.md` + `farmerArtifactRegistry.ts`; CI `sync-parity-guard.mjs`.
+- **Orchestrator** — `restoreFarmerCloudState` replaces ad-hoc restore calls in `runFieldSyncPipeline`.
+- **Declaration GPS + offline prefs** — `field_device_preferences_updated` audit (`syncFieldDevicePreferences.ts`).
+- **Profile photo** — Supabase Storage + `farmer_profile_photo_synced` audit.
+- **In-progress walk** — SQLite `plot_mapping_drafts` + `plot_mapping_draft_saved` audit; resume prompt on Walk screen.
+- **Offline tiles** — manifest + active pack id cross-device; missing packs re-download via `restoreMissingOfflineTilePacksFromServer`.
+- **Upload queue** — `enqueueFarmerCloudSyncActions` before queue drain on Sync now.
+- **Tests** — `plotMappingDraft.test.ts`; DEVICE_SMOKE §12 extended; FR-009/FR-010 regression ledger.
+
 ## Cross-device sync completeness — Phase 1d (2026-06-23)
 
 Closes remaining second-device gaps after Phase 1–1c.

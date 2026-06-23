@@ -11,6 +11,7 @@ import {
 import type { TranslateFn } from '@/features/i18n/translate';
 import { drainPendingSyncQueueForManualSync } from '@/features/sync/drainPendingSyncQueue';
 import { enqueuePlotDependentSyncForLinkedPlots } from '@/features/sync/enqueuePlotDependentSyncActions';
+import { enqueueFarmerCloudSyncActions } from '@/features/sync/enqueueFarmerCloudSyncActions';
 import {
   formatSyncNowUserMessage,
   type SyncNowUserOutcome,
@@ -28,11 +29,9 @@ import {
 } from '@/features/sync/plotServerSync';
 import { restoreLocalPlotsFromServer } from '@/features/sync/restoreLocalPlotsFromServer';
 import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
+import { restoreFarmerCloudState } from '@/features/sync/restoreFarmerCloudState';
 import { reconcileUnuploadedLocalDeliveryReceipts } from '@/features/harvest/reconcileUnuploadedLocalDeliveryReceipts';
 import { backfillServerHarvestDatesFromLocal } from '@/features/harvest/backfillServerHarvestDatesFromLocal';
-import { restoreLocalEvidenceFromServer } from '@/features/sync/restoreLocalEvidenceFromServer';
-import { restoreLocalGroundTruthPhotosFromServer } from '@/features/sync/restoreLocalGroundTruthPhotosFromServer';
-import { restoreLocalDeclarationsFromServer } from '@/features/sync/restoreLocalDeclarationsFromServer';
 import { reportSyncFailure, reportSyncStepStart } from '@/features/sync/reportSyncFailure';
 import { emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { invalidateServerPlotListCache } from '@/features/sync/serverPlotListCache';
@@ -193,57 +192,27 @@ export async function runFieldSyncPipeline(
     outcome.receiptsRequeued = receiptReconcileResult.requeuedCount;
   }
 
-  const declarationRestoreResult = await restoreLocalDeclarationsFromServer({
+  const cloudRestoreResult = await restoreFarmerCloudState({
     apiFarmerId,
     ownedFarmerIds: farmerScopeIds,
     localFarmer: syncFarmer,
     localPlots: activePlots,
   });
-  if (declarationRestoreResult.producerRestored) {
-    outcome.declarationsRestored = (outcome.declarationsRestored ?? 0) + 1;
+  if (cloudRestoreResult.declarationsRestored > 0) {
+    outcome.declarationsRestored = cloudRestoreResult.declarationsRestored;
   }
-  if (declarationRestoreResult.plotsRestored > 0) {
-    outcome.declarationsRestored =
-      (outcome.declarationsRestored ?? 0) + declarationRestoreResult.plotsRestored;
+  if (cloudRestoreResult.groundTruthRestored > 0) {
+    outcome.groundTruthPhotosRestored = cloudRestoreResult.groundTruthRestored;
   }
-  if (declarationRestoreResult.legalRestored > 0) {
-    outcome.declarationsRestored =
-      (outcome.declarationsRestored ?? 0) + declarationRestoreResult.legalRestored;
+  if (cloudRestoreResult.evidenceRestored > 0) {
+    outcome.evidenceRestored = cloudRestoreResult.evidenceRestored;
   }
-  if (declarationRestoreResult.fetchFailed) {
+  if (cloudRestoreResult.fetchFailed) {
+    outcome.evidenceFetchFailed = true;
     outcome.declarationsFetchFailed = true;
   }
-
-  const groundTruthRestoreResult = await restoreLocalGroundTruthPhotosFromServer({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
-  if (groundTruthRestoreResult.restoredCount > 0) {
-    outcome.groundTruthPhotosRestored = groundTruthRestoreResult.restoredCount;
-  }
-  if (groundTruthRestoreResult.fetchFailed) {
-    outcome.evidenceFetchFailed = true;
-  }
-  if (groundTruthRestoreResult.downloadFailed > 0) {
-    outcome.evidenceDownloadFailed = (outcome.evidenceDownloadFailed ?? 0) + groundTruthRestoreResult.downloadFailed;
-  }
-
-  const evidenceRestoreResult = await restoreLocalEvidenceFromServer({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
-  if (evidenceRestoreResult.restoredCount > 0) {
-    outcome.evidenceRestored =
-      (outcome.evidenceRestored ?? 0) + evidenceRestoreResult.restoredCount;
-  }
-  if (evidenceRestoreResult.fetchFailed) {
-    outcome.evidenceFetchFailed = true;
-  }
-  if (evidenceRestoreResult.downloadFailed > 0) {
-    outcome.evidenceDownloadFailed =
-      (outcome.evidenceDownloadFailed ?? 0) + evidenceRestoreResult.downloadFailed;
+  if (cloudRestoreResult.downloadFailed > 0) {
+    outcome.evidenceDownloadFailed = cloudRestoreResult.downloadFailed;
   }
 
   reportSyncStepStart('plot_upload', { plotCount: activePlots.length });
@@ -349,6 +318,8 @@ export async function runFieldSyncPipeline(
       plotServerLinks,
     }).catch(() => undefined);
   }
+
+  await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
 
   let queueFirstError: string | undefined;
 

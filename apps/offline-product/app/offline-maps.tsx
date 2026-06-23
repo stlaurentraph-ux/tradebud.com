@@ -11,7 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { alertLocationPermissionDenied } from '@/features/permissions/locationPermission';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { useAppState } from '@/features/state/AppStateContext';
 import { setSetting } from '@/features/state/persistence';
+import { queueFieldDevicePreferencesSync } from '@/features/sync/syncFieldDevicePreferences';
 import { bboxAroundCoordinate } from '@/features/offlineTiles/manualTraceImagery';
 import {
   downloadOfflineTilePack,
@@ -22,12 +24,13 @@ import {
 } from '@/features/offlineTiles/offlineTiles';
 import { goBackOrHome } from '@/features/navigation/routes';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createOfflineMapsScreenStyles } from '@/app/_offlineMapsScreenStyles';
+import { createOfflineMapsScreenStyles } from '@/screenStyles/offlineMapsScreenStyles';
 
 export default function OfflineMapsScreen() {
   const colors = useAppColors();
   const styles = useThemedStyles(createOfflineMapsScreenStyles);
   const { t } = useLanguage();
+  const { farmer } = useAppState();
   const [packs, setPacks] = useState<OfflineTilesPackMeta[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
@@ -51,6 +54,9 @@ export default function OfflineMapsScreen() {
     await setSetting('offlineTilesEnabled', '1');
     await setSetting('offlineTilesActivePackId', packId);
     await refreshPacks();
+    if (farmer) {
+      await queueFieldDevicePreferencesSync(farmer).catch(() => undefined);
+    }
     Alert.alert(t('offline_maps_ready_title'), t('offline_maps_ready_body'), [
       { text: t('ok'), onPress: () => goBackOrHome(router) },
     ]);

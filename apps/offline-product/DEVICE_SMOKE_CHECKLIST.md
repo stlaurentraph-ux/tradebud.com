@@ -107,6 +107,10 @@ Use the same farmer account on a **second phone or tablet** after the first devi
 - [ ] Device B: Plot detail → Documents shows land title / tenure files from Device A
 - [ ] Device B: Plot detail → Field photos section shows ground-truth photos from Device A
 - [ ] Device B: Producer declarations and plot attestations match Device A
+- [ ] Device B: Settings → Declaration GPS matches Device A (Advanced)
+- [ ] Device B: Settings → profile photo matches Device A
+- [ ] Device B: Walk my plot offers to continue in-progress boundary from Device A
+- [ ] Device B: Offline map pack preference restored (tiles re-download in background)
 - [ ] Device B: Settings → Sync now → "Backup complete" with no pending queue
 
 ## Sign-off

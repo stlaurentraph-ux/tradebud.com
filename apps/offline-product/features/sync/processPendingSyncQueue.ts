@@ -2,6 +2,7 @@ import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { postHarvestToBackend, syncPlotLegalToBackend } from '@/features/api/postPlot';
 import { postAuditEventToBackend } from '@/features/api/audit';
 import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
+import { markFieldCloudAuditSynced } from '@/features/sync/queueFieldCloudAuditSync';
 import { fetchMergedServerPlots } from '@/features/sync/resolveFieldSyncScope';
 import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
 import { syncLandTitlePhotosWithFiles } from '@/features/evidence/syncLandTitlePhotosWithFiles';
@@ -430,6 +431,10 @@ export async function processPendingSyncQueue(params: {
           eventType,
           payload: auditPayload as Record<string, unknown>,
         });
+        const scopeId = String((auditPayload as Record<string, unknown>).farmerId ?? '').trim();
+        if (scopeId) {
+          await markFieldCloudAuditSynced({ eventType, scopeId });
+        }
       } else {
         await deletePendingSyncAction(a.id);
         await logAuditEvent({

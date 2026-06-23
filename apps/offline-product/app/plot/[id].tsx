@@ -19,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
-import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import { subscribeServerPlotSyncChanged, emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
@@ -74,6 +74,9 @@ import {
 import { countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { resolveBackendPlotMetaForLocal, resolveServerPlotIdForLocal, reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
+import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
+import { restoreCloudMediaFromServer } from '@/features/sync/restoreCloudMediaFromServer';
 import { hasDuplicatePlotName } from '@/features/plots/plotNameValidation';
 import { resolveHarvestPlotPickerId, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
 import {
@@ -90,7 +93,7 @@ import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { resolvePlotAreaHa } from '@/features/harvest/plotYieldCapacity';
 import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createPlotDetailScreenStyles } from '@/app/plot/_plotDetailScreenStyles';
+import { createPlotDetailScreenStyles } from '@/screenStyles/plotDetailScreenStyles';
 
 type Sub = 'photos' | 'documents' | 'deliveries';
 type SetupTarget = Sub | 'settings';
@@ -215,6 +218,52 @@ export default function PlotDetailScreen() {
       });
   }, [plot?.id, plotId]);
 
+  const refreshPlotLocalMedia = useCallback(async () => {
+    const resolvedPlotId = plot?.id ?? plotId;
+    if (!resolvedPlotId) return;
+    try {
+      const [nextPhotos, nextTitlePhotos, nextEvidence] = await Promise.all([
+        loadPhotosForPlot(resolvedPlotId),
+        loadTitlePhotosForPlot(resolvedPlotId),
+        loadEvidenceForPlot(resolvedPlotId),
+      ]);
+      setPhotos(nextPhotos);
+      setTitlePhotos(nextTitlePhotos);
+      setEvidence(nextEvidence);
+    } catch {
+      // Keep existing UI state on read failure.
+    }
+  }, [plot?.id, plotId]);
+
+  const restoreCloudMediaIfSignedIn = useCallback(async () => {
+    if (!farmer?.id || !hasSyncAuthSession()) return;
+    try {
+      const { farmerId, ownedFarmerIds } = await prepareFieldSyncContext({
+        profileFarmerId: farmer.id,
+        localPlots: plots,
+      });
+      const result = await restoreCloudMediaFromServer({
+        apiFarmerId: farmerId,
+        ownedFarmerIds,
+        localPlots: plots,
+        localFarmer: farmer,
+      });
+      const restored =
+        result.evidenceRestored +
+        result.groundTruthRestored +
+        result.landTitleRestored +
+        (result.devicePreferencesRestored ? 1 : 0) +
+        (result.profilePhotoRestored ? 1 : 0) +
+        (result.mappingDraftRestored ? 1 : 0) +
+        result.offlinePacksQueued;
+      if (restored > 0) {
+        emitServerPlotSyncChanged();
+      }
+    } catch {
+      // Non-blocking; full Sync now still available from Settings.
+    }
+  }, [farmer?.id, plots]);
+
   useEffect(() => {
     if (!farmer?.id) {
       setProducerEvidenceKinds([]);
@@ -319,17 +368,35 @@ export default function PlotDetailScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      void refreshBackendPlots(false);
-      void refreshTenureVerification();
-    }, [refreshBackendPlots, refreshTenureVerification]),
+      let cancelled = false;
+      void (async () => {
+        void refreshBackendPlots(false);
+        void refreshTenureVerification();
+        if (hasSyncAuthSession() && farmer?.id) {
+          await restoreCloudMediaIfSignedIn();
+          if (cancelled) return;
+        }
+        await refreshPlotLocalMedia();
+      })();
+      return () => {
+        cancelled = true;
+      };
+    }, [
+      farmer?.id,
+      refreshBackendPlots,
+      refreshPlotLocalMedia,
+      refreshTenureVerification,
+      restoreCloudMediaIfSignedIn,
+    ]),
   );
 
   useEffect(() => {
     return subscribeServerPlotSyncChanged(() => {
       void refreshBackendPlots(true);
       void refreshTenureVerification();
+      void refreshPlotLocalMedia();
     });
-  }, [refreshBackendPlots, refreshTenureVerification]);
+  }, [refreshBackendPlots, refreshPlotLocalMedia, refreshTenureVerification]);
 
   useEffect(() => {
     if (!backendPlotId) return;

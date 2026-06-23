@@ -126,6 +126,11 @@ function main() {
   issues.push(...checkSmokeChecklistCoversRegressionLedger());
   issues.push(...checkAppConfigPlainJavaScript());
 
+  const syncParityScript = path.join(root, 'scripts/sync-parity-guard.mjs');
+  if (fs.existsSync(syncParityScript)) {
+    // sync-parity-guard runs as its own script in qa:regression
+  }
+
   if (issues.length === 0) {
     console.log('field-regression-guard: OK');
     process.exit(0);

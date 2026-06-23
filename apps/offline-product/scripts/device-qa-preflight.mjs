@@ -81,8 +81,8 @@ assertIncludes('features/api/postPlot.ts', "from './syncAuthSession'", 'postPlot
 assertIncludes('scripts/security-preflight.mjs', 'sanitizeLogContext', 'security preflight script');
 
 // Home screen 2×2 tiles — layout + copy contract (dev + prod)
-assertIncludes('app/(tabs)/_homeScreenStyles.ts', 'HOME_TILE_PAD_MIN = 16', 'home tiles min padding');
-assertIncludes('app/(tabs)/_homeScreenStyles.ts', 'flex: 1,\n      alignSelf: \'stretch\'', 'home tiles flex row height');
+assertIncludes('screenStyles/homeScreenStyles.ts', 'HOME_TILE_PAD_MIN = 16', 'home tiles min padding');
+assertIncludes('screenStyles/homeScreenStyles.ts', 'flex: 1,\n      alignSelf: \'stretch\'', 'home tiles flex row height');
 assertIncludes('app/(tabs)/index.tsx', 'testID={`home-tile-${tile.key.replace(/_/g, \'-\')}`}', 'home tile test ids');
 assertNotIncludes('app/(tabs)/index.tsx', 'numberOfLines', 'home tiles wrap text (no numberOfLines)');
 
@@ -130,30 +130,29 @@ for (const file of localeFiles) {
 }
 console.log(`OK home tiles: short titles in ${localeFiles.length} locales`);
 
-function listGhostStyleRoutes(dirRel = 'app') {
+function listScreenStyleRoutes(dirRel = 'app') {
   const hits = [];
   const dir = path.join(root, dirRel);
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const rel = path.join(dirRel, entry.name);
     if (entry.isDirectory()) {
-      hits.push(...listGhostStyleRoutes(rel));
+      hits.push(...listScreenStyleRoutes(rel));
       continue;
     }
     if (!entry.name.endsWith('ScreenStyles.ts')) continue;
-    if (entry.name.startsWith('_')) continue;
     hits.push(rel);
   }
   return hits;
 }
 
-const ghostStyleRoutes = listGhostStyleRoutes();
-if (ghostStyleRoutes.length > 0) {
+const screenStyleRoutes = listScreenStyleRoutes();
+if (screenStyleRoutes.length > 0) {
   console.error(
-    `FAIL expo routes: unprefixed *ScreenStyles.ts under app/ (${ghostStyleRoutes.join(', ')}) — prefix with _`,
+    `FAIL expo routes: *ScreenStyles.ts must live outside app/ (${screenStyleRoutes.join(', ')})`,
   );
   process.exit(1);
 }
-console.log('OK expo routes: no unprefixed *ScreenStyles.ts under app/');
+console.log('OK expo routes: no *ScreenStyles.ts under app/');
 
 assertNotIncludes('app/(tabs)/explore.tsx', "router.push('/record')", 'explore uses tab record route');
 assertIncludes('app/(tabs)/explore.tsx', "router.push('/(tabs)/record')", 'explore record route');

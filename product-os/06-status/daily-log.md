@@ -1,3 +1,10 @@
+### 2026-06-23 (offline — farmer artifact sync registry Phase 1e)
+
+- **Registry** — `product-os/04-quality/farmer-artifact-sync-registry.md` + `farmerArtifactRegistry.ts`; CI `sync-parity-guard.mjs` in `qa:regression`.
+- **Orchestrator** — `restoreFarmerCloudState` + `enqueueFarmerCloudSyncActions` in Sync now pipeline.
+- **Cross-device** — Declaration GPS + offline tile prefs (`field_device_preferences_updated`); profile photo (Storage + audit); in-progress walk draft (SQLite + `plot_mapping_draft_saved`); offline pack manifest re-download.
+- **Tests / smoke** — `plotMappingDraft.test.ts`; DEVICE_SMOKE §12 extended; FR-009/FR-010 ledger rows.
+
 ### 2026-06-23 (offline — cross-device sync completeness)
 
 - **Gaps** — Ground-truth field photos never restored on second device; plot compliance declarations failed when audit stored server plot id; post-auth sync skipped partial restore (server > local); background sync skipped pull-only restore; OAuth sign-in fire-and-forgot backup; partial restore failures silent in Sync now message.

@@ -208,6 +208,22 @@ export async function initDatabase() {
   await ensurePlotEvidenceStorageSchemaExtras(db);
   await ensurePlotLegalSchemaExtras(db);
   await ensureLocalDeliveryReceiptsSchema(db);
+  await ensurePlotMappingDraftsSchema(db);
+}
+
+async function ensurePlotMappingDraftsSchema(db: SQLite.SQLiteDatabase) {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS plot_mapping_drafts (
+      farmerId TEXT PRIMARY KEY NOT NULL,
+      editPlotId TEXT,
+      plotName TEXT,
+      captureMethod TEXT,
+      isRecording INTEGER NOT NULL DEFAULT 0,
+      drawTracingActive INTEGER NOT NULL DEFAULT 0,
+      pointsJson TEXT NOT NULL,
+      updatedAt INTEGER NOT NULL
+    );
+  `);
 }
 
 async function ensureLocalDeliveryReceiptsSchema(db: SQLite.SQLiteDatabase) {
@@ -1134,6 +1150,67 @@ export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<voi
   } else {
     await setSetting('farmerProfilePhotoUri', uri);
   }
+}
+
+export type PlotMappingDraftRow = {
+  farmerId: string;
+  editPlotId: string | null;
+  plotName: string | null;
+  captureMethod: string | null;
+  isRecording: boolean;
+  drawTracingActive: boolean;
+  points: Array<{ latitude: number; longitude: number; timestamp?: number }>;
+  updatedAt: number;
+};
+
+export async function persistPlotMappingDraft(row: PlotMappingDraftRow): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `INSERT OR REPLACE INTO plot_mapping_drafts
+      (farmerId, editPlotId, plotName, captureMethod, isRecording, drawTracingActive, pointsJson, updatedAt)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?);`,
+    [
+      row.farmerId,
+      row.editPlotId,
+      row.plotName,
+      row.captureMethod,
+      row.isRecording ? 1 : 0,
+      row.drawTracingActive ? 1 : 0,
+      JSON.stringify(row.points),
+      row.updatedAt,
+    ],
+  );
+}
+
+export async function loadPlotMappingDraft(farmerId: string): Promise<PlotMappingDraftRow | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<any>(
+    'SELECT * FROM plot_mapping_drafts WHERE farmerId = ? LIMIT 1;',
+    [farmerId],
+  );
+  if (!row) return null;
+  let points: PlotMappingDraftRow['points'] = [];
+  try {
+    const parsed = JSON.parse(String(row.pointsJson ?? '[]'));
+    if (Array.isArray(parsed)) points = parsed;
+  } catch {
+    points = [];
+  }
+  return {
+    farmerId: String(row.farmerId),
+    editPlotId: row.editPlotId ?? null,
+    plotName: row.plotName ?? null,
+    captureMethod: row.captureMethod ?? null,
+    isRecording: Boolean(row.isRecording),
+    drawTracingActive: Boolean(row.drawTracingActive),
+    points,
+    updatedAt: Number(row.updatedAt) || 0,
+  };
+}
+
+export async function clearPlotMappingDraft(farmerId: string): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM plot_mapping_drafts WHERE farmerId = ?;', [farmerId]);
 }
 
 export async function deletePlotLocalData(plotId: string): Promise<void> {

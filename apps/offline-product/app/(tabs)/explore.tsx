@@ -26,7 +26,7 @@ import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
-import { createExploreScreenStyles } from '@/app/(tabs)/_exploreScreenStyles';
+import { createExploreScreenStyles } from '@/screenStyles/exploreScreenStyles';
 
 type PlotListTranslate = (key: string, values?: Record<string, string | number>) => string;
 
