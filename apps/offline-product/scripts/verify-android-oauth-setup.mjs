@@ -125,11 +125,14 @@ console.log('Google Cloud Console checklist (manual, on device only):');
 console.log('  1. Credentials → OAuth 2.0 Client ID → type Android');
 console.log('  2. Package name: com.tracebud.app');
 console.log('  3. SHA-1: expo.dev → tracebud-offline → Credentials → Android (upload keystore)');
-console.log('  4. After changing SHA-1 or intent filters → new EAS preview APK (OTA is not enough for OAuth native wiring)');
-console.log('  5. On device: Sign out → Google → account picker (not “Access blocked / invalid_request”)');
+console.log(
+  '  4. Advanced settings → Enable custom URI scheme (required for native com.googleusercontent.apps.*:/oauth2redirect)',
+);
+console.log('  5. After changing SHA-1, intent filters, or custom URI scheme → new EAS preview APK if native wiring changed');
+console.log('  6. On device: Sign out → Google → account picker (not “Access blocked / invalid_request”)');
 console.log('');
 console.log(
-  '[info] Server-side HTTP probes against accounts.google.com are not valid for Android installed clients.',
+  '[info] npm run oauth:verify:android cannot read Google Console Advanced Settings — only a physical device Google tap verifies step 4.',
 );
 console.log('[info] Confirm sign-in on a physical device with the preview APK you will ship to testers.');
 console.log('');

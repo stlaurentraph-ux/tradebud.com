@@ -105,7 +105,9 @@ export async function signInWithOAuthProvider(provider: OAuthProvider): Promise<
         if (message === 'sign_in_oauth_cancelled') {
           throw error;
         }
-        if (__DEV__ && Constants.isDevice === false) {
+        const allowBrowserFallback =
+          Platform.OS === 'android' || (__DEV__ && Constants.isDevice === false);
+        if (allowBrowserFallback) {
           console.warn('[oauth] Native Google sign-in failed; falling back to browser OAuth:', message);
           return signInWithOAuthBrowser(provider);
         }

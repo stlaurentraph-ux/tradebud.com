@@ -39,7 +39,9 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 ## 4. OAuth sign-in
 
 - [ ] Sign out → local plots remain on device
-- [ ] **Android:** Google Cloud → Android OAuth client has package `com.tracebud.app` + EAS upload **SHA-1** (expo.dev → Credentials → Android). Rebuild preview APK after SHA-1 or intent-filter changes — OTA alone is not enough.
+- [ ] **Android:** Google Cloud → Android OAuth client has package `com.tracebud.app` + EAS upload **SHA-1** (expo.dev → Credentials → Android)
+- [ ] **Android:** Same OAuth client → **Advanced settings** → **Enable custom URI scheme** (fixes Error 400 “Custom URI scheme is not enabled”). Wait ~5 min; no rebuild needed for this toggle alone.
+- [ ] **Android smoke (required before pilot APK):** On a physical device with the preview APK, tap Google sign-in once — account picker must appear (not “Access blocked”). CI `oauth:verify:android` does not cover this.
 - [ ] Google sign-in → backup offer when unsynced plots exist; upload succeeds
 - [ ] iOS: Apple sign-in completes (or skip on Android)
 - [ ] New OAuth account without display name → name step in create-account wizard → save → Home
