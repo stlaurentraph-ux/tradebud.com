@@ -997,6 +997,8 @@
   "sync_harvest_upload_failed_settings": "Could not send this delivery. It is still saved on this device — tap Sync now again on Wi‑Fi.",
   "sync_declaration_upload_failed": "Could not save this declaration to Tracebud. Your answers are still on this device — try again later.",
   "sync_declaration_upload_failed_settings": "Could not save this declaration to Tracebud. Your answers are still on this device — tap Sync now again.",
+  "sync_land_docs_still_pending_after_audit_limit": "Land title photos or documents are still waiting to upload. Tap Sync now again — they upload before declarations.",
+  "sync_declarations_pending_after_land_upload": "Land documents uploaded. Declarations still waiting — wait a minute, then tap Sync now again.",
   "settings_sync_last_error": "Last error ({action})",
   "settings_sync_failure_step": "Failed step",
   "sync_failure_step_token": "Sign-in refresh",

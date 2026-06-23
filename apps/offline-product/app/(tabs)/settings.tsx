@@ -1189,6 +1189,7 @@ export default function SettingsScreen() {
               syncOutcome: outcome,
               queueLastError,
               queueLastErrorActionType,
+              queueMediaPendingCount: freshPending?.queueMediaPendingCount ?? 0,
               plotsFetchFailed:
                 freshPending?.plotsFetchFailed === true || outcome.plotsFetchFailed === true,
               syncAccessFailure,

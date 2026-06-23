@@ -34,6 +34,7 @@ import {
   type PendingSyncAction,
 } from '@/features/state/persistence';
 import { compareHlcTimestamp, parseHlcTimestamp } from '@/features/sync/hlc';
+import { comparePendingSyncActionsForDrain } from '@/features/sync/pendingSyncQueuePriority';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 export type ProcessPendingSyncQueueResult = {
@@ -199,12 +200,7 @@ export async function processPendingSyncQueue(params: {
       return true;
     })
     .filter((row) => ignoreBackoff || isEligibleForRetry(row, nowMs))
-    .sort((a, b) => {
-      const cmp = compareHlcTimestamp(a.hlcTimestamp, b.hlcTimestamp);
-      if (cmp !== 0) return cmp;
-      if (a.createdAt !== b.createdAt) return a.createdAt - b.createdAt;
-      return a.id - b.id;
-    });
+    .sort(comparePendingSyncActionsForDrain);
   const maxActions =
     params.maxActions != null && Number.isFinite(params.maxActions)
       ? Math.max(0, Math.floor(params.maxActions))
@@ -490,6 +486,7 @@ export async function processPendingSyncQueue(params: {
         },
       }).catch(() => undefined);
       if (failure.cause === 'rate_limit') {
+        // Stop this pass; upload-phase drain runs audit rows separately afterward.
         break;
       }
     }

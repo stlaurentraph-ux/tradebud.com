@@ -48,7 +48,18 @@ export function formatSyncFailureUserMessage(failure: SyncFailure, t: TranslateF
   }
 
   if (failure.cause === 'rate_limit') {
-    if (failure.step === 'plot_upload' || failure.actionType === 'photos_sync' || failure.actionType === 'evidence_sync' || failure.actionType === 'harvest') {
+    if (
+      failure.actionType === 'audit_sync' ||
+      failure.step === 'declaration'
+    ) {
+      return t('sync_declaration_upload_failed_settings');
+    }
+    if (
+      failure.step === 'plot_upload' ||
+      failure.actionType === 'photos_sync' ||
+      failure.actionType === 'evidence_sync' ||
+      failure.actionType === 'harvest'
+    ) {
       return t('plot_upload_rate_limited_settings');
     }
     return t('sync_rate_limited_settings');

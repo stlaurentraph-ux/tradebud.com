@@ -27,9 +27,12 @@ export type SyncAttentionContext = {
     | 'unsyncedPlotCount'
     | 'blockedPlots'
     | 'supportMailto'
+    | 'queueCompleted'
   >;
   queueLastError?: string | null;
   queueLastErrorActionType?: PendingSyncAction['actionType'] | null;
+  /** Pending photos_sync + evidence_sync rows after a sync attempt. */
+  queueMediaPendingCount?: number;
   plotsFetchFailed?: boolean;
   syncAccessFailure?: 'network' | 'session_expired' | null;
   /** When upload pass found zero unsynced but server confirmation still pending. */
@@ -57,8 +60,30 @@ export function resolveSyncAttentionMessage(ctx: SyncAttentionContext): SyncAtte
   }
 
   if (syncOutcome?.syncFailure && total > 0) {
+    const failure = syncOutcome.syncFailure;
+    if (
+      failure.cause === 'rate_limit' &&
+      (failure.actionType === 'audit_sync' || failure.step === 'declaration') &&
+      (ctx.queueMediaPendingCount ?? 0) > 0
+    ) {
+      return {
+        message: t('sync_land_docs_still_pending_after_audit_limit'),
+        kind: 'error',
+      };
+    }
+    if (
+      failure.cause === 'rate_limit' &&
+      (failure.actionType === 'audit_sync' || failure.step === 'declaration') &&
+      (syncOutcome.queueCompleted ?? 0) > 0 &&
+      (ctx.queueMediaPendingCount ?? 0) === 0
+    ) {
+      return {
+        message: t('sync_declarations_pending_after_land_upload'),
+        kind: 'error',
+      };
+    }
     return {
-      message: formatSyncFailureUserMessage(syncOutcome.syncFailure, t),
+      message: formatSyncFailureUserMessage(failure, t),
       kind: 'error',
     };
   }

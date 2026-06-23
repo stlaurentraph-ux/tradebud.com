@@ -325,8 +325,6 @@ export async function runFieldSyncPipeline(
     }).catch(() => undefined);
   }
 
-  await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
-
   let queueFirstError: string | undefined;
 
   if (shouldProcessConsent) {
@@ -384,6 +382,8 @@ export async function runFieldSyncPipeline(
       if (queueRes.firstError) queueFirstError = queueRes.firstError;
     }
   }
+
+  await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
 
   const dateBackfillResult = await backfillServerHarvestDatesFromLocal({
     farmerId: syncFarmer.id,
