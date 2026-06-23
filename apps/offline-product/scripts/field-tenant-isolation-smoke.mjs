@@ -52,9 +52,15 @@ function loadManifest() {
 }
 
 const manifest = loadManifest();
+
+// Dependabot PRs structurally cannot receive repository secrets in GitHub Actions.
+// A dependency-bump PR cannot affect tenant isolation behaviour, so skip rather than fail.
+const isDependabot = process.env.GITHUB_ACTOR === 'dependabot[bot]';
+
 const strict =
-  process.argv.includes('--strict') ||
-  process.env[manifest.ciEnv?.strictFlag ?? 'FIELD_TENANT_SMOKE_STRICT'] === '1';
+  !isDependabot &&
+  (process.argv.includes('--strict') ||
+    process.env[manifest.ciEnv?.strictFlag ?? 'FIELD_TENANT_SMOKE_STRICT'] === '1');
 
 const API_URL = (
   process.env.FIELD_TENANT_SMOKE_API_URL?.trim() ||
