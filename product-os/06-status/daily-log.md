@@ -1,3 +1,9 @@
+### 2026-06-23 (Lane 2 — CI triage PR #258 dependabot ESLint 10 bump)
+
+- **Triage:** All 8 failing CI checks on PR #258 (`dependabot/npm_and_yarn/npm-development-11e27202be`) fail at the **Install dependencies** step with `ERESOLVE` — no lint/test/build actually runs.
+- **Root cause:** PR bumps `eslint` `9.39.3` → `10.5.0`. `eslint-config-next@16.2.9` requires `eslint-plugin-import@^2.32.0`, whose peer range is `eslint@"^2 || ... || ^9"` — ESLint 10 is excluded. `npm ci` hard-fails for every job.
+- **No code fix applied** (PR-caused; fix requires full ESLint 10 ecosystem upgrade — out of Lane 2 scope). Recommendation: close PR #258 and defer ESLint 10 upgrade until `eslint-plugin-import` v3 / `eslint-config-next` publishes ESLint 10 support.
+
 ### 2026-06-19 (backend — structural automation phase 2)
 
 - **Audit registry v2** — 117 `audit_log` events categorized; strict `--ci` src scan for unregistered emits.
