@@ -2,6 +2,7 @@ import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { postHarvestToBackend, syncPlotLegalToBackend } from '@/features/api/postPlot';
 import { postAuditEventToBackend } from '@/features/api/audit';
 import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
+import { invalidateAuditFetchCache } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import { markFieldCloudAuditSynced } from '@/features/sync/queueFieldCloudAuditSync';
 import { fetchMergedServerPlots } from '@/features/sync/resolveFieldSyncScope';
 import { fetchPlotsForFarmerCached } from '@/features/sync/serverPlotFetchCache';
@@ -431,6 +432,7 @@ export async function processPendingSyncQueue(params: {
           eventType,
           payload: auditPayload as Record<string, unknown>,
         });
+        invalidateAuditFetchCache();
         const scopeId = String((auditPayload as Record<string, unknown>).farmerId ?? '').trim();
         if (scopeId) {
           await markFieldCloudAuditSynced({ eventType, scopeId });
@@ -487,6 +489,9 @@ export async function processPendingSyncQueue(params: {
           error: errorText,
         },
       }).catch(() => undefined);
+      if (failure.cause === 'rate_limit') {
+        break;
+      }
     }
   }
 

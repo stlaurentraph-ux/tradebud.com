@@ -2,6 +2,8 @@
 
 Track completed milestones/features/docs updates.
 
+- Backend **cross-surface network routing** (2026-06-19): shared `email-to-tenant-resolution.ts` (delivery + inbox fan-out); consent farmers in `resolveFarmerIdsForTenant`; registry + guard + integration test.
+- Dashboard **compliance issues + exporter workflow structural contracts** (2026-06-19): registries, guards, PermissionGates, analytics, Playwright paths #5–#6; backend `requests_operational_issues` entry.
 - Dashboard **CRM/outreach structural contracts phases 1–4** (2026-06-19): registry + 8 guards; send/archive campaign UI; backend network role parity; Playwright golden path #4; `requests:archive` permission; feature-gate + audit parity guards; FEAT doc.
 - Dashboard **CRM/outreach structural contracts** (2026-06-19): `dashboardCrmOutreachRegistry.ts`; guards for contact statuses, campaign/inbox states, request types, network PermissionGate contracts; outreach `requests:create` gate.
 - Dashboard **structural automation phase 2** (2026-06-19): legal/DDS registry, permission matrix, backend role parity, analytics slice guards.

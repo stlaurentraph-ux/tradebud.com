@@ -33,6 +33,10 @@ export const DASHBOARD_EVENTS = {
   CONTACT_STATUS_CHANGE_FAILURE: 'dashboard_contact_status_change_failure',
   CONTACT_CREATE_SUCCESS: 'dashboard_contact_create_success',
   CONTACT_CREATE_FAILURE: 'dashboard_contact_create_failure',
+  ISSUE_STATUS_CHANGED: 'dashboard_issue_status_changed',
+  ISSUE_STATUS_CHANGE_FAILURE: 'dashboard_issue_status_change_failure',
+  ISSUE_CREATE_SUCCESS: 'dashboard_issue_create_success',
+  ISSUE_REMEDIATION_CLICKED: 'dashboard_issue_remediation_clicked',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -51,6 +55,7 @@ const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.CAMPAIGN_ARCHIVE_FAILURE,
   DASHBOARD_EVENTS.CONTACT_STATUS_CHANGE_FAILURE,
   DASHBOARD_EVENTS.CONTACT_CREATE_FAILURE,
+  DASHBOARD_EVENTS.ISSUE_STATUS_CHANGE_FAILURE,
 ]);
 
 function compactProps(properties?: DashboardEventProps): Record<string, string | number | boolean> {

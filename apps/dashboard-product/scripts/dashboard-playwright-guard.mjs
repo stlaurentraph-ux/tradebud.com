@@ -34,8 +34,8 @@ function assertManifestShape(manifest) {
   if (manifest.schemaVersion !== 1) {
     throw new Error('manifest schemaVersion must be 1');
   }
-  if (manifest.slice !== '4.5') {
-    throw new Error('manifest slice must be 4.5');
+  if (manifest.slice !== '4.6') {
+    throw new Error('manifest slice must be 4.6');
   }
   if (manifest.goldenTenantId !== 'tenant_rwanda_001') {
     throw new Error('manifest goldenTenantId must be tenant_rwanda_001');
@@ -46,18 +46,20 @@ function assertManifestShape(manifest) {
   if (manifest.smoke?.onboardingStepKey !== 'create_first_campaign') {
     throw new Error('manifest smoke.onboardingStepKey must be create_first_campaign');
   }
-  if (!Array.isArray(manifest.paths) || manifest.paths.length !== 4) {
-    throw new Error('manifest must define exactly four golden paths');
+  if (!Array.isArray(manifest.paths) || manifest.paths.length !== 6) {
+    throw new Error('manifest must define exactly six golden paths');
   }
   const ids = manifest.paths.map((item) => item.id);
   if (
     !ids.includes('login_shell') ||
     !ids.includes('login_stub') ||
     !ids.includes('onboarding_read_write') ||
-    !ids.includes('outreach_send_archive')
+    !ids.includes('outreach_send_archive') ||
+    !ids.includes('compliance_issues_status') ||
+    !ids.includes('exporter_package_readiness')
   ) {
     throw new Error(
-      'manifest paths must include login_shell, login_stub, onboarding_read_write, and outreach_send_archive',
+      'manifest paths must include login_shell, login_stub, onboarding_read_write, outreach_send_archive, compliance_issues_status, and exporter_package_readiness',
     );
   }
 }
@@ -117,6 +119,27 @@ function assertSpecAlignment(manifest) {
   }
   if (!outreachSpec.includes('Archive') && !outreachSpec.includes('archive')) {
     throw new Error('outreach spec must exercise archive action');
+  }
+
+  const issuesPath = manifest.paths.find((item) => item.id === 'compliance_issues_status');
+  const issuesSpec = readDashboard(issuesPath.specFile);
+  if (!issuesSpec.includes(issuesPath.mockedApi) && !apiMocks.includes(issuesPath.mockedApi)) {
+    throw new Error('compliance issues spec must mock /api/requests/issues');
+  }
+  if (!issuesSpec.includes('/compliance/issues')) {
+    throw new Error('compliance issues spec must navigate to /compliance/issues');
+  }
+
+  const exporterPath = manifest.paths.find((item) => item.id === 'exporter_package_readiness');
+  const exporterSpec = readDashboard(exporterPath.specFile);
+  if (!exporterSpec.includes(exporterPath.mockedApi) && !apiMocks.includes(exporterPath.mockedApi)) {
+    throw new Error('exporter readiness spec must mock /api/harvest/packages');
+  }
+  if (!exporterSpec.includes('Assemble Shipment')) {
+    throw new Error('exporter readiness spec must assert assemble shipment gate');
+  }
+  if (!readDashboard('e2e/helpers/smoke-session.ts').includes('GOLDEN_EXPORTER_SMOKE')) {
+    throw new Error('smoke-session helper must define GOLDEN_EXPORTER_SMOKE');
   }
 }
 

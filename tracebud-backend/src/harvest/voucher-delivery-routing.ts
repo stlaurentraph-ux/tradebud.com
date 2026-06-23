@@ -1,5 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { Pool } from 'pg';
+import { resolveTenantIdForContactEmail } from '../network/email-to-tenant-resolution';
 
 export interface VoucherDeliveryRecipientInput {
   farmerId: string;
@@ -18,29 +19,7 @@ function normalizeEmail(email: string | null | undefined): string | null {
 }
 
 export async function resolveTenantIdForBuyerEmail(pool: Pool, email: string): Promise<string | null> {
-  const normalized = normalizeEmail(email);
-  if (!normalized) {
-    return null;
-  }
-  try {
-    const res = await pool.query<{ tenant_id: string }>(
-      `
-        SELECT tenant_id
-        FROM tenant_signup_contacts
-        WHERE lower(email) = $1
-        ORDER BY updated_at DESC NULLS LAST, created_at DESC NULLS LAST
-        LIMIT 1
-      `,
-      [normalized],
-    );
-    return res.rows[0]?.tenant_id ?? null;
-  } catch (error) {
-    const code = (error as { code?: string } | null)?.code;
-    if (code === '42P01') {
-      return null;
-    }
-    throw error;
-  }
+  return resolveTenantIdForContactEmail(pool, email);
 }
 
 export async function farmerCanDeliverToTenant(

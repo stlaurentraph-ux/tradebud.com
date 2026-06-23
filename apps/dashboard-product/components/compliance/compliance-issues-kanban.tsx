@@ -3,15 +3,23 @@
 import Link from 'next/link';
 import { useContext } from 'react';
 import { AlertCircle, AlertTriangle, Clock, Info } from 'lucide-react';
+import { PermissionGate } from '@/components/common/permission-gate';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import {
+  DASHBOARD_ISSUE_KANBAN_COLUMNS,
+  getKanbanAdvanceStatus,
+  type DashboardOperationalIssueSeverity,
+  type DashboardOperationalIssueStatus,
+} from '@/lib/dashboardComplianceIssuesRegistry';
 import {
   getIssueSlaUrgency,
   issueSlaRowClass,
 } from '@/lib/compliance-issue-sla';
 import { getIssueRemediationHref, isPersistedComplianceIssue } from '@/lib/compliance-issue-remediation';
 import { issueKindBadgeClass } from '@/lib/compliance-issue-ownership';
+import type { ComplianceIssueKind } from '@/lib/compliance-issue-ownership';
 import { LocaleContext } from '@/lib/locale-context';
 import {
   getIssuesAdvanceStatusLabel,
@@ -28,8 +36,8 @@ import {
   getIssuesSlaLabel,
 } from '@/lib/workflow-terminology-labels';
 
-export type ComplianceIssueSeverity = 'INFO' | 'WARNING' | 'BLOCKING';
-export type ComplianceIssueStatus = 'open' | 'in_progress' | 'resolved' | 'closed';
+export type ComplianceIssueSeverity = DashboardOperationalIssueSeverity;
+export type ComplianceIssueStatus = DashboardOperationalIssueStatus;
 
 export interface ComplianceIssueRecord {
   id: string;
@@ -46,20 +54,14 @@ export interface ComplianceIssueRecord {
   createdAt: string;
   dueDate?: string;
   resolutionPath?: string;
-  issueKind?: 'canonical' | 'campaign' | 'request' | 'upstream_blocker';
+  issueKind?: ComplianceIssueKind;
   ownerRole?: string;
   ownerOrganisationName?: string | null;
   sourceIssueId?: string | null;
   canUpdateStatus?: boolean;
 }
 
-type KanbanColumnKey = 'open' | 'in_progress' | 'resolved';
-
-const KANBAN_COLUMNS: Array<{ key: KanbanColumnKey; statuses: ComplianceIssueStatus[] }> = [
-  { key: 'open', statuses: ['open'] },
-  { key: 'in_progress', statuses: ['in_progress'] },
-  { key: 'resolved', statuses: ['resolved', 'closed'] },
-];
+const KANBAN_COLUMNS = DASHBOARD_ISSUE_KANBAN_COLUMNS;
 
 function severityIcon(severity: ComplianceIssueSeverity) {
   if (severity === 'BLOCKING') return <AlertCircle className="h-4 w-4 text-red-500" aria-hidden="true" />;
@@ -90,7 +92,9 @@ export function ComplianceIssuesKanban({
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       {KANBAN_COLUMNS.map((column) => {
-        const columnIssues = issues.filter((issue) => column.statuses.includes(issue.status));
+        const columnIssues = issues.filter((issue) =>
+          (column.statuses as readonly ComplianceIssueStatus[]).includes(issue.status),
+        );
         const overdueCount = columnIssues.filter((issue) => getIssueSlaUrgency(issue.dueDate) === 'overdue').length;
         const columnLabel = getIssuesKanbanColumnLabel(column.key, t);
         return (
@@ -113,12 +117,7 @@ export function ComplianceIssuesKanban({
                 columnIssues.map((issue) => {
                   const slaLabel = getIssuesSlaLabel(issue.dueDate, t);
                   const urgency = getIssueSlaUrgency(issue.dueDate);
-                  const nextStatus: ComplianceIssueStatus | null =
-                    issue.status === 'open'
-                      ? 'in_progress'
-                      : issue.status === 'in_progress'
-                        ? 'resolved'
-                        : null;
+                  const nextStatus = getKanbanAdvanceStatus(issue.status);
                   const canAdvanceStatus = Boolean(
                     nextStatus &&
                       onAdvanceStatus &&
@@ -185,17 +184,21 @@ export function ComplianceIssuesKanban({
                             ) : null}
                           </div>
                           {canAdvanceStatus ? (
-                            <span
-                              role="presentation"
-                              className="mt-2 inline-flex text-[11px] font-medium text-primary"
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                onAdvanceStatus?.(issue.id, nextStatus as ComplianceIssueStatus);
-                              }}
-                              onKeyDown={(event) => event.stopPropagation()}
-                            >
-                              {getIssuesAdvanceStatusLabel(nextStatus as 'in_progress' | 'resolved', t)}
-                            </span>
+                            <PermissionGate permission="compliance:resolve_issue">
+                              <span
+                                role="presentation"
+                                className="mt-2 inline-flex text-[11px] font-medium text-primary"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  if (nextStatus) {
+                                    onAdvanceStatus?.(issue.id, nextStatus);
+                                  }
+                                }}
+                                onKeyDown={(event) => event.stopPropagation()}
+                              >
+                                {getIssuesAdvanceStatusLabel(nextStatus as 'in_progress' | 'resolved', t)}
+                              </span>
+                            </PermissionGate>
                           ) : remediationHref ? (
                             <Link
                               href={remediationHref}

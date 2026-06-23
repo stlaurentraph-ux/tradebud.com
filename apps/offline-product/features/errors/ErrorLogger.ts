@@ -40,12 +40,14 @@ function isRateLimitMessage(message: string, context?: Record<string, unknown>):
 }
 
 function dedupeKey(message: string, context?: Record<string, unknown>): string {
+  const logContext = String(context?.context ?? context?.phase ?? '');
+  const omitFarmerId = logContext === 'fetchAudit';
   return [
     message.toLowerCase().trim(),
     String(context?.statusCode ?? ''),
-    String(context?.context ?? context?.phase ?? ''),
+    logContext,
     String(context?.action ?? ''),
-    String(context?.farmerId ?? ''),
+    omitFarmerId ? '' : String(context?.farmerId ?? ''),
     String(context?.plotId ?? ''),
     String(context?.clientPlotId ?? ''),
   ].join('|');

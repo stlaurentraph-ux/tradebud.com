@@ -27,7 +27,10 @@ describe('voucher-delivery-routing', () => {
     const pool = {
       query: jest
         .fn()
-        .mockResolvedValueOnce({ rows: [{ tenant_id: 'tenant_exporter' }], rowCount: 1 })
+        .mockResolvedValueOnce({
+          rows: [{ email: 'buyer@coop.example', tenant_id: 'tenant_exporter' }],
+          rowCount: 1,
+        })
         .mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 }),
     } as unknown as Pool;
 
@@ -56,7 +59,7 @@ describe('voucher-delivery-routing', () => {
   });
 
   it('resolves tenant from signup contact email', async () => {
-    const pool = makePool([{ tenant_id: 'tenant_1' }]);
+    const pool = makePool([{ email: 'ops@example.com', tenant_id: 'tenant_1' }]);
     await expect(resolveTenantIdForBuyerEmail(pool, 'Ops@Example.com')).resolves.toBe('tenant_1');
   });
 

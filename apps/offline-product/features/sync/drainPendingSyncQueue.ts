@@ -50,6 +50,16 @@ export async function drainPendingSyncQueueForManualSync(params: {
       merged.fetchFailed = res.fetchFailed;
     }
 
+    if (res.syncFailure?.cause === 'rate_limit') {
+      if (res.firstError && !merged.firstError) {
+        merged.firstError = res.firstError;
+      }
+      if (res.syncFailure && !merged.syncFailure) {
+        merged.syncFailure = res.syncFailure;
+      }
+      break;
+    }
+
     const madeProgress = res.completed > 0 || res.droppedInvalid > 0;
     if (!madeProgress) {
       break;

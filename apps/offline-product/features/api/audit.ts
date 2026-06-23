@@ -34,11 +34,8 @@ export async function fetchAuditForFarmer(farmerId: string) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    logError(new Error(body.message ?? `Audit fetch error: ${res.status}`), {
-      context: 'fetchAudit',
-      statusCode: res.status,
-      farmerId,
-    });
+    // Restore/sync callers handle failures gracefully; logging here duplicated
+    // once per parallel restore step and flooded Metro LogBox in dev.
     throw new Error(body.message ?? `Audit fetch error: ${res.status}`);
   }
 
@@ -84,11 +81,13 @@ export async function postAuditEventToBackend(params: {
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      logError(new Error(body.message ?? `Audit POST failed (${res.status})`), {
-        context: 'postAuditEvent',
-        statusCode: res.status,
-        eventType: params.eventType,
-      });
+      if (res.status !== 429) {
+        logError(new Error(body.message ?? `Audit POST failed (${res.status})`), {
+          context: 'postAuditEvent',
+          statusCode: res.status,
+          eventType: params.eventType,
+        });
+      }
       return {
         ok: false,
         reason: 'server_error',

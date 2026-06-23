@@ -1,3 +1,15 @@
+### 2026-06-19 (backend — cross-surface network routing)
+
+- **Shared resolver** — `email-to-tenant-resolution.ts` (signup contacts + admin_users) used by delivery routing and inbox campaign fan-out.
+- **Buyer visibility** — `resolveFarmerIdsForTenant` unions active `consent_grants` farmers.
+- **Structural** — `networkRoutingRegistry.ts`, guard, integration test `network-routing-delivery.int.spec.ts`.
+
+### 2026-06-19 (dashboard — compliance issues + exporter structural)
+
+- **Operational issues** — `dashboardComplianceIssuesRegistry.ts` + 3 guards; kanban/detail PermissionGate; analytics (`ISSUE_*`); Playwright `compliance-issues-status.spec.ts`; backend `requests_operational_issues` binding.
+- **Exporter critical path** — `dashboardExporterWorkflowRegistry.ts` + guard; package detail `assemble-shipment-action` testid; Playwright `exporter-package-readiness.spec.ts`.
+- **Golden paths** — Playwright manifest 4 → 6 (slice 4.6); `qa:structural:ci` green.
+
 ### 2026-06-19 (dashboard — CRM/outreach phase 4)
 
 - **Contact create analytics** — success/failure in `createContact`.

@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { GOLDEN_SMOKE } from './smoke-session';
+import { GOLDEN_EXPORTER_SMOKE, GOLDEN_SMOKE } from './smoke-session';
 
 const EMPTY_METRICS = {
   total_packages: 0,
@@ -24,7 +24,11 @@ const EMPTY_METRICS = {
   recent_activity: [],
 };
 
-export async function mockAuthenticatedDashboardApis(page: Page): Promise<void> {
+export async function mockAuthenticatedDashboardApis(
+  page: Page,
+  options?: { primaryRole?: string },
+): Promise<void> {
+  const primaryRole = options?.primaryRole ?? 'importer';
   await page.route('**/api/launch/commercial-profile', async (route) => {
     await route.fulfill({
       status: 200,
@@ -34,8 +38,8 @@ export async function mockAuthenticatedDashboardApis(page: Page): Promise<void> 
           tenant_id: GOLDEN_SMOKE.tenantId,
           organization_name: GOLDEN_SMOKE.organizationName,
           country: 'RW',
-          primary_role: 'importer',
-          supply_chain_roles: ['importer'],
+          primary_role: primaryRole,
+          supply_chain_roles: [primaryRole],
           team_size: null,
           main_commodity: 'coffee',
           primary_objective: null,
@@ -213,4 +217,132 @@ export async function mockOutreachCampaignApis(page: Page): Promise<{
     sendCalls: () => sendCount,
     archiveCalls: () => archiveCount,
   };
+}
+
+const SMOKE_CANONICAL_ISSUE = {
+  id: 'issue_compliance_playwright_1',
+  title: 'Playwright tenure gap',
+  description: 'Missing land title evidence for plot review',
+  severity: 'WARNING',
+  status: 'open',
+  owner: null,
+  linked_entity_type: 'plot',
+  linked_entity_id: 'plot_pw_1',
+  linked_entity_name: 'Plot PW-1',
+  due_date: null,
+  created_at: new Date().toISOString(),
+  resolution_path: '/plots/plot_pw_1',
+  issue_kind: 'canonical',
+  owner_role: 'exporter',
+  owner_organisation_name: 'Golden Exporter',
+  source_issue_id: null,
+  can_update_status: true,
+};
+
+export async function mockComplianceIssuesApis(page: Page): Promise<{
+  patchCalls: () => number;
+}> {
+  let issues = [{ ...SMOKE_CANONICAL_ISSUE }];
+  let patchCount = 0;
+
+  await page.route('**/api/requests/issues', async (route) => {
+    const request = route.request();
+    if (request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(issues),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.route('**/api/requests/issues/*', async (route) => {
+    if (route.request().method() !== 'PATCH') {
+      await route.continue();
+      return;
+    }
+    patchCount += 1;
+    const body = (route.request().postDataJSON() ?? {}) as { status?: string };
+    issues = issues.map((issue) =>
+      issue.id === SMOKE_CANONICAL_ISSUE.id
+        ? { ...issue, status: body.status ?? issue.status }
+        : issue,
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ id: SMOKE_CANONICAL_ISSUE.id, status: body.status ?? 'open' }),
+    });
+  });
+
+  return { patchCalls: () => patchCount };
+}
+
+const SMOKE_EXPORTER_PACKAGE = {
+  package: {
+    id: GOLDEN_EXPORTER_SMOKE.packageId,
+    label: 'SHP-PW-001',
+    status: 'draft',
+    farmer_id: 'farmer_pw_1',
+    sender_tenant_id: GOLDEN_EXPORTER_SMOKE.tenantId,
+    sender_org: 'Coop Alpha',
+    created_at: new Date().toISOString(),
+    plot_count: 1,
+    compliant_plot_count: 0,
+  },
+  vouchers: [],
+};
+
+export async function mockExporterPackageReadinessApis(
+  page: Page,
+  options?: { blocked?: boolean },
+): Promise<void> {
+  const blocked = options?.blocked ?? true;
+  const packageId = GOLDEN_EXPORTER_SMOKE.packageId;
+
+  await page.route('**/api/harvest/packages/**', async (route) => {
+    const request = route.request();
+    const url = request.url();
+
+    if (request.method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+
+    if (url.includes('/readiness')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          packageId,
+          status: blocked ? 'blocked' : 'ready_to_submit',
+          blockers: blocked
+            ? [
+                {
+                  code: 'MISSING_PLOT_GEOMETRY',
+                  message: 'Plot geometry missing for linked producer',
+                  severity: 'blocker',
+                },
+              ]
+            : [],
+          warnings: [],
+          checkedAt: new Date().toISOString(),
+        }),
+      });
+      return;
+    }
+
+    if (url.includes(packageId)) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(SMOKE_EXPORTER_PACKAGE),
+      });
+      return;
+    }
+
+    await route.continue();
+  });
 }

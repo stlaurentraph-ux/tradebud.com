@@ -57,6 +57,7 @@ DDS audit phases expand to `dds_package_*_{phase}` events — see `backendFiling
 | `backend-filing-state-guard` | harvest.service ↔ filing registry |
 | `backend-plot-compliance-guard` | plot status registry |
 | `backend-api-access-guard` | controller role gates |
+| `backend-network-routing-guard` | cross-surface email routing + consent visibility |
 | `backend-deploy-smoke-guard` | deploy manifest |
 | `stripe-webhook-replay-guard` | billing webhook replay |
 | `check-tenure-parse-readiness --static-only` | tenure parse static readiness |

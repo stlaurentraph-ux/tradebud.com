@@ -22,6 +22,11 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
     roles: ['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer'],
   },
   {
+    id: 'requests_operational_issues',
+    file: 'requests/requests.controller.ts',
+    roles: ['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer', 'sponsor'],
+  },
+  {
     id: 'requests_evidence',
     file: 'requests/requests.controller.ts',
     roles: ['admin', 'exporter', 'compliance_manager', 'cooperative'],

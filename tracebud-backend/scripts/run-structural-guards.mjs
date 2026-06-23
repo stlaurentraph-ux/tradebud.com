@@ -17,6 +17,7 @@ const guards = [
   ['backend-filing-state-guard.mjs', []],
   ['backend-plot-compliance-guard.mjs', []],
   ['backend-api-access-guard.mjs', []],
+  ['backend-network-routing-guard.mjs', []],
   ['backend-deploy-smoke-guard.mjs', []],
   ['stripe-webhook-replay-guard.mjs', []],
   ['check-tenure-parse-readiness.mjs', ['--static-only']],

@@ -3,11 +3,13 @@ import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { pendingSyncDedupKey } from '@/features/sync/pendingSyncDedup';
+import { invalidateAuditFetchCache } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import {
   deletePendingSyncAction,
   enqueuePendingSync,
   getSetting,
   loadPendingSyncActions,
+  markPendingSyncAttempt,
   setSetting,
   type PendingSyncAction,
 } from '@/features/state/persistence';
@@ -72,32 +74,32 @@ async function clearDeclarationAuditSyncedMarker(params: {
   }
 }
 
-async function deletePendingSyncByDedupKey(
+async function findPendingSyncByDedupKey(
   actionType: PendingSyncAction['actionType'],
   payloadJson: string,
-): Promise<void> {
+): Promise<PendingSyncAction | undefined> {
   const key = pendingSyncDedupKey(actionType, payloadJson);
-  if (!key) return;
+  if (!key) return undefined;
   const rows = await loadPendingSyncActions().catch(() => []);
-  const match = rows.find(
+  return rows.find(
     (row) =>
       row.actionType === actionType &&
       pendingSyncDedupKey(row.actionType, row.payloadJson) === key,
   );
+}
+
+async function deletePendingSyncByDedupKey(
+  actionType: PendingSyncAction['actionType'],
+  payloadJson: string,
+): Promise<void> {
+  const match = await findPendingSyncByDedupKey(actionType, payloadJson);
   if (match) await deletePendingSyncAction(match.id).catch(() => undefined);
 }
 
-/** Queue a self-declaration audit row and post immediately when signed in. */
-export async function queueDeclarationAuditSync(params: {
-  eventType: string;
-  payload: Record<string, unknown>;
-}): Promise<QueueDeclarationAuditResult> {
-  await clearDeclarationAuditSyncedMarker(params);
+async function ensurePendingDeclarationAuditRow(payloadJson: string): Promise<PendingSyncAction> {
+  const existing = await findPendingSyncByDedupKey('audit_sync', payloadJson);
+  if (existing) return existing;
 
-  const payloadJson = JSON.stringify({
-    eventType: params.eventType,
-    payload: params.payload,
-  });
   await enqueuePendingSync({
     createdAt: Date.now(),
     actionType: 'audit_sync',
@@ -105,7 +107,37 @@ export async function queueDeclarationAuditSync(params: {
     lastError: null,
   });
 
-  if (!hasSyncAuthSession()) return 'queued';
+  const created = await findPendingSyncByDedupKey('audit_sync', payloadJson);
+  if (!created) {
+    throw new Error('Failed to enqueue declaration audit sync row');
+  }
+  return created;
+}
+
+/** Queue a self-declaration audit row; optional immediate POST when signed in. */
+export async function queueDeclarationAuditSync(params: {
+  eventType: string;
+  payload: Record<string, unknown>;
+  /** Sync now drains the queue — skip an extra POST before the drain pass. */
+  deferPost?: boolean;
+  /** User just saved attestations — allow re-upload even if a marker exists. */
+  clearSyncedMarker?: boolean;
+}): Promise<QueueDeclarationAuditResult> {
+  if (params.clearSyncedMarker) {
+    await clearDeclarationAuditSyncedMarker(params);
+  } else if (await isDeclarationAuditSynced(params)) {
+    return 'synced';
+  }
+
+  const payloadJson = JSON.stringify({
+    eventType: params.eventType,
+    payload: params.payload,
+  });
+
+  if (params.deferPost || !hasSyncAuthSession()) {
+    await ensurePendingDeclarationAuditRow(payloadJson);
+    return 'queued';
+  }
 
   const result = await postAuditEventToBackend({
     eventType: params.eventType,
@@ -114,14 +146,15 @@ export async function queueDeclarationAuditSync(params: {
   if (result.ok) {
     await deletePendingSyncByDedupKey('audit_sync', payloadJson);
     await markDeclarationAuditSynced(params);
+    invalidateAuditFetchCache();
     return 'synced';
   }
 
-  await enqueuePendingSync({
-    createdAt: Date.now(),
-    actionType: 'audit_sync',
-    payloadJson,
-    lastError: result.message ?? result.reason,
+  const row = await ensurePendingDeclarationAuditRow(payloadJson);
+  await markPendingSyncAttempt(row.id, {
+    attempts: row.attempts ?? 0,
+    lastError: result.message ?? result.reason ?? 'Declaration audit sync failed',
+    lastAttemptAt: Date.now(),
   });
   return 'queued';
 }
@@ -132,6 +165,7 @@ export async function queueProducerAttestationAuditSync(
   if (!hasProducerAttestationsComplete(farmer)) return 'skipped';
   return queueDeclarationAuditSync({
     eventType: 'producer_attestations_updated',
+    clearSyncedMarker: true,
     payload: {
       farmerId: farmer.id,
       fpicConsent: farmer.fpicConsent === true,
@@ -151,6 +185,7 @@ export async function queuePlotComplianceAuditSync(params: {
   if (!(params.plot.landTenureDeclared && params.plot.noDeforestationDeclared)) return 'skipped';
   return queueDeclarationAuditSync({
     eventType: 'plot_compliance_declared',
+    clearSyncedMarker: true,
     payload: {
       plotId: params.plot.id,
       farmerId: params.farmerId,
@@ -187,6 +222,7 @@ export async function enqueuePendingDeclarationAuditsForDevice(params: {
       await queueDeclarationAuditSync({
         eventType: 'producer_attestations_updated',
         payload,
+        deferPost: true,
       });
       producer = true;
     }
@@ -211,6 +247,7 @@ export async function enqueuePendingDeclarationAuditsForDevice(params: {
     await queueDeclarationAuditSync({
       eventType: 'plot_compliance_declared',
       payload,
+      deferPost: true,
     });
     plots += 1;
   }

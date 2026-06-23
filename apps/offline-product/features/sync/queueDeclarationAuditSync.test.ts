@@ -1,21 +1,119 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { pendingSyncDedupKey } from './pendingSyncDedup';
+const postAuditEventToBackend = vi.fn();
+const hasSyncAuthSession = vi.fn();
+const enqueuePendingSync = vi.fn();
+const loadPendingSyncActions = vi.fn();
+const markPendingSyncAttempt = vi.fn();
+const getSetting = vi.fn();
+const setSetting = vi.fn();
+const deletePendingSyncAction = vi.fn();
 
-describe('pendingSyncDedupKey audit_sync', () => {
-  it('dedupes producer attestations per farmer', () => {
-    const payloadJson = JSON.stringify({
+vi.mock('@/features/api/audit', () => ({
+  postAuditEventToBackend,
+}));
+
+vi.mock('@/features/api/syncAuthSession', () => ({
+  hasSyncAuthSession,
+}));
+
+vi.mock('@/features/sync/fetchMergedAuditEventsForFarmer', () => ({
+  invalidateAuditFetchCache: vi.fn(),
+}));
+
+vi.mock('@/features/state/persistence', () => ({
+  enqueuePendingSync,
+  loadPendingSyncActions,
+  markPendingSyncAttempt,
+  getSetting,
+  setSetting,
+  deletePendingSyncAction,
+}));
+
+async function loadModule() {
+  return import('./queueDeclarationAuditSync');
+}
+
+describe('queueDeclarationAuditSync', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    postAuditEventToBackend.mockReset();
+    hasSyncAuthSession.mockReset();
+    enqueuePendingSync.mockReset();
+    loadPendingSyncActions.mockReset();
+    markPendingSyncAttempt.mockReset();
+    getSetting.mockReset();
+    setSetting.mockReset();
+    deletePendingSyncAction.mockReset();
+
+    hasSyncAuthSession.mockReturnValue(true);
+    getSetting.mockResolvedValue(null);
+    setSetting.mockResolvedValue(undefined);
+    deletePendingSyncAction.mockResolvedValue(undefined);
+    markPendingSyncAttempt.mockResolvedValue(undefined);
+    loadPendingSyncActions.mockResolvedValue([]);
+    enqueuePendingSync.mockImplementation(async (row) => {
+      loadPendingSyncActions.mockResolvedValue([
+        {
+          id: 42,
+          createdAt: row.createdAt,
+          actionType: row.actionType,
+          payloadJson: row.payloadJson,
+          lastError: row.lastError,
+          attempts: 0,
+        },
+      ]);
+    });
+  });
+
+  it('queues only once during sync backfill (deferPost)', async () => {
+    const { queueDeclarationAuditSync } = await loadModule();
+
+    await queueDeclarationAuditSync({
+      eventType: 'producer_attestations_updated',
+      payload: { farmerId: 'farmer-1' },
+      deferPost: true,
+    });
+
+    expect(enqueuePendingSync).toHaveBeenCalledTimes(1);
+    expect(postAuditEventToBackend).not.toHaveBeenCalled();
+  });
+
+  it('does not enqueue a second row when immediate POST fails', async () => {
+    postAuditEventToBackend.mockResolvedValue({
+      ok: false,
+      reason: 'server_error',
+      message: 'Too many requests, please slow down.',
+    });
+    const { queueDeclarationAuditSync } = await loadModule();
+
+    const result = await queueDeclarationAuditSync({
+      eventType: 'plot_compliance_declared',
+      payload: { plotId: 'plot-1', farmerId: 'farmer-1' },
+      clearSyncedMarker: true,
+    });
+
+    expect(result).toBe('queued');
+    expect(enqueuePendingSync).toHaveBeenCalledTimes(1);
+    expect(markPendingSyncAttempt).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({
+        lastError: 'Too many requests, please slow down.',
+      }),
+    );
+  });
+
+  it('skips work when declaration audit marker already exists', async () => {
+    getSetting.mockResolvedValue('1730000000000');
+    const { queueDeclarationAuditSync } = await loadModule();
+
+    const result = await queueDeclarationAuditSync({
       eventType: 'producer_attestations_updated',
       payload: { farmerId: 'farmer-1' },
     });
-    expect(pendingSyncDedupKey('audit_sync', payloadJson)).toBe('audit_sync:producer:farmer-1');
-  });
 
-  it('dedupes plot compliance per plot', () => {
-    const payloadJson = JSON.stringify({
-      eventType: 'plot_compliance_declared',
-      payload: { plotId: 'plot-1', farmerId: 'farmer-1' },
-    });
-    expect(pendingSyncDedupKey('audit_sync', payloadJson)).toBe('audit_sync:plot:plot-1');
+    expect(result).toBe('synced');
+    expect(enqueuePendingSync).not.toHaveBeenCalled();
+    expect(postAuditEventToBackend).not.toHaveBeenCalled();
   });
 });

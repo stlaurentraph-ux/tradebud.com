@@ -29,6 +29,7 @@
     "db:verify:consent-sovereignty-v11": "node scripts/apply-consent-sovereignty-v11-migration.mjs --verify-only",
     "smoke:consent": "node scripts/smoke-consent-sovereignty.mjs",
     "test:integration:consent": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/consent/consent-lineage-revoke.int.spec.ts",
+    "test:integration:network-routing": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/network/network-routing-delivery.int.spec.ts",
     "db:apply:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs",
     "db:verify:request-campaign-contact-targets": "node scripts/run-with-root-test-db.mjs node scripts/apply-request-campaign-contact-targets-migration.mjs --verify-only",
     "db:apply:rls-phase3": "node scripts/apply-rls-phase3-launch-admin-integrations.mjs",
