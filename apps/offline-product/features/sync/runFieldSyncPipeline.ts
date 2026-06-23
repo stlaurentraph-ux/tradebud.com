@@ -28,6 +28,7 @@ import {
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
 import { restoreLocalPlotsFromServer } from '@/features/sync/restoreLocalPlotsFromServer';
+import { pruneRedundantPendingUploadActions } from '@/features/sync/pruneRedundantPendingUploadActions';
 import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
 import { restoreFarmerCloudState } from '@/features/sync/restoreFarmerCloudState';
 import { reconcileUnuploadedLocalDeliveryReceipts } from '@/features/harvest/reconcileUnuploadedLocalDeliveryReceipts';
@@ -214,6 +215,8 @@ export async function runFieldSyncPipeline(
   if (cloudRestoreResult.downloadFailed > 0) {
     outcome.evidenceDownloadFailed = cloudRestoreResult.downloadFailed;
   }
+
+  await pruneRedundantPendingUploadActions({ farmerId: apiFarmerId }).catch(() => 0);
 
   reportSyncStepStart('plot_upload', { plotCount: activePlots.length });
   await warmPlotServerLinksForSync({

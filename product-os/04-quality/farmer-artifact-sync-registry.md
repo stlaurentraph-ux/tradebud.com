@@ -27,11 +27,11 @@ Guard: `ui-reload-guard.mjs` — each screen must subscribe to sync bus and/or f
 
 | Screen | Reload patterns |
 |--------|-----------------|
-| `app/plot/[id].tsx` | sync bus + focus + `restoreCloudMediaFromServer` |
-| `app/documents.tsx` | sync bus + focus + `restoreCloudMediaFromServer` |
-| `app/(tabs)/harvests.tsx` | sync bus + focus |
-| `app/(tabs)/explore.tsx` | sync bus + focus |
-| `app/(tabs)/settings.tsx` | sync bus + focus |
+| `app/plot/[id].tsx` | `useFocusCloudPull` + sync bus reload |
+| `app/documents.tsx` | `useFocusCloudPull` + sync bus reload |
+| `app/(tabs)/harvests.tsx` | `useFocusCloudPull` + sync bus reload |
+| `app/(tabs)/explore.tsx` | `useFocusCloudPull` + sync bus reload |
+| `app/(tabs)/settings.tsx` | focus pull + sync bus reload |
 | `features/mapping/WalkPerimeterScreen.tsx` | focus (walk draft resume) |
 
 ## Registry
@@ -47,7 +47,7 @@ Guard: `ui-reload-guard.mjs` — each screen must subscribe to sync bus and/or f
 | Producer declarations | `farmer` | `audit_sync` | `producer_attestations_updated` | `restoreLocalDeclarationsFromServer` | documents |
 | Plot attestations | `plots` flags | `audit_sync` | `plot_compliance_declared` | same | plot detail |
 | Cadastral / informal tenure | `plot_legal` | legal + land upload | `plot_legal_synced` audit | same | plot detail |
-| Delivery receipts | `local_delivery_receipts` | `harvest` | vouchers | `restoreLocalDeliveryReceiptsFromServer` | harvests |
+| Delivery receipts | `local_delivery_receipts` | `harvest` | vouchers | `restoreLocalDeliveryReceiptsFromServer` + receipt sync reconcile | harvests |
 | Delivery dates | receipt + `harvest_date` | backfill / PATCH | voucher column | `supplementVoucherHarvestDates` | harvests |
 | **Declaration GPS + prefs** | `farmer` + `settings` | `audit_sync` | `field_device_preferences_updated` | `restoreLocalFieldDevicePreferencesFromServer` | settings advanced |
 | **Farmer profile photo** | settings + `farmer` | `audit_sync` + Storage | `farmer_profile_photo_synced` | `restoreLocalFarmerProfilePhotoFromServer` | settings profile |
@@ -60,6 +60,7 @@ Guard: `ui-reload-guard.mjs` — each screen must subscribe to sync bus and/or f
 - **Multiple sources:** land titles may appear in audit, tenure API, and synced-evidence — dedupe by `storagePath`.
 - **Audit is append-only:** restore uses **latest** event per `(farmerId, kind)` or `(serverPlotId, photo kind)`.
 - **Plot link gate:** without `plot_server_links`, plot-scoped restore skips (`skippedUnlinked`).
+- **Queue prune:** after restore, `pruneRedundantPendingUploadActions` drops stale `photos_sync`, `evidence_sync`, `harvest`, and `audit_sync` rows when local state is already synced.
 - **Farmer scope:** always `prepareFieldSyncContext` / `ownedFarmerIds`.
 - **Offline tiles:** cross-device syncs **manifest + active pack id**; device re-downloads tiles (not full binary upload).
 

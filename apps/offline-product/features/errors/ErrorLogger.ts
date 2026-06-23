@@ -195,6 +195,11 @@ export function logError(error: unknown, context?: Record<string, unknown>): Cla
   const safeContext = sanitizeLogContext(context);
   const classified = classifyError(error, safeContext);
 
+  // Expected during sync bursts — UI maps to farmer copy; do not spam LogBox/Sentry.
+  if (classified.code === 'RATE_LIMITED') {
+    return classified;
+  }
+
   if (shouldSkipDuplicateLog(classified.message, safeContext)) {
     return classified;
   }
@@ -224,7 +229,7 @@ export function logError(error: unknown, context?: Record<string, unknown>): Cla
     });
   }
 
-  if (classified.category !== 'validation' && classified.code !== 'RATE_LIMITED' && isSentryEnabled()) {
+  if (classified.category !== 'validation' && isSentryEnabled()) {
     reportErrorToSentry(classified.originalError ?? new Error(classified.message), {
       category: classified.category,
       code: classified.code,

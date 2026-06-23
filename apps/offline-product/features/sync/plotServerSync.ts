@@ -28,7 +28,7 @@ import { backendRowMatchesLocalClientId, findServerPlotForSyncConfirmation } fro
 import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
 
-export { listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
+export { estimatePlotSyncAttention, listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
 export { isLocalPlotConfirmedOnServer } from '@/features/sync/plotSyncPending';
 
 const PLOT_UPLOAD_GAP_MS = 400;

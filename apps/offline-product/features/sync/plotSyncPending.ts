@@ -180,3 +180,22 @@ export function listUnsyncedLocalPlots(
 ): Plot[] {
   return listPlotsNeedingServerUpload(localPlots, backendPlots, plotServerLinks);
 }
+
+/** Settings/home chip before server list settles — honour saved device links offline. */
+export function estimatePlotSyncAttention(params: {
+  localPlots: Plot[];
+  backendPlots: unknown[];
+  plotServerLinks?: Record<string, string> | null;
+  t: TranslateFn;
+}) {
+  const backendPlots = params.backendPlots ?? [];
+  return summarizePlotSyncPending(
+    classifyLocalPlotSyncPending({
+      localPlots: params.localPlots,
+      backendPlots,
+      plotServerLinks: params.plotServerLinks,
+      t: params.t,
+      trustPersistedLinksWithoutServer: backendPlots.length === 0,
+    }),
+  );
+}

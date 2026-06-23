@@ -40,9 +40,10 @@ import {
   type PendingSyncAction,
 } from '@/features/state/persistence';
 import {
-  listUnsyncedLocalPlots,
-  subscribeServerPlotSyncChanged,
+  estimatePlotSyncAttention,
 } from '@/features/sync/plotServerSync';
+import { restoreCloudStateOnFocus } from '@/features/sync/restoreCloudStateOnFocus';
+import { useReloadOnServerPlotSyncChanged } from '@/features/sync/useFocusCloudPull';
 import {
   prepareFieldSyncContext,
 } from '@/features/sync/resolveFieldSyncScope';
@@ -199,6 +200,7 @@ export default function SettingsScreen() {
   /** Local plots with no matching server row (by name). */
   const [backendPlots, setBackendPlots] = useState<unknown[]>([]);
   const [plotServerLinks, setPlotServerLinks] = useState<Record<string, string>>({});
+  const [plotServerLinksHydrated, setPlotServerLinksHydrated] = useState(false);
   const [measuredSyncPending, setMeasuredSyncPending] = useState<TotalSyncPendingSnapshot | null>(null);
   const [plotsFetchState, setPlotsFetchState] = useState<'idle' | 'loading' | 'ok' | 'failed'>('idle');
   const [syncAccessFailure, setSyncAccessFailure] = useState<
@@ -236,6 +238,21 @@ export default function SettingsScreen() {
   useEffect(() => {
     measuredSyncPendingRef.current = measuredSyncPending;
   }, [measuredSyncPending]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void loadPlotServerLinks()
+      .then((links) => {
+        if (!cancelled) setPlotServerLinks(links);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setPlotServerLinksHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refreshPushPermission = useCallback(async () => {
     if (Platform.OS === 'web') {
@@ -506,6 +523,11 @@ export default function SettingsScreen() {
   useFocusEffect(
     useCallback(() => {
       void (async () => {
+        await reloadFromDisk();
+        if (isSignedIn && farmer?.id) {
+          await restoreCloudStateOnFocus().catch(() => undefined);
+          await reloadFromDisk();
+        }
         await refreshSavedSyncEmail();
         await refreshSyncMetrics();
         await refreshCloudParity();
@@ -530,15 +552,17 @@ export default function SettingsScreen() {
           setQueueSmartSweepCap(Number(storedSmartSweepCap) as 25 | 50 | 100 | 200);
         }
       })();
-    }, [refreshSavedSyncEmail, refreshSyncMetrics, refreshCloudParity, refreshPushPermission]),
+    }, [farmer?.id, isSignedIn, reloadFromDisk, refreshSavedSyncEmail, refreshSyncMetrics, refreshCloudParity, refreshPushPermission]),
   );
 
-  useEffect(() => {
-    return subscribeServerPlotSyncChanged(() => {
+  useReloadOnServerPlotSyncChanged({
+    reloadFromDisk,
+    onSyncChanged: async () => {
       if (freezeSyncMetricsDisplayRef.current) return;
-      void refreshSyncMetrics();
-    });
-  }, [refreshSyncMetrics]);
+      await refreshSyncMetrics();
+      await refreshCloudParity();
+    },
+  });
 
   useEffect(() => {
     return subscribeSyncQueueLock(() => {
@@ -563,14 +587,32 @@ export default function SettingsScreen() {
     setNameInput(farmerDisplayName ?? '');
   }, [farmer?.id, farmerDisplayName]);
 
+  const plotAttentionEstimate = useMemo(() => {
+    if (measuredSyncPending != null || !isSignedIn || plots.length === 0) {
+      return null;
+    }
+    return estimatePlotSyncAttention({
+      localPlots: plots,
+      backendPlots,
+      plotServerLinks,
+      t,
+    });
+  }, [measuredSyncPending, plots, backendPlots, plotServerLinks, isSignedIn, t]);
+
   const unsyncedPlotCount = useMemo(() => {
     if (measuredSyncPending != null) return measuredSyncPending.unsyncedPlotCount;
-    if (!isSignedIn || plots.length === 0) return 0;
-    return listUnsyncedLocalPlots(plots, backendPlots, plotServerLinks).length;
-  }, [measuredSyncPending, plots, backendPlots, plotServerLinks, isSignedIn]);
+    return plotAttentionEstimate?.needsUploadPlots.length ?? 0;
+  }, [measuredSyncPending, plotAttentionEstimate]);
 
-  const totalSyncPending =
-    measuredSyncPending?.total ?? queuePendingCount + unsyncedPlotCount;
+  const blockedPlotCount = useMemo(() => {
+    if (measuredSyncPending != null) return measuredSyncPending.blockedPlotCount;
+    return plotAttentionEstimate?.blockedPlots.length ?? 0;
+  }, [measuredSyncPending, plotAttentionEstimate]);
+
+  const totalSyncPending = useMemo(() => {
+    if (measuredSyncPending != null) return measuredSyncPending.total;
+    return queuePendingCount + unsyncedPlotCount + blockedPlotCount;
+  }, [measuredSyncPending, queuePendingCount, unsyncedPlotCount, blockedPlotCount]);
 
   const syncApiBaseUrl = getTracebudApiBaseUrl();
   const syncUsesLocalApi = useMemo(() => isLocalLanSyncApi(syncApiBaseUrl), [syncApiBaseUrl]);
@@ -702,16 +744,24 @@ export default function SettingsScreen() {
 
   const pendingDetailMessage = useMemo(() => {
     if (totalSyncPending <= 0) return null;
+    if (
+      isSignedIn &&
+      plots.length > 0 &&
+      measuredSyncPending == null &&
+      (plotsFetchState === 'loading' || !plotServerLinksHydrated)
+    ) {
+      return null;
+    }
     const plotCount = measuredSyncPending?.unsyncedPlotCount ?? unsyncedPlotCount;
-    const blockedPlotCount = measuredSyncPending?.blockedPlotCount ?? 0;
+    const blockedCount = measuredSyncPending?.blockedPlotCount ?? blockedPlotCount;
     const queueCount = measuredSyncPending?.queuePendingCount ?? queuePendingCount;
-    const names = measuredSyncPending?.unsyncedPlotNames ?? [];
-    const blockedPlots = measuredSyncPending?.blockedPlots ?? [];
+    const names = measuredSyncPending?.unsyncedPlotNames ?? plotAttentionEstimate?.unsyncedPlotNames ?? [];
+    const blockedPlots = measuredSyncPending?.blockedPlots ?? plotAttentionEstimate?.blockedPlots ?? [];
     return resolveSyncAttentionMessage({
       pending: {
         total: totalSyncPending,
         unsyncedPlotCount: plotCount,
-        blockedPlotCount,
+        blockedPlotCount: blockedCount,
         queuePendingCount: queueCount,
         unsyncedPlotNames: names,
         blockedPlots,
@@ -723,7 +773,12 @@ export default function SettingsScreen() {
       syncAccessFailure,
     }).message;
   }, [
+    blockedPlotCount,
+    isSignedIn,
     measuredSyncPending,
+    plotAttentionEstimate,
+    plotServerLinksHydrated,
+    plots.length,
     plotsFetchState,
     queueLastError,
     queueLastErrorActionType,

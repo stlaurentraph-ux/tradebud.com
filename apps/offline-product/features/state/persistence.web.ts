@@ -15,6 +15,7 @@ export type PlotPhoto = {
   latitude?: number | null;
   longitude?: number | null;
   direction?: 'north' | 'east' | 'south' | 'west' | null;
+  storagePath?: string | null;
 };
 
 export type PlotTitlePhoto = {
@@ -166,6 +167,33 @@ export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
 
 export function isPlotTitlePhotoPendingUpload(photo: Pick<PlotTitlePhoto, 'storagePath'>): boolean {
   return !photo.storagePath?.trim();
+}
+
+export function isPlotGroundPhotoPendingUpload(
+  photo: Pick<PlotPhoto, 'uri' | 'storagePath'>,
+): boolean {
+  if (photo.storagePath?.trim()) return false;
+  const uri = photo.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isPlotEvidencePendingUpload(
+  item: Pick<PlotEvidenceItem, 'uri' | 'storagePath'>,
+): boolean {
+  if (item.storagePath?.trim()) return false;
+  const uri = item.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isLocalDeliveryReceiptPendingUpload(
+  receipt: Pick<LocalDeliveryReceiptRow, 'pendingSync' | 'qrCodeRef'>,
+): boolean {
+  if (!receipt.pendingSync) return false;
+  return !receipt.qrCodeRef?.trim();
 }
 
 export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {

@@ -69,6 +69,19 @@ describe('plotSyncPending', () => {
     expect(summary.blockedPlots).toHaveLength(0);
   });
 
+  it('trusts persisted links before the server list is available', () => {
+    const rows = classifyLocalPlotSyncPending({
+      localPlots: [plot1, plot2],
+      backendPlots: [],
+      plotServerLinks: { 'farmer-1': 'server-1', 'farmer-2': 'server-2' },
+      t,
+      trustPersistedLinksWithoutServer: true,
+    });
+    const summary = summarizePlotSyncPending(rows);
+    expect(summary.needsUploadPlots).toHaveLength(0);
+    expect(summary.unsyncedPlotNames).toEqual([]);
+  });
+
   it('classifies overlap-blocked plots separately from upload-needed plots', () => {
     const overlappingSquare = [
       { latitude: 14.1, longitude: -87.2 },

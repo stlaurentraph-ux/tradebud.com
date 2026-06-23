@@ -25,7 +25,7 @@ import {
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
-import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
+import { estimatePlotSyncAttention } from '@/features/sync/plotServerSync';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -113,8 +113,13 @@ export default function HomeScreen() {
 
   const unsyncedPlotCount = useMemo(() => {
     if (!isSignedIn || plots.length === 0) return 0;
-    return listUnsyncedLocalPlots(plots, backendPlots, plotServerLinks).length;
-  }, [plots, backendPlots, plotServerLinks, isSignedIn]);
+    return estimatePlotSyncAttention({
+      localPlots: plots,
+      backendPlots,
+      plotServerLinks,
+      t,
+    }).needsUploadPlots.length;
+  }, [plots, backendPlots, plotServerLinks, isSignedIn, t]);
 
   const totalPendingSync = pendingCount + unsyncedPlotCount;
   const needsBackupAttention = isSignedIn && totalPendingSync > 0;

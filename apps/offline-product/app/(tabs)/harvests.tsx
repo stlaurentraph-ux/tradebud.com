@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -45,7 +44,7 @@ import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerV
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
-import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import { useFocusCloudPull, useReloadOnServerPlotSyncChanged } from '@/features/sync/useFocusCloudPull';
 import { loadPlotServerLinks } from '@/features/state/persistence';
 
 export default function HarvestsScreen() {
@@ -53,7 +52,7 @@ export default function HarvestsScreen() {
   const appColors = useAppColors();
   const styles = useThemedStyles(createHarvestScreenStyles);
   const params = useLocalSearchParams<{ plotId?: string; record?: string; focus?: string; receiptsPlot?: string }>();
-  const { farmer, plots: localPlots } = useAppState();
+  const { farmer, plots: localPlots, reloadFromDisk } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
   const { isSignedIn, openSignIn } = useSignInSheet();
 
@@ -147,17 +146,21 @@ export default function HarvestsScreen() {
     void refreshHarvestData();
   }, [refreshHarvestData, params.plotId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refreshHarvestData();
-    }, [refreshHarvestData]),
-  );
-
-  useEffect(() => {
-    return subscribeServerPlotSyncChanged(() => {
-      void refreshHarvestData({ forcePlotFetch: true });
-    });
+  const refreshAfterCloudPull = useCallback(async () => {
+    await refreshHarvestData({ forcePlotFetch: true });
   }, [refreshHarvestData]);
+
+  useFocusCloudPull({
+    isSignedIn,
+    reloadFromDisk,
+    onPullComplete: refreshAfterCloudPull,
+    enabled: Boolean(farmer?.id),
+  });
+
+  useReloadOnServerPlotSyncChanged({
+    reloadFromDisk,
+    onSyncChanged: refreshAfterCloudPull,
+  });
 
   /** Server plots plus local plots not returned by the API (offline / not synced yet). */
   const mergedHarvestPlots = useMemo(

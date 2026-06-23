@@ -33,9 +33,9 @@ Every farmer-owned artifact needs all five:
 
 ## Orchestrator entry points
 
-- Full restore: `restoreFarmerCloudState` (pipeline + sign-in)
-- Media-only: `restoreCloudMediaFromServer` → orchestrator with `mediaOnly: true`
-- Pipeline: `runFieldSyncPipeline` → restore then `enqueueFarmerCloudSyncActions`
+- Full restore: `restoreFarmerCloudState` (pipeline + sign-in; includes declarations)
+- Focus restore: `restoreCloudStateOnFocus` → plots + links + receipts + media + declarations (`useFocusCloudPull` on tab screens)
+- Pipeline: `runFieldSyncPipeline` → same pull phase + upload + queue drain
 
 ## New artifact workflow
 

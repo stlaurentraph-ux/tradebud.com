@@ -826,6 +826,7 @@
   "plot_upload_server_error_settings": "Couldn't back up this plot to Tracebud right now. It's saved on this device — tap Sync now to try again.",
   "plot_upload_rate_limited": "Too many uploads at once. Wait a minute, then try again from My Plots.",
   "plot_upload_rate_limited_settings": "Tracebud is rate-limiting uploads. Wait about a minute, then tap Sync now again.",
+  "sync_rate_limited_settings": "Tracebud is busy right now. Wait about a minute, then try again.",
   "plot_upload_geometry_rejected": "Tracebud could not accept this boundary. Edit the plot shape or declared area, then sync again.",
   "plot_verified": "Verified",
   "plot_voucher_body": "This code traces this delivery to your plot. It does not mean all export paperwork is complete.",

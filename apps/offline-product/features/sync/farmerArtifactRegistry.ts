@@ -47,23 +47,23 @@ export const PLOT_MEDIA_UI_FILES = [
 export const FARMER_ARTIFACT_UI_RELOAD_FILES = [
   {
     file: 'app/plot/[id].tsx',
-    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect', 'restoreCloudMediaFromServer'],
+    patterns: ['useFocusCloudPull', 'useReloadOnServerPlotSyncChanged'],
   },
   {
     file: 'app/documents.tsx',
-    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect', 'restoreCloudMediaFromServer'],
+    patterns: ['useFocusCloudPull', 'useReloadOnServerPlotSyncChanged'],
   },
   {
     file: 'app/(tabs)/harvests.tsx',
-    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect'],
+    patterns: ['useFocusCloudPull', 'useReloadOnServerPlotSyncChanged'],
   },
   {
     file: 'app/(tabs)/explore.tsx',
-    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect'],
+    patterns: ['useFocusCloudPull', 'useReloadOnServerPlotSyncChanged'],
   },
   {
     file: 'app/(tabs)/settings.tsx',
-    patterns: ['subscribeServerPlotSyncChanged', 'useFocusEffect'],
+    patterns: ['restoreCloudStateOnFocus', 'useReloadOnServerPlotSyncChanged', 'useFocusEffect'],
   },
   {
     file: 'features/mapping/WalkPerimeterScreen.tsx',
