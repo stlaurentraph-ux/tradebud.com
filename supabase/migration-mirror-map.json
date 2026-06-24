@@ -156,6 +156,11 @@
       "supabase": "20260624220000_campaign_fulfillment_provenance.sql",
       "backend": "tb_v16_066_campaign_fulfillment_provenance.sql",
       "purpose": "campaign_fulfillment_provenance"
+    },
+    {
+      "supabase": "20260624230000_campaign_delivery_attempts.sql",
+      "backend": "tb_v16_067_campaign_delivery_attempts.sql",
+      "purpose": "campaign_delivery_attempts"
     }
   ],
   "supabaseOnly": [
