@@ -7,8 +7,7 @@ import { buildPgPoolConfig, collectDatabaseUrlWarnings } from './pg-pool-config'
 import { assertProdDatabaseUrl } from './supabase-db-refs';
 import { PgPoolShutdownService } from './pg-pool-shutdown.service';
 
-export const DRIZZLE = Symbol('DRIZZLE');
-export const PG_POOL = Symbol('PG_POOL');
+import { DRIZZLE, PG_POOL } from './db.tokens';
 
 // Railway and some hosts cannot reach Supabase direct `db.*` IPv6 endpoints.
 setDefaultResultOrder('ipv4first');
@@ -55,3 +54,5 @@ function createPgPool(): Pool {
   exports: [DRIZZLE, PG_POOL],
 })
 export class DbModule {}
+
+export { DRIZZLE, PG_POOL } from './db.tokens';
