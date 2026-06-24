@@ -59,7 +59,7 @@ Bulk outreach from importer/exporter/cooperative to contact emails.
 |------|---------|-------------|
 | 1 | Dashboard send campaign | `POST /v1/requests/campaigns/:id/send` |
 | 2 | Backend inbox fan-out | Email → tenant; skip self-tenant and unresolved |
-| 2b | Backend `queueCampaignRecipientInvites` | Unresolved emails → `campaign_recipient_invites` (`sent`) |
+| 2b | Backend `queueCampaignRecipientInvites` | Unresolved emails → `campaign_recipient_invites` (`sent`); phone-only CRM targets → `desk_only` (`pending`) keyed by `contact_id` |
 | 3 | Recipient dashboard `/inbox` | `inbox_requests` row per distinct recipient tenant |
 
 **Note:** Field producers without a workspace tenant receive campaign **email/CTA only** until signup.

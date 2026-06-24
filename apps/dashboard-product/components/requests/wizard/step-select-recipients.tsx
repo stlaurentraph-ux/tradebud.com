@@ -19,6 +19,7 @@ export interface Recipient {
   id: string;
   type: RecipientType;
   email?: string;
+  phone?: string;
   name: string;
   country: string;
   commodity: string;
@@ -161,7 +162,21 @@ export function StepSelectRecipients({
   );
 
   const allFilteredSelected = filteredRecipients.length > 0 && filteredRecipients.every((r) => isSelected(r));
-  const selectedMissingEmailCount = data.selectedRecipients.filter((recipient) => !recipient.email).length;
+  const selectedMissingDeliveryCount = data.selectedRecipients.filter((recipient) => {
+    if (recipient.email?.includes('@')) {
+      return false;
+    }
+    if (recipient.phone?.trim()) {
+      return false;
+    }
+    if (recipient.id.startsWith('manual-')) {
+      const manualEmail = recipient.id.replace(/^manual-/, '');
+      if (manualEmail.includes('@')) {
+        return false;
+      }
+    }
+    return true;
+  }).length;
   const canProceed = data.selectedRecipients.length > 0;
 
   const mergeRecipients = (incoming: Recipient[]) => {
@@ -241,10 +256,10 @@ export function StepSelectRecipients({
             ))}
             {data.selectedRecipients.length > 8 && <Badge variant="outline">+{data.selectedRecipients.length - 8} more</Badge>}
           </div>
-          {selectedMissingEmailCount > 0 ? (
+          {selectedMissingDeliveryCount > 0 ? (
             <p className="mt-3 text-xs text-amber-700">
-              {selectedMissingEmailCount} selected recipient{selectedMissingEmailCount === 1 ? '' : 's'} missing email
-              address. You can continue, but those recipients cannot be delivered until email is added.
+              {selectedMissingDeliveryCount} selected recipient{selectedMissingDeliveryCount === 1 ? '' : 's'} missing
+              email or phone. You can continue, but those recipients cannot be delivered until contact details are added.
             </p>
           ) : null}
         </div>

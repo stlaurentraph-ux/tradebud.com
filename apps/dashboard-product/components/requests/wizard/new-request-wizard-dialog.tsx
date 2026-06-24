@@ -161,6 +161,7 @@ export function NewRequestWizardDialog({
           const name = typeof item.full_name === 'string' ? item.full_name : 'Unknown contact';
           const email =
             typeof item.email === 'string' && item.email.includes('@') ? item.email.trim().toLowerCase() : undefined;
+          const phone = typeof item.phone === 'string' && item.phone.trim() ? item.phone.trim() : undefined;
           const country = typeof item.country === 'string' && item.country ? item.country : 'Unknown';
           const organization = typeof item.organization === 'string' ? item.organization.trim() : '';
           const status = typeof item.status === 'string' ? item.status.toLowerCase() : 'new';
@@ -192,6 +193,7 @@ export function NewRequestWizardDialog({
             id,
             type: 'farmer',
             email,
+            phone,
             name,
             country,
             commodity,
@@ -284,15 +286,32 @@ export function NewRequestWizardDialog({
     }
   };
 
-  const toTargetEmail = (recipient: Recipient): { email: string; full_name: string } | null => {
-    if (recipient.email && recipient.email.includes('@')) {
-      return { email: recipient.email, full_name: recipient.name };
+  const toCampaignTarget = (
+    recipient: Recipient,
+  ): { contact_id?: string; email?: string | null; full_name: string } | null => {
+    const manualEmail = recipient.id.startsWith('manual-')
+      ? recipient.id.replace(/^manual-/, '')
+      : '';
+    const email =
+      recipient.email && recipient.email.includes('@')
+        ? recipient.email.trim().toLowerCase()
+        : manualEmail && manualEmail.includes('@')
+          ? manualEmail.trim().toLowerCase()
+          : null;
+    const isCrmContact =
+      recipient.type === 'farmer' &&
+      !recipient.id.startsWith('manual-') &&
+      !recipient.id.startsWith('org-');
+
+    if (!isCrmContact && !email) {
+      return null;
     }
-    const manualEmail = recipient.id.startsWith('manual-') ? recipient.id.replace(/^manual-/, '') : '';
-    if (manualEmail && manualEmail.includes('@')) {
-      return { email: manualEmail, full_name: recipient.name };
-    }
-    return null;
+
+    return {
+      contact_id: isCrmContact ? recipient.id : undefined,
+      email,
+      full_name: recipient.name,
+    };
   };
 
   const createCampaign = async (status: 'Draft' | 'Sent') => {
@@ -304,13 +323,21 @@ export function NewRequestWizardDialog({
     }
 
     const targets = recipientsData.selectedRecipients
-      .map(toTargetEmail)
-      .filter((target): target is { email: string; full_name: string } => Boolean(target));
-    const missingEmailCount = recipientsData.selectedRecipients.length - targets.length;
-    if (missingEmailCount > 0) {
-      throw new Error(
-        `${missingEmailCount} selected recipient${missingEmailCount === 1 ? ' is' : 's are'} missing an email address.`,
+      .map(toCampaignTarget)
+      .filter((target): target is { contact_id?: string; email?: string | null; full_name: string } =>
+        Boolean(target),
       );
+    if (targets.length === 0) {
+      throw new Error('Selected recipients must be CRM contacts or include an email address.');
+    }
+
+    if (status === 'Sent') {
+      const sendableCount = targets.filter((target) => target.contact_id || target.email).length;
+      if (sendableCount === 0) {
+        throw new Error(
+          'No recipients can be delivered. Select CRM contacts with phone or add email before sending.',
+        );
+      }
     }
 
     const payload = {

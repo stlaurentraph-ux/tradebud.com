@@ -5,6 +5,13 @@ export type QueueCampaignRecipientInvitesResult = {
   skippedResolvedCount: number;
 };
 
+export type CampaignInviteDelivery = {
+  contact_id: string;
+  delivery_channel: 'email' | 'desk_only';
+  delivery_address: string | null;
+  recipient_email?: string | null;
+};
+
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
@@ -96,67 +103,149 @@ async function resolveTenantIdsByEmail(
   return resolved;
 }
 
+function normalizeDeliveries(
+  deliveries: readonly CampaignInviteDelivery[] | undefined,
+  recipientEmails: readonly string[] | undefined,
+): CampaignInviteDelivery[] {
+  if (deliveries && deliveries.length > 0) {
+    return deliveries
+      .filter((delivery) => delivery.contact_id?.trim())
+      .map((delivery) => ({
+        contact_id: delivery.contact_id.trim(),
+        delivery_channel: delivery.delivery_channel,
+        delivery_address: delivery.delivery_address?.trim() || null,
+        recipient_email: delivery.recipient_email?.trim().toLowerCase() || null,
+      }));
+  }
+
+  return Array.from(
+    new Set(
+      (recipientEmails ?? [])
+        .map((email) => normalizeEmail(email))
+        .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
+    ),
+  ).map((email) => ({
+    contact_id: `legacy:${email}`,
+    delivery_channel: 'email' as const,
+    delivery_address: email,
+    recipient_email: email,
+  }));
+}
+
 /**
- * After a campaign send, persist invite rows for recipients whose email does not resolve to a workspace tenant.
+ * After a campaign send, persist invite rows for recipients without a workspace tenant.
+ * Email-channel invites skip when the address already resolves to a tenant.
+ * Desk-only invites are always queued for cooperative follow-up until WhatsApp (P3).
  */
 export async function queueCampaignRecipientInvites(
   pool: Pool,
   input: {
     campaignId: string;
     senderTenantId: string;
-    recipientEmails: readonly string[];
+    recipientEmails?: readonly string[];
+    deliveries?: readonly CampaignInviteDelivery[];
     actorUserId?: string | null;
   },
 ): Promise<QueueCampaignRecipientInvitesResult> {
   const campaignId = input.campaignId.trim();
   const senderTenantId = input.senderTenantId.trim();
-  const emails = Array.from(
-    new Set(
-      input.recipientEmails
-        .map((email) => normalizeEmail(email))
-        .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)),
-    ),
-  );
+  const rows = normalizeDeliveries(input.deliveries, input.recipientEmails);
 
-  if (!campaignId || !senderTenantId || emails.length === 0) {
+  if (!campaignId || !senderTenantId || rows.length === 0) {
     return { queuedCount: 0, skippedResolvedCount: 0 };
   }
 
-  const tenantByEmail = await resolveTenantIdsByEmail(pool, emails);
+  const emailRecipients = rows
+    .map((row) => row.recipient_email)
+    .filter((email): email is string => Boolean(email));
+  const tenantByEmail = await resolveTenantIdsByEmail(pool, emailRecipients);
   let queuedCount = 0;
   let skippedResolvedCount = 0;
 
-  for (const recipientEmail of emails) {
-    const resolvedTenantId = tenantByEmail.get(recipientEmail);
-    if (resolvedTenantId) {
-      skippedResolvedCount += 1;
-      continue;
+  for (const delivery of rows) {
+    const recipientEmail = delivery.recipient_email;
+    if (delivery.delivery_channel === 'email' && recipientEmail) {
+      const resolvedTenantId = tenantByEmail.get(recipientEmail);
+      if (resolvedTenantId) {
+        skippedResolvedCount += 1;
+        continue;
+      }
     }
+
+    const contactId = delivery.contact_id.startsWith('legacy:') ? null : delivery.contact_id;
+    const inviteStatus = delivery.delivery_channel === 'desk_only' ? 'pending' : 'sent';
 
     let inviteId: string | null = null;
     try {
-      const upsert = await pool.query<{ id: string }>(
-        `
-          INSERT INTO campaign_recipient_invites (
-            campaign_id,
-            sender_tenant_id,
-            recipient_email,
-            status,
-            sent_at
-          )
-          VALUES ($1, $2, $3, 'sent', NOW())
-          ON CONFLICT (campaign_id, recipient_email) DO UPDATE
-          SET
-            status = 'sent',
-            sent_at = COALESCE(campaign_recipient_invites.sent_at, NOW())
-          RETURNING id
-        `,
-        [campaignId, senderTenantId, recipientEmail],
-      );
-      inviteId = upsert.rows[0]?.id ?? null;
+      if (contactId) {
+        const upsert = await pool.query<{ id: string }>(
+          `
+            INSERT INTO campaign_recipient_invites (
+              campaign_id,
+              sender_tenant_id,
+              contact_id,
+              recipient_email,
+              delivery_channel,
+              delivery_address,
+              status,
+              sent_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 = 'sent' THEN NOW() ELSE NULL END)
+            ON CONFLICT (campaign_id, contact_id) WHERE contact_id IS NOT NULL
+            DO UPDATE SET
+              recipient_email = EXCLUDED.recipient_email,
+              delivery_channel = EXCLUDED.delivery_channel,
+              delivery_address = EXCLUDED.delivery_address,
+              status = EXCLUDED.status,
+              sent_at = COALESCE(campaign_recipient_invites.sent_at, EXCLUDED.sent_at)
+            RETURNING id
+          `,
+          [
+            campaignId,
+            senderTenantId,
+            contactId,
+            recipientEmail,
+            delivery.delivery_channel,
+            delivery.delivery_address,
+            inviteStatus,
+          ],
+        );
+        inviteId = upsert.rows[0]?.id ?? null;
+      } else if (recipientEmail) {
+        const upsert = await pool.query<{ id: string }>(
+          `
+            INSERT INTO campaign_recipient_invites (
+              campaign_id,
+              sender_tenant_id,
+              recipient_email,
+              delivery_channel,
+              delivery_address,
+              status,
+              sent_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, NOW())
+            ON CONFLICT (campaign_id, recipient_email) DO UPDATE
+            SET
+              delivery_channel = EXCLUDED.delivery_channel,
+              delivery_address = EXCLUDED.delivery_address,
+              status = 'sent',
+              sent_at = COALESCE(campaign_recipient_invites.sent_at, NOW())
+            RETURNING id
+          `,
+          [
+            campaignId,
+            senderTenantId,
+            recipientEmail,
+            delivery.delivery_channel,
+            delivery.delivery_address,
+            inviteStatus,
+          ],
+        );
+        inviteId = upsert.rows[0]?.id ?? null;
+      }
     } catch (error) {
       const code = (error as { code?: string } | null)?.code;
-      if (code === '42P01') {
+      if (code === '42P01' || code === '42703') {
         return { queuedCount, skippedResolvedCount };
       }
       throw error;
@@ -171,7 +260,9 @@ export async function queueCampaignRecipientInvites(
       invite_id: inviteId,
       campaign_id: campaignId,
       sender_tenant_id: senderTenantId,
+      contact_id: contactId,
       recipient_email: recipientEmail,
+      delivery_channel: delivery.delivery_channel,
       actor_user_id: input.actorUserId ?? null,
     });
   }

@@ -22,6 +22,7 @@ import {
   campaignRecipientOnboardingBadgeClass,
   countCampaignRecipientsForFilter,
   filterCampaignRecipients,
+  getCampaignRecipientDisplayLabel,
   getRecipientProgressSteps,
   type CampaignRecipientFilter,
   type CampaignRecipientTimelineEntry,
@@ -80,11 +81,15 @@ function RecipientRow({
   recipient: CampaignRecipientTimelineEntry;
   t?: (key: string) => string;
 }) {
+  const displayLabel = getCampaignRecipientDisplayLabel(recipient);
   const [copied, setCopied] = useState(false);
   const relativeTime = formatRelativeTimestamp(recipient.updated_at);
   const steps = getRecipientProgressSteps(recipient.onboarding_status);
 
   const handleCopyEmail = async () => {
+    if (!recipient.recipient_email) {
+      return;
+    }
     try {
       await navigator.clipboard.writeText(recipient.recipient_email);
       setCopied(true);
@@ -98,9 +103,10 @@ function RecipientRow({
     <div className="flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2">
-          <p className="truncate font-medium text-foreground" title={recipient.recipient_email}>
-            {recipient.recipient_email}
+          <p className="truncate font-medium text-foreground" title={displayLabel}>
+            {displayLabel}
           </p>
+          {recipient.recipient_email ? (
           <Button
             type="button"
             variant="ghost"
@@ -112,6 +118,7 @@ function RecipientRow({
           >
             <Copy className={cn('h-3.5 w-3.5', copied && 'text-emerald-600')} aria-hidden="true" />
           </Button>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Badge className={campaignRecipientOnboardingBadgeClass(recipient.onboarding_status)}>
@@ -228,7 +235,11 @@ export function CampaignDecisionsDialog({
                         </div>
                       ) : (
                         filteredRecipients.map((recipient) => (
-                          <RecipientRow key={recipient.recipient_email} recipient={recipient} t={t} />
+                          <RecipientRow
+                            key={recipient.contact_id ?? recipient.recipient_email ?? recipient.recipient_label}
+                            recipient={recipient}
+                            t={t}
+                          />
                         ))
                       )}
                     </div>

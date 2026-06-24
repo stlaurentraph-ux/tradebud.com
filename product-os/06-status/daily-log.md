@@ -1,3 +1,10 @@
+### 2026-06-24 (ADR-012 P2 — contact-centric campaigns)
+
+- **Backend** — `target_contact_ids` on `request_campaigns`; invite rows keyed by `contact_id` with `delivery_channel` (`email` | `desk_only`); TB-V16-064 migration.
+- **Send path** — email branch via Resend; phone-only CRM contacts queue `desk_only` invites (cooperative follow-up until WhatsApp P3).
+- **Dashboard** — campaign wizard sends `contact_id` in targets; drafts allow phone-only farmers; timeline shows `recipient_label` for desk-only rows.
+- **Verification** — `campaign-contact-targets`, `campaign-delivery-plan`, `campaign-recipient-timeline`, `campaign-recipient-invite` specs (11/11); dashboard `campaign-recipient-timeline.test.ts` (7/7).
+
 ### 2026-06-24 (delivery intake QR — Phase D hardening)
 
 - **Dashboard** — `/t/[ref]` trip preview; handoff photo hash audit; desk coach marks.

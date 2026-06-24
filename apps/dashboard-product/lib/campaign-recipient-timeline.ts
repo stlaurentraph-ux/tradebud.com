@@ -7,7 +7,10 @@ export type CampaignRecipientOnboardingStatus =
   | 'on_platform';
 
 export type CampaignRecipientTimelineEntry = {
-  recipient_email: string;
+  contact_id?: string | null;
+  recipient_email: string | null;
+  recipient_label?: string;
+  delivery_channel?: string | null;
   onboarding_status: CampaignRecipientOnboardingStatus;
   invite_status: string | null;
   decision: 'accept' | 'refuse' | null;
@@ -55,6 +58,12 @@ const PROGRESS_STEP_ORDER: CampaignRecipientProgressStepId[] = [
   'responded',
   'fulfilled',
 ];
+
+export function getCampaignRecipientDisplayLabel(
+  recipient: Pick<CampaignRecipientTimelineEntry, 'recipient_label' | 'recipient_email'>,
+): string {
+  return recipient.recipient_label?.trim() || recipient.recipient_email?.trim() || 'Unknown recipient';
+}
 
 export function getRecipientProgressSteps(
   status: CampaignRecipientOnboardingStatus,
