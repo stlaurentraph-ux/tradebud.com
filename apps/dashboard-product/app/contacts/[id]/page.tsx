@@ -117,6 +117,10 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
         return;
       }
 
+      if (!match.email) {
+        setFarmerProfileId(null);
+        return;
+      }
       const resolved = await resolveProducerFarmerId(match.email);
       if (resolved) {
         setFarmerProfileId(resolved);
@@ -496,7 +500,7 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
                       </p>
                     ) : (
                       <p className="text-muted-foreground">
-                        {getProducerDetailCopy('field_app_not_linked', role, t, { email: contact.email })}
+                        {getProducerDetailCopy('field_app_not_linked', role, t, { email: contact.email ?? '' })}
                       </p>
                     )}
                   </CardContent>
