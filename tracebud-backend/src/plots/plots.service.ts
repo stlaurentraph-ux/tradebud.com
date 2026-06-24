@@ -130,6 +130,7 @@ export interface PlotAssignmentExportAuditEvent {
 @Injectable()
 export class PlotsService {
   private geometryCaptureColumnAvailable: boolean | null = null;
+  private geometryApprovalColumnsAvailable: boolean | null = null;
   private clientPlotIdColumnAvailable: boolean | null = null;
 
   constructor(
@@ -160,6 +161,24 @@ export class PlotsService {
     );
     this.geometryCaptureColumnAvailable = (res.rowCount ?? 0) > 0;
     return this.geometryCaptureColumnAvailable;
+  }
+
+  private async plotHasGeometryApprovalColumns(): Promise<boolean> {
+    if (this.geometryApprovalColumnsAvailable !== null) {
+      return this.geometryApprovalColumnsAvailable;
+    }
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'plot'
+          AND column_name = 'geometry_approved_at'
+        LIMIT 1
+      `,
+    );
+    this.geometryApprovalColumnsAvailable = (res.rowCount ?? 0) > 0;
+    return this.geometryApprovalColumnsAvailable;
   }
 
   private async plotHasClientPlotIdColumn(): Promise<boolean> {
@@ -2262,6 +2281,10 @@ export class PlotsService {
     const geometryCaptureSelect = hasGeometryCapture
       ? 'p.geometry_capture'
       : 'NULL::jsonb AS geometry_capture';
+    const hasGeometryApproval = await this.plotHasGeometryApprovalColumns();
+    const geometryApprovalSelect = hasGeometryApproval
+      ? 'p.geometry_approved_at, p.geometry_approved_by_user_id'
+      : 'NULL::timestamptz AS geometry_approved_at, NULL::uuid AS geometry_approved_by_user_id';
 
     const res = await this.pool.query(
       `
@@ -2274,6 +2297,7 @@ export class PlotsService {
           p.declared_area_ha,
           p.status,
           ${geometryCaptureSelect},
+          ${geometryApprovalSelect},
           ST_AsGeoJSON(p.geometry) AS geometry_geojson,
           COALESCE(cc.full_name, ua.name, LEFT(fp.id::text, 8)) AS farmer_name
         FROM plot p
@@ -2325,12 +2349,58 @@ export class PlotsService {
       status: row.status as string,
       geometry,
       geometry_capture: row.geometry_capture ?? null,
+      geometry_approved_at: row.geometry_approved_at ?? null,
+      geometry_approved_by_user_id: row.geometry_approved_by_user_id ?? null,
       ground_truth_photos: {
         clearance_verified_count: groundTruthPhotos.clearanceVerifiedCount,
         min_required: groundTruthPhotos.minRequired,
         clearance_eligible: groundTruthPhotos.clearanceEligible,
         total_count: groundTruthPhotos.totalCount,
       },
+    };
+  }
+
+  async approvePlotGeometry(plotId: string, userId: string) {
+    const hasGeometryApproval = await this.plotHasGeometryApprovalColumns();
+    if (!hasGeometryApproval) {
+      throw new BadRequestException('Geometry approval is not available on this database.');
+    }
+
+    const res = await this.pool.query(
+      `
+        UPDATE plot
+        SET
+          geometry_approved_at = NOW(),
+          geometry_approved_by_user_id = $2::uuid,
+          updated_at = NOW()
+        WHERE id = $1::uuid
+        RETURNING id, geometry_approved_at, geometry_approved_by_user_id
+      `,
+      [plotId, userId],
+    );
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId,
+        'plot_geometry_approved',
+        JSON.stringify({
+          plotId,
+          geometryApprovedAt: res.rows[0].geometry_approved_at,
+        }),
+      ],
+    );
+
+    return {
+      id: res.rows[0].id as string,
+      geometry_approved_at: res.rows[0].geometry_approved_at as string,
+      geometry_approved_by_user_id: res.rows[0].geometry_approved_by_user_id as string,
     };
   }
 
@@ -3221,6 +3291,17 @@ export class PlotsService {
           `Area discrepancy ${diffPct.toFixed(1)}% exceeds 5% tolerance.`,
         );
       }
+    }
+
+    if (await this.plotHasGeometryApprovalColumns()) {
+      await this.pool.query(
+        `
+          UPDATE plot
+          SET geometry_approved_at = NULL, geometry_approved_by_user_id = NULL
+          WHERE id = $1::uuid
+        `,
+        [plotId],
+      );
     }
 
     await this.pool.query(

@@ -22,6 +22,8 @@ Documents **role gates** on Nest controllers (403 scope). Runtime ownership proo
 | `partner_export_status` | `integrations/partner-data.controller.ts` | exporter, agent |
 | `eudr_connectivity` | `integrations/eudr.controller.ts` | exporter, agent |
 | `field_plot_sync` | `plots/plots.controller.ts` | farmer, agent (plot scope) |
+| `plots_approve_geometry` | `plots/plots.controller.ts` | exporter, compliance_manager, country_reviewer, admin |
+| `cadastral_parcel_lookup` | `plots/cadastral-parcel.controller.ts` | exporter, cooperative, compliance_manager, country_reviewer, admin, agent |
 
 ## Notes
 

@@ -12,6 +12,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { normalizeFarmerPhoneE164 } from '../contacts/crm-contact-reachability';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PlotsService } from './plots.service';
 import {
   assertAgentTenantAccess,

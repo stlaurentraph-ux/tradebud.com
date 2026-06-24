@@ -109,14 +109,22 @@ export async function mintSmokeBearerToken(options = {}) {
     throw new Error(`Demo user not found: ${email}`);
   }
 
-  await adminFetch(supabaseUrl, serviceRole, `/auth/v1/admin/users/${user.id}`, {
-    method: 'PUT',
-    body: JSON.stringify({
-      email,
-      app_metadata: { ...(user.app_metadata ?? {}), ...appMetadata },
-      user_metadata: user.user_metadata ?? {},
-    }),
-  });
+  try {
+    await adminFetch(supabaseUrl, serviceRole, `/auth/v1/admin/users/${user.id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        email,
+        app_metadata: { ...(user.app_metadata ?? {}), ...appMetadata },
+        user_metadata: user.user_metadata ?? {},
+      }),
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!message.includes('users_email_partial_key')) {
+      throw error;
+    }
+    console.warn('[warn] smoke user metadata update skipped (duplicate email constraint)');
+  }
 
   const link = await adminFetch(supabaseUrl, serviceRole, '/auth/v1/admin/generate_link', {
     method: 'POST',

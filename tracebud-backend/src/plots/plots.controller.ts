@@ -660,6 +660,21 @@ export class PlotsController {
     return this.plotsService.getDeforestationDecisionHistory(id);
   }
 
+  @Post(':id/approve-geometry')
+  @ApiOperation({
+    summary: 'Approve current plot geometry for exporter shipment coverage',
+  })
+  @ApiParam({ name: 'id', description: 'Plot ID' })
+  async approvePlotGeometry(@Param('id') id: string, @Req() req: any) {
+    this.enforcePlotReviewRole(req);
+    await this.enforcePlotTenantAccess(id, req);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    return this.plotsService.approvePlotGeometry(id, userId);
+  }
+
   @Get(':id/map-preview')
   @ApiOperation({
     summary: 'Read-only plot map preview (geometry + metadata)',
