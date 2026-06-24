@@ -117,7 +117,7 @@ export default function FarmersPage() {
       const matchesSearch =
         producer.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (producer.organization ?? '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        producer.email.toLowerCase().includes(searchTerm.toLowerCase());
+        (producer.email ?? '').toLowerCase().includes(searchTerm.toLowerCase());
       const matchesCompliance = complianceFilter === 'all' || compliance === complianceFilter;
       const matchesFpic =
         fpicFilter === 'all' ||

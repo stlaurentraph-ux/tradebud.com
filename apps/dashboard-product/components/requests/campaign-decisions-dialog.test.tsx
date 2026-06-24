@@ -26,7 +26,10 @@ const basePayload = {
   },
   recipients: [
     {
+      contact_id: null,
       recipient_email: 'accept@example.com',
+      recipient_label: 'accept@example.com',
+      delivery_channel: 'email',
       onboarding_status: 'fulfilled' as const,
       invite_status: null,
       decision: 'accept' as const,
@@ -36,7 +39,10 @@ const basePayload = {
       updated_at: '2026-04-22T12:00:00.000Z',
     },
     {
+      contact_id: null,
       recipient_email: 'refuse@example.com',
+      recipient_label: 'refuse@example.com',
+      delivery_channel: 'email',
       onboarding_status: 'refused' as const,
       invite_status: null,
       decision: 'refuse' as const,
@@ -98,7 +104,7 @@ describe('CampaignDecisionsDialog', () => {
       expect(screen.getByText('1 of 2 fulfilled')).toBeInTheDocument();
     });
     expect(screen.getByText('accept@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Evidence attached')).toBeInTheDocument();
+    expect(screen.getAllByText('Fulfilled').length).toBeGreaterThan(0);
     expect(screen.getByText('Submitted on behalf of farmer')).toBeInTheDocument();
     expect(screen.getAllByText('Refused').length).toBeGreaterThan(0);
   });
@@ -119,7 +125,7 @@ describe('CampaignDecisionsDialog', () => {
       expect(screen.getByText('accept@example.com')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('tab', { name: /activity log/i }));
+    await user.click(screen.getByRole('tab', { name: /^activity/i }));
 
     expect(screen.getByRole('tab', { name: /^all/i })).toHaveTextContent('2');
     expect(screen.getByRole('tab', { name: /accept/i })).toHaveTextContent('1');

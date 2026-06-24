@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { trackAnalyticsEvent, ANALYTICS_EVENTS } from '@/lib/observability/analytics';
+import { trackDashboardEvent, DASHBOARD_EVENTS } from '@/lib/observability/analytics';
 
 function authHeaders(): Record<string, string> | undefined {
   const token = typeof window !== 'undefined' ? sessionStorage.getItem('tracebud_token') : null;
@@ -32,7 +32,7 @@ export function usePlotGeometryApproval(plotId: string) {
       if (!response.ok) {
         throw new Error(body.error ?? 'Could not approve plot geometry.');
       }
-      trackAnalyticsEvent(ANALYTICS_EVENTS.PLOT_GEOMETRY_APPROVED, { plotId });
+      trackDashboardEvent(DASHBOARD_EVENTS.PLOT_GEOMETRY_APPROVED, { plotId });
       return body.geometry_approved_at ?? new Date().toISOString();
     } catch (approveError) {
       const message =

@@ -50,7 +50,9 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
+    queueMicrotask(() => {
+      if (!cancelled) setLoading(true);
+    });
     void listContacts()
       .then(async (contacts) => {
         if (cancelled) return;
@@ -72,6 +74,12 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
         if (match.farmer_profile_id) {
           setFarmerProfileId(match.farmer_profile_id);
           setResolveError(null);
+          return;
+        }
+
+        if (!match.email) {
+          setFarmerProfileId(null);
+          setResolveError(getProducerDetailCopy('resolve_error_no_account', role, t));
           return;
         }
 
@@ -106,7 +114,11 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
     <div className="flex flex-col">
       <AppHeader
         title={contact?.full_name ?? getProducerDetailFallbackTitle(role, t)}
-        subtitle={contact ? contact.email : `ID: ${id}`}
+        subtitle={
+          contact
+            ? (contact.email ?? contact.phone ?? 'Phone-only contact')
+            : `ID: ${id}`
+        }
         breadcrumbs={[
           { label: getDashboardBreadcrumbLabel(t), href: '/' },
           { label: getProducersNavLabel(role, t), href: producersHref },
@@ -225,7 +237,9 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
                     </p>
                   ) : (
                     <p className="text-muted-foreground">
-                      {getProducerDetailCopy('field_app_not_linked', role, t, { email: contact.email })}
+                      {getProducerDetailCopy('field_app_not_linked', role, t, {
+                        email: contact.email ?? contact.phone ?? 'Phone-only contact',
+                      })}
                     </p>
                   )}
                 </CardContent>

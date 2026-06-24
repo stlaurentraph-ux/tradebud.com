@@ -346,3 +346,61 @@ export async function mockExporterPackageReadinessApis(
     await route.continue();
   });
 }
+
+export async function mockPlotGeometryApprovalApis(
+  page: Page,
+  options?: { approved?: boolean },
+): Promise<void> {
+  const approved = options?.approved ?? false;
+  const approvedAt = approved ? new Date().toISOString() : null;
+
+  await page.route('**/api/plots/*/map-preview', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    const url = route.request().url();
+    const plotId = decodeURIComponent(url.split('/api/plots/')[1]?.split('/')[0] ?? 'plot_smoke');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: plotId,
+        name: 'Playwright plot',
+        kind: 'polygon',
+        area_ha: 1.2,
+        status: 'under_review',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [30.06, -1.94],
+              [30.061, -1.94],
+              [30.061, -1.939],
+              [30.06, -1.94],
+            ],
+          ],
+        },
+        geometry_capture: {
+          geometryConfidenceTier: 'low',
+          captureMethod: 'walk_perimeter',
+        },
+        geometry_approved_at: approvedAt,
+      }),
+    });
+  });
+
+  await page.route('**/api/plots/*/approve-geometry', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry_approved_at: new Date().toISOString(),
+      }),
+    });
+  });
+}
