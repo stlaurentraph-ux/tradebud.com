@@ -50,7 +50,7 @@ import {
   getRegisterDeliveryHeaderCtaLabel,
 } from '@/lib/workflow-terminology-labels';
 
-interface Harvest extends ExporterBatchRecord {}
+type Harvest = ExporterBatchRecord;
 
 const devMockHarvests: Harvest[] =
   process.env.NODE_ENV !== 'production' ? mockBatches : [];
