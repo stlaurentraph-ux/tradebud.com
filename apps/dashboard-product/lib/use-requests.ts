@@ -43,6 +43,7 @@ export interface RequestCampaign {
   accepted_count?: number;
   pending_count?: number;
   expired_count?: number;
+  recipient_status_counts?: import('@/lib/campaign-recipient-timeline').CampaignRecipientStatusCounts;
 }
 
 function getAuthHeaders(): Record<string, string> | undefined {

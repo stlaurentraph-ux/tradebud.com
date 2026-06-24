@@ -753,6 +753,14 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/requests/campaigns/[id]/recipients/resend",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/recipients/resend"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/requests/campaigns/decision-intent/public",
       "category": "backend-proxy",
       "backendPaths": [

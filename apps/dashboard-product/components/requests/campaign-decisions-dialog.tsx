@@ -1,9 +1,10 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
-import { CheckCircle2, Clock, Copy, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, Copy, RefreshCw, XCircle } from 'lucide-react';
 import { AsyncState } from '@/components/common/async-state';
+import { PermissionGate } from '@/components/common/permission-gate';
 import { CampaignRecipientFunnelSummary } from '@/components/requests/campaign-recipient-funnel-summary';
 import { CampaignRecipientProgressStepper } from '@/components/requests/campaign-recipient-progress-stepper';
 import { Badge } from '@/components/ui/badge';
@@ -29,7 +30,10 @@ import {
   type CampaignRecipientFilter,
   type CampaignRecipientTimelineEntry,
 } from '@/lib/campaign-recipient-timeline';
+import { resolveCampaignRecipientSenderActions } from '@/lib/campaign-recipient-sender-ui';
 import { LocaleContext } from '@/lib/locale-context';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
+import { resendCampaignRecipientInvite } from '@/lib/request-campaign-client';
 import { cn } from '@/lib/utils';
 import {
   formatCampaignDecisionSource,
@@ -40,6 +44,9 @@ import {
   getCampaignRecipientOnboardingStatusLabel,
   getCampaignRecipientFulfillmentSourceLabel,
   getCampaignRecipientTimelineCopyEmailLabel,
+  getCampaignRecipientTimelineCopyConnectLinkLabel,
+  getCampaignRecipientTimelineCopyInboxLinkLabel,
+  getCampaignRecipientTimelineResendInviteLabel,
   getCampaignRecipientTimelineDescription,
   getCampaignRecipientTimelineEmptyActivity,
   getCampaignRecipientTimelineEmptyFiltered,
@@ -78,28 +85,64 @@ function formatRelativeTimestamp(iso: string | null | undefined): string | null 
 }
 
 function RecipientRow({
+  campaignId,
   recipient,
   t,
+  onResent,
 }: {
+  campaignId: string;
   recipient: CampaignRecipientTimelineEntry;
   t?: (key: string) => string;
+  onResent?: () => void;
 }) {
   const displayLabel = getCampaignRecipientDisplayLabel(recipient);
   const channelIcon = getCampaignRecipientChannelIcon(recipient.delivery_channel);
-  const [copied, setCopied] = useState(false);
+  const actions = resolveCampaignRecipientSenderActions(campaignId, recipient);
+  const [copiedField, setCopiedField] = useState<'email' | 'connect' | 'inbox' | null>(null);
+  const [isResending, setIsResending] = useState(false);
   const relativeTime = formatRelativeTimestamp(recipient.updated_at);
   const steps = getRecipientProgressSteps(recipient.onboarding_status);
+
+  const copyToClipboard = async (text: string, field: 'email' | 'connect' | 'inbox') => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      window.setTimeout(() => setCopiedField(null), 1500);
+      if (field === 'connect' || field === 'inbox') {
+        trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_RECIPIENT_LINK_COPIED, {
+          campaign_id: campaignId,
+          link_type: field,
+        });
+      }
+    } catch {
+      // Clipboard unavailable — ignore silently.
+    }
+  };
 
   const handleCopyEmail = async () => {
     if (!recipient.recipient_email) {
       return;
     }
+    await copyToClipboard(recipient.recipient_email, 'email');
+  };
+
+  const handleResend = async () => {
+    if (!recipient.recipient_email) {
+      return;
+    }
+    setIsResending(true);
     try {
-      await navigator.clipboard.writeText(recipient.recipient_email);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1500);
+      await resendCampaignRecipientInvite(campaignId, recipient.recipient_email);
+      trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_RECIPIENT_INVITE_RESENT, {
+        campaign_id: campaignId,
+      });
+      onResent?.();
     } catch {
-      // Clipboard unavailable — ignore silently.
+      trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_RECIPIENT_INVITE_RESEND_FAILURE, {
+        campaign_id: campaignId,
+      });
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -125,7 +168,7 @@ function RecipientRow({
             aria-label={getCampaignRecipientTimelineCopyEmailLabel(t)}
             title={getCampaignRecipientTimelineCopyEmailLabel(t)}
           >
-            <Copy className={cn('h-3.5 w-3.5', copied && 'text-emerald-600')} aria-hidden="true" />
+            <Copy className={cn('h-3.5 w-3.5', copiedField === 'email' && 'text-emerald-600')} aria-hidden="true" />
           </Button>
           ) : null}
         </div>
@@ -149,6 +192,55 @@ function RecipientRow({
             </span>
           ) : null}
         </div>
+        {actions.canCopyConnectLink || actions.canCopyInboxLink || actions.canResendInvite ? (
+          <div className="flex flex-wrap gap-2 pt-1">
+            {actions.canCopyConnectLink && actions.connectUrl ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void copyToClipboard(actions.connectUrl!, 'connect')}
+              >
+                <Copy
+                  className={cn('mr-1 h-3.5 w-3.5', copiedField === 'connect' && 'text-emerald-600')}
+                  aria-hidden="true"
+                />
+                {getCampaignRecipientTimelineCopyConnectLinkLabel(t)}
+              </Button>
+            ) : null}
+            {actions.canCopyInboxLink && actions.inboxUrl ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void copyToClipboard(actions.inboxUrl!, 'inbox')}
+              >
+                <Copy
+                  className={cn('mr-1 h-3.5 w-3.5', copiedField === 'inbox' && 'text-emerald-600')}
+                  aria-hidden="true"
+                />
+                {getCampaignRecipientTimelineCopyInboxLinkLabel(t)}
+              </Button>
+            ) : null}
+            {actions.canResendInvite ? (
+              <PermissionGate permission="requests:send">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={isResending}
+                  onClick={() => void handleResend()}
+                >
+                  <RefreshCw
+                    className={cn('mr-1 h-3.5 w-3.5', isResending && 'animate-spin')}
+                    aria-hidden="true"
+                  />
+                  {getCampaignRecipientTimelineResendInviteLabel(t)}
+                </Button>
+              </PermissionGate>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <CampaignRecipientProgressStepper steps={steps} compact t={t} />
     </div>
@@ -166,10 +258,20 @@ export function CampaignDecisionsDialog({
   const [activeTab, setActiveTab] = useState<'recipients' | 'activity'>('recipients');
   const [recipientFilter, setRecipientFilter] = useState<CampaignRecipientFilter>('all');
   const [decisionFilter, setDecisionFilter] = useState<CampaignDecisionFilter>('all');
-  const { data, isLoading, isLoadingMore, error, loadMore } = useCampaignDecisions(campaignId, {
+  const { data, isLoading, isLoadingMore, error, loadMore, reload } = useCampaignDecisions(campaignId, {
     decision: decisionFilter,
     enabled: open,
   });
+
+  useEffect(() => {
+    if (!open || !campaignId || !data) {
+      return;
+    }
+    trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_RECIPIENT_TIMELINE_VIEWED, {
+      campaign_id: campaignId,
+      recipient_count: data.recipients.length,
+    });
+  }, [open, campaignId, data]);
 
   const recipients = useMemo(() => data?.recipients ?? [], [data?.recipients]);
   const filteredRecipients = useMemo(
@@ -251,8 +353,10 @@ export function CampaignDecisionsDialog({
                         filteredRecipients.map((recipient) => (
                           <RecipientRow
                             key={recipient.contact_id ?? recipient.recipient_email ?? recipient.recipient_label}
+                            campaignId={campaignId ?? ''}
                             recipient={recipient}
                             t={t}
+                            onResent={reload}
                           />
                         ))
                       )}

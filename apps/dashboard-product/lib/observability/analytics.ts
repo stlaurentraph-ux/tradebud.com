@@ -48,6 +48,10 @@ export const DASHBOARD_EVENTS = {
   DELIVERY_DESK_TRIP_CLAIM_SUCCESS: 'delivery_desk_trip_claim_success',
   DELIVERY_DESK_HANDOFF_CONFIRMED: 'delivery_desk_handoff_confirmed',
   DELIVERY_TRIP_PREVIEW_VIEWED: 'delivery_trip_preview_viewed',
+  CAMPAIGN_RECIPIENT_TIMELINE_VIEWED: 'dashboard_campaign_recipient_timeline_viewed',
+  CAMPAIGN_RECIPIENT_LINK_COPIED: 'dashboard_campaign_recipient_link_copied',
+  CAMPAIGN_RECIPIENT_INVITE_RESENT: 'dashboard_campaign_recipient_invite_resent',
+  CAMPAIGN_RECIPIENT_INVITE_RESEND_FAILURE: 'dashboard_campaign_recipient_invite_resend_failure',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -67,6 +71,7 @@ const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.CONTACT_STATUS_CHANGE_FAILURE,
   DASHBOARD_EVENTS.CONTACT_CREATE_FAILURE,
   DASHBOARD_EVENTS.ISSUE_STATUS_CHANGE_FAILURE,
+  DASHBOARD_EVENTS.CAMPAIGN_RECIPIENT_INVITE_RESEND_FAILURE,
 ]);
 
 function compactProps(properties?: DashboardEventProps): Record<string, string | number | boolean> {

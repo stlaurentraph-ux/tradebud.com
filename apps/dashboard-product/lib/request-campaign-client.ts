@@ -26,3 +26,24 @@ export async function archiveRequestCampaign(campaignId: string): Promise<void> 
     throw new Error(parseBackendErrorMessage(body, 'Failed to archive campaign.'));
   }
 }
+
+export async function resendCampaignRecipientInvite(
+  campaignId: string,
+  recipientEmail: string,
+): Promise<void> {
+  const response = await fetch(
+    `/api/requests/campaigns/${encodeURIComponent(campaignId)}/recipients/resend`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(),
+      },
+      body: JSON.stringify({ recipient_email: recipientEmail }),
+    },
+  );
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(parseBackendErrorMessage(body, 'Failed to resend invite.'));
+  }
+}

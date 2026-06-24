@@ -5323,6 +5323,37 @@ export function getOutreachResponsesSummaryWithTotal(
   );
 }
 
+export function getOutreachFunnelSummary(
+  counts: import('@/lib/campaign-recipient-timeline').CampaignRecipientStatusCounts | undefined,
+  t?: TranslateFn,
+): string {
+  if (!counts) {
+    return '';
+  }
+  const parts: string[] = [];
+  if (counts.fulfilled > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.fulfilled', '{{count}} fulfilled', t, { count: counts.fulfilled }),
+    );
+  }
+  if (counts.signed_up > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.joined', '{{count}} joined', t, { count: counts.signed_up }),
+    );
+  }
+  if (counts.invite_sent > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.invited', '{{count}} invited', t, { count: counts.invite_sent }),
+    );
+  }
+  if (counts.refused > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.refused', '{{count}} refused', t, { count: counts.refused }),
+    );
+  }
+  return parts.join(' · ');
+}
+
 export function getOutreachViewTimelineLabel(t?: TranslateFn): string {
   return wf('workflow.outreach.action.view_timeline', 'View timeline', t);
 }
@@ -5416,6 +5447,18 @@ export function getCampaignRecipientTimelineEmptyActivity(t?: TranslateFn): stri
 
 export function getCampaignRecipientTimelineCopyEmailLabel(t?: TranslateFn): string {
   return wf('workflow.outreach.timeline.action.copy_email', 'Copy email', t);
+}
+
+export function getCampaignRecipientTimelineCopyConnectLinkLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.action.copy_signup_link', 'Copy signup link', t);
+}
+
+export function getCampaignRecipientTimelineCopyInboxLinkLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.action.copy_inbox_link', 'Copy inbox link', t);
+}
+
+export function getCampaignRecipientTimelineResendInviteLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.action.resend_invite', 'Resend invite', t);
 }
 
 export function getCampaignRecipientTimelineFilterLabel(

@@ -39,6 +39,12 @@ export type CampaignRecipientDecisionRow = {
   decided_at: string | Date;
 };
 
+export type CampaignRecipientShareLinks = {
+  recipient_lane: 'dashboard' | 'field';
+  connect_url: string;
+  inbox_url: string | null;
+};
+
 export type CampaignRecipientTimelineEntry = {
   contact_id: string | null;
   recipient_email: string | null;
@@ -51,6 +57,8 @@ export type CampaignRecipientTimelineEntry = {
   fulfillment_source: CampaignFulfillmentSource | null;
   decided_at: string | null;
   updated_at: string | null;
+  share_links?: CampaignRecipientShareLinks;
+  can_resend_invite?: boolean;
 };
 
 export type CampaignRecipientStatusCounts = Record<CampaignRecipientOnboardingStatus, number>;
