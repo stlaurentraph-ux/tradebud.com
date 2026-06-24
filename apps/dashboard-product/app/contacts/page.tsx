@@ -110,7 +110,7 @@ export default function ContactsPage() {
     return contacts.filter((contact) => {
       const matchesSearch =
         contact.full_name.toLowerCase().includes(search.toLowerCase()) ||
-        contact.email.toLowerCase().includes(search.toLowerCase()) ||
+        (contact.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (contact.organization ?? '').toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
       const matchesActivity =

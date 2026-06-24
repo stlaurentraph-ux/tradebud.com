@@ -2,6 +2,8 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from '@nes
 import { Pool } from 'pg';
 import { markCrmContactSubmittedOnFulfill } from '../contacts/mark-crm-contact-submitted-on-fulfill';
 import { PG_POOL } from '../db/db.module';
+import { deriveFarmerAppFulfillmentSource } from '../requests/campaign-fulfillment-source';
+import { recordCampaignFulfillmentDecision } from '../requests/record-campaign-fulfillment-decision';
 import { resolveTenantIdsByEmails } from '../network/email-to-tenant-resolution';
 import { GOLDEN_STAGING_TENANT } from '../testing/golden-staging-tenant.constants';
 
@@ -702,81 +704,86 @@ export class InboxService {
       input.recipientTenantId,
       input.recipientUserId,
     );
-    if (!recipientEmail) {
-      return;
-    }
 
-    await markCrmContactSubmittedOnFulfill(this.pool, {
+    const crmResult = await markCrmContactSubmittedOnFulfill(this.pool, {
       senderTenantId: input.senderTenantId,
       recipientEmail,
       source: 'inbox_fulfillment',
       campaignId: input.campaignId,
     });
 
-    let insertedDecision = false;
+    let invite: {
+      contact_id: string | null;
+      recipient_email: string | null;
+      delivery_address: string | null;
+      delivery_channel: string | null;
+      claimed_farmer_profile_id: string | null;
+    } | null = null;
+
     try {
-      const decisionRes = await this.pool.query<{ campaign_id: string }>(
+      const inviteRes = await this.pool.query<{
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_address: string | null;
+        delivery_channel: string | null;
+        claimed_farmer_profile_id: string | null;
+      }>(
         `
-          INSERT INTO request_campaign_recipient_decisions (
-            campaign_id,
-            recipient_email,
-            decision,
-            source
-          )
-          VALUES ($1, $2, 'accept', 'inbox_fulfillment')
-          ON CONFLICT (campaign_id, recipient_email) DO NOTHING
-          RETURNING campaign_id
+          SELECT
+            contact_id,
+            LOWER(recipient_email) AS recipient_email,
+            delivery_address,
+            delivery_channel,
+            claimed_farmer_profile_id
+          FROM campaign_recipient_invites
+          WHERE campaign_id = $1
+            AND sender_tenant_id = $2
+            AND (
+              ($3::text IS NOT NULL AND LOWER(recipient_email) = $3)
+              OR ($4::text IS NOT NULL AND contact_id = $4)
+            )
+          ORDER BY created_at DESC
+          LIMIT 1
         `,
-        [input.campaignId, recipientEmail],
+        [
+          input.campaignId,
+          input.senderTenantId,
+          recipientEmail,
+          crmResult.contactId,
+        ],
       );
-      insertedDecision = Boolean(decisionRes.rows[0]?.campaign_id);
+      invite = inviteRes.rows[0] ?? null;
     } catch (error) {
       const code = (error as { code?: string } | null)?.code;
-      if (code === '42P01') {
-        return;
+      if (code !== '42P01' && code !== '42703') {
+        throw error;
       }
-      throw error;
     }
 
-    if (!insertedDecision) {
+    const fulfillmentSource = invite?.claimed_farmer_profile_id
+      ? deriveFarmerAppFulfillmentSource(invite)
+      : 'cooperative_on_behalf';
+
+    const decisionResult = await recordCampaignFulfillmentDecision(this.pool, {
+      campaignId: input.campaignId,
+      senderTenantId: input.senderTenantId,
+      fulfillmentSource,
+      decisionSource: 'inbox_fulfillment',
+      recipientEmail: invite?.recipient_email ?? recipientEmail,
+      deliveryAddress: invite?.delivery_address,
+      contactId: invite?.contact_id ?? crmResult.contactId,
+    });
+
+    if (!decisionResult.inserted) {
       return;
-    }
-
-    try {
-      await this.pool.query(
-        `
-          UPDATE request_campaigns
-          SET
-            accepted_count = accepted_count + 1,
-            pending_count = CASE WHEN pending_count > 0 THEN pending_count - 1 ELSE pending_count END,
-            status = CASE
-              WHEN status IN ('RUNNING', 'PARTIAL') AND pending_count <= 1 THEN
-                CASE
-                  WHEN expired_count > 0 THEN 'PARTIAL'
-                  ELSE 'COMPLETED'
-                END
-              ELSE status
-            END,
-            updated_at = NOW()
-          WHERE tenant_id = $1
-            AND id = $2
-            AND status IN ('RUNNING', 'PARTIAL')
-        `,
-        [input.senderTenantId, input.campaignId],
-      );
-    } catch (error) {
-      const code = (error as { code?: string } | null)?.code;
-      if (code === '42P01') {
-        return;
-      }
-      throw error;
     }
 
     await this.emitAuditEvent('inbox_request_campaign_reconciled', {
       campaignId: input.campaignId,
       senderTenantId: input.senderTenantId,
       recipientTenantId: input.recipientTenantId,
-      recipientEmail,
+      recipientEmail: decisionResult.recipientEmail,
+      fulfillmentSource,
       evidencePlotIds: input.responsePayload.evidencePlotIds,
       evidencePackageIds: input.responsePayload.evidencePackageIds,
       reconciledAt: input.responsePayload.respondedAt,

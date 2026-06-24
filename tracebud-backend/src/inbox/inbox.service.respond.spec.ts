@@ -28,6 +28,10 @@ describe('InboxService respond fulfillment', () => {
         return { rows: [{ email: 'exporter@tracebud.test' }] };
       }
 
+      if (normalized.includes('FROM campaign_recipient_invites')) {
+        return { rows: [] };
+      }
+
       if (normalized.includes('INSERT INTO request_campaign_recipient_decisions')) {
         return { rows: [{ campaign_id: 'camp_1' }] };
       }
@@ -64,7 +68,8 @@ describe('InboxService respond fulfillment', () => {
         sql.includes('request_campaign_recipient_decisions') &&
         Array.isArray(params) &&
         params[0] === 'camp_1' &&
-        params[1] === 'exporter@tracebud.test',
+        params[1] === 'exporter@tracebud.test' &&
+        params[3] === 'cooperative_on_behalf',
       ),
     ).toBe(true);
     expect(

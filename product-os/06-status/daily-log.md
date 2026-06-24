@@ -1,3 +1,11 @@
+### 2026-06-24 (ADR-012 P5 — buyer fulfillment provenance)
+
+- **Schema** — TB-V16-066: `fulfillment_source` + `contact_id` on `request_campaign_recipient_decisions`; `require_farmer_app_confirmation` on `request_campaigns`.
+- **Backend** — `campaign-fulfillment-source.ts` derives `farmer_app_email` / `farmer_app_phone` / `cooperative_on_behalf`; inbox + consent grant paths record decisions via `record-campaign-fulfillment-decision.ts`.
+- **Timeline** — recipient onboarding respects strict coop policy (coop fulfillment stays `accepted` until farmer claims when flag set).
+- **Dashboard** — campaign decisions dialog shows green farmer-direct vs amber cooperative fulfillment badges.
+- **Analytics** — `fulfillment_source_recorded` audit events on decision insert.
+
 ### 2026-06-24 (ADR-012 P1 — CRM farmer phone reachability)
 
 - **Schema** — TB-V16-063: farmer CRM contacts allow null email when phone present.
