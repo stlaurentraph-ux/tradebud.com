@@ -44,6 +44,7 @@ describe('campaign-recipient-timeline', () => {
         {
           recipient_email: 'a@example.com',
           status: 'claimed',
+          claimed_tenant_id: null,
           claimed_farmer_profile_id: 'farmer_1',
           sent_at: null,
         },
