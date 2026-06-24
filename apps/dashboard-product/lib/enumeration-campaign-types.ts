@@ -76,3 +76,12 @@ export function parseMappingRegionForm(form: MappingRegionFormState): Enumeratio
   }
   return { label, bbox: { west, south, east, north } };
 }
+
+export type OutreachCampaignStatusLabel = 'Draft' | 'Sent' | 'Completed' | 'Archived';
+
+export function mapCampaignStatusToOutreachUi(status: string): OutreachCampaignStatusLabel {
+  if (status === 'DRAFT') return 'Draft';
+  if (status === 'QUEUED' || status === 'RUNNING') return 'Sent';
+  if (status === 'COMPLETED' || status === 'PARTIAL') return 'Completed';
+  return 'Archived';
+}

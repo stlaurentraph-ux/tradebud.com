@@ -18,7 +18,7 @@ import type {
 import { useRequestCampaigns } from '@/lib/use-requests';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildAppBreadcrumbs } from '@/lib/nav-labels';
-import { mapCampaignStatusToOutreachUi } from '@/lib/dashboardCrmOutreachRegistry';
+import { mapCampaignStatusToOutreachUi } from '@/lib/enumeration-campaign-types';
 
 export default function EnumerationCampaignPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: campaignId } = use(params);

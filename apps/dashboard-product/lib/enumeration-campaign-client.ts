@@ -1,9 +1,13 @@
-import { getAuthHeaders } from '@/lib/auth-headers';
 import { parseBackendErrorMessage } from '@/lib/request-campaign-payload';
 import type {
   EnumerationCampaignProgress,
   EnumerationMappingRegion,
 } from '@/lib/enumeration-campaign-types';
+
+function getAuthHeaders(): Record<string, string> | undefined {
+  const token = typeof window !== 'undefined' ? sessionStorage.getItem('tracebud_token') : null;
+  return token ? { Authorization: `Bearer ${token}` } : undefined;
+}
 
 export async function fetchEnumerationCampaignProgress(
   campaignId: string,
