@@ -65,10 +65,11 @@ function EnumerationCampaignPageContent({ campaignId }: { campaignId: string }) 
   return (
     <>
       <AppHeader
-        breadcrumbs={buildAppBreadcrumbs(t, [
-          { label: 'Programmes', href: '/programmes' },
-          { label: pageTitle },
-        ])}
+        breadcrumbs={buildAppBreadcrumbs(
+          t,
+          { name: 'Programmes', href: '/programmes' },
+          { name: pageTitle },
+        )}
         title="Field mapping ops"
         description="Publish the district region agents confirm offline and track roster collection progress."
       />
