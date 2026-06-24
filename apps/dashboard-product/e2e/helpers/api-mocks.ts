@@ -351,8 +351,7 @@ export async function mockPlotGeometryApprovalApis(
   page: Page,
   options?: { approved?: boolean },
 ): Promise<void> {
-  const approved = options?.approved ?? false;
-  const approvedAt = approved ? new Date().toISOString() : null;
+  let approvedAt = options?.approved ? new Date().toISOString() : null;
 
   await page.route('**/api/plots/*/map-preview', async (route) => {
     if (route.request().method() !== 'GET') {
@@ -395,11 +394,12 @@ export async function mockPlotGeometryApprovalApis(
       await route.continue();
       return;
     }
+    approvedAt = new Date().toISOString();
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        geometry_approved_at: new Date().toISOString(),
+        geometry_approved_at: approvedAt,
       }),
     });
   });
