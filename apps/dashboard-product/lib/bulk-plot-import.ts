@@ -172,10 +172,15 @@ export async function updateBulkPlotImportPolicy(input: {
   requireSignedPackages?: boolean;
   acceptIntegratorSignatures?: boolean;
 }): Promise<BulkPlotImportPolicy> {
-  return requestJson<BulkPlotImportPolicy>('/api/imports/plots/policy', {
+  const result = await requestJson<BulkPlotImportPolicy>('/api/imports/plots/policy', {
     method: 'PATCH',
     body: JSON.stringify(input),
   });
+  trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_POLICY_UPDATED, {
+    require_signed_packages: result.requireSignedPackages,
+    accept_integrator_signatures: result.acceptIntegratorSignatures,
+  });
+  return result;
 }
 
 export async function listBulkPlotImportIntegratorKeys(): Promise<BulkPlotImportIntegratorKey[]> {

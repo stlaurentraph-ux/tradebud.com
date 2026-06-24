@@ -153,6 +153,10 @@ export const BACKEND_BULK_IMPORT_AUDIT_EVENT_TYPES = [
   'bulk_import_signing_key_registered',
   'bulk_import_signing_key_revoked',
   'bulk_import_policy_updated',
+  'bulk_import_execute_completed',
+  'bulk_import_job_completed',
+  'bulk_import_job_crashed',
+  'bulk_import_job_payload_storage_fallback',
   'bulk_import_package_signature_verified',
   'bulk_import_package_signature_failed',
 ] as const;

@@ -9,6 +9,9 @@ import { createHash, randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
 import { BulkPlotImportJobStorageService } from './bulk-plot-import-job-storage.service';
+import {
+  BulkPlotImportObservabilityService,
+} from './bulk-plot-import-observability.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
 import {
   BULK_PLOT_IMPORT_ASYNC_MAX_ROWS,
@@ -51,6 +54,7 @@ export class BulkPlotImportJobService {
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly bulkPlotImportService: BulkPlotImportService,
     private readonly jobStorage: BulkPlotImportJobStorageService,
+    private readonly observability: BulkPlotImportObservabilityService,
   ) {}
 
   async createJob(params: {
@@ -79,6 +83,7 @@ export class BulkPlotImportJobService {
     const stored = await this.jobStorage.persistJobPayload({
       tenantId: params.tenantId,
       jobId,
+      userId: params.userId,
       payload,
     });
 
@@ -97,6 +102,14 @@ export class BulkPlotImportJobService {
         params.userId,
       ],
     );
+
+    this.observability.log('job_queued', {
+      tenantId: params.tenantId,
+      jobId,
+      userId: params.userId,
+      rowCount: rows.length,
+      storageMode: stored.storageMode,
+    });
 
     const job = await this.getJob(params.tenantId, jobId);
     this.scheduleProcessing(jobId);
@@ -119,9 +132,26 @@ export class BulkPlotImportJobService {
 
   private scheduleProcessing(jobId: string): void {
     setImmediate(() => {
-      void this.processJob(jobId).catch((error) => {
+      void this.processJob(jobId).catch(async (error) => {
         const message = error instanceof Error ? error.message : 'Bulk import job failed.';
         this.logger.error(`Bulk import job ${jobId} crashed: ${message}`);
+        try {
+          const result = await this.pool.query<BulkImportJobRow>(
+            `SELECT tenant_id, created_by_id FROM bulk_import_jobs WHERE id = $1 LIMIT 1`,
+            [jobId],
+          );
+          const row = result.rows[0];
+          await this.observability.recordJobCrashed({
+            tenantId: row?.tenant_id ?? null,
+            userId: row?.created_by_id ?? null,
+            jobId,
+            message,
+          });
+        } catch (auditError) {
+          const auditMessage =
+            auditError instanceof Error ? auditError.message : 'Failed to record job crash audit.';
+          this.logger.error(`Bulk import job ${jobId} crash audit failed: ${auditMessage}`);
+        }
       });
     });
   }
@@ -143,11 +173,19 @@ export class BulkPlotImportJobService {
       const job = claimed.rows[0];
       if (!job) return;
 
+      this.observability.log('job_processing_started', {
+        tenantId: job.tenant_id,
+        jobId,
+        userId: job.created_by_id,
+        totalRecords: job.total_records,
+      });
+
       const payload = await this.jobStorage.loadJobPayload({
         payloadJsonb: job.payload_jsonb,
         fileStorageKey: job.file_storage_key,
       });
       const rows = payload.rows;
+      const storageMode = payload.storageMode;
       const failureSamples: Array<{ rowIndex: number; clientPlotId: string; message?: string }> = [];
 
       let processedRecords = job.processed_records;
@@ -164,6 +202,17 @@ export class BulkPlotImportJobService {
           actorEmail: payload.actorEmail,
           actorFullName: payload.actorFullName,
           skipRowLimit: true,
+        });
+
+        await this.observability.recordExecuteCompleted({
+          tenantId: job.tenant_id,
+          userId: job.created_by_id,
+          mode: 'async_batch',
+          jobId,
+          totalRows: result.totalRows,
+          importedCount: result.importedCount,
+          duplicateSkippedCount: result.duplicateSkippedCount,
+          failedCount: result.failedCount,
         });
 
         successCount += result.importedCount;
@@ -225,9 +274,22 @@ export class BulkPlotImportJobService {
             failureSamples,
             importedCount: successCount,
             duplicateSkippedCount,
+            storageMode,
           }),
         ],
       );
+
+      await this.observability.recordJobCompleted({
+        tenantId: job.tenant_id,
+        userId: job.created_by_id,
+        jobId,
+        status: finalStatus,
+        totalRecords: job.total_records,
+        successCount,
+        failureCount,
+        duplicateSkippedCount,
+        storageMode,
+      });
     } finally {
       this.processingJobIds.delete(jobId);
     }

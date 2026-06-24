@@ -8,6 +8,7 @@ import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.servi
 import { BulkPlotImportIntegratorKeyService } from './bulk-plot-import-integrator-key.service';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
 import { BulkPlotImportJobStorageService } from './bulk-plot-import-job-storage.service';
+import { BulkPlotImportObservabilityService } from './bulk-plot-import-observability.service';
 import { BulkPlotImportPackageService } from './bulk-plot-import-package.service';
 import { BulkPlotImportPolicyService } from './bulk-plot-import-policy.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
@@ -38,6 +39,7 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     BulkPlotImportService,
     BulkPlotImportJobService,
     BulkPlotImportJobStorageService,
+    BulkPlotImportObservabilityService,
     BulkPlotImportEvidenceService,
     BulkPlotImportPackageService,
     BulkPlotImportPolicyService,

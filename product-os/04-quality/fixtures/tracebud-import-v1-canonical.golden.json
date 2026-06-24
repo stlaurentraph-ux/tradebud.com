@@ -1,0 +1,4 @@
+{
+  "canonicalMessage": "{\"exported_at\":\"2026-06-24T10:00:00.000Z\",\"format_version\":\"tracebud_import_v1\",\"plots\":[{\"client_plot_id\":\"PLOT-1\",\"country_iso\":\"HN\",\"declared_area_ha\":1,\"geolocation_mode\":\"POINT\",\"geometry\":{\"coordinates\":[-87.1,14.1],\"type\":\"Point\"},\"producer_ref\":\"P1\"}],\"producers\":[{\"country_iso\":\"HN\",\"full_name\":\"Maria\",\"producer_ref\":\"P1\"}],\"source_system\":\"legacy_gis_export\"}",
+  "contentHashSha256": "7f411ba80f728040832dd6d8823d7e63ad38f1e4dd25feaf698c98ae98b05e87"
+}

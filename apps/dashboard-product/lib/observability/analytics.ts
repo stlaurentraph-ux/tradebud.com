@@ -31,6 +31,7 @@ export const DASHBOARD_EVENTS = {
   BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_VERIFIED: 'dashboard_bulk_plot_import_package_signature_verified',
   BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_FAILED: 'dashboard_bulk_plot_import_package_signature_failed',
   BULK_PLOT_IMPORT_PACKAGE_UNSIGNED: 'dashboard_bulk_plot_import_package_unsigned',
+  BULK_PLOT_IMPORT_POLICY_UPDATED: 'dashboard_bulk_plot_import_policy_updated',
   INBOUND_CAMPAIGN_REQUEST_VIEWED: 'inbound_campaign_request_viewed',
 } as const;
 

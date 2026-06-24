@@ -12,8 +12,14 @@ function makeRow(index: number): BulkPlotImportInputRow {
 }
 
 describe('BulkPlotImportJobStorageService', () => {
+  const observability = {
+    log: jest.fn(),
+    warn: jest.fn(),
+    recordStorageFallback: jest.fn().mockResolvedValue(undefined),
+  };
+
   it('keeps small payloads inline', async () => {
-    const service = new BulkPlotImportJobStorageService();
+    const service = new BulkPlotImportJobStorageService(observability as never);
     const payload = { rows: [makeRow(1)] };
     const stored = await service.persistJobPayload({
       tenantId: 'tenant_1',
@@ -21,19 +27,21 @@ describe('BulkPlotImportJobStorageService', () => {
       payload,
     });
     expect(stored.fileStorageKey).toBeNull();
-    expect(stored.payloadJsonb).toEqual(payload);
+    expect(stored.storageMode).toBe('inline');
+    expect(stored.payloadJsonb.rows).toEqual(payload.rows);
   });
 
   it('loads inline payloads without storage key', async () => {
-    const service = new BulkPlotImportJobStorageService();
-    const payload = { rows: [makeRow(1)], actorEmail: 'ops@example.com' };
+    const service = new BulkPlotImportJobStorageService(observability as never);
+    const payload = { rows: [makeRow(1)], actorEmail: 'ops@example.com', storageMode: 'inline' };
     const loaded = await service.loadJobPayload({ payloadJsonb: payload });
     expect(loaded.rows).toHaveLength(1);
     expect(loaded.actorEmail).toBe('ops@example.com');
+    expect(loaded.storageMode).toBe('inline');
   });
 
   it('detects large payloads for object storage', () => {
-    const service = new BulkPlotImportJobStorageService();
+    const service = new BulkPlotImportJobStorageService(observability as never);
     const serialized = JSON.stringify({ rows: [{ clientPlotId: 'x'.repeat(600_000) }] });
     expect(service.shouldUseObjectStorage(serialized)).toBe(true);
   });

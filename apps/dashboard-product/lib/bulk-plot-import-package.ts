@@ -1,4 +1,8 @@
 import type { BulkPlotImportGeoJsonGeometry, BulkPlotImportInputRow } from '@/lib/bulk-plot-import';
+import {
+  TRACEBUD_IMPORT_V1_FORMAT,
+  canonicalizeTracebudImportV1ForHash,
+} from '@tracebud/import-v1-canonical';
 
 async function sha256Hex(input: string): Promise<string> {
   const subtle = globalThis.crypto?.subtle;
@@ -11,7 +15,7 @@ async function sha256Hex(input: string): Promise<string> {
     .join('');
 }
 
-export const TRACEBUD_IMPORT_V1_FORMAT = 'tracebud_import_v1';
+export { TRACEBUD_IMPORT_V1_FORMAT };
 
 export type TracebudImportV1Producer = {
   producer_ref: string;
@@ -142,30 +146,6 @@ export const BULK_PLOT_IMPORT_PACKAGE_SAMPLE = JSON.stringify(
   null,
   2,
 );
-
-function sortObjectKeys(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((entry) => sortObjectKeys(entry));
-  }
-  if (value && typeof value === 'object') {
-    return Object.keys(value as Record<string, unknown>)
-      .sort()
-      .reduce<Record<string, unknown>>((accumulator, key) => {
-        accumulator[key] = sortObjectKeys((value as Record<string, unknown>)[key]);
-        return accumulator;
-      }, {});
-  }
-  return value;
-}
-
-export function canonicalizeTracebudImportV1ForHash(
-  pkg: TracebudImportV1Package,
-): Record<string, unknown> {
-  const payload: Record<string, unknown> = { ...pkg };
-  delete payload.content_hash_sha256;
-  delete payload.signature;
-  return sortObjectKeys(payload) as Record<string, unknown>;
-}
 
 export async function computeTracebudImportV1ContentHash(pkg: TracebudImportV1Package): Promise<string> {
   const canonical = JSON.stringify(canonicalizeTracebudImportV1ForHash(pkg));

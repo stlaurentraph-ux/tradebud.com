@@ -1,6 +1,7 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
 import { BulkPlotImportJobStorageService } from './bulk-plot-import-job-storage.service';
+import { BulkPlotImportObservabilityService } from './bulk-plot-import-observability.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
 
 function makeRow(index: number) {
@@ -17,6 +18,7 @@ function makeService(deps?: {
   pool?: { query: jest.Mock };
   bulkPlotImportService?: Partial<BulkPlotImportService>;
   jobStorage?: Partial<BulkPlotImportJobStorageService>;
+  observability?: Partial<BulkPlotImportObservabilityService>;
 }) {
   const pool = deps?.pool ?? { query: jest.fn() };
   const jobStorage =
@@ -24,10 +26,19 @@ function makeService(deps?: {
     ({
       persistJobPayload: jest.fn().mockImplementation(async ({ payload }) => ({
         fileStorageKey: null,
-        payloadJsonb: payload,
+        storageMode: 'inline',
+        payloadJsonb: { ...payload, storageMode: 'inline' },
       })),
-      loadJobPayload: jest.fn().mockResolvedValue({ rows: [] }),
+      loadJobPayload: jest.fn().mockResolvedValue({ rows: [], storageMode: 'inline' }),
     } as unknown as BulkPlotImportJobStorageService);
+  const observability =
+    deps?.observability ??
+    ({
+      log: jest.fn(),
+      recordExecuteCompleted: jest.fn().mockResolvedValue(undefined),
+      recordJobCompleted: jest.fn().mockResolvedValue(undefined),
+      recordJobCrashed: jest.fn().mockResolvedValue(undefined),
+    } as unknown as BulkPlotImportObservabilityService);
   return {
     service: new BulkPlotImportJobService(
       pool as never,
@@ -42,9 +53,11 @@ function makeService(deps?: {
           }),
         } as unknown as BulkPlotImportService),
       jobStorage as BulkPlotImportJobStorageService,
+      observability as BulkPlotImportObservabilityService,
     ),
     pool,
     jobStorage,
+    observability,
   };
 }
 
@@ -88,13 +101,17 @@ describe('BulkPlotImportJobService.createJob', () => {
         })
         .mockResolvedValue({ rows: [] }),
     };
-    const { service } = makeService({ pool });
+    const { service, observability } = makeService({ pool });
     const rows = Array.from({ length: 501 }, (_, index) => makeRow(index + 1));
     const job = await service.createJob({ tenantId: 'tenant_1', userId: 'user_1', rows });
     expect(job.id).toBe('job_1');
     expect(job.status).toBe('QUEUED');
     expect(job.totalRecords).toBe(501);
     expect(pool.query).toHaveBeenCalled();
+    expect(observability.log).toHaveBeenCalledWith(
+      'job_queued',
+      expect.objectContaining({ tenantId: 'tenant_1', rowCount: 501, storageMode: 'inline' }),
+    );
   });
 });
 

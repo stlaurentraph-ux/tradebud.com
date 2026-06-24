@@ -5,6 +5,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.service';
 import { BulkPlotImportIntegratorKeyService } from './bulk-plot-import-integrator-key.service';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
+import { BulkPlotImportObservabilityService } from './bulk-plot-import-observability.service';
 import { BulkPlotImportPackageService } from './bulk-plot-import-package.service';
 import { BulkPlotImportPolicyService } from './bulk-plot-import-policy.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
@@ -40,6 +41,7 @@ export class BulkPlotImportController {
     private readonly bulkPlotImportSigningKeyService: BulkPlotImportSigningKeyService,
     private readonly bulkPlotImportPolicyService: BulkPlotImportPolicyService,
     private readonly bulkPlotImportIntegratorKeyService: BulkPlotImportIntegratorKeyService,
+    private readonly bulkPlotImportObservabilityService: BulkPlotImportObservabilityService,
   ) {}
 
   private getTenantId(req: any): string {
@@ -206,13 +208,24 @@ export class BulkPlotImportController {
         : typeof req.user?.user_metadata?.fullName === 'string'
           ? req.user.user_metadata.fullName
           : undefined;
-    return this.bulkPlotImportService.execute({
+    const result = await this.bulkPlotImportService.execute({
       tenantId,
       userId,
       rows: body?.rows ?? [],
       actorEmail: email,
       actorFullName: fullName,
     });
+    await this.bulkPlotImportObservabilityService.recordExecuteCompleted({
+      tenantId,
+      userId,
+      mode: 'sync',
+      totalRows: result.totalRows,
+      importedCount: result.importedCount,
+      duplicateSkippedCount: result.duplicateSkippedCount,
+      failedCount: result.failedCount,
+      sourceSystem: body?.importPackage?.source_system ?? null,
+    });
+    return result;
   }
 
   @Post('jobs')

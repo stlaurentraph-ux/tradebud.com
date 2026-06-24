@@ -89,6 +89,14 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV, G
 - External worker queue (Redis/Bull) separate from API process
 - Integrator self-service key registration UI
 
+## Scope (Observability hardening — shipped)
+
+- `BulkPlotImportObservabilityService` for structured JSON logs (`scope: bulk_plot_import`)
+- Backend audit events: `bulk_import_execute_completed`, `bulk_import_job_completed`, `bulk_import_job_crashed`, `bulk_import_job_payload_storage_fallback`
+- Job lifecycle logs include `tenantId`, `jobId`, `storageMode`, counters
+- Shared `@tracebud/import-v1-canonical` package + golden fixture parity tests (backend + dashboard)
+- Dashboard analytics: `dashboard_bulk_plot_import_policy_updated`
+
 ## Permissions
 
 | Role | Preview/import |
@@ -150,6 +158,13 @@ Imported plots enter normal compliance pipeline (`pending_check`).
 - [x] Integrator keys resolve by `kid` with optional `source_system` allowlist
 - [x] Async jobs spill large payloads to object storage with inline fallback
 
+### Observability hardening
+
+- [x] Sync execute and async job terminal states write backend audit events
+- [x] Storage fallback and job crashes are auditable with structured logs
+- [x] Dashboard/backend canonical hash parity guarded by shared golden fixture
+- [x] Policy updates emit dashboard analytics event
+
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
@@ -158,6 +173,9 @@ Imported plots enter normal compliance pipeline (`pending_check`).
 - `tracebud-backend/src/plots/bulk-plot-import-evidence.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-package.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-policy.service.spec.ts`
+- `tracebud-backend/src/plots/bulk-plot-import-observability.service.spec.ts`
+- `tracebud-backend/src/plots/bulk-plot-import-package-canonical.parity.spec.ts`
+- `apps/dashboard-product/lib/bulk-plot-import-package-canonical.parity.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-kml.test.ts`
