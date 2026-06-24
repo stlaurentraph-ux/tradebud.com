@@ -122,7 +122,6 @@ export default function PlotsPage() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const { user } = useAuth();
-  const isCooperative = user?.active_role === 'cooperative';
   const role = user?.active_role;
   const { plots, isLoading: isPlotsLoading, error: plotsLoadError, reload: reloadPlots } = useTenantPlots(
     user?.tenant_id ?? null,
