@@ -5,6 +5,7 @@ import type { CampaignInvitePreview } from './campaignInviteTypes';
 export type { CampaignInvitePreview };
 
 const STORAGE_KEY = 'tracebud_pending_campaign_invite';
+const CLAIM_TOKEN_STORAGE_KEY = 'tracebud_pending_campaign_claim_token';
 const PREVIEW_STORAGE_KEY = 'tracebud_pending_campaign_invite_preview';
 
 export function parseCampaignIdFromUrl(url: string): string | null {
@@ -26,6 +27,17 @@ export function parseCampaignIdFromUrl(url: string): string | null {
   }
 }
 
+export function parseCampaignClaimTokenFromUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.searchParams.get('token')?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function isCampaignInviteDeepLink(url: string): boolean {
   return parseCampaignIdFromUrl(url) != null;
 }
@@ -33,6 +45,22 @@ export function isCampaignInviteDeepLink(url: string): boolean {
 export async function readPendingCampaignInviteId(): Promise<string | null> {
   const value = (await AsyncStorage.getItem(STORAGE_KEY))?.trim();
   return value || null;
+}
+
+export async function readPendingCampaignClaimToken(): Promise<string | null> {
+  const value = (await AsyncStorage.getItem(CLAIM_TOKEN_STORAGE_KEY))?.trim();
+  return value || null;
+}
+
+export async function readPendingCampaignBootstrapContext(): Promise<{
+  campaignId: string | null;
+  claimToken: string | null;
+}> {
+  const [campaignId, claimToken] = await Promise.all([
+    readPendingCampaignInviteId(),
+    readPendingCampaignClaimToken(),
+  ]);
+  return { campaignId, claimToken };
 }
 
 export async function readPendingCampaignInvitePreview(): Promise<CampaignInvitePreview | null> {
@@ -47,6 +75,8 @@ export async function readPendingCampaignInvitePreview(): Promise<CampaignInvite
       fromOrg: parsed.fromOrg?.trim() || '',
       dueAt: parsed.dueAt ?? null,
       senderTenantId: parsed.senderTenantId?.trim() || '',
+      deliveryChannel: parsed.deliveryChannel,
+      recipientLabel: parsed.recipientLabel?.trim() || undefined,
     };
   } catch {
     return null;
@@ -59,6 +89,12 @@ export async function persistPendingCampaignInviteId(campaignId: string | null |
   await AsyncStorage.setItem(STORAGE_KEY, trimmed);
 }
 
+export async function persistPendingCampaignClaimToken(token: string | null | undefined): Promise<void> {
+  const trimmed = token?.trim();
+  if (!trimmed) return;
+  await AsyncStorage.setItem(CLAIM_TOKEN_STORAGE_KEY, trimmed);
+}
+
 export async function persistPendingCampaignInvitePreview(
   preview: CampaignInvitePreview | null | undefined,
 ): Promise<void> {
@@ -69,15 +105,19 @@ export async function persistPendingCampaignInvitePreview(
 export async function persistCampaignInvite(
   campaignId: string,
   preview?: CampaignInvitePreview | null,
+  claimToken?: string | null,
 ): Promise<void> {
   await persistPendingCampaignInviteId(campaignId);
+  if (claimToken?.trim()) {
+    await persistPendingCampaignClaimToken(claimToken);
+  }
   if (preview) {
     await persistPendingCampaignInvitePreview(preview);
   }
 }
 
 export async function clearPendingCampaignInviteId(): Promise<void> {
-  await AsyncStorage.multiRemove([STORAGE_KEY, PREVIEW_STORAGE_KEY]);
+  await AsyncStorage.multiRemove([STORAGE_KEY, CLAIM_TOKEN_STORAGE_KEY, PREVIEW_STORAGE_KEY]);
 }
 
 export async function consumePendingCampaignInviteId(): Promise<string | null> {

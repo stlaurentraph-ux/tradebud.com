@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { fetchCampaignPublicPreview } from '@/features/api/campaignPreview';
+import { fetchAndCacheCampaignInvitePreview } from '@/features/campaign/fetchAndCacheCampaignInvitePreview';
 import {
-  persistPendingCampaignInvitePreview,
   readPendingCampaignInvitePreview,
   type CampaignInvitePreview,
 } from '@/features/campaign/campaignInviteContext';
@@ -23,11 +22,11 @@ export function useCampaignInvitePreview(campaignId: string | null | undefined) 
     }
     setLoading(true);
     try {
-      const res = await fetchCampaignPublicPreview(id);
-      if (res.ok) {
-        setPreview(res.preview);
-        await persistPendingCampaignInvitePreview(res.preview);
-        return res.preview;
+      const claimToken = await readPendingCampaignClaimToken();
+      const fetched = await fetchAndCacheCampaignInvitePreview(id, claimToken);
+      if (fetched) {
+        setPreview(fetched);
+        return fetched;
       }
       return cached?.campaignId === id ? cached : null;
     } finally {

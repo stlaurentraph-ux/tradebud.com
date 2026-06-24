@@ -10,7 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { normalizeFarmerPhoneE164 } from '../contacts/crm-contact-reachability';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PlotsService } from './plots.service';
 import {
@@ -47,7 +47,14 @@ export class FieldAppController {
     summary: 'Link local field-app farmer id to the signed-in Supabase user',
   })
   async bootstrapFieldApp(
-    @Body() body: { farmerId?: string; fullName?: string; countryCode?: string; campaignId?: string },
+    @Body()
+    body: {
+      farmerId?: string;
+      fullName?: string;
+      countryCode?: string;
+      campaignId?: string;
+      claimToken?: string;
+    },
     @Req() req: any,
   ) {
     const userId = req.user?.id as string | undefined;
@@ -59,6 +66,11 @@ export class FieldAppController {
       throw new BadRequestException('farmerId is required');
     }
     const email = typeof req.user?.email === 'string' ? req.user.email : '';
+    const phoneE164 =
+      normalizeFarmerPhoneE164(typeof req.user?.phone === 'string' ? req.user.phone : null) ??
+      normalizeFarmerPhoneE164(
+        typeof req.user?.user_metadata?.phone === 'string' ? req.user.user_metadata.phone : null,
+      );
     const fullName =
       body.fullName?.trim() ||
       (typeof req.user?.user_metadata?.full_name === 'string'
@@ -72,7 +84,9 @@ export class FieldAppController {
       countryCode: body.countryCode?.trim() || 'HN',
       fullName,
       email,
+      phoneE164,
       campaignId: body.campaignId?.trim() || null,
+      claimToken: body.claimToken?.trim() || null,
     });
     const ownedFarmerIds = await this.plotsService.listFarmerProfileIdsForAuthUser(userId);
     return { ok: true, farmer_id: farmerId, owned_farmer_ids: ownedFarmerIds };
