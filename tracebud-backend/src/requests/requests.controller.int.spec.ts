@@ -27,6 +27,7 @@ describe('RequestsController integration: decision timeline', () => {
       CREATE TABLE request_campaigns (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'RUNNING',
         target_contact_emails TEXT[] NOT NULL DEFAULT '{}',
         target_contact_ids TEXT[] NOT NULL DEFAULT '{}',
         require_farmer_app_confirmation BOOLEAN NOT NULL DEFAULT false

@@ -103,6 +103,7 @@ describe('Network routing — delivery to buyer tenant integration', () => {
         farmer_id UUID NOT NULL,
         transaction_id UUID NOT NULL,
         qr_code_ref TEXT NULL,
+        delivery_trip_ref TEXT NULL,
         status TEXT NOT NULL DEFAULT 'issued',
         intended_recipient_email TEXT NULL,
         intended_recipient_tenant_id TEXT NULL,
