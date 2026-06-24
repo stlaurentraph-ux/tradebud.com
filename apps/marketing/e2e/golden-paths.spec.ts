@@ -88,7 +88,8 @@ test('delivery receipt preview shows register CTA with mocked API', async ({ pag
   });
 
   await page.goto('/d/V-PLAYWRIGHT-TEST');
-  await expect(page.getByRole('heading', { name: 'Delivery receipt' })).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText('Loading delivery receipt')).not.toBeVisible({ timeout: 12_000 });
+  await expect(page.getByRole('heading', { name: 'Delivery receipt' })).toBeVisible({ timeout: 5_000 });
   await expect(page.getByText('420 kg')).toBeVisible();
   await expect(page.getByRole('link', { name: 'Register delivery in Tracebud' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Create a workspace to claim this delivery' })).toBeVisible();
