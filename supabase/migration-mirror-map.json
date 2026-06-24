@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-22T14:22:28.529Z",
+  "generatedAt": "2026-06-24T11:30:43.702Z",
   "pairs": [
     {
       "supabase": "202606120001_consent_grants.sql",
@@ -36,11 +36,6 @@
       "supabase": "202606170001_voucher_delivery_routing.sql",
       "backend": "tb_v16_044_voucher_delivery_routing.sql",
       "purpose": "voucher_delivery_routing"
-    },
-    {
-      "supabase": "20260623120000_voucher_buyer_invites.sql",
-      "backend": "tb_v16_054_voucher_buyer_invites.sql",
-      "purpose": "voucher_buyer_invites"
     },
     {
       "supabase": "202606170002_processing_facility_subtypes.sql",
@@ -116,6 +111,36 @@
       "supabase": "20260622130000_harvest_transaction_client_event_id.sql",
       "backend": "tb_v16_059_harvest_transaction_client_event_id.sql",
       "purpose": "harvest_transaction_client_event_id"
+    },
+    {
+      "supabase": "20260623120000_voucher_buyer_invites.sql",
+      "backend": "tb_v16_054_voucher_buyer_invites.sql",
+      "purpose": "voucher_buyer_invites"
+    },
+    {
+      "supabase": "20260624140000_delivery_trip_ref.sql",
+      "backend": "tb_v16_060_delivery_trip_ref.sql",
+      "purpose": "delivery_trip_ref"
+    },
+    {
+      "supabase": "20260624160000_campaign_recipient_farmer_claim.sql",
+      "backend": "tb_v16_062_campaign_recipient_farmer_claim.sql",
+      "purpose": "campaign_recipient_farmer_claim"
+    },
+    {
+      "supabase": "20260624180000_campaign_recipient_invites.sql",
+      "backend": "tb_v16_061_campaign_recipient_invites.sql",
+      "purpose": "campaign_recipient_invites"
+    },
+    {
+      "supabase": "20260624190000_crm_farmer_phone_reachability.sql",
+      "backend": "tb_v16_063_crm_farmer_phone_reachability.sql",
+      "purpose": "crm_farmer_phone_reachability"
+    },
+    {
+      "supabase": "20260624190000_enumeration_mapping_region.sql",
+      "backend": "tb_v16_062_enumeration_mapping_region.sql",
+      "purpose": "enumeration_mapping_region"
     }
   ],
   "supabaseOnly": [
