@@ -6,10 +6,11 @@ import { PlotsService } from '../plots/plots.service';
 
 const testDbUrl = process.env.TEST_DATABASE_URL;
 const describeIfDb = testDbUrl ? describe : describe.skip;
-const schema = 'tb_scope_test';
+const schema = `tb_scope_test_${process.pid}_${Date.now().toString(36)}`;
 
-function withSearchPath(connectionString: string, _targetSchema: string) {
-  return connectionString;
+function withSearchPath(connectionString: string, targetSchema: string): string {
+  const separator = connectionString.includes('?') ? '&' : '?';
+  return `${connectionString}${separator}options=-csearch_path%3D${targetSchema}%2Cpublic`;
 }
 
 describeIfDb('Ownership scope integration: farmer/profile joins', () => {
