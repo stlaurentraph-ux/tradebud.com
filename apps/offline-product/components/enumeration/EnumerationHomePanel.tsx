@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Brand } from '@/constants/theme';
 import { ProvisionalMemberSheet } from '@/components/enumeration/ProvisionalMemberSheet';
+import { EnumerationTileBootstrapGate } from '@/components/enumeration/EnumerationTileBootstrapGate';
 import { useEnumeration } from '@/features/enumeration/EnumerationContext';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -40,6 +41,7 @@ export function EnumerationHomePanel() {
 
   return (
     <View style={styles.wrap}>
+      <EnumerationTileBootstrapGate />
       <Card variant="outlined" style={styles.heroCard}>
         <View style={styles.heroIconWrap}>
           <Ionicons name="people-outline" size={24} color={Brand.primary} />

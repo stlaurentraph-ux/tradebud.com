@@ -21,6 +21,8 @@ export const DASHBOARD_EVENTS = {
   REACT_RENDER_ERROR: 'dashboard_react_render_error',
   UPSTREAM_BLOCKER_ALERT_CLICKED: 'dashboard_upstream_blocker_alert_clicked',
   PLOT_GEOMETRY_REVISION_APPLIED: 'plot_geometry_revision_applied',
+  ENUMERATION_MAPPING_REGION_SAVED: 'enumeration_mapping_region_saved',
+  ENUMERATION_MAPPING_REGION_SAVE_FAILURE: 'enumeration_mapping_region_save_failure',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -33,6 +35,7 @@ const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.PACKAGE_SEAL_FAILURE,
   DASHBOARD_EVENTS.UI_ACTION_FAILED,
   DASHBOARD_EVENTS.REACT_RENDER_ERROR,
+  DASHBOARD_EVENTS.ENUMERATION_MAPPING_REGION_SAVE_FAILURE,
 ]);
 
 function compactProps(properties?: DashboardEventProps): Record<string, string | number | boolean> {

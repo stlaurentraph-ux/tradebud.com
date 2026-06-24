@@ -1567,5 +1567,18 @@
   "enumeration_prefetching": "Downloading roster…",
   "enumeration_prefetch_success": "{n} members ready offline",
   "enumeration_prefetch_failed": "Could not download roster. Check Wi‑Fi and sign-in.",
-  "enumeration_provisional_sync_result": "Linked {synced} provisional member(s). {failed} failed."
+  "enumeration_provisional_sync_result": "Linked {synced} provisional member(s). {failed} failed.",
+  "enumeration_tile_region_title": "Confirm mapping region",
+  "enumeration_tile_region_body": "Are your field operations in {region}? Satellite maps can download for offline tracing.",
+  "enumeration_tile_region_yes": "Yes, download maps",
+  "enumeration_tile_region_no": "Choose another region",
+  "enumeration_tile_wifi_title": "Large map download",
+  "enumeration_tile_wifi_body": "This district pack is about {mb} MB. Connect to Wi‑Fi before downloading if you can.",
+  "enumeration_tile_download_anyway": "Download now",
+  "enumeration_tile_downloading_title": "Downloading district maps",
+  "enumeration_tile_downloading_body": "{pct}% complete",
+  "enumeration_tile_ready_title": "Offline maps ready",
+  "enumeration_tile_ready_body": "District satellite tiles are installed for manual plot tracing.",
+  "enumeration_tile_download_failed_title": "Map download failed",
+  "enumeration_tile_download_failed_body": "Try again on Wi‑Fi from the member queue or Offline maps in Settings."
 }

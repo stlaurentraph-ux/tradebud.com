@@ -23,6 +23,7 @@ import type {
   SyncEnumerationProvisionalResult,
 } from './field-enumeration-pack.types';
 import { parseMappingRegionRow } from './resolve-enumeration-mapping-region';
+import { summarizeEnumerationProgress, validateMappingRegionInput, type EnumerationCampaignProgress } from './field-enumeration-progress';
 import { PlotsService } from './plots.service';
 
 type ContactRow = {
@@ -476,6 +477,160 @@ export class FieldEnumerationService {
     }
 
     return warnings;
+  }
+
+  async updateCampaignMappingRegion(
+    tenantId: string,
+    campaignId: string,
+    input: {
+      label?: string | null;
+      west?: number | null;
+      south?: number | null;
+      east?: number | null;
+      north?: number | null;
+    },
+  ): Promise<{ campaign_id: string; mappingRegion: FieldEnumerationMappingRegion }> {
+    const normalizedCampaignId = campaignId.trim();
+    if (!normalizedCampaignId) {
+      throw new BadRequestException('campaignId is required');
+    }
+    let regionInput: ReturnType<typeof validateMappingRegionInput>;
+    try {
+      regionInput = validateMappingRegionInput(input);
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : 'Invalid mapping region');
+    }
+
+    try {
+      const result = await this.pool.query<{ id: string }>(
+        `
+          UPDATE request_campaigns
+          SET
+            mapping_region_label = $1,
+            mapping_region_west = $2,
+            mapping_region_south = $3,
+            mapping_region_east = $4,
+            mapping_region_north = $5,
+            updated_at = NOW()
+          WHERE tenant_id = $6
+            AND id = $7
+          RETURNING id
+        `,
+        [
+          regionInput.label,
+          regionInput.west,
+          regionInput.south,
+          regionInput.east,
+          regionInput.north,
+          tenantId,
+          normalizedCampaignId,
+        ],
+      );
+      if (!result.rows[0]) {
+        throw new NotFoundException('Campaign not found for this workspace');
+      }
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42703') {
+        throw new BadRequestException(
+          'Mapping region columns are not migrated yet. Apply tb_v16_062_enumeration_mapping_region.sql.',
+        );
+      }
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw error;
+    }
+
+    return {
+      campaign_id: normalizedCampaignId,
+      mappingRegion: {
+        label: regionInput.label,
+        bbox: {
+          west: regionInput.west,
+          south: regionInput.south,
+          east: regionInput.east,
+          north: regionInput.north,
+        },
+      },
+    };
+  }
+
+  async getCampaignProgressForDesk(
+    tenantId: string,
+    campaignId: string,
+  ): Promise<EnumerationCampaignProgress> {
+    const pack = await this.getPackForAgent(tenantId, campaignId);
+    const farmerIds = pack.members.map((member) => member.farmerId).filter(Boolean);
+    const geometryPendingByFarmer = await this.loadGeometryPendingByFarmer(tenantId, farmerIds);
+    const provisionalPendingReview = await this.countProvisionalContacts(tenantId);
+    const provisionalFarmerIds = await this.loadProvisionalFarmerIds(tenantId);
+
+    const members = pack.members.map((member) => ({
+      ...member,
+      isProvisional: provisionalFarmerIds.has(member.farmerId),
+      geometryPendingApproval: geometryPendingByFarmer.get(member.farmerId) ?? 0,
+    }));
+
+    return summarizeEnumerationProgress({
+      campaignId: campaignId.trim(),
+      campaignTitle: pack.campaignTitle ?? 'Mapping campaign',
+      mappingRegionConfigured: Boolean(pack.mappingRegion),
+      mappingRegion: pack.mappingRegion,
+      provisionalPendingReview,
+      members,
+    });
+  }
+
+  private async countProvisionalContacts(tenantId: string): Promise<number> {
+    try {
+      const result = await this.pool.query<{ count: string }>(
+        `SELECT COUNT(*)::text AS count FROM crm_contacts WHERE tenant_id = $1 AND tags @> ARRAY['enumeration:provisional']::text[]`,
+        [tenantId],
+      );
+      return Number.parseInt(result.rows[0]?.count ?? '0', 10);
+    } catch {
+      return 0;
+    }
+  }
+
+  private async loadProvisionalFarmerIds(tenantId: string): Promise<Set<string>> {
+    try {
+      const result = await this.pool.query<{ farmer_profile_id: string }>(
+        `SELECT farmer_profile_id FROM crm_contacts WHERE tenant_id = $1 AND tags @> ARRAY['enumeration:provisional']::text[] AND farmer_profile_id IS NOT NULL`,
+        [tenantId],
+      );
+      return new Set(result.rows.map((row) => row.farmer_profile_id));
+    } catch {
+      return new Set();
+    }
+  }
+
+  private async loadGeometryPendingByFarmer(
+    tenantId: string,
+    farmerIds: string[],
+  ): Promise<Map<string, number>> {
+    if (farmerIds.length === 0) return new Map();
+    try {
+      const result = await this.pool.query<{ farmer_id: string; count: string }>(
+        `
+          SELECT p.farmer_id, COUNT(*)::text AS count
+          FROM plot p
+          WHERE p.farmer_id = ANY($1::uuid[])
+            AND p.geometry_approved_at IS NULL
+            AND COALESCE(p.metadata->>'geometry_confidence_tier', '') IN ('low', 'moderate')
+          GROUP BY p.farmer_id
+        `,
+        [farmerIds],
+      );
+      return new Map(result.rows.map((row) => [row.farmer_id, Number.parseInt(row.count, 10)]));
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42703') {
+        return new Map();
+      }
+      throw error;
+    }
   }
 }
 

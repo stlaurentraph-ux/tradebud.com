@@ -1,8 +1,12 @@
 import { ForbiddenException } from '@nestjs/common';
+import { FieldEnumerationService } from '../plots/field-enumeration.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 
 describe('RequestsController', () => {
+  const makeController = (service: RequestsService) =>
+    new RequestsController(service, {} as FieldEnumerationService);
+
   const makeReq = (role: string, tenantId = 'tenant_1') => ({
     user: {
       id: 'user_1',
@@ -12,7 +16,7 @@ describe('RequestsController', () => {
 
   it('denies decision timeline for roles outside requests access policy', async () => {
     const service = { listDecisions: jest.fn() } as unknown as RequestsService;
-    const controller = new RequestsController(service);
+    const controller = makeController(service);
 
     await expect(controller.listDecisions(makeReq('farmer'), 'camp_1')).rejects.toBeInstanceOf(
       ForbiddenException,
@@ -21,7 +25,7 @@ describe('RequestsController', () => {
 
   it('denies decision timeline when tenant claim is missing', async () => {
     const service = { listDecisions: jest.fn() } as unknown as RequestsService;
-    const controller = new RequestsController(service);
+    const controller = makeController(service);
 
     await expect(
       controller.listDecisions({
@@ -59,7 +63,7 @@ describe('RequestsController', () => {
         ],
       }),
     } as unknown as RequestsService;
-    const controller = new RequestsController(service);
+    const controller = makeController(service);
 
     const result = await controller.listDecisions(makeReq('admin', 'tenant_abc'), 'camp_1', 'accept', '10', '20');
 
@@ -109,7 +113,7 @@ describe('RequestsController', () => {
         decisions: [],
       }),
     } as unknown as RequestsService;
-    const controller = new RequestsController(service);
+    const controller = makeController(service);
 
     await controller.listDecisions(makeReq('exporter', 'tenant_abc'), 'camp_1', 'all', 'NaN', 'abc');
 

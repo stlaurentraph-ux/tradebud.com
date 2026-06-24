@@ -23,6 +23,7 @@ import { validateProvisionalMemberInput } from '@/features/enumeration/validateP
 import { fetchFieldEnumerationPack } from '@/features/enumeration/fetchFieldEnumerationPack';
 import { mergeEnumerationPackIntoRoster } from '@/features/enumeration/applyEnumerationPackToRoster';
 import { syncAllProvisionalRosterMembers } from '@/features/enumeration/syncProvisionalRosterToServer';
+import type { FieldEnumerationMappingRegion } from '@/features/enumeration/fieldEnumerationPackTypes';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import {
   loadFieldRosterEntries,
@@ -77,6 +78,8 @@ type EnumerationContextValue = {
   >;
   syncProvisionalMembers: () => Promise<{ synced: number; failed: number }>;
   packPrefetching: boolean;
+  pendingTileBootstrap: (FieldEnumerationMappingRegion & { campaignId?: string | null }) | null;
+  clearPendingTileBootstrap: () => void;
 };
 
 const EnumerationContext = createContext<EnumerationContextValue | undefined>(undefined);
@@ -87,6 +90,7 @@ export function EnumerationProvider({ children }: { children: ReactNode }) {
   const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
   const [rosterLoading, setRosterLoading] = useState(false);
   const [packPrefetching, setPackPrefetching] = useState(false);
+  const [pendingTileBootstrap, setPendingTileBootstrap] = useState<(FieldEnumerationMappingRegion & { campaignId?: string | null }) | null>(null);
 
   const isEnumerationMode = isSignedIn && isFieldAgentRole(fieldAppRole);
 
@@ -242,6 +246,9 @@ export function EnumerationProvider({ children }: { children: ReactNode }) {
         }
         const mergeResult = await mergeEnumerationPackIntoRoster(response.pack);
         await refreshRoster();
+        if (response.pack.mappingRegion) {
+          setPendingTileBootstrap({ ...response.pack.mappingRegion, campaignId: response.pack.campaignId });
+        }
         trackEvent(ANALYTICS_EVENTS.ENUMERATION_ROSTER_PREFETCHED, {
           campaignId: response.pack.campaignId,
           memberCount: response.pack.members.length,
@@ -267,6 +274,8 @@ export function EnumerationProvider({ children }: { children: ReactNode }) {
     return { synced: result.synced, failed: result.failed };
   }, [refreshRoster]);
 
+  const clearPendingTileBootstrap = useCallback(() => { setPendingTileBootstrap(null); }, []);
+
   useEffect(() => {
     if (!isEnumerationMode || !isSignedIn) return;
     void prefetchRoster().catch(() => undefined);
@@ -290,6 +299,8 @@ export function EnumerationProvider({ children }: { children: ReactNode }) {
       prefetchRoster,
       syncProvisionalMembers,
       packPrefetching,
+      pendingTileBootstrap,
+      clearPendingTileBootstrap,
     }),
     [
       fieldAppRole,
@@ -307,6 +318,8 @@ export function EnumerationProvider({ children }: { children: ReactNode }) {
       prefetchRoster,
       syncProvisionalMembers,
       packPrefetching,
+      pendingTileBootstrap,
+      clearPendingTileBootstrap,
     ],
   );
 

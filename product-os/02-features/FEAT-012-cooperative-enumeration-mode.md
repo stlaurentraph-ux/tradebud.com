@@ -173,19 +173,20 @@ Include `tenantId`, `campaignId`, `assignmentId`, `captureIntent`, `geometryConf
 - [ ] Dashboard provisional merge queue (minimal) — deferred
 - [x] Tests: pack merge helpers + backend tag/dedup spec
 
-### Phase E — Confirm-gated district tiles
+### Phase E — Confirm-gated district tiles (2026-06-24)
 
-- [ ] Campaign/tenant `mapping_region_bbox` + label
-- [ ] Post-sign-in region confirm dialog (GPS/locale hint)
-- [ ] Wi‑Fi + size gate; download district pack; set active pack
-- [ ] Decline path: manual picker / defer
-- [ ] Tests: confirm flow, pack covers bbox, GEO-108 messaging
+- [x] Campaign `mapping_region_*` columns + pack API `mappingRegion`
+- [x] Post-roster-prefetch region confirm dialog (GPS hint)
+- [x] Size gate (>50 MB Wi‑Fi ack) + zoom cap; download district pack; set active pack
+- [x] Decline path → `/offline-maps` manual picker
+- [x] Tests: bbox parse/containment, size estimate, zoom cap
 
-### Phase F — Field manager ops (dashboard)
+### Phase F — Field manager ops (dashboard) (2026-06-24)
 
-- [ ] Publish mapping campaign (roster CSV or CRM selection + draw bbox on map)
-- [ ] Collection progress: members complete / plots captured / provisional pending review
-- [ ] Geometry approval integration (existing S6.4 card)
+- [x] Publish mapping campaign region (bbox + label on map)
+- [x] Collection progress: members complete / plots captured / provisional pending review
+- [x] Geometry approval counts in progress table (existing S6.4 card integration via pending counts)
+- [ ] Provisional merge queue (minimal desk UI) — deferred
 
 ## Acceptance criteria (Phase B–E minimum viable enumeration)
 

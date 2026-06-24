@@ -15,6 +15,7 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { FieldEnumerationService } from '../plots/field-enumeration.service';
 import { RequestType, RequestsService } from './requests.service';
 
 @ApiTags('Requests')
@@ -22,7 +23,10 @@ import { RequestType, RequestsService } from './requests.service';
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/requests')
 export class RequestsController {
-  constructor(private readonly requestsService: RequestsService) {}
+  constructor(
+    private readonly requestsService: RequestsService,
+    private readonly fieldEnumerationService: FieldEnumerationService,
+  ) {}
 
   private getTenantId(req: any): string {
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
@@ -205,6 +209,34 @@ export class RequestsController {
     this.requireRequestsAccess(req);
     const tenantId = this.getTenantId(req);
     return this.requestsService.archiveCampaign(tenantId, id);
+  }
+
+  @Get('campaigns/:id/enumeration-progress')
+  async getEnumerationProgress(@Req() req: any, @Param('id') id: string) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.fieldEnumerationService.getCampaignProgressForDesk(tenantId, id);
+  }
+
+  @Patch('campaigns/:id/mapping-region')
+  async updateCampaignMappingRegion(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body()
+    body: {
+      label?: string | null;
+      west?: number | null;
+      south?: number | null;
+      east?: number | null;
+      north?: number | null;
+    },
+  ) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    if (!body || typeof body !== 'object') {
+      throw new BadRequestException('Invalid payload.');
+    }
+    return this.fieldEnumerationService.updateCampaignMappingRegion(tenantId, id, body);
   }
 
   @Post('campaigns/:id/decision-intent')

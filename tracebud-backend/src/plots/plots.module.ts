@@ -28,6 +28,7 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     GfwContextService,
     FdpCommodityService,
   ],
+  exports: [FieldEnumerationService],
 })
 export class PlotsModule {}
 
