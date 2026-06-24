@@ -8,7 +8,7 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Brand } from '@/constants/theme';
 import { fetchAndCacheCampaignInvitePreview } from '@/features/campaign/fetchAndCacheCampaignInvitePreview';
-import { persistPendingCampaignInviteId } from '@/features/campaign/campaignInviteContext';
+import { persistPendingCampaignClaimToken, persistPendingCampaignInviteId } from '@/features/campaign/campaignInviteContext';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -21,8 +21,9 @@ import { createCampaignInviteScreenStyles } from '@/screenStyles/campaignInviteS
  * Persists invite, loads preview, then routes to Home where the banner continues the flow.
  */
 export default function CampaignInviteScreen() {
-  const params = useLocalSearchParams<{ campaign?: string }>();
+  const params = useLocalSearchParams<{ campaign?: string; token?: string }>();
   const campaignId = typeof params.campaign === 'string' ? params.campaign.trim() : '';
+  const claimToken = typeof params.token === 'string' ? params.token.trim() : '';
   const { openSignIn } = useSignInSheet();
   const { t } = useLanguage();
   const styles = useThemedStyles(createCampaignInviteScreenStyles);
@@ -37,7 +38,10 @@ export default function CampaignInviteScreen() {
     let cancelled = false;
     void (async () => {
       await persistPendingCampaignInviteId(campaignId);
-      await fetchAndCacheCampaignInvitePreview(campaignId);
+      if (claimToken) {
+        await persistPendingCampaignClaimToken(claimToken);
+      }
+      await fetchAndCacheCampaignInvitePreview(campaignId, claimToken || undefined);
       trackEvent(ANALYTICS_EVENTS.CAMPAIGN_INVITE_DEEP_LINK_OPENED, { campaignId });
       if (!cancelled) {
         setBootstrapping(false);
@@ -94,7 +98,8 @@ export default function CampaignInviteScreen() {
         title={t('campaign_invite_banner_cta')}
         onPress={() => {
           openSignIn({
-            variant: 'general',
+            variant: claimToken ? 'campaign_phone' : 'general',
+            expectedPhone: preview?.recipientLabel,
             onSuccess: () => {
               router.replace({ pathname: '/data-sharing', params: { campaign: campaignId } });
             },

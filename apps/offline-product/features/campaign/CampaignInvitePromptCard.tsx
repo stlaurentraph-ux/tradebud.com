@@ -53,8 +53,11 @@ export function CampaignInvitePromptCard({
   const handlePrimaryPress = () => {
     if (!isSignedIn) {
       trackEvent(ANALYTICS_EVENTS.CAMPAIGN_INVITE_BANNER_CTA, { campaignId, requiresSignIn: true });
+      const usePhoneOtp =
+        preview?.deliveryChannel === 'whatsapp' || Boolean(preview?.recipientLabel?.startsWith('+'));
       openSignIn({
-        variant: 'general',
+        variant: usePhoneOtp ? 'campaign_phone' : 'general',
+        expectedPhone: usePhoneOtp ? preview?.recipientLabel : undefined,
         onSuccess: () => {
           trackEvent(ANALYTICS_EVENTS.CAMPAIGN_INVITE_BANNER_CTA, { campaignId, afterSignIn: true });
           openDataSharing();

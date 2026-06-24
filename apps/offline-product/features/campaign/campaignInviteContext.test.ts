@@ -11,6 +11,7 @@ vi.mock('@react-native-async-storage/async-storage', () => ({
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   isCampaignInviteDeepLink,
+  parseCampaignClaimTokenFromUrl,
   parseCampaignIdFromUrl,
   persistPendingCampaignInviteId,
   persistPendingCampaignInvitePreview,
@@ -38,6 +39,27 @@ describe('campaignInviteContext', () => {
     expect(AsyncStorage.setItem).toHaveBeenCalledWith('tracebud_pending_campaign_invite', 'camp-xyz');
     vi.mocked(AsyncStorage.getItem).mockResolvedValue('camp-xyz');
     await expect(readPendingCampaignInviteId()).resolves.toBe('camp-xyz');
+  });
+
+  it('parses claim token from invite deep links', () => {
+    expect(
+      parseCampaignClaimTokenFromUrl(
+        'tracebudoffline://campaign?campaign=camp-abc&token=opaque-token',
+      ),
+    ).toBe('opaque-token');
+  });
+
+  it('persists pending claim token', async () => {
+    const { persistPendingCampaignClaimToken, readPendingCampaignClaimToken } = await import(
+      './campaignInviteContext'
+    );
+    await persistPendingCampaignClaimToken('tok-123');
+    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
+      'tracebud_pending_campaign_claim_token',
+      'tok-123',
+    );
+    vi.mocked(AsyncStorage.getItem).mockResolvedValue('tok-123');
+    await expect(readPendingCampaignClaimToken()).resolves.toBe('tok-123');
   });
 
   it('persists and reads campaign invite preview', async () => {

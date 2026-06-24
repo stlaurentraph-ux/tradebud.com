@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
-import { readPendingCampaignInviteId } from '@/features/campaign/campaignInviteContext';
+import { readPendingCampaignBootstrapContext } from '@/features/campaign/campaignInviteContext';
 import {
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
@@ -41,12 +41,13 @@ async function runPostOAuthConnectTasks(params: {
     void ensureFarmerOAuthProfile(params.fullName, params.session).catch(() => undefined);
 
     if (params.farmerId) {
-      const campaignId = await readPendingCampaignInviteId();
+      const { campaignId, claimToken } = await readPendingCampaignBootstrapContext();
       const bootstrap = await bootstrapFieldAppProducer(
         {
           farmerId: params.farmerId,
           fullName: params.fullName || undefined,
           campaignId: campaignId ?? undefined,
+          claimToken: claimToken ?? undefined,
         },
         { timeoutMs: OAUTH_CONNECT_TIMEOUT_MS },
       );

@@ -5,6 +5,12 @@
 - **Dashboard** — add/edit farmer wizards + CSV import support phone-only producers.
 - **Verification** — backend + dashboard reachability unit tests green.
 
+### 2026-06-24 (ADR-012 P4 — field phone OTP + token claim)
+
+- **Backend** — `claim-campaign-invite-by-token.ts` validates WhatsApp invite tokens against verified phone on bootstrap.
+- **Field app** — phone OTP sign-in for `campaign_phone` variant; persists claim token from deep links; bootstrap sends `claimToken`.
+- **Analytics** — `farmer_auth_phone_otp_*`, `campaign_invite_claimed_by_token`.
+
 ### 2026-06-24 (ADR-012 P3 — WhatsApp campaign delivery + claim landing)
 
 - **Schema** — TB-V16-065: `claim_token_hash` / `claim_expires_at` on `campaign_recipient_invites`.

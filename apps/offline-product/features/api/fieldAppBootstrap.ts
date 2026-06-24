@@ -59,6 +59,7 @@ export async function bootstrapFieldAppProducer(
     fullName?: string;
     countryCode?: string;
     campaignId?: string;
+    claimToken?: string;
   },
   options?: { timeoutMs?: number; force?: boolean },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -98,6 +99,7 @@ export async function bootstrapFieldAppProducer(
           fullName: params.fullName?.trim() || undefined,
           countryCode: params.countryCode?.trim() || undefined,
           campaignId: params.campaignId?.trim() || undefined,
+          claimToken: params.claimToken?.trim() || undefined,
         }),
         signal: controller.signal,
       });
@@ -108,9 +110,14 @@ export async function bootstrapFieldAppProducer(
         bootstrappedAtByFarmerId.set(farmerId, Date.now());
         if (params.campaignId?.trim()) {
           const { trackEvent, ANALYTICS_EVENTS } = await import('@/features/observability/analytics');
-          trackEvent(ANALYTICS_EVENTS.CAMPAIGN_INVITE_CLAIMED_ON_BOOTSTRAP, {
-            campaignId: params.campaignId.trim(),
-          });
+          trackEvent(
+            params.claimToken?.trim()
+              ? ANALYTICS_EVENTS.CAMPAIGN_INVITE_CLAIMED_BY_TOKEN
+              : ANALYTICS_EVENTS.CAMPAIGN_INVITE_CLAIMED_ON_BOOTSTRAP,
+            {
+              campaignId: params.campaignId.trim(),
+            },
+          );
         }
         return { ok: true };
       }
@@ -157,7 +164,7 @@ export async function bootstrapFieldAppProducer(
 /** Best-effort server link before plot sync (creates farmer_profile when missing). */
 export async function ensureFieldProducerBootstrapped(
   farmerId: string,
-  options?: { fullName?: string; force?: boolean; campaignId?: string },
+  options?: { fullName?: string; force?: boolean; campaignId?: string; claimToken?: string },
 ): Promise<void> {
   const scopedFarmerId = farmerId.trim();
   if (!scopedFarmerId || !hasSyncAuthSession()) {
@@ -169,6 +176,7 @@ export async function ensureFieldProducerBootstrapped(
       farmerId: scopedFarmerId,
       fullName,
       campaignId: options?.campaignId?.trim() || undefined,
+      claimToken: options?.claimToken?.trim() || undefined,
     },
     { force: options?.force === true },
   ).catch(() => undefined);

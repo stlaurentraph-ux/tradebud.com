@@ -6,6 +6,8 @@ import { claimSelfLinkedFarmerProfileForAuthUser,
   listFarmerProfileIdsForUser,
 } from '../auth/farmer-ownership';
 import { claimCampaignInvitesForFieldFarmer } from '../requests/claim-campaign-invites-for-field-farmer';
+import { claimCampaignInviteByToken } from '../requests/claim-campaign-invite-by-token';
+import { normalizeFarmerPhoneE164 } from '../contacts/crm-contact-reachability';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
@@ -484,7 +486,9 @@ export class PlotsService {
     countryCode?: string;
     fullName?: string | null;
     email?: string | null;
+    phoneE164?: string | null;
     campaignId?: string | null;
+    claimToken?: string | null;
   }): Promise<{ created: boolean }> {
     const created = await this.ensureFarmerProfileForPlot(params.farmerId, params.userId, {
       countryCode: params.countryCode,
@@ -495,12 +499,31 @@ export class PlotsService {
       params.farmerId,
       params.userId,
     );
-    if (params.email?.trim()) {
+    const claimToken = params.claimToken?.trim() || null;
+    const campaignId = params.campaignId?.trim() || null;
+    const verifiedPhone = normalizeFarmerPhoneE164(params.phoneE164);
+    if (claimToken && campaignId && verifiedPhone) {
+      const tokenClaim = await claimCampaignInviteByToken(this.pool, {
+        campaignId,
+        token: claimToken,
+        farmerProfileId: params.farmerId,
+        verifiedPhoneE164: verifiedPhone,
+        actorUserId: params.userId,
+      }).catch(() => ({ claimed: false as const, reason: 'not_found' as const }));
+      if (!tokenClaim.claimed && tokenClaim.reason === 'phone_mismatch') {
+        throw new ForbiddenException(
+          'This invite was sent to a different phone number. Sign in with the phone that received the WhatsApp message.',
+        );
+      }
+      if (!tokenClaim.claimed && tokenClaim.reason === 'expired') {
+        throw new ForbiddenException('This campaign invite has expired. Ask your buyer to resend the request.');
+      }
+    } else if (params.email?.trim()) {
       await claimCampaignInvitesForFieldFarmer(this.pool, {
         recipientEmail: params.email,
         farmerProfileId: params.farmerId,
         actorUserId: params.userId,
-        campaignId: params.campaignId ?? null,
+        campaignId,
       }).catch(() => undefined);
     }
     if (params.fullName?.trim()) {
