@@ -29,6 +29,7 @@
     "qa:structural:ci": "node ./scripts/run-structural-guards.mjs"
   },
   "dependencies": {
+    "@tracebud/import-v1-canonical": "*",
     "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "1.2.12",
     "@radix-ui/react-alert-dialog": "1.1.15",
@@ -66,6 +67,7 @@
     "cmdk": "1.1.1",
     "date-fns": "4.1.0",
     "embla-carousel-react": "8.6.0",
+    "fflate": "^0.8.3",
     "input-otp": "1.4.2",
     "lucide-react": "^0.564.0",
     "next": "16.1.6",
@@ -82,10 +84,10 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4.2.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@playwright/test": "^1.51.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22",
     "@types/react": "19.2.14",

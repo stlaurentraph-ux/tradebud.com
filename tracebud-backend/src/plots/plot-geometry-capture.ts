@@ -2,7 +2,7 @@ export type PlotGeometryCapturePayload = {
   geometry_confidence_tier: 'high' | 'moderate' | 'low';
   geometry_confidence_score: number;
   horizontal_uncertainty_m: number | null;
-  capture_method: 'MOBILE_GPS' | 'WEB_DRAW';
+  capture_method: 'MOBILE_GPS' | 'WEB_DRAW' | 'BULK_IMPORT' | 'CADASTRAL_IMPORT';
   imagery_source: 'esri_online' | 'offline_pack' | null;
   offline_tiles_pack_id: string | null;
   recorded_at: number;
@@ -21,7 +21,14 @@ export function normalizePlotGeometryCaptureInput(
   if (!Number.isFinite(score)) return null;
 
   const captureRaw = row.captureMethod ?? row.capture_method;
-  if (captureRaw !== 'MOBILE_GPS' && captureRaw !== 'WEB_DRAW') return null;
+  if (
+    captureRaw !== 'MOBILE_GPS' &&
+    captureRaw !== 'WEB_DRAW' &&
+    captureRaw !== 'BULK_IMPORT' &&
+    captureRaw !== 'CADASTRAL_IMPORT'
+  ) {
+    return null;
+  }
 
   const horizontalRaw = row.horizontalUncertaintyM ?? row.horizontal_uncertainty_m;
   const horizontalUncertaintyM =

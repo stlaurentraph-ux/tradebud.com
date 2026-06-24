@@ -21,6 +21,18 @@ export const DASHBOARD_EVENTS = {
   REACT_RENDER_ERROR: 'dashboard_react_render_error',
   UPSTREAM_BLOCKER_ALERT_CLICKED: 'dashboard_upstream_blocker_alert_clicked',
   PLOT_GEOMETRY_REVISION_APPLIED: 'plot_geometry_revision_applied',
+  BULK_PLOT_IMPORT_PREVIEW: 'dashboard_bulk_plot_import_preview',
+  BULK_PLOT_IMPORT_SUCCESS: 'dashboard_bulk_plot_import_success',
+  BULK_PLOT_IMPORT_FAILURE: 'dashboard_bulk_plot_import_failure',
+  BULK_PLOT_IMPORT_JOB_QUEUED: 'dashboard_bulk_plot_import_job_queued',
+  BULK_PLOT_IMPORT_JOB_COMPLETED: 'dashboard_bulk_plot_import_job_completed',
+  BULK_PLOT_IMPORT_EVIDENCE_SUCCESS: 'dashboard_bulk_plot_import_evidence_success',
+  BULK_PLOT_IMPORT_EVIDENCE_FAILURE: 'dashboard_bulk_plot_import_evidence_failure',
+  BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_VERIFIED: 'dashboard_bulk_plot_import_package_signature_verified',
+  BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_FAILED: 'dashboard_bulk_plot_import_package_signature_failed',
+  BULK_PLOT_IMPORT_PACKAGE_UNSIGNED: 'dashboard_bulk_plot_import_package_unsigned',
+  BULK_PLOT_IMPORT_POLICY_UPDATED: 'dashboard_bulk_plot_import_policy_updated',
+  INBOUND_CAMPAIGN_REQUEST_VIEWED: 'inbound_campaign_request_viewed',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -33,6 +45,7 @@ const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.PACKAGE_SEAL_FAILURE,
   DASHBOARD_EVENTS.UI_ACTION_FAILED,
   DASHBOARD_EVENTS.REACT_RENDER_ERROR,
+  DASHBOARD_EVENTS.BULK_PLOT_IMPORT_FAILURE,
 ]);
 
 function compactProps(properties?: DashboardEventProps): Record<string, string | number | boolean> {
@@ -51,7 +64,6 @@ export function trackDashboardEvent(
   const props = compactProps(properties);
 
   if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line no-console
     console.log('[DashboardAnalytics]', name, props);
   }
 

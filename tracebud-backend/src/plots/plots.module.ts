@@ -1,10 +1,23 @@
 import { Module } from '@nestjs/common';
+import { ContactsModule } from '../contacts/contacts.module';
 import { ConsentModule } from '../consent/consent.module';
 import { DbModule } from '../db/db.module';
 import { LaunchModule } from '../launch/launch.module';
-import { PlotsController } from './plots.controller';
+import { BulkPlotImportController } from './bulk-plot-import.controller';
+import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.service';
+import { BulkPlotImportIntegratorKeyService } from './bulk-plot-import-integrator-key.service';
+import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
+import { BulkPlotImportJobStorageService } from './bulk-plot-import-job-storage.service';
+import { BulkPlotImportObservabilityService } from './bulk-plot-import-observability.service';
+import { BulkPlotImportPackageService } from './bulk-plot-import-package.service';
+import { BulkPlotImportPolicyService } from './bulk-plot-import-policy.service';
+import { BulkPlotImportService } from './bulk-plot-import.service';
+import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.service';
+import { CadastralParcelController } from './cadastral-parcel.controller';
+import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service';
 import { FieldAppController } from './field-app.controller';
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
+import { PlotsController } from './plots.controller';
 import { PlotsService } from './plots.service';
 import { TenureParseService } from './tenure-parse.service';
 import { EvidenceDocumentsService } from './evidence-documents.service';
@@ -14,10 +27,25 @@ import { GfwService } from '../compliance/gfw.service';
 import { FdpCommodityService } from '../compliance/fdp-commodity.service';
 
 @Module({
-  imports: [DbModule, ConsentModule, LaunchModule],
-  controllers: [PlotsController, FieldAppController],
+  imports: [DbModule, ConsentModule, LaunchModule, ContactsModule],
+  controllers: [
+    PlotsController,
+    FieldAppController,
+    CadastralParcelController,
+    BulkPlotImportController,
+  ],
   providers: [
     PlotsService,
+    BulkPlotImportService,
+    BulkPlotImportJobService,
+    BulkPlotImportJobStorageService,
+    BulkPlotImportObservabilityService,
+    BulkPlotImportEvidenceService,
+    BulkPlotImportPackageService,
+    BulkPlotImportPolicyService,
+    BulkPlotImportIntegratorKeyService,
+    BulkPlotImportSigningKeyService,
+    CadastralParcelLookupService,
     TenureParseService,
     EvidenceDocumentsService,
     TenureReviewAlertService,
@@ -28,4 +56,3 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
   ],
 })
 export class PlotsModule {}
-

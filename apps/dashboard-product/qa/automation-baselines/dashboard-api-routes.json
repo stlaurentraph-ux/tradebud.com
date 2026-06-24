@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-21T13:52:45.589Z",
+  "generatedAt": "2026-06-24T12:25:54.737Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -359,6 +359,86 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/harvest/vouchers/claim"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/evidence",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/evidence"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/integrator-keys",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/integrator-keys"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/jobs",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/jobs"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/jobs/[id]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/jobs/{id}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/packages/verify",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/packages/verify"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/policy",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/preview",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/preview"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/signing-keys",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/signing-keys/[id]/revoke",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/signing-keys/{id}/revoke"
       ],
       "failClosed": true
     },

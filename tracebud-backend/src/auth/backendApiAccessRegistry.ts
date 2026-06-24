@@ -74,6 +74,18 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
     roles: ['farmer', 'agent'],
     note: 'enforceSyncPlotScope via resolveFieldActorRole',
   },
+  {
+    id: 'bulk_plot_import',
+    file: 'plots/bulk-plot-import.controller.ts',
+    roles: ['cooperative', 'exporter', 'admin', 'compliance_manager'],
+    note: 'POST preview + execute + async jobs + evidence ZIP + package signature verify for bulk plot import',
+  },
+  {
+    id: 'cadastral_parcel_lookup',
+    file: 'plots/cadastral-parcel.controller.ts',
+    roles: ['farmer', 'agent', 'exporter', 'cooperative', 'compliance_manager', 'admin', 'country_reviewer'],
+    note: 'GET cadastral parcel lookup',
+  },
 ] as const;
 
 /** Billing meter event types (billing_meter table — not audit_log). */

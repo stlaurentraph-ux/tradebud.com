@@ -269,6 +269,7 @@ export class PlotsService {
       ...params.existingPlot,
       name: nextName,
       client_plot_id: params.clientPlotId.trim(),
+      reconciledExisting: true as const,
     };
   }
 
