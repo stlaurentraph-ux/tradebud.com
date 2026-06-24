@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConsentModule } from '../consent/consent.module';
 import { DbModule } from '../db/db.module';
 import { LaunchModule } from '../launch/launch.module';
+import { CadastralParcelController } from './cadastral-parcel.controller';
+import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service';
 import { PlotsController } from './plots.controller';
 import { FieldAppController } from './field-app.controller';
 import { FieldEnumerationService } from './field-enumeration.service';
@@ -16,8 +18,9 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
 
 @Module({
   imports: [DbModule, ConsentModule, LaunchModule],
-  controllers: [PlotsController, FieldAppController],
+  controllers: [PlotsController, FieldAppController, CadastralParcelController],
   providers: [
+    CadastralParcelLookupService,
     PlotsService,
     FieldEnumerationService,
     TenureParseService,

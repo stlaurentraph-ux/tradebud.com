@@ -47,6 +47,7 @@ export const BACKEND_WORKFLOW_AUDIT_EVENT_TYPES = [
 export const BACKEND_PLOT_AUDIT_EVENT_TYPES = [
   'plot_created',
   'plot_geometry_superseded',
+  'plot_geometry_approved',
   'plot_geometry_quality_checked',
   'plot_evidence_synced',
   'plot_deforestation_decision_recorded',

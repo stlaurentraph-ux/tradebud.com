@@ -79,6 +79,18 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
     roles: ['farmer', 'agent'],
     note: 'enforceSyncPlotScope via resolveFieldActorRole',
   },
+  {
+    id: 'plots_approve_geometry',
+    file: 'plots/plots.controller.ts',
+    roles: ['exporter', 'compliance_manager', 'country_reviewer', 'admin'],
+    note: 'POST approve-geometry',
+  },
+  {
+    id: 'cadastral_parcel_lookup',
+    file: 'plots/cadastral-parcel.controller.ts',
+    roles: ['exporter', 'cooperative', 'compliance_manager', 'country_reviewer', 'admin', 'agent'],
+    note: 'GET lookup demo fixtures',
+  },
 ] as const;
 
 /** Billing meter event types (billing_meter table — not audit_log). */

@@ -21,6 +21,7 @@ const guards = [
   'dashboard-compliance-permission-guard.mjs',
   'dashboard-compliance-backend-parity-guard.mjs',
   'dashboard-exporter-workflow-guard.mjs',
+  'dashboard-mapping-workflow-guard.mjs',
   'dashboard-rbac-guard.mjs',
   'dashboard-shipment-transition-guard.mjs',
   'dashboard-legal-workflow-guard.mjs',
