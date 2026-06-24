@@ -3,6 +3,7 @@ export type PlotGeometryCapturePayload = {
   geometry_confidence_score: number;
   horizontal_uncertainty_m: number | null;
   capture_method: 'MOBILE_GPS' | 'WEB_DRAW';
+  capture_intent: 'eudr_minimum' | 'full_boundary' | null;
   imagery_source: 'esri_online' | 'offline_pack' | null;
   offline_tiles_pack_id: string | null;
   recorded_at: number;
@@ -39,6 +40,10 @@ export function normalizePlotGeometryCaptureInput(
   const offlineTilesPackId =
     typeof packRaw === 'string' && packRaw.length > 0 ? packRaw : null;
 
+  const intentRaw = row.captureIntent ?? row.capture_intent;
+  const captureIntent =
+    intentRaw === 'eudr_minimum' || intentRaw === 'full_boundary' ? intentRaw : null;
+
   const recordedRaw = row.recordedAt ?? row.recorded_at;
   const recordedAt =
     typeof recordedRaw === 'number' && Number.isFinite(recordedRaw)
@@ -50,6 +55,7 @@ export function normalizePlotGeometryCaptureInput(
     geometry_confidence_score: Math.round(score),
     horizontal_uncertainty_m: horizontalUncertaintyM,
     capture_method: captureRaw,
+    capture_intent: captureIntent,
     imagery_source: imagerySource,
     offline_tiles_pack_id: offlineTilesPackId,
     recorded_at: recordedAt,

@@ -5,11 +5,14 @@ export type PlotGeometryCaptureMethod = 'MOBILE_GPS' | 'WEB_DRAW';
 
 export type PlotGeometryCaptureImagerySource = 'esri_online' | 'offline_pack';
 
+export type PlotGeometryCaptureIntent = 'eudr_minimum' | 'full_boundary';
+
 export type PlotGeometryCaptureMetadata = {
   geometryConfidenceTier: 'high' | 'moderate' | 'low';
   geometryConfidenceScore: number;
   horizontalUncertaintyM: number | null;
   captureMethod: PlotGeometryCaptureMethod;
+  captureIntent?: PlotGeometryCaptureIntent | null;
   imagerySource?: PlotGeometryCaptureImagerySource | null;
   offlineTilesPackId?: string | null;
   recordedAt: number;
@@ -32,6 +35,7 @@ export function buildPlotGeometryCaptureMetadata(params: {
   } | null;
   precisionMeters?: number | null;
   recordedAt?: number;
+  captureIntent?: PlotGeometryCaptureIntent | null;
 }): PlotGeometryCaptureMetadata {
   const imagerySource =
     params.captureMethod === 'draw' ? (params.manualTraceImagery?.imagerySource ?? null) : null;
@@ -47,6 +51,7 @@ export function buildPlotGeometryCaptureMetadata(params: {
         ? params.precisionMeters
         : null),
     captureMethod: mapMobileCaptureMethodToApi(params.captureMethod),
+    captureIntent: params.captureIntent ?? null,
     imagerySource,
     offlineTilesPackId,
     recordedAt: params.recordedAt ?? Date.now(),
@@ -85,11 +90,18 @@ export function parsePlotGeometryCaptureMetadata(
   const parsedImagery =
     imagerySource === 'esri_online' || imagerySource === 'offline_pack' ? imagerySource : null;
 
+  const captureIntentRaw = row.captureIntent ?? row.capture_intent;
+  const captureIntent =
+    captureIntentRaw === 'eudr_minimum' || captureIntentRaw === 'full_boundary'
+      ? captureIntentRaw
+      : null;
+
   return {
     geometryConfidenceTier: tier,
     geometryConfidenceScore: score,
     horizontalUncertaintyM,
     captureMethod,
+    captureIntent,
     imagerySource: parsedImagery,
     offlineTilesPackId:
       typeof row.offlineTilesPackId === 'string' && row.offlineTilesPackId.length > 0

@@ -25,7 +25,12 @@ import {
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
-import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
+import { estimatePlotSyncAttention } from '@/features/sync/plotServerSync';
+import { summarizeHomeBackupAttention } from '@/features/sync/homeBackupAttention';
+import { readPendingCampaignInviteId } from '@/features/campaign/campaignInviteContext';
+import { PendingCampaignInviteBanner } from '@/features/campaign/PendingCampaignInviteBanner';
+import { EnumerationHomePanel } from '@/components/enumeration/EnumerationHomePanel';
+import { useEnumerationOptional } from '@/features/enumeration/EnumerationContext';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -43,8 +48,12 @@ export default function HomeScreen() {
     pending: number;
   } | null>(null);
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
+  const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
+  const campaignBannerTrackedRef = useRef<string | null>(null);
   const readinessRefreshGenRef = useRef(0);
   const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
+  const enumeration = useEnumerationOptional();
+  const isEnumerationHome = Boolean(enumeration?.isEnumerationMode);
 
   const refreshPlotReadiness = useCallback(async () => {
     if (plots.length === 0) {
@@ -101,6 +110,9 @@ export default function HomeScreen() {
   useFocusEffect(
     useCallback(() => {
       void refreshAuth();
+      void readPendingCampaignInviteId()
+        .then((campaignId) => setPendingCampaignId(campaignId))
+        .catch(() => setPendingCampaignId(null));
       loadPendingSyncActions()
         .then((rows) => setPendingCount(rows.length))
         .catch(() => undefined);
@@ -111,13 +123,26 @@ export default function HomeScreen() {
     }, [refreshAuth]),
   );
 
-  const unsyncedPlotCount = useMemo(() => {
-    if (!isSignedIn || plots.length === 0) return 0;
-    return listUnsyncedLocalPlots(plots, backendPlots, plotServerLinks).length;
-  }, [plots, backendPlots, plotServerLinks, isSignedIn]);
+  const plotAttentionEstimate = useMemo(() => {
+    if (plots.length === 0) return null;
+    return estimatePlotSyncAttention({
+      localPlots: plots,
+      backendPlots: isSignedIn ? backendPlots : [],
+      plotServerLinks,
+      t,
+    });
+  }, [plots, backendPlots, plotServerLinks, isSignedIn, t]);
 
-  const totalPendingSync = pendingCount + unsyncedPlotCount;
-  const needsBackupAttention = isSignedIn && totalPendingSync > 0;
+  const { totalPendingSync, needsBackupAttention, plotsBackedUpOnDevice } = useMemo(
+    () =>
+      summarizeHomeBackupAttention({
+        plotCount: plots.length,
+        pendingQueueCount: pendingCount,
+        unsyncedPlotCount: plotAttentionEstimate?.needsUploadPlots.length ?? 0,
+        blockedPlotCount: plotAttentionEstimate?.blockedPlots.length ?? 0,
+      }),
+    [plots.length, pendingCount, plotAttentionEstimate],
+  );
 
   const openBackupFlow = useCallback(() => {
     if (!isSignedIn) {
@@ -146,10 +171,19 @@ export default function HomeScreen() {
 
   /** One next-step card until the first plot is saved; then hidden. */
   const onboardingStep = useMemo((): 'register_plot' | 'add_name' | null => {
+    if (pendingCampaignId) return null;
     if (plots.length > 0) return null;
     if (farmer && !farmer.name?.trim()) return 'add_name';
     return 'register_plot';
-  }, [plots.length, farmer]);
+  }, [plots.length, farmer, pendingCampaignId]);
+
+  useEffect(() => {
+    if (!pendingCampaignId) return;
+    if (campaignBannerTrackedRef.current === pendingCampaignId) return;
+    campaignBannerTrackedRef.current = pendingCampaignId;
+    trackEvent(ANALYTICS_EVENTS.CAMPAIGN_INVITE_BANNER_SHOWN, { campaignId: pendingCampaignId });
+  }, [pendingCampaignId]);
+
   const homeTiles = useMemo(() => {
     const openPlotSection = (sub: 'documents') => {
       if (sub === 'documents') {
@@ -228,6 +262,19 @@ export default function HomeScreen() {
       />
 
       <ThemedScrollView contentContainerStyle={styles.container}>
+        {isEnumerationHome ? (
+          <EnumerationHomePanel />
+        ) : (
+          <>
+        {pendingCampaignId ? (
+          <PendingCampaignInviteBanner
+            campaignId={pendingCampaignId}
+            isSignedIn={isSignedIn}
+            onDismiss={() => setPendingCampaignId(null)}
+            t={t}
+          />
+        ) : null}
+
         {onboardingStep ? (
           <Card variant="outlined" style={styles.onboardingCard}>
             <View style={styles.onboardingHeader}>
@@ -429,6 +476,7 @@ export default function HomeScreen() {
 
         {plotsCount > 0 ? (
         <Pressable
+          testID="home-backup-sync-card"
           onPress={openBackupFlow}
           accessibilityRole="button"
           accessibilityLabel={
@@ -446,7 +494,7 @@ export default function HomeScreen() {
                 <Ionicons
                   name={needsBackupAttention ? 'cloud-upload-outline' : 'cloud-done-outline'}
                   size={16}
-                  color={needsBackupAttention ? Brand.warning : isSignedIn ? Brand.success : Brand.primary}
+                  color={needsBackupAttention ? Brand.warning : plotsBackedUpOnDevice || isSignedIn ? Brand.success : Brand.primary}
                 />
                 <ThemedText type="defaultSemiBold">{t('sync_status')}</ThemedText>
               </View>
@@ -472,6 +520,7 @@ export default function HomeScreen() {
               </View>
             ) : null}
             <ThemedText
+              testID="home-backup-status-caption"
               type="caption"
               style={[
                 styles.syncCaption,
@@ -484,13 +533,15 @@ export default function HomeScreen() {
             >
               {needsBackupAttention
                 ? t('backup_waiting', { n: totalPendingSync })
-                : isSignedIn
+                : plotsBackedUpOnDevice || isSignedIn
                   ? t('backup_up_to_date')
                   : t('home_sign_in_backup_caption')}
             </ThemedText>
           </Card>
         </Pressable>
         ) : null}
+          </>
+        )}
       </ThemedScrollView>
     </ThemedView>
   );
