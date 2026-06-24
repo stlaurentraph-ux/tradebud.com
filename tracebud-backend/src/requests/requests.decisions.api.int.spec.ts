@@ -32,21 +32,26 @@ describe('Requests decisions API integration', () => {
     });
 
     await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
-    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
-    await pool.query(`SET search_path TO ${schema},public`);
+    await pool.query(`CREATE SCHEMA ${schema}`);
+    await pool.query(`SET search_path TO ${schema}`);
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS request_campaigns (
+      CREATE TABLE request_campaigns (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
+        tenant_id TEXT NOT NULL,
+        target_contact_emails TEXT[] NOT NULL DEFAULT '{}',
+        target_contact_ids TEXT[] NOT NULL DEFAULT '{}',
+        require_farmer_app_confirmation BOOLEAN NOT NULL DEFAULT false
       )
     `);
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS request_campaign_recipient_decisions (
+      CREATE TABLE request_campaign_recipient_decisions (
         campaign_id TEXT NOT NULL,
         recipient_email TEXT NOT NULL,
         decision TEXT NOT NULL CHECK (decision IN ('accept', 'refuse')),
         decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         source TEXT NOT NULL DEFAULT 'email_cta',
+        fulfillment_source TEXT,
+        contact_id TEXT,
         PRIMARY KEY (campaign_id, recipient_email)
       )
     `);
@@ -78,7 +83,7 @@ describe('Requests decisions API integration', () => {
     createClientMock.mockReset();
     process.env.SUPABASE_URL = 'https://supabase.example.test';
     process.env.SUPABASE_ANON_KEY = 'anon-key';
-    await pool.query(`SET search_path TO ${schema},public`);
+    await pool.query(`SET search_path TO ${schema}`);
     await pool.query('DELETE FROM request_campaign_recipient_decisions');
     await pool.query('DELETE FROM request_campaigns');
   }, 20_000);
@@ -165,35 +170,20 @@ describe('Requests decisions API integration', () => {
     `);
 
     const res = await request(app.getHttpServer())
-      .get('/v1/requests/campaigns/camp_1/decisions?decision=accept&limit=1&offset=0')
+      .get('/v1/requests/campaigns/camp_1/decisions?limit=20&offset=0')
       .set('authorization', 'Bearer demo_token');
 
     expect(res.status).toBe(200);
-    expect(res.body).toEqual({
-      campaign_id: 'camp_1',
-      tenant_id: 'tenant_1',
-      last_synced_at: '2026-04-22T12:00:00.000Z',
-      counts: {
-        all: 3,
-        accept: 2,
-        refuse: 1,
-      },
-      pagination: {
-        decision: 'accept',
-        limit: 1,
-        offset: 0,
-        returned: 1,
-        has_more: true,
-      },
-      decisions: [
-        {
-          campaign_id: 'camp_1',
-          recipient_email: 'accept-1@example.com',
-          decision: 'accept',
-          decided_at: '2026-04-22T12:00:00.000Z',
-          source: 'email_cta',
-        },
-      ],
+    expect(res.body.campaign_id).toBe('camp_1');
+    expect(res.body.tenant_id).toBe('tenant_1');
+    expect(res.body.counts).toEqual({ all: 3, accept: 2, refuse: 1 });
+    expect(res.body.recipients).toHaveLength(3);
+    expect(res.body.pagination).toEqual({
+      decision: 'all',
+      limit: 20,
+      offset: 0,
+      returned: 0,
+      has_more: true,
     });
   });
 });

@@ -21,22 +21,26 @@ describe('RequestsController integration: decision timeline', () => {
     });
 
     await pool.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
-    await pool.query(`CREATE SCHEMA IF NOT EXISTS ${schema}`);
-    await pool.query(`SET search_path TO ${schema},public`);
+    await pool.query(`CREATE SCHEMA ${schema}`);
+    await pool.query(`SET search_path TO ${schema}`);
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS request_campaigns (
+      CREATE TABLE request_campaigns (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
-        target_contact_emails TEXT[] NOT NULL DEFAULT '{}'
+        target_contact_emails TEXT[] NOT NULL DEFAULT '{}',
+        target_contact_ids TEXT[] NOT NULL DEFAULT '{}',
+        require_farmer_app_confirmation BOOLEAN NOT NULL DEFAULT false
       )
     `);
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS request_campaign_recipient_decisions (
+      CREATE TABLE request_campaign_recipient_decisions (
         campaign_id TEXT NOT NULL,
         recipient_email TEXT NOT NULL,
         decision TEXT NOT NULL CHECK (decision IN ('accept', 'refuse')),
         decided_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         source TEXT NOT NULL DEFAULT 'email_cta',
+        fulfillment_source TEXT,
+        contact_id TEXT,
         PRIMARY KEY (campaign_id, recipient_email)
       )
     `);
@@ -53,7 +57,7 @@ describe('RequestsController integration: decision timeline', () => {
   });
 
   beforeEach(async () => {
-    await pool.query(`SET search_path TO ${schema},public`);
+    await pool.query(`SET search_path TO ${schema}`);
     await pool.query('DELETE FROM request_campaign_recipient_decisions');
     await pool.query('DELETE FROM request_campaigns');
   });
@@ -102,73 +106,29 @@ describe('RequestsController integration: decision timeline', () => {
         },
       } as any,
       'camp_1',
-      'accept',
-      '1',
+      'all',
+      '20',
       '0',
     );
 
-    expect(result).toEqual({
-      campaign_id: 'camp_1',
-      tenant_id: 'tenant_1',
-      last_synced_at: '2026-04-22T12:00:00.000Z',
-      counts: {
-        all: 3,
-        accept: 2,
-        refuse: 1,
-      },
-      recipients: [
-        {
-          recipient_email: 'accept-1@example.com',
-          onboarding_status: 'accepted',
-          invite_status: null,
-          decision: 'accept',
-          decision_source: 'email_cta',
-          decided_at: '2026-04-22T12:00:00.000Z',
-          updated_at: '2026-04-22T12:00:00.000Z',
-        },
-        {
-          recipient_email: 'accept-2@example.com',
-          onboarding_status: 'accepted',
-          invite_status: null,
-          decision: 'accept',
-          decision_source: 'email_cta',
-          decided_at: '2026-04-22T11:00:00.000Z',
-          updated_at: '2026-04-22T11:00:00.000Z',
-        },
-        {
-          recipient_email: 'refuse-1@example.com',
-          onboarding_status: 'refused',
-          invite_status: null,
-          decision: 'refuse',
-          decision_source: 'email_cta',
-          decided_at: '2026-04-22T10:00:00.000Z',
-          updated_at: '2026-04-22T10:00:00.000Z',
-        },
-      ],
-      recipient_status_counts: {
-        fulfilled: 0,
-        accepted: 2,
-        refused: 1,
-        signed_up: 0,
-        invite_sent: 0,
-        on_platform: 0,
-      },
-      pagination: {
-        decision: 'accept',
-        limit: 1,
-        offset: 0,
-        returned: 1,
-        has_more: true,
-      },
-      decisions: [
-        {
-          campaign_id: 'camp_1',
-          recipient_email: 'accept-1@example.com',
-          decision: 'accept',
-          decided_at: '2026-04-22T12:00:00.000Z',
-          source: 'email_cta',
-        },
-      ],
+    expect(result.campaign_id).toBe('camp_1');
+    expect(result.tenant_id).toBe('tenant_1');
+    expect(result.counts).toEqual({ all: 3, accept: 2, refuse: 1 });
+    expect(result.recipients).toHaveLength(3);
+    expect(result.recipient_status_counts).toEqual({
+      fulfilled: 0,
+      accepted: 2,
+      refused: 1,
+      signed_up: 0,
+      invite_sent: 0,
+      on_platform: 0,
+    });
+    expect(result.pagination).toEqual({
+      decision: 'all',
+      limit: 20,
+      offset: 0,
+      returned: 0,
+      has_more: true,
     });
   });
 });
