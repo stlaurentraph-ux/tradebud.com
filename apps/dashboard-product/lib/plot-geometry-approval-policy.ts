@@ -9,7 +9,7 @@ export type PlotGeometryApprovalState = {
   capture: PlotGeometryCaptureRecord | null;
 };
 
-const APPROVAL_ROLES: TenantRole[] = [
+const APPROVAL_ROLES: ReadonlyArray<string> = [
   'exporter',
   'compliance_manager',
   'country_reviewer',

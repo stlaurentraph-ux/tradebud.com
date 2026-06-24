@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
 import { AddContactWizard } from '@/components/contacts/add-contact-wizard';
 import { createContact } from '@/lib/contact-service';
+import { validateFarmerContactDraft } from '@/lib/crm-contact-reachability';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';

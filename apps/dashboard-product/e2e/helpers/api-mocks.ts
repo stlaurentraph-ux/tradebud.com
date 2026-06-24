@@ -295,6 +295,59 @@ const SMOKE_EXPORTER_PACKAGE = {
   vouchers: [],
 };
 
+export async function mockPlotGeometryApprovalApis(
+  page: Page,
+  options?: { approved?: boolean },
+): Promise<void> {
+  const approved = options?.approved ?? false;
+  const plotId = GOLDEN_EXPORTER_SMOKE.packageId;
+
+  await page.route(`**/api/plots/${plotId}/map-preview`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: plotId,
+        name: 'Test Plot',
+        kind: 'polygon',
+        area_ha: 1.2,
+        status: 'under_review',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [30.0612, -1.9441],
+              [30.0624, -1.9441],
+              [30.0624, -1.9432],
+              [30.0612, -1.9432],
+              [30.0612, -1.9441],
+            ],
+          ],
+        },
+        geometry_capture: {
+          geometry_confidence_tier: 'low',
+          capture_method: 'gps_walk',
+        },
+        geometry_approved_at: approved ? new Date().toISOString() : null,
+      }),
+    });
+  });
+
+  await page.route(`**/api/plots/${plotId}/approve-geometry`, async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry_approved_at: new Date().toISOString(),
+      }),
+    });
+  });
+}
+
 export async function mockExporterPackageReadinessApis(
   page: Page,
   options?: { blocked?: boolean },
