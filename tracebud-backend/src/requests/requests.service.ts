@@ -805,9 +805,10 @@ export class RequestsService {
         tenant_id: string;
         target_contact_emails: string[] | null;
         target_contact_ids: string[] | null;
+        require_farmer_app_confirmation: boolean;
       }>(
         `
-          SELECT id, tenant_id, target_contact_emails, target_contact_ids
+          SELECT id, tenant_id, target_contact_emails, target_contact_ids, require_farmer_app_confirmation
           FROM request_campaigns
           WHERE tenant_id = $1
             AND id = $2
@@ -820,6 +821,8 @@ export class RequestsService {
       }
       const targetContactEmails = campaignResult.rows[0].target_contact_emails ?? [];
       const targetContactIds = campaignResult.rows[0].target_contact_ids ?? [];
+      const requireFarmerAppConfirmation =
+        campaignResult.rows[0].require_farmer_app_confirmation ?? false;
       let targetContacts: Array<{
         contact_id: string;
         full_name: string;
@@ -880,13 +883,18 @@ export class RequestsService {
         refuse: Number(countResult.rows[0]?.refuse_count ?? 0),
       };
 
-      const timelineDecisionsResult = await this.pool.query<RequestCampaignDecisionRecord>(
+      const timelineDecisionsResult = await this.pool.query<RequestCampaignDecisionRecord & {
+        fulfillment_source: string | null;
+        contact_id: string | null;
+      }>(
         `
           SELECT
             decision.recipient_email,
             decision.decision,
             decision.decided_at,
-            decision.source
+            decision.source,
+            decision.fulfillment_source,
+            decision.contact_id
           FROM request_campaign_recipient_decisions decision
           INNER JOIN request_campaigns campaign
             ON campaign.id = decision.campaign_id
@@ -983,8 +991,11 @@ export class RequestsService {
           recipient_email: row.recipient_email,
           decision: row.decision,
           source: row.source,
+          fulfillment_source: row.fulfillment_source,
+          contact_id: row.contact_id,
           decided_at: new Date(row.decided_at).toISOString(),
         })),
+        requireFarmerAppConfirmation: requireFarmerAppConfirmation,
       });
 
       const hasDecisionFilter = decisionFilter !== 'all';

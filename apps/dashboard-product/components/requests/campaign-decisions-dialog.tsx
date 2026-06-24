@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CAMPAIGN_RECIPIENT_FILTERS,
+  campaignFulfillmentSourceBadgeClass,
   campaignRecipientOnboardingBadgeClass,
   countCampaignRecipientsForFilter,
   filterCampaignRecipients,
@@ -37,6 +38,7 @@ import {
 } from '@/lib/use-campaign-decisions';
 import {
   getCampaignRecipientOnboardingStatusLabel,
+  getCampaignRecipientFulfillmentSourceLabel,
   getCampaignRecipientTimelineCopyEmailLabel,
   getCampaignRecipientTimelineDescription,
   getCampaignRecipientTimelineEmptyActivity,
@@ -131,6 +133,11 @@ function RecipientRow({
           <Badge className={campaignRecipientOnboardingBadgeClass(recipient.onboarding_status)}>
             {getCampaignRecipientOnboardingStatusLabel(recipient.onboarding_status, t)}
           </Badge>
+          {recipient.fulfillment_source ? (
+            <Badge className={campaignFulfillmentSourceBadgeClass(recipient.fulfillment_source)}>
+              {getCampaignRecipientFulfillmentSourceLabel(recipient.fulfillment_source, t)}
+            </Badge>
+          ) : null}
           {recipient.decision_source ? (
             <span className="text-xs text-muted-foreground">
               {formatCampaignDecisionSource(recipient.decision_source)}

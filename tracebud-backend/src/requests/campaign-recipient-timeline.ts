@@ -1,3 +1,10 @@
+import {
+  isCampaignFulfillmentDecisionSource,
+  resolveCampaignFulfillmentSource,
+  shouldTreatCooperativeFulfillmentAsPending,
+  type CampaignFulfillmentSource,
+} from './campaign-fulfillment-source';
+
 export type CampaignRecipientOnboardingStatus =
   | 'fulfilled'
   | 'accepted'
@@ -27,6 +34,8 @@ export type CampaignRecipientDecisionRow = {
   recipient_email: string;
   decision: 'accept' | 'refuse';
   source: string;
+  fulfillment_source?: string | null;
+  contact_id?: string | null;
   decided_at: string | Date;
 };
 
@@ -39,6 +48,7 @@ export type CampaignRecipientTimelineEntry = {
   invite_status: string | null;
   decision: 'accept' | 'refuse' | null;
   decision_source: string | null;
+  fulfillment_source: CampaignFulfillmentSource | null;
   decided_at: string | null;
   updated_at: string | null;
 };
@@ -68,13 +78,23 @@ function toIso(value: string | Date | null | undefined): string | null {
 export function deriveCampaignRecipientOnboardingStatus(
   invite: CampaignRecipientInviteRow | null | undefined,
   decision: CampaignRecipientDecisionRow | null | undefined,
+  options?: { requireFarmerAppConfirmation?: boolean },
 ): CampaignRecipientOnboardingStatus {
   if (decision?.decision === 'refuse') {
     return 'refused';
   }
 
   if (decision?.decision === 'accept') {
-    if (decision.source.trim().toLowerCase() === 'inbox_fulfillment') {
+    if (isCampaignFulfillmentDecisionSource(decision.source)) {
+      const fulfillmentSource = resolveCampaignFulfillmentSource({ invite, decision });
+      if (
+        shouldTreatCooperativeFulfillmentAsPending({
+          fulfillmentSource,
+          requireFarmerAppConfirmation: options?.requireFarmerAppConfirmation ?? false,
+        })
+      ) {
+        return 'accepted';
+      }
       return 'fulfilled';
     }
     return 'accepted';
@@ -104,6 +124,7 @@ export function buildCampaignRecipientTimeline(input: {
   targetContacts?: readonly CampaignRecipientTargetContact[];
   invites: readonly CampaignRecipientInviteRow[];
   decisions: readonly CampaignRecipientDecisionRow[];
+  requireFarmerAppConfirmation?: boolean;
 }): {
   recipients: CampaignRecipientTimelineEntry[];
   status_counts: CampaignRecipientStatusCounts;
@@ -120,8 +141,12 @@ export function buildCampaignRecipientTimeline(input: {
   }
 
   const decisionByEmail = new Map<string, CampaignRecipientDecisionRow>();
+  const decisionByContactId = new Map<string, CampaignRecipientDecisionRow>();
   for (const decision of input.decisions) {
     decisionByEmail.set(normalizeEmail(decision.recipient_email), decision);
+    if (decision.contact_id) {
+      decisionByContactId.set(decision.contact_id, decision);
+    }
   }
 
   const status_counts: CampaignRecipientStatusCounts = { ...EMPTY_STATUS_COUNTS };
@@ -135,8 +160,14 @@ export function buildCampaignRecipientTimeline(input: {
     invite: CampaignRecipientInviteRow | null;
     decision: CampaignRecipientDecisionRow | null;
   }) => {
-    const onboarding_status = deriveCampaignRecipientOnboardingStatus(params.invite, params.decision);
+    const onboarding_status = deriveCampaignRecipientOnboardingStatus(params.invite, params.decision, {
+      requireFarmerAppConfirmation: input.requireFarmerAppConfirmation,
+    });
     status_counts[onboarding_status] += 1;
+    const fulfillment_source = resolveCampaignFulfillmentSource({
+      invite: params.invite,
+      decision: params.decision,
+    });
     const decidedAt = toIso(params.decision?.decided_at);
     const sentAt = toIso(params.invite?.sent_at ?? null);
     const updatedAt =
@@ -155,6 +186,7 @@ export function buildCampaignRecipientTimeline(input: {
       invite_status: params.invite?.status ?? null,
       decision: params.decision?.decision ?? null,
       decision_source: params.decision?.source ?? null,
+      fulfillment_source,
       decided_at: decidedAt,
       updated_at: updatedAt,
     });
@@ -166,7 +198,9 @@ export function buildCampaignRecipientTimeline(input: {
       const invite =
         inviteByContactId.get(contact.contact_id) ??
         (email ? inviteByEmail.get(email) ?? null : null);
-      const decision = email ? decisionByEmail.get(email) ?? null : null;
+      const decision =
+        decisionByContactId.get(contact.contact_id) ??
+        (email ? decisionByEmail.get(email) ?? null : null);
       pushRecipient({
         contact_id: contact.contact_id,
         recipient_email: email,
