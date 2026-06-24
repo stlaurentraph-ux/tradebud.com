@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { Pool } from 'pg';
 import { AuditController } from './audit.controller';
+import { AuditWriteService } from './audit-write.service';
 import { PG_POOL } from '../db/db.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
@@ -88,7 +89,7 @@ describe('Audit gated-entry actors API integration', () => {
 
     const moduleRef = await Test.createTestingModule({
       controllers: [AuditController],
-      providers: [{ provide: PG_POOL, useValue: pool }],
+      providers: [{ provide: PG_POOL, useValue: pool }, AuditWriteService],
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue(new TestAuthGuard())

@@ -29,7 +29,8 @@ describe('RequestsController integration: decision timeline', () => {
         tenant_id TEXT NOT NULL,
         target_contact_emails TEXT[] NOT NULL DEFAULT '{}',
         target_contact_ids TEXT[] NOT NULL DEFAULT '{}',
-        require_farmer_app_confirmation BOOLEAN NOT NULL DEFAULT false
+        require_farmer_app_confirmation BOOLEAN NOT NULL DEFAULT false,
+        status TEXT NOT NULL DEFAULT 'RUNNING'
       )
     `);
     await pool.query(`
@@ -127,8 +128,8 @@ describe('RequestsController integration: decision timeline', () => {
       decision: 'all',
       limit: 20,
       offset: 0,
-      returned: 0,
-      has_more: true,
+      returned: 3,
+      has_more: false,
     });
   });
 });
