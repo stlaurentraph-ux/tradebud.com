@@ -22,7 +22,6 @@ import {
   getProducersNavHref,
   getProducersNavLabel,
 } from '@/lib/workflow-terminology-labels';
-import { validateFarmerContactDraft } from '@/lib/crm-contact-reachability';
 
 export default function NewProducerPage() {
   const router = useRouter();

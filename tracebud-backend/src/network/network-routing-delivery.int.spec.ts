@@ -107,7 +107,6 @@ describe('Network routing — delivery to buyer tenant integration', () => {
         status TEXT NOT NULL DEFAULT 'issued',
         intended_recipient_email TEXT NULL,
         intended_recipient_tenant_id TEXT NULL,
-        delivery_trip_ref TEXT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
       CREATE TABLE voucher_buyer_claims (
