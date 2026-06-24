@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RequestsService } from './requests.service';
 
@@ -6,6 +6,28 @@ import { RequestsService } from './requests.service';
 @Controller('v1/public/requests')
 export class RequestsPublicController {
   constructor(private readonly requestsService: RequestsService) {}
+
+  @Get('campaigns/:campaignId/invite')
+  @ApiOperation({
+    summary: 'Validate campaign invite token for field-auth landing',
+  })
+  async getCampaignInvitePreview(
+    @Param('campaignId') campaignId: string,
+    @Query('token') token?: string,
+  ) {
+    if (!token?.trim()) {
+      throw new BadRequestException('token is required.');
+    }
+    try {
+      const preview = await this.requestsService.getCampaignInvitePublicPreview(campaignId, token);
+      return { preview };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException('Campaign invite not found');
+    }
+  }
 
   @Get('campaigns/:campaignId/preview')
   @ApiOperation({

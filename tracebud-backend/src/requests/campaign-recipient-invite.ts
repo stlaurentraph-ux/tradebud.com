@@ -7,9 +7,11 @@ export type QueueCampaignRecipientInvitesResult = {
 
 export type CampaignInviteDelivery = {
   contact_id: string;
-  delivery_channel: 'email' | 'desk_only';
+  delivery_channel: 'email' | 'whatsapp' | 'desk_only';
   delivery_address: string | null;
   recipient_email?: string | null;
+  claim_token_hash?: string | null;
+  claim_expires_at?: string | null;
 };
 
 function normalizeEmail(email: string): string {
@@ -115,6 +117,8 @@ function normalizeDeliveries(
         delivery_channel: delivery.delivery_channel,
         delivery_address: delivery.delivery_address?.trim() || null,
         recipient_email: delivery.recipient_email?.trim().toLowerCase() || null,
+        claim_token_hash: delivery.claim_token_hash?.trim() || null,
+        claim_expires_at: delivery.claim_expires_at?.trim() || null,
       }));
   }
 
@@ -187,15 +191,19 @@ export async function queueCampaignRecipientInvites(
               recipient_email,
               delivery_channel,
               delivery_address,
+              claim_token_hash,
+              claim_expires_at,
               status,
               sent_at
             )
-            VALUES ($1, $2, $3, $4, $5, $6, $7, CASE WHEN $7 = 'sent' THEN NOW() ELSE NULL END)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8::timestamptz, $9, CASE WHEN $9 = 'sent' THEN NOW() ELSE NULL END)
             ON CONFLICT (campaign_id, contact_id) WHERE contact_id IS NOT NULL
             DO UPDATE SET
               recipient_email = EXCLUDED.recipient_email,
               delivery_channel = EXCLUDED.delivery_channel,
               delivery_address = EXCLUDED.delivery_address,
+              claim_token_hash = COALESCE(EXCLUDED.claim_token_hash, campaign_recipient_invites.claim_token_hash),
+              claim_expires_at = COALESCE(EXCLUDED.claim_expires_at, campaign_recipient_invites.claim_expires_at),
               status = EXCLUDED.status,
               sent_at = COALESCE(campaign_recipient_invites.sent_at, EXCLUDED.sent_at)
             RETURNING id
@@ -207,6 +215,8 @@ export async function queueCampaignRecipientInvites(
             recipientEmail,
             delivery.delivery_channel,
             delivery.delivery_address,
+            delivery.claim_token_hash,
+            delivery.claim_expires_at,
             inviteStatus,
           ],
         );

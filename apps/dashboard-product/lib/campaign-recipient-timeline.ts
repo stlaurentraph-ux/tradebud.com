@@ -65,6 +65,18 @@ export function getCampaignRecipientDisplayLabel(
   return recipient.recipient_label?.trim() || recipient.recipient_email?.trim() || 'Unknown recipient';
 }
 
+export function getCampaignRecipientChannelIcon(
+  channel: string | null | undefined,
+): string | null {
+  if (channel === 'email') {
+    return '📧';
+  }
+  if (channel === 'whatsapp') {
+    return '📱';
+  }
+  return null;
+}
+
 export function getRecipientProgressSteps(
   status: CampaignRecipientOnboardingStatus,
 ): CampaignRecipientProgressStep[] {

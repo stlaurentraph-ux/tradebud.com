@@ -4,6 +4,7 @@ import {
   filterCampaignRecipients,
   formatCampaignRecipientOnboardingStatus,
   getCampaignRecipientDisplayLabel,
+  getCampaignRecipientChannelIcon,
   getRecipientProgressSteps,
   summarizeCampaignRecipientStatusCounts,
   type CampaignRecipientStatusCounts,
@@ -40,6 +41,12 @@ describe('campaign-recipient-timeline', () => {
         recipient_email: null,
       }),
     ).toBe('+233555000');
+  });
+
+  it('maps delivery channels to outreach icons', () => {
+    expect(getCampaignRecipientChannelIcon('email')).toBe('📧');
+    expect(getCampaignRecipientChannelIcon('whatsapp')).toBe('📱');
+    expect(getCampaignRecipientChannelIcon('desk_only')).toBeNull();
   });
 
   it('provides badge classes per onboarding status', () => {

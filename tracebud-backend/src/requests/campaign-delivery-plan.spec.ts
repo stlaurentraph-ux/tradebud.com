@@ -22,7 +22,7 @@ describe('campaign-delivery-plan', () => {
     ]);
   });
 
-  it('plans desk-only delivery when CRM contact has phone but no email', () => {
+  it('plans WhatsApp delivery when CRM contact has phone but no email', () => {
     expect(
       planCampaignDeliveries([
         { id: 'contact_2', full_name: 'Bob', email: null, phone: '+233111222' },
@@ -33,13 +33,13 @@ describe('campaign-delivery-plan', () => {
         full_name: 'Bob',
         email: null,
         phone: '+233111222',
-        delivery_channel: 'desk_only',
+        delivery_channel: 'whatsapp',
         delivery_address: '+233111222',
       },
     ]);
   });
 
-  it('counts deliverable email and desk-only recipients', () => {
+  it('counts deliverable email, WhatsApp, and desk-only recipients', () => {
     const deliveries = [
       ...planCampaignDeliveries([
         { id: 'c1', full_name: 'A', email: 'a@example.com', phone: null },
@@ -51,7 +51,8 @@ describe('campaign-delivery-plan', () => {
     expect(countDeliverableRecipients(deliveries)).toEqual({
       total: 3,
       email: 2,
-      desk_only: 1,
+      whatsapp: 1,
+      desk_only: 0,
     });
   });
 });

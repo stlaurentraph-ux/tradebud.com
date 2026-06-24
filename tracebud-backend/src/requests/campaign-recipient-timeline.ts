@@ -172,7 +172,7 @@ export function buildCampaignRecipientTimeline(input: {
         recipient_email: email,
         recipient_label: email ?? contact.phone?.trim() ?? contact.full_name,
         delivery_channel:
-          invite?.delivery_channel ?? (email ? 'email' : contact.phone ? 'desk_only' : null),
+          invite?.delivery_channel ?? (email ? 'email' : contact.phone ? 'whatsapp' : null),
         invite,
         decision,
       });
