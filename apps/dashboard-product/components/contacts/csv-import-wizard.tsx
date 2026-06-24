@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import {
-  Check,
   ArrowLeft,
   ArrowRight,
   Upload,
@@ -201,10 +200,7 @@ export function CsvImportWizard({ importType, onComplete, onCancel, onFinished }
 
       reader.readAsText(file);
     },
-    [fields, t],
-  );
-
-  const handleDrop = useCallback(
+    [fields, importType, t],
     (e: React.DragEvent) => {
       e.preventDefault();
       setIsDragging(false);
