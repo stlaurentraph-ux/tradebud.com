@@ -1,6 +1,7 @@
 'use client';
 
 import { useContext, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { Badge } from '@/components/ui/badge';
@@ -8,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Send } from 'lucide-react';
+import { MapPin, Plus, Send } from 'lucide-react';
 import { useSponsorView } from '@/lib/sponsor-view';
 import { NewRequestWizardDialog, type NewRequestResult } from '@/components/requests/wizard/new-request-wizard-dialog';
 import { LocaleContext } from '@/lib/locale-context';
@@ -25,6 +26,7 @@ type ProgrammeCampaign = {
   requestedBy: string;
   date: string;
   status: ProgrammeStatus;
+  requestType?: string;
 };
 
 const PROGRAMME_STATUS_TABS: ProgrammeStatus[] = ['Draft', 'Sent', 'Completed', 'Archived'];
@@ -98,6 +100,7 @@ function toProgrammeCampaign(record: Record<string, unknown>): ProgrammeCampaign
     requestedBy: String(record.created_by ?? 'Sponsor Programmes'),
     date: String(record.created_at ?? new Date().toISOString()),
     status: mapBackendStatus(String(record.status ?? 'RUNNING')),
+    requestType: String(record.request_type ?? ''),
   };
 }
 
@@ -299,6 +302,7 @@ function ProgrammesPageContent() {
                     <TableHead>Requested by</TableHead>
                     <TableHead>Date</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -312,6 +316,18 @@ function ProgrammesPageContent() {
                       <TableCell>{new Date(campaign.date).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge className={statusBadgeClass[campaign.status]}>{campaign.status}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {campaign.requestType === 'MISSING_PLOT_GEOMETRY' ? (
+                          <Button variant="outline" size="sm" asChild>
+                            <Link href={`/programmes/${campaign.id}/enumeration`}>
+                              <MapPin className="mr-1 h-3.5 w-3.5" />
+                              Field mapping
+                            </Link>
+                          </Button>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}

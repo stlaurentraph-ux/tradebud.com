@@ -5,6 +5,7 @@ import { Pool } from 'pg';
 import { createClient } from '@supabase/supabase-js';
 import { ConsentService } from '../consent/consent.service';
 import { InboxService } from '../inbox/inbox.service';
+import { FieldEnumerationService } from '../plots/field-enumeration.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 import { PG_POOL } from '../db/db.module';
@@ -58,6 +59,15 @@ describeIfDb('Requests decisions API integration', () => {
         {
           provide: ConsentService,
           useValue: { canTenantAccessFarmerEvidence: jest.fn().mockResolvedValue(true) },
+        },
+        {
+          provide: FieldEnumerationService,
+          useValue: {
+            getPackForAgent: jest.fn(),
+            syncProvisionalMember: jest.fn(),
+            updateCampaignMappingRegion: jest.fn(),
+            getCampaignProgressForDesk: jest.fn(),
+          },
         },
         { provide: PG_POOL, useValue: pool },
       ],

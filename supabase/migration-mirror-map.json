@@ -111,6 +111,11 @@
       "supabase": "20260622130000_harvest_transaction_client_event_id.sql",
       "backend": "tb_v16_059_harvest_transaction_client_event_id.sql",
       "purpose": "harvest_transaction_client_event_id"
+    },
+    {
+      "supabase": "20260624190000_enumeration_mapping_region.sql",
+      "backend": "tb_v16_062_enumeration_mapping_region.sql",
+      "purpose": "enumeration_mapping_region"
     }
   ],
   "supabaseOnly": [

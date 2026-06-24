@@ -4,6 +4,7 @@ import { DbModule } from '../db/db.module';
 import { LaunchModule } from '../launch/launch.module';
 import { PlotsController } from './plots.controller';
 import { FieldAppController } from './field-app.controller';
+import { FieldEnumerationService } from './field-enumeration.service';
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
 import { PlotsService } from './plots.service';
 import { TenureParseService } from './tenure-parse.service';
@@ -18,6 +19,7 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
   controllers: [PlotsController, FieldAppController],
   providers: [
     PlotsService,
+    FieldEnumerationService,
     TenureParseService,
     EvidenceDocumentsService,
     TenureReviewAlertService,
@@ -26,6 +28,7 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     GfwContextService,
     FdpCommodityService,
   ],
+  exports: [FieldEnumerationService],
 })
 export class PlotsModule {}
 

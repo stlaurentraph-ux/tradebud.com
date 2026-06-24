@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-21T13:52:45.589Z",
+  "generatedAt": "2026-06-24T12:41:15.098Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -702,6 +702,22 @@
       "dashboardPath": "/api/requests/campaigns/[id]/decisions",
       "category": "backend-proxy",
       "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/enumeration-progress",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/enumeration-progress"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/mapping-region",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/mapping-region"
+      ],
       "failClosed": true
     },
     {

@@ -11,6 +11,7 @@ import { PushRegistrationBridge } from '@/components/PushRegistrationBridge';
 import { SplashGate } from '@/components/layout/SplashGate';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
+import { EnumerationProvider } from '@/features/enumeration/EnumerationContext';
 import { initObservability } from '@/features/observability/initObservability';
 import '@/features/auth/googleOAuthEnv';
 import { AppStateProvider } from '@/features/state/AppStateContext';
@@ -27,11 +28,12 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <AppErrorBoundary>
-      <LanguageProvider>
+    <LanguageProvider>
+      <AppErrorBoundary>
         <AppStateProvider>
           <SplashGate>
             <SignInProvider>
+              <EnumerationProvider>
               <AutoPlotUploadBridge />
               <PushRegistrationBridge />
               <ConsentPushBridge />
@@ -41,6 +43,7 @@ export default function RootLayout() {
                   <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
                   <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                   <Stack.Screen name="documents" options={{ headerShown: false }} />
+                  <Stack.Screen name="campaign" options={{ headerShown: false }} />
                   <Stack.Screen name="data-sharing" options={{ headerShown: false }} />
                   <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />
                   <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
@@ -49,10 +52,11 @@ export default function RootLayout() {
                 </Stack>
                 <StatusBar style="auto" />
               </ThemeProvider>
+              </EnumerationProvider>
             </SignInProvider>
           </SplashGate>
         </AppStateProvider>
-      </LanguageProvider>
-    </AppErrorBoundary>
+      </AppErrorBoundary>
+    </LanguageProvider>
   );
 }

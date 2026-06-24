@@ -1,3 +1,10 @@
+### 2026-06-24 (FEAT-012 — Phase E/F enumeration closure)
+
+- **Field** — confirm-gated district tile bootstrap after roster prefetch (`EnumerationTileBootstrapGate`); `tile_bootstrap_*` analytics.
+- **Dashboard** — programme enumeration setup + progress (`/programmes/[id]/enumeration`).
+- **Backend** — campaign mapping region + enumeration progress endpoints.
+- **Guards** — offline analytics baseline refreshed for tile bootstrap + enumeration events.
+
 ### 2026-06-19 (backend — structural automation phase 2)
 
 - **Audit registry v2** — 117 `audit_log` events categorized; strict `--ci` src scan for unregistered emits.
