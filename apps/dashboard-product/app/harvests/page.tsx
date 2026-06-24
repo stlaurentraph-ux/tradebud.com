@@ -50,7 +50,7 @@ import {
   getRegisterDeliveryHeaderCtaLabel,
 } from '@/lib/workflow-terminology-labels';
 
-interface Harvest extends ExporterBatchRecord {}
+type Harvest = ExporterBatchRecord;
 
 const devMockHarvests: Harvest[] =
   process.env.NODE_ENV !== 'production' ? mockBatches : [];
@@ -65,25 +65,22 @@ export default function HarvestsPage() {
   const voucherFirstIntake = usesVoucherFirstHarvestIntake(role);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pass' | 'warning' | 'blocked'>('all');
-  const [harvests, setHarvests] = useState<Harvest[]>(devMockHarvests);
+  const [liveHarvests, setLiveHarvests] = useState<Harvest[]>(devMockHarvests);
+  const harvests = demoDataEnabled ? mockBatches : liveHarvests;
+  const setHarvests = (updater: Harvest[] | ((prev: Harvest[]) => Harvest[])) => {
+    if (demoDataEnabled) return;
+    setLiveHarvests(updater);
+  };
 
   useEffect(() => {
-    if (demoDataEnabled) {
-      setHarvests(mockBatches);
-      return;
-    }
-
-    if (!user?.tenant_id) {
-      setHarvests(devMockHarvests);
-      return;
-    }
+    if (demoDataEnabled || !user?.tenant_id) return;
 
     void listBatchIntakes(user.tenant_id).then((storedBatches) => {
       if (storedBatches.length === 0) {
-        setHarvests(devMockHarvests);
+        setLiveHarvests(devMockHarvests);
         return;
       }
-      setHarvests((previous) => {
+      setLiveHarvests((previous) => {
         const merged = [...storedBatches, ...previous];
         const seen = new Set<string>();
         return merged.filter((batch) => {
