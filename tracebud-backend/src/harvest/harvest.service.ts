@@ -989,12 +989,26 @@ export class HarvestService {
   async confirmDeliveryHandoff(
     tenantId: string,
     userId: string | undefined,
-    input: { intakeRef: string; receivedKg: number; note?: string | null },
+    input: {
+      intakeRef: string;
+      receivedKg: number;
+      note?: string | null;
+      handoffPhotoSha256?: string | null;
+      handoffPhotoBytes?: number | null;
+    },
   ): Promise<DeliveryHandoffConfirmationResult> {
     const receivedKg = Number(input.receivedKg);
     if (!Number.isFinite(receivedKg) || receivedKg <= 0) {
       throw new BadRequestException('receivedKg must be positive');
     }
+
+    const photoAudit =
+      input.handoffPhotoSha256?.trim()
+        ? {
+            handoffPhotoSha256: input.handoffPhotoSha256.trim(),
+            handoffPhotoBytes: input.handoffPhotoBytes ?? null,
+          }
+        : {};
 
     const tripRef = parseDeliveryTripRef(input.intakeRef);
     if (tripRef) {
@@ -1021,6 +1035,7 @@ export class HarvestService {
             weightVarianceWarning,
             voucherQrRefs: preview.lines.map((line) => line.qrRef),
             note: input.note?.trim() || null,
+            ...photoAudit,
           }),
         ],
       );
@@ -1063,6 +1078,7 @@ export class HarvestService {
           varianceKg,
           weightVarianceWarning,
           note: input.note?.trim() || null,
+          ...photoAudit,
         }),
       ],
     );

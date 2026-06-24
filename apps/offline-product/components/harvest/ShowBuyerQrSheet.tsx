@@ -67,6 +67,9 @@ export function ShowBuyerQrSheet({
         <ThemedText type="caption" style={styles.hint}>
           {t('show_buyer_qr_hint')}
         </ThemedText>
+        <ThemedText type="caption" style={styles.brightnessHint}>
+          {t('show_buyer_qr_brightness')}
+        </ThemedText>
 
         <Button title={t('close')} variant="secondary" onPress={onClose} style={styles.doneBtn} />
       </View>
@@ -119,6 +122,12 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
     color: '#6B7280',
+    paddingHorizontal: 12,
+  },
+  brightnessHint: {
+    marginTop: 8,
+    textAlign: 'center',
+    color: '#9CA3AF',
     paddingHorizontal: 12,
   },
   doneBtn: {

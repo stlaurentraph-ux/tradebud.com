@@ -1,3 +1,10 @@
+### 2026-06-24 (delivery intake QR — Phase D hardening)
+
+- **Dashboard** — `/t/[ref]` trip preview; handoff photo hash audit; desk coach marks.
+- **Marketing** — read-only QR on `/d/` and `/t/` preview pages.
+- **Field** — amber advisory icon; show-buyer brightness copy.
+- **Backend** — `plot-capture-quality-policy`; public preview rate limit 45/min/IP.
+
 ### 2026-06-24 (delivery intake QR — Phase C desk polish)
 
 - Focus: desk scan ergonomics, scanner feedback, handoff variance UX, public preview clarity.

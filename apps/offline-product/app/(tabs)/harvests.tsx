@@ -607,9 +607,12 @@ export default function HarvestsScreen() {
 
             {deliveryIntakeAdvisory ? (
               <Card style={styles.intakeAdvisoryCard}>
-                <ThemedText type="caption" style={styles.intakeAdvisoryText}>
-                  {t(deliveryIntakeAdvisory.advisoryKey)}
-                </ThemedText>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                  <Ionicons name="warning-outline" size={18} color="#C2410C" />
+                  <ThemedText type="caption" style={[styles.intakeAdvisoryText, { flex: 1 }]}>
+                    {t(deliveryIntakeAdvisory.advisoryKey)}
+                  </ThemedText>
+                </View>
               </Card>
             ) : null}
 

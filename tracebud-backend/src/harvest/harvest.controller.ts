@@ -294,6 +294,8 @@ export class HarvestController {
       intakeRef: dto.intakeRef,
       receivedKg: dto.receivedKg,
       note: dto.note,
+      handoffPhotoSha256: dto.handoffPhotoSha256,
+      handoffPhotoBytes: dto.handoffPhotoBytes,
     });
     return { confirmation };
   }

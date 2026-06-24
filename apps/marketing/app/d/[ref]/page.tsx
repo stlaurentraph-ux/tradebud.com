@@ -11,7 +11,9 @@ import {
   buildDashboardClaimUrl,
   buildDashboardLoginUrlForClaim,
   buildDashboardSignupUrlForClaim,
+  buildMarketingDeliveryQrUrl,
 } from '@/lib/delivery-intake-links';
+import { DeliveryIntakeQrImage } from '@/components/delivery-intake/delivery-intake-qr-image';
 
 type DeliveryPreview = {
   qrRef: string;
@@ -74,7 +76,11 @@ export default async function MarketingDeliveryPreviewPage({
         </div>
 
         <div className="rounded-xl border border-border bg-muted/20 p-4">
-          <p className="text-base font-medium text-foreground">{preview.plotName ?? 'Plot delivery'}</p>
+          <DeliveryIntakeQrImage
+            value={buildMarketingDeliveryQrUrl(preview.qrRef)}
+            alt={`QR code for delivery ${preview.qrRef}`}
+          />
+          <p className="mt-4 text-base font-medium text-foreground">{preview.plotName ?? 'Plot delivery'}</p>
           <p className="mt-1 text-2xl font-semibold text-foreground">{formatKg(preview.kg)}</p>
           {preview.harvestDate ? (
             <p className="mt-1 text-sm text-muted-foreground">

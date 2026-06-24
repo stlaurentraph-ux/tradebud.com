@@ -63,6 +63,7 @@ export function HarvestReceiveDeliveryPanel({ initialClaimRef = null }: HarvestR
   const [scannerOpen, setScannerOpen] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [pendingHandoff, setPendingHandoff] = useState<PendingHandoff | null>(null);
+  const [deskCoachDismissed, setDeskCoachDismissed] = useState(true);
   const autoClaimHandled = useRef<string | null>(null);
   const [resolvedClaimRef, setResolvedClaimRef] = useState<string | null>(initialClaimRef?.trim() || null);
 
@@ -75,6 +76,11 @@ export function HarvestReceiveDeliveryPanel({ initialClaimRef = null }: HarvestR
     const claim = new URLSearchParams(window.location.search).get('claim')?.trim();
     if (claim) setResolvedClaimRef(claim);
   }, [initialClaimRef]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setDeskCoachDismissed(window.localStorage.getItem('delivery_desk_coach_v1') === '1');
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -286,6 +292,25 @@ export function HarvestReceiveDeliveryPanel({ initialClaimRef = null }: HarvestR
           <CardDescription>{copy('description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!deskCoachDismissed ? (
+            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm">
+              <p className="font-medium">{copy('coach_title')}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{copy('coach_body')}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="mt-2 h-8 px-2"
+                onClick={() => {
+                  window.localStorage.setItem('delivery_desk_coach_v1', '1');
+                  setDeskCoachDismissed(true);
+                }}
+              >
+                {copy('coach_dismiss')}
+              </Button>
+            </div>
+          ) : null}
+
           {resolvedClaimRef ? (
             <div
               className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm"

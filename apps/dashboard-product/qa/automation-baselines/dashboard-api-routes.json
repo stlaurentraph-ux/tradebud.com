@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T10:40:00.000Z",
+  "generatedAt": "2026-06-24T11:22:04.416Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -284,6 +284,14 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/public/harvest/delivery-preview/{qrRef}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/delivery-trip-preview/[tripRef]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/public/harvest/delivery-trip-preview/{tripRef}"
       ],
       "failClosed": true
     },

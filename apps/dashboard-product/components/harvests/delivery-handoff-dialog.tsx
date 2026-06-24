@@ -25,6 +25,8 @@ type DeliveryHandoffDialogProps = {
   onConfirmed: () => void;
 };
 
+const MAX_HANDOFF_PHOTO_BYTES = 600_000;
+
 function parseKgInput(value: string): number | null {
   const parsed = Number(value.replace(',', '.'));
   return Number.isFinite(parsed) ? parsed : null;
@@ -35,6 +37,13 @@ function hasMeaningfulWeightVariance(expectedKg: number, receivedKg: number): bo
   const delta = Math.abs(receivedKg - expectedKg);
   const variancePct = (delta / expectedKg) * 100;
   return variancePct > 2 || delta > 5;
+}
+
+async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
+  const hash = await crypto.subtle.digest('SHA-256', buffer);
+  return Array.from(new Uint8Array(hash))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
 }
 
 export function DeliveryHandoffDialog({
@@ -54,6 +63,9 @@ export function DeliveryHandoffDialog({
   const expectedKg = vouchers.reduce((sum, voucher) => sum + (voucher.kg ?? 0), 0);
   const [receivedKg, setReceivedKg] = useState(String(Math.round(expectedKg)));
   const [note, setNote] = useState('');
+  const [photoName, setPhotoName] = useState<string | null>(null);
+  const [photoSha256, setPhotoSha256] = useState<string | null>(null);
+  const [photoBytes, setPhotoBytes] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -61,6 +73,9 @@ export function DeliveryHandoffDialog({
     if (!open) return;
     setReceivedKg(String(Math.round(expectedKg)));
     setNote('');
+    setPhotoName(null);
+    setPhotoSha256(null);
+    setPhotoBytes(null);
     setError(null);
   }, [expectedKg, open]);
 
@@ -69,6 +84,27 @@ export function DeliveryHandoffDialog({
     if (parsedReceivedKg == null || parsedReceivedKg <= 0) return false;
     return hasMeaningfulWeightVariance(expectedKg, parsedReceivedKg);
   }, [expectedKg, parsedReceivedKg]);
+
+  const handlePhotoChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setPhotoName(null);
+      setPhotoSha256(null);
+      setPhotoBytes(null);
+      return;
+    }
+    if (file.size > MAX_HANDOFF_PHOTO_BYTES) {
+      setError(copy('handoff_photo_too_large'));
+      event.target.value = '';
+      return;
+    }
+    const buffer = await file.arrayBuffer();
+    const digest = await sha256Hex(buffer);
+    setPhotoName(file.name);
+    setPhotoSha256(digest);
+    setPhotoBytes(file.size);
+    setError(null);
+  };
 
   const handleConfirm = async () => {
     if (parsedReceivedKg == null || parsedReceivedKg <= 0) {
@@ -89,6 +125,8 @@ export function DeliveryHandoffDialog({
           intakeRef,
           receivedKg: parsedReceivedKg,
           note: note.trim() || undefined,
+          handoffPhotoSha256: photoSha256 ?? undefined,
+          handoffPhotoBytes: photoBytes ?? undefined,
         }),
       });
       if (!response.ok) {
@@ -155,6 +193,23 @@ export function DeliveryHandoffDialog({
               })}
             </p>
           ) : null}
+
+          <div className="space-y-2">
+            <Label htmlFor="handoffPhoto">{copy('handoff_photo_label')}</Label>
+            <Input
+              id="handoffPhoto"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(event) => void handlePhotoChange(event)}
+            />
+            <p className="text-xs text-muted-foreground">{copy('handoff_photo_hint')}</p>
+            {photoName ? (
+              <p className="text-xs font-medium text-foreground">
+                {copy('handoff_photo_attached', { name: photoName })}
+              </p>
+            ) : null}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="handoffNote">{copy('handoff_note_label')}</Label>

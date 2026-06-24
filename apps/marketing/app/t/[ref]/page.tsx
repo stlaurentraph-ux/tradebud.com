@@ -8,7 +8,9 @@ import {
   buildDashboardClaimUrl,
   buildDashboardLoginUrlForClaim,
   buildDashboardSignupUrlForClaim,
+  buildMarketingDeliveryTripQrUrl,
 } from '@/lib/delivery-intake-links';
+import { DeliveryIntakeQrImage } from '@/components/delivery-intake/delivery-intake-qr-image';
 import { cn } from '@/lib/utils';
 
 type DeliveryTripPreview = {
@@ -69,7 +71,11 @@ export default async function MarketingDeliveryTripPreviewPage({
         </div>
 
         <div className="rounded-xl border border-border bg-muted/20 p-4">
-          <p className="text-2xl font-semibold text-foreground">{preview.totalKg.toLocaleString()} kg</p>
+          <DeliveryIntakeQrImage
+            value={buildMarketingDeliveryTripQrUrl(preview.tripRef)}
+            alt={`QR code for trip ${preview.tripRef}`}
+          />
+          <p className="mt-4 text-2xl font-semibold text-foreground">{preview.totalKg.toLocaleString()} kg</p>
           <p className="mt-1 text-sm text-muted-foreground">
             {preview.lineCount} plot(s) · {readyCount} ready for registration
           </p>

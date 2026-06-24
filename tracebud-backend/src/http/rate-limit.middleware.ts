@@ -4,6 +4,7 @@ import { recordRateLimit429 } from './rate-limit-observability';
 const WINDOW_MS = 60_000;
 const MAX_REQUESTS_ANON = 120;
 const MAX_REQUESTS_AUTH_PRODUCTION = 240;
+const MAX_REQUESTS_PUBLIC_DELIVERY_PREVIEW = 45;
 
 type Bucket = { count: number; resetAt: number };
 
@@ -80,7 +81,16 @@ export function resolveRateLimitKey(req: Request): string {
   return `ip:${readClientIp(req)}`;
 }
 
+function isPublicDeliveryPreviewRequest(req: Request): boolean {
+  const url = readRequestUrl(req);
+  const method = req.method?.toUpperCase() ?? 'GET';
+  return method === 'GET' && url.includes('/v1/public/harvest/delivery');
+}
+
 function resolveMaxRequests(req: Request): number {
+  if (isPublicDeliveryPreviewRequest(req)) {
+    return MAX_REQUESTS_PUBLIC_DELIVERY_PREVIEW;
+  }
   if (process.env.NODE_ENV !== 'production') {
     return Math.max(MAX_REQUESTS_ANON, 600);
   }

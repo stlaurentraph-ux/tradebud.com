@@ -16,4 +16,18 @@ export class ConfirmDeliveryHandoffDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'SHA-256 hex of optional desk handoff photo (metadata only; image not stored server-side)',
+  })
+  @IsOptional()
+  @IsString()
+  handoffPhotoSha256?: string;
+
+  @ApiProperty({ required: false, description: 'Byte length of optional desk handoff photo' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  handoffPhotoBytes?: number;
 }

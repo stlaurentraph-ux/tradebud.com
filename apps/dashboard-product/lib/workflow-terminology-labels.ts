@@ -5604,6 +5604,32 @@ const HARVEST_RECEIVE_DELIVERY_COPY: Record<string, { key: string; fallback: str
   handoff_cancel: { key: 'workflow.harvest.receive.handoff_cancel', fallback: 'Cancel' },
   handoff_confirm: { key: 'workflow.harvest.receive.handoff_confirm', fallback: 'Confirm & stage' },
   handoff_confirming: { key: 'workflow.harvest.receive.handoff_confirming', fallback: 'Confirming…' },
+  handoff_photo_label: {
+    key: 'workflow.harvest.receive.handoff_photo_label',
+    fallback: 'Desk photo (optional)',
+  },
+  handoff_photo_hint: {
+    key: 'workflow.harvest.receive.handoff_photo_hint',
+    fallback: 'Photo of scale or truck plate. Only a hash is stored for audit — not the image file.',
+  },
+  handoff_photo_attached: {
+    key: 'workflow.harvest.receive.handoff_photo_attached',
+    fallback: 'Attached: {{name}}',
+  },
+  handoff_photo_too_large: {
+    key: 'workflow.harvest.receive.handoff_photo_too_large',
+    fallback: 'Photo must be under 600 KB. Take a closer crop or lower resolution.',
+  },
+  coach_title: {
+    key: 'workflow.harvest.receive.coach_title',
+    fallback: 'Start with Directed to you or scan a receipt',
+  },
+  coach_body: {
+    key: 'workflow.harvest.receive.coach_body',
+    fallback:
+      'Member deliveries directed to your organisation appear in the inbox. Otherwise scan or paste the voucher code.',
+  },
+  coach_dismiss: { key: 'workflow.harvest.receive.coach_dismiss', fallback: 'Got it' },
   footnote: {
     key: 'workflow.harvest.receive.footnote',
     fallback:

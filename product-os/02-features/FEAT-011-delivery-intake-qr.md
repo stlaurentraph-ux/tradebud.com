@@ -94,6 +94,16 @@ Unchanged voucher lifecycle. New side effect: `voucher_buyer_claims` on desk cla
 - Marketing/dashboard public preview: status badge, 3-step explainer, trip line chips — **shipped 2026-06-24**
 - Auto-claim banner on desk when `?claim=` present — **shipped 2026-06-24**
 
+## Phase D (hardening + field/desk completeness)
+
+- Dashboard `/t/[ref]` trip preview + proxy API — **shipped 2026-06-24**
+- Marketing preview read-only QR image — **shipped 2026-06-24**
+- Desk coach marks (dismissible) — **shipped 2026-06-24**
+- Handoff optional photo (SHA-256 audit metadata only) — **shipped 2026-06-24**
+- Field intake advisory warning icon + show-buyer brightness hint — **shipped 2026-06-24**
+- Public delivery preview rate limit (45 req/min/IP) — **shipped 2026-06-24**
+- Backend `plot-capture-quality-policy` module (package readiness) — **shipped 2026-06-24**
+
 ## Dependencies
 
 - `TRACEBUD_BACKEND_URL` on marketing + dashboard
