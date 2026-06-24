@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T11:51:59.716Z",
+  "generatedAt": "2026-06-24T12:03:44.843Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -395,10 +395,34 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/imports/plots/packages/verify",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/packages/verify"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/imports/plots/preview",
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/imports/plots/preview"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/signing-keys",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/signing-keys/[id]/revoke",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/signing-keys/{id}/revoke"
       ],
       "failClosed": true
     },

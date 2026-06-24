@@ -6,7 +6,9 @@ import { LaunchModule } from '../launch/launch.module';
 import { BulkPlotImportController } from './bulk-plot-import.controller';
 import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.service';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
+import { BulkPlotImportPackageService } from './bulk-plot-import-package.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
+import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.service';
 import { CadastralParcelController } from './cadastral-parcel.controller';
 import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service';
 import { FieldAppController } from './field-app.controller';
@@ -33,6 +35,8 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     BulkPlotImportService,
     BulkPlotImportJobService,
     BulkPlotImportEvidenceService,
+    BulkPlotImportPackageService,
+    BulkPlotImportSigningKeyService,
     CadastralParcelLookupService,
     TenureParseService,
     EvidenceDocumentsService,

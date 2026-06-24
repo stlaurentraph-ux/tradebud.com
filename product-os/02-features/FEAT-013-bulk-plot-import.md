@@ -1,4 +1,4 @@
-# FEAT-013: Bulk plot import (Phase A–F)
+# FEAT-013: Bulk plot import (Phase A–G)
 
 ## Goal
 
@@ -56,9 +56,19 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV, G
 - `POST /v1/imports/plots/evidence` uploads files to plot-evidence storage and registers documents via existing sync path
 - Evidence import runs after plot import completes (sync and async job paths)
 
+## Scope (Phase G — shipped)
+
+- Tenant-scoped Ed25519 public key registry (`tenant_import_signing_keys`)
+- Settings page `/settings/import-signing-keys` for `admin` / `compliance_manager`
+- `GET/POST /v1/imports/plots/signing-keys` and `POST .../signing-keys/:id/revoke`
+- `POST /v1/imports/plots/packages/verify` validates hash + optional signature
+- Unsigned packages import with warning; invalid signatures block import
+- Preview/execute/job endpoints re-verify signed packages server-side
+
 ## Non-goals (later phases)
 
-- Ed25519/RSA package signature verification
+- Tracebud-approved integrator key allowlist
+- Tenant policy requiring signed packages for all imports
 - External worker queue / object storage for job payloads
 
 ## Permissions
@@ -108,11 +118,19 @@ Imported plots enter normal compliance pipeline (`pending_check`).
 - [x] Evidence files uploaded and linked to plots by `client_plot_id` after plot import
 - [x] Hash mismatch and missing plot/reference failures surfaced per file
 
+### Phase G
+
+- [x] Tenant admin can register/revoke Ed25519 public keys with stable `kid`
+- [x] Signed packages verify against tenant keys; unsigned packages warn but import
+- [x] Invalid or revoked-key signatures block preview and import
+- [x] Audit events for key lifecycle and signature verification outcomes
+
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-job.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-evidence.service.spec.ts`
+- `tracebud-backend/src/plots/bulk-plot-import-package.service.spec.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-kml.test.ts`

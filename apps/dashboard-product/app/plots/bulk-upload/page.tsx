@@ -47,6 +47,7 @@ import {
   BULK_PLOT_IMPORT_PACKAGE_SAMPLE,
   parseAndVerifyTracebudImportV1Package,
   parseTracebudImportV1Package,
+  type TracebudImportV1Package,
 } from '@/lib/bulk-plot-import-package';
 import {
   BULK_PLOT_IMPORT_SYNC_MAX_ROWS,
@@ -56,6 +57,7 @@ import {
   isBulkPlotImportJobTerminal,
   previewBulkPlotImport,
   queueBulkPlotImportJob,
+  verifyBulkPlotImportPackage,
   type BulkPlotImportEvidenceExecuteResponse,
   type BulkPlotImportExecuteResponse,
   type BulkPlotImportInputRow,
@@ -153,6 +155,7 @@ export default function PlotBulkUploadPage() {
   const [packageNotice, setPackageNotice] = useState<string | null>(null);
   const [evidenceZipBytes, setEvidenceZipBytes] = useState<Uint8Array | null>(null);
   const [evidenceReferences, setEvidenceReferences] = useState<TracebudImportV1EvidenceReference[]>([]);
+  const [importPackage, setImportPackage] = useState<TracebudImportV1Package | null>(null);
   const [evidenceImportResult, setEvidenceImportResult] =
     useState<BulkPlotImportEvidenceExecuteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -165,6 +168,7 @@ export default function PlotBulkUploadPage() {
     setPackageNotice(null);
     setEvidenceZipBytes(null);
     setEvidenceReferences([]);
+    setImportPackage(null);
     setEvidenceImportResult(null);
     setPreview(null);
     setResult(null);
@@ -223,18 +227,31 @@ export default function PlotBulkUploadPage() {
     setError(null);
     setPackageNotice(null);
     let rows: BulkPlotImportInputRow[] = [];
+    let packageForImport: TracebudImportV1Package | null = null;
     try {
       if (source === 'package') {
-        const parsed = await parseAndVerifyTracebudImportV1Package(fileText);
+        const parsed = await parseAndVerifyTracebudImportV1Package(fileText, {
+          verifyPackage: verifyBulkPlotImportPackage,
+        });
         rows = parsed.rows;
+        packageForImport = parsed.package;
+        setImportPackage(parsed.package);
         setEvidenceReferences(parsed.package.evidence_references ?? []);
+        const verificationMessage = parsed.packageVerification?.message;
+        if (parsed.packageVerification?.signatureStatus === 'verified') {
+          setPackageNotice(verificationMessage ?? 'Package signature verified.');
+        } else if (parsed.packageVerification?.signatureStatus === 'unsigned') {
+          setPackageNotice(verificationMessage ?? 'Package is not cryptographically signed.');
+        }
         const evidenceCount = parsed.evidenceReferenceCount;
         if (evidenceCount > 0 && !evidenceZipBytes) {
           setPackageNotice(
-            `${evidenceCount} evidence reference(s) found. Add an evidence ZIP before import to attach files.`,
+            `${parsed.packageVerification?.signatureStatus === 'unsigned' ? 'Package is unsigned. ' : ''}${evidenceCount} evidence reference(s) found. Add an evidence ZIP before import to attach files.`,
           );
         } else if (evidenceCount > 0 && evidenceZipBytes) {
-          setPackageNotice(`${evidenceCount} evidence reference(s) will be imported from the ZIP after plots.`);
+          setPackageNotice(
+            `${parsed.packageVerification?.signatureStatus === 'verified' ? 'Signature verified. ' : parsed.packageVerification?.signatureStatus === 'unsigned' ? 'Package unsigned. ' : ''}${evidenceCount} evidence reference(s) will be imported from the ZIP after plots.`,
+          );
         }
         if (parsed.skippedPlotCount > 0) {
           setPackageNotice(
@@ -267,6 +284,7 @@ export default function PlotBulkUploadPage() {
     try {
       const response = await previewBulkPlotImport(rows, {
         summaryOnly: rows.length > BULK_PLOT_IMPORT_SYNC_MAX_ROWS,
+        importPackage: packageForImport,
       });
       setPreview(response);
       setStep('preview');
@@ -301,7 +319,9 @@ export default function PlotBulkUploadPage() {
     setError(null);
     try {
       if (mappedRows.length > BULK_PLOT_IMPORT_SYNC_MAX_ROWS) {
-        const queued = await queueBulkPlotImportJob(mappedRows);
+        const queued = await queueBulkPlotImportJob(mappedRows, {
+          importPackage: source === 'package' ? importPackage : null,
+        });
         setActiveJob(queued);
         setStep('job');
         const finished = await pollImportJob(queued.id);
@@ -328,7 +348,9 @@ export default function PlotBulkUploadPage() {
         return;
       }
 
-      const response = await executeBulkPlotImport(mappedRows);
+      const response = await executeBulkPlotImport(mappedRows, {
+        importPackage: source === 'package' ? importPackage : null,
+      });
       setResult(response);
       setStep('result');
       if (response.importedCount > 0) {
@@ -386,7 +408,7 @@ export default function PlotBulkUploadPage() {
                 <CardDescription>
                   CSV supports point plots under 4 ha or cadastral keys. GeoJSON and KML support
                   Point or Polygon placemarks/features. Import packages use tracebud_import_v1 with
-                  optional content_hash_sha256 integrity checks and an optional evidence ZIP.
+                  optional content_hash_sha256 integrity checks, optional Ed25519 signatures, and an optional evidence ZIP.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -517,6 +539,9 @@ export default function PlotBulkUploadPage() {
                       >
                         <Download className="mr-2 h-4 w-4" />
                         Download tracebud_import_v1 sample
+                      </Button>
+                      <Button type="button" variant="outline" asChild>
+                        <Link href="/settings/import-signing-keys">Manage signing keys</Link>
                       </Button>
                     </div>
 

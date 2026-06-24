@@ -1,4 +1,8 @@
 import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
+import type {
+  TracebudImportV1Package,
+  TracebudImportV1PackageVerification,
+} from '@/lib/bulk-plot-import-package';
 
 export type BulkPlotImportPreviewRow = {
   rowIndex: number;
@@ -111,9 +115,62 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
   return payload as T;
 }
 
+export async function verifyBulkPlotImportPackage(
+  importPackage: TracebudImportV1Package,
+): Promise<TracebudImportV1PackageVerification> {
+  const result = await requestJson<TracebudImportV1PackageVerification>('/api/imports/plots/packages/verify', {
+    method: 'POST',
+    body: JSON.stringify({ importPackage }),
+  });
+  trackDashboardEvent(
+    result.signatureStatus === 'verified'
+      ? DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_VERIFIED
+      : result.signatureStatus === 'failed'
+        ? DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_FAILED
+        : DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PACKAGE_UNSIGNED,
+    {
+      kid: result.kid ?? null,
+      source_system: importPackage.source_system,
+    },
+  );
+  return result;
+}
+
+export type BulkPlotImportSigningKey = {
+  id: string;
+  kid: string;
+  algorithm: 'ed25519';
+  label: string;
+  publicKeyFingerprint: string;
+  revokedAt: string | null;
+  createdAt: string;
+};
+
+export async function listBulkPlotImportSigningKeys(): Promise<BulkPlotImportSigningKey[]> {
+  return requestJson<BulkPlotImportSigningKey[]>('/api/imports/plots/signing-keys', { method: 'GET' });
+}
+
+export async function registerBulkPlotImportSigningKey(input: {
+  kid: string;
+  label: string;
+  publicKeyPem: string;
+}): Promise<BulkPlotImportSigningKey> {
+  return requestJson<BulkPlotImportSigningKey>('/api/imports/plots/signing-keys', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function revokeBulkPlotImportSigningKey(keyId: string): Promise<BulkPlotImportSigningKey> {
+  return requestJson<BulkPlotImportSigningKey>(`/api/imports/plots/signing-keys/${keyId}/revoke`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export async function previewBulkPlotImport(
   rows: BulkPlotImportInputRow[],
-  options?: { summaryOnly?: boolean },
+  options?: { summaryOnly?: boolean; importPackage?: TracebudImportV1Package | null },
 ): Promise<BulkPlotImportPreviewResponse> {
   trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PREVIEW, {
     row_count: rows.length,
@@ -121,17 +178,25 @@ export async function previewBulkPlotImport(
   });
   return requestJson<BulkPlotImportPreviewResponse>('/api/imports/plots/preview', {
     method: 'POST',
-    body: JSON.stringify({ rows, summaryOnly: options?.summaryOnly === true }),
+    body: JSON.stringify({
+      rows,
+      summaryOnly: options?.summaryOnly === true,
+      importPackage: options?.importPackage ?? undefined,
+    }),
   });
 }
 
 export async function executeBulkPlotImport(
   rows: BulkPlotImportInputRow[],
+  options?: { importPackage?: TracebudImportV1Package | null },
 ): Promise<BulkPlotImportExecuteResponse> {
   try {
     const result = await requestJson<BulkPlotImportExecuteResponse>('/api/imports/plots', {
       method: 'POST',
-      body: JSON.stringify({ rows }),
+      body: JSON.stringify({
+        rows,
+        importPackage: options?.importPackage ?? undefined,
+      }),
     });
     trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_SUCCESS, {
       row_count: result.totalRows,
@@ -150,11 +215,15 @@ export async function executeBulkPlotImport(
 
 export async function queueBulkPlotImportJob(
   rows: BulkPlotImportInputRow[],
+  options?: { importPackage?: TracebudImportV1Package | null },
 ): Promise<BulkPlotImportJobResponse> {
   trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_JOB_QUEUED, { row_count: rows.length });
   return requestJson<BulkPlotImportJobResponse>('/api/imports/plots/jobs', {
     method: 'POST',
-    body: JSON.stringify({ rows }),
+    body: JSON.stringify({
+      rows,
+      importPackage: options?.importPackage ?? undefined,
+    }),
   });
 }
 

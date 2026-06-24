@@ -15,6 +15,7 @@ describe('bulk plot import package', () => {
     expect(result.rows[0]?.producerFullName).toBe('Maria Lopez');
     expect(result.rows[1]?.geometry?.type).toBe('Polygon');
     expect(result.evidenceReferenceCount).toBe(1);
+    expect(result.packageVerification?.signatureStatus).toBe('unsigned');
   });
 
   it('rejects packages with the wrong format_version', () => {

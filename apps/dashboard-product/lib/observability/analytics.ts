@@ -28,6 +28,9 @@ export const DASHBOARD_EVENTS = {
   BULK_PLOT_IMPORT_JOB_COMPLETED: 'dashboard_bulk_plot_import_job_completed',
   BULK_PLOT_IMPORT_EVIDENCE_SUCCESS: 'dashboard_bulk_plot_import_evidence_success',
   BULK_PLOT_IMPORT_EVIDENCE_FAILURE: 'dashboard_bulk_plot_import_evidence_failure',
+  BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_VERIFIED: 'dashboard_bulk_plot_import_package_signature_verified',
+  BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_FAILED: 'dashboard_bulk_plot_import_package_signature_failed',
+  BULK_PLOT_IMPORT_PACKAGE_UNSIGNED: 'dashboard_bulk_plot_import_package_unsigned',
   INBOUND_CAMPAIGN_REQUEST_VIEWED: 'inbound_campaign_request_viewed',
 } as const;
 

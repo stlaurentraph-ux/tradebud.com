@@ -43,15 +43,29 @@ export type TracebudImportV1EvidenceReference = {
   file_hash_sha256?: string | null;
 };
 
+export type TracebudImportV1PackageSignature = {
+  algorithm: 'ed25519';
+  kid: string;
+  value: string;
+};
+
 export type TracebudImportV1Package = {
   format_version: typeof TRACEBUD_IMPORT_V1_FORMAT;
   source_system: string;
   exported_at: string;
   content_hash_sha256?: string;
-  signature?: string;
+  signature?: TracebudImportV1PackageSignature | null;
   producers: TracebudImportV1Producer[];
   plots: TracebudImportV1Plot[];
   evidence_references?: TracebudImportV1EvidenceReference[];
+};
+
+export type TracebudImportV1PackageVerification = {
+  signatureStatus: 'unsigned' | 'verified' | 'failed';
+  contentHashValid: boolean;
+  kid?: string;
+  signingKeyLabel?: string;
+  message?: string;
 };
 
 export type TracebudImportV1ParseResult = {
@@ -60,6 +74,7 @@ export type TracebudImportV1ParseResult = {
   evidenceReferenceCount: number;
   skippedPlotCount: number;
   skipMessages: string[];
+  packageVerification?: TracebudImportV1PackageVerification;
 };
 
 export const BULK_PLOT_IMPORT_PACKAGE_SAMPLE = JSON.stringify(
@@ -286,16 +301,36 @@ export function parseTracebudImportV1Package(text: string): TracebudImportV1Pars
 
 export async function parseAndVerifyTracebudImportV1Package(
   text: string,
+  options?: {
+    verifyPackage?: (pkg: TracebudImportV1Package) => Promise<TracebudImportV1PackageVerification>;
+  },
 ): Promise<TracebudImportV1ParseResult> {
   const result = parseTracebudImportV1Package(text);
   const hashValid = await verifyTracebudImportV1ContentHash(result.package);
   if (!hashValid) {
     throw new Error('content_hash_sha256 does not match the package payload.');
   }
-  if (result.package.signature?.trim()) {
+
+  if (options?.verifyPackage) {
+    const packageVerification = await options.verifyPackage(result.package);
+    if (!packageVerification.contentHashValid || packageVerification.signatureStatus === 'failed') {
+      throw new Error(packageVerification.message ?? 'Import package verification failed.');
+    }
+    return { ...result, packageVerification };
+  }
+
+  if (result.package.signature) {
     throw new Error(
-      'signature is present but asymmetric signature verification is not enabled in this release. Remove signature or import without it.',
+      'Package signature verification requires a server check. Retry preview from the bulk import wizard.',
     );
   }
-  return result;
+
+  return {
+    ...result,
+    packageVerification: {
+      signatureStatus: 'unsigned',
+      contentHashValid: true,
+      message: 'Package is not cryptographically signed.',
+    },
+  };
 }

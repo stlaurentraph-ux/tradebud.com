@@ -1,10 +1,13 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards, BadRequestException } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.service';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
+import { BulkPlotImportPackageService } from './bulk-plot-import-package.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
+import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.service';
+import type { TracebudImportV1PackageInput } from './bulk-plot-import-package.util';
 import type {
   BulkPlotImportEvidenceItemInput,
   BulkPlotImportInputRow,
@@ -21,6 +24,7 @@ const BULK_PLOT_IMPORT_ROLES = [
   'compliance_manager',
 ] as const;
 
+
 @ApiTags('Imports')
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
@@ -30,6 +34,8 @@ export class BulkPlotImportController {
     private readonly bulkPlotImportService: BulkPlotImportService,
     private readonly bulkPlotImportJobService: BulkPlotImportJobService,
     private readonly bulkPlotImportEvidenceService: BulkPlotImportEvidenceService,
+    private readonly bulkPlotImportPackageService: BulkPlotImportPackageService,
+    private readonly bulkPlotImportSigningKeyService: BulkPlotImportSigningKeyService,
   ) {}
 
   private getTenantId(req: any): string {
@@ -47,14 +53,88 @@ export class BulkPlotImportController {
     }
   }
 
+  private assertSigningKeyAdmin(req: any): void {
+    const role = deriveRoleFromSupabaseUser(req?.user);
+    this.bulkPlotImportSigningKeyService.assertSigningKeyAdminRole(role);
+  }
+
+  @Get('signing-keys')
+  @ApiOperation({ summary: 'List tenant import signing keys' })
+  listSigningKeys(@Req() req: any) {
+    this.assertBulkPlotImportAccess(req);
+    return this.bulkPlotImportSigningKeyService.listKeys(this.getTenantId(req));
+  }
+
+  @Post('signing-keys')
+  @ApiOperation({ summary: 'Register tenant Ed25519 import signing public key' })
+  registerSigningKey(
+    @Req() req: any,
+    @Body() body: { kid?: string; label?: string; publicKeyPem?: string },
+  ) {
+    this.assertSigningKeyAdmin(req);
+    const tenantId = this.getTenantId(req);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    return this.bulkPlotImportSigningKeyService.registerKey({
+      tenantId,
+      userId,
+      kid: body?.kid ?? '',
+      label: body?.label ?? '',
+      publicKeyPem: body?.publicKeyPem ?? '',
+    });
+  }
+
+  @Post('signing-keys/:id/revoke')
+  @ApiOperation({ summary: 'Revoke tenant import signing key' })
+  revokeSigningKey(@Req() req: any, @Param('id') keyId: string) {
+    this.assertSigningKeyAdmin(req);
+    const tenantId = this.getTenantId(req);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    return this.bulkPlotImportSigningKeyService.revokeKey({ tenantId, userId, keyId });
+  }
+
+  @Post('packages/verify')
+  @ApiOperation({ summary: 'Verify tracebud_import_v1 package hash and optional signature' })
+  async verifyPackage(@Req() req: any, @Body() body: { importPackage?: TracebudImportV1PackageInput }) {
+    this.assertBulkPlotImportAccess(req);
+    const tenantId = this.getTenantId(req);
+    const userId = req.user?.id as string | undefined;
+    if (!body?.importPackage) {
+      throw new BadRequestException('importPackage is required.');
+    }
+    const pkg = this.bulkPlotImportPackageService.assertPackageShape(body.importPackage);
+    return this.bulkPlotImportPackageService.verifyPackage({
+      tenantId,
+      userId,
+      pkg,
+      audit: true,
+    });
+  }
+
   @Post('preview')
   @ApiOperation({ summary: 'Validate bulk plot import rows without writing data' })
-  preview(
+  async preview(
     @Req() req: any,
-    @Body() body: { rows?: BulkPlotImportInputRow[]; summaryOnly?: boolean },
+    @Body()
+    body: {
+      rows?: BulkPlotImportInputRow[];
+      summaryOnly?: boolean;
+      importPackage?: TracebudImportV1PackageInput;
+    },
   ) {
     this.assertBulkPlotImportAccess(req);
     const tenantId = this.getTenantId(req);
+    const userId = req.user?.id as string | undefined;
+    await this.bulkPlotImportPackageService.assertPackageImportable({
+      tenantId,
+      userId,
+      importPackage: body?.importPackage,
+    });
     return this.bulkPlotImportService.preview(tenantId, body?.rows ?? [], {
       summaryOnly: body?.summaryOnly === true,
     });
@@ -62,13 +142,21 @@ export class BulkPlotImportController {
 
   @Post()
   @ApiOperation({ summary: 'Execute bulk plot import for tenant-scoped producers' })
-  async execute(@Req() req: any, @Body() body: { rows?: BulkPlotImportInputRow[] }) {
+  async execute(
+    @Req() req: any,
+    @Body() body: { rows?: BulkPlotImportInputRow[]; importPackage?: TracebudImportV1PackageInput },
+  ) {
     this.assertBulkPlotImportAccess(req);
     const tenantId = this.getTenantId(req);
     const userId = req.user?.id as string | undefined;
     if (!userId) {
       throw new ForbiddenException('Missing authenticated user');
     }
+    await this.bulkPlotImportPackageService.assertPackageImportable({
+      tenantId,
+      userId,
+      importPackage: body?.importPackage,
+    });
     const email = typeof req.user?.email === 'string' ? req.user.email : undefined;
     const fullName =
       typeof req.user?.user_metadata?.full_name === 'string'
@@ -87,13 +175,21 @@ export class BulkPlotImportController {
 
   @Post('jobs')
   @ApiOperation({ summary: 'Queue async bulk plot import job for large payloads' })
-  async createJob(@Req() req: any, @Body() body: { rows?: BulkPlotImportInputRow[] }) {
+  async createJob(
+    @Req() req: any,
+    @Body() body: { rows?: BulkPlotImportInputRow[]; importPackage?: TracebudImportV1PackageInput },
+  ) {
     this.assertBulkPlotImportAccess(req);
     const tenantId = this.getTenantId(req);
     const userId = req.user?.id as string | undefined;
     if (!userId) {
       throw new ForbiddenException('Missing authenticated user');
     }
+    await this.bulkPlotImportPackageService.assertPackageImportable({
+      tenantId,
+      userId,
+      importPackage: body?.importPackage,
+    });
     const email = typeof req.user?.email === 'string' ? req.user.email : undefined;
     const fullName =
       typeof req.user?.user_metadata?.full_name === 'string'

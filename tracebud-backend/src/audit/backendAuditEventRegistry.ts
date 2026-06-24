@@ -149,6 +149,13 @@ export const BACKEND_YIELD_BENCHMARK_AUDIT_EVENT_TYPES = [
 
 export const BACKEND_BILLING_AUDIT_EVENT_TYPES = ['billing_band_upgrade_accepted'] as const;
 
+export const BACKEND_BULK_IMPORT_AUDIT_EVENT_TYPES = [
+  'bulk_import_signing_key_registered',
+  'bulk_import_signing_key_revoked',
+  'bulk_import_package_signature_verified',
+  'bulk_import_package_signature_failed',
+] as const;
+
 /** @deprecated Use categorized arrays; kept for guard imports. */
 export const BACKEND_PLATFORM_AUDIT_EVENT_TYPES = [
   ...BACKEND_DASHBOARD_AUDIT_EVENT_TYPES,
@@ -167,6 +174,7 @@ export const BACKEND_PLATFORM_AUDIT_EVENT_TYPES = [
   ...BACKEND_INBOX_AUDIT_EVENT_TYPES,
   ...BACKEND_YIELD_BENCHMARK_AUDIT_EVENT_TYPES,
   ...BACKEND_BILLING_AUDIT_EVENT_TYPES,
+  ...BACKEND_BULK_IMPORT_AUDIT_EVENT_TYPES,
   ...DDS_FILING_AUDIT_EVENT_TYPES,
 ] as const;
 
