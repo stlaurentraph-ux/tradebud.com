@@ -146,6 +146,42 @@ export type BulkPlotImportSigningKey = {
   createdAt: string;
 };
 
+export type BulkPlotImportPolicy = {
+  tenantId: string;
+  requireSignedPackages: boolean;
+  acceptIntegratorSignatures: boolean;
+  updatedAt: string | null;
+};
+
+export type BulkPlotImportIntegratorKey = {
+  id: string;
+  integratorId: string;
+  kid: string;
+  algorithm: 'ed25519';
+  label: string;
+  allowedSourceSystems: string[];
+  publicKeyFingerprint: string;
+  revokedAt: string | null;
+};
+
+export async function getBulkPlotImportPolicy(): Promise<BulkPlotImportPolicy> {
+  return requestJson<BulkPlotImportPolicy>('/api/imports/plots/policy', { method: 'GET' });
+}
+
+export async function updateBulkPlotImportPolicy(input: {
+  requireSignedPackages?: boolean;
+  acceptIntegratorSignatures?: boolean;
+}): Promise<BulkPlotImportPolicy> {
+  return requestJson<BulkPlotImportPolicy>('/api/imports/plots/policy', {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  });
+}
+
+export async function listBulkPlotImportIntegratorKeys(): Promise<BulkPlotImportIntegratorKey[]> {
+  return requestJson<BulkPlotImportIntegratorKey[]>('/api/imports/plots/integrator-keys', { method: 'GET' });
+}
+
 export async function listBulkPlotImportSigningKeys(): Promise<BulkPlotImportSigningKey[]> {
   return requestJson<BulkPlotImportSigningKey[]>('/api/imports/plots/signing-keys', { method: 'GET' });
 }

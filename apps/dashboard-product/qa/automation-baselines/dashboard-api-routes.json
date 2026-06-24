@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T12:03:44.843Z",
+  "generatedAt": "2026-06-24T12:25:54.737Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -379,6 +379,14 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/imports/plots/integrator-keys",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/integrator-keys"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/imports/plots/jobs",
       "category": "backend-proxy",
       "backendPaths": [
@@ -399,6 +407,14 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/imports/plots/packages/verify"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/policy",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
       ],
       "failClosed": true
     },

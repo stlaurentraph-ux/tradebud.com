@@ -65,6 +65,8 @@ export type TracebudImportV1PackageVerification = {
   contentHashValid: boolean;
   kid?: string;
   signingKeyLabel?: string;
+  signerType?: 'tenant' | 'integrator';
+  integratorId?: string;
   message?: string;
 };
 

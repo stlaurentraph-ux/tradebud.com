@@ -152,6 +152,7 @@ export const BACKEND_BILLING_AUDIT_EVENT_TYPES = ['billing_band_upgrade_accepted
 export const BACKEND_BULK_IMPORT_AUDIT_EVENT_TYPES = [
   'bulk_import_signing_key_registered',
   'bulk_import_signing_key_revoked',
+  'bulk_import_policy_updated',
   'bulk_import_package_signature_verified',
   'bulk_import_package_signature_failed',
 ] as const;

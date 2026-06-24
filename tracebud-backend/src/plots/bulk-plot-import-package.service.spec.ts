@@ -6,11 +6,15 @@ import {
   parseTracebudImportV1PackageSignature,
   type TracebudImportV1PackageInput,
 } from './bulk-plot-import-package.util';
+import { BulkPlotImportIntegratorKeyService } from './bulk-plot-import-integrator-key.service';
 import { BulkPlotImportPackageService } from './bulk-plot-import-package.service';
+import { BulkPlotImportPolicyService } from './bulk-plot-import-policy.service';
 import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.service';
 
 function buildService(deps?: {
   signingKeys?: Partial<BulkPlotImportSigningKeyService>;
+  integratorKeys?: Partial<BulkPlotImportIntegratorKeyService>;
+  policy?: Partial<BulkPlotImportPolicyService>;
   pool?: { query: jest.Mock };
 }) {
   const pool = deps?.pool ?? { query: jest.fn().mockResolvedValue({ rows: [] }) };
@@ -19,9 +23,32 @@ function buildService(deps?: {
     ({
       resolveActiveKey: jest.fn(),
     } as unknown as BulkPlotImportSigningKeyService);
+  const integratorKeys =
+    deps?.integratorKeys ??
+    ({
+      resolveActiveKey: jest.fn(),
+    } as unknown as BulkPlotImportIntegratorKeyService);
+  const policy =
+    deps?.policy ??
+    ({
+      getPolicy: jest.fn().mockResolvedValue({
+        tenantId: 'tenant_1',
+        requireSignedPackages: false,
+        acceptIntegratorSignatures: false,
+        updatedAt: null,
+      }),
+      assertSignedPackagesRequired: jest.fn().mockResolvedValue(undefined),
+    } as unknown as BulkPlotImportPolicyService);
   return {
-    packageService: new BulkPlotImportPackageService(signingKeys as BulkPlotImportSigningKeyService, pool as never),
+    packageService: new BulkPlotImportPackageService(
+      signingKeys as BulkPlotImportSigningKeyService,
+      integratorKeys as BulkPlotImportIntegratorKeyService,
+      policy as BulkPlotImportPolicyService,
+      pool as never,
+    ),
     signingKeys: signingKeys as BulkPlotImportSigningKeyService,
+    integratorKeys: integratorKeys as BulkPlotImportIntegratorKeyService,
+    policy: policy as BulkPlotImportPolicyService,
     pool,
   };
 }
@@ -85,6 +112,7 @@ describe('bulk plot import package verification', () => {
     });
 
     expect(result.signatureStatus).toBe('verified');
+    expect(result.signerType).toBe('tenant');
     expect(result.signingKeyLabel).toBe('Coop export key');
     expect(
       verify(
@@ -94,6 +122,49 @@ describe('bulk plot import package verification', () => {
         Buffer.from(signatureValue, 'base64'),
       ),
     ).toBe(true);
+  });
+
+  it('verifies integrator keys when tenant accepts integrator signatures', async () => {
+    const { publicKey, privateKey } = generateKeyPairSync('ed25519');
+    const publicKeyPem = publicKey.export({ type: 'spki', format: 'pem' }).toString();
+    const privateKeyPem = privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const pkg = assertTracebudImportV1PackageShape(basePackage);
+    const message = getTracebudImportV1CanonicalMessage(pkg);
+    const signatureValue = sign(null, Buffer.from(message, 'utf8'), createPrivateKey(privateKeyPem)).toString(
+      'base64',
+    );
+    const signedPackage: TracebudImportV1PackageInput = {
+      ...pkg,
+      signature: {
+        algorithm: 'ed25519',
+        kid: 'integrator-key-1',
+        value: signatureValue,
+      },
+    };
+
+    const { packageService, signingKeys, integratorKeys, policy } = buildService();
+    (signingKeys.resolveActiveKey as jest.Mock).mockResolvedValue(null);
+    (policy.getPolicy as jest.Mock).mockResolvedValue({
+      tenantId: 'tenant_1',
+      requireSignedPackages: false,
+      acceptIntegratorSignatures: true,
+      updatedAt: null,
+    });
+    (integratorKeys.resolveActiveKey as jest.Mock).mockResolvedValue({
+      integrator_id: 'tracebud_partner_a',
+      kid: 'integrator-key-1',
+      label: 'Partner A export key',
+      public_key_pem: publicKeyPem,
+    });
+
+    const result = await packageService.verifyPackage({
+      tenantId: 'tenant_1',
+      pkg: signedPackage,
+    });
+
+    expect(result.signatureStatus).toBe('verified');
+    expect(result.signerType).toBe('integrator');
+    expect(result.integratorId).toBe('tracebud_partner_a');
   });
 
   it('fails when content hash does not match', async () => {

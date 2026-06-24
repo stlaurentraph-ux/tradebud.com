@@ -8,6 +8,7 @@ import {
 import { createHash, randomUUID } from 'crypto';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
+import { BulkPlotImportJobStorageService } from './bulk-plot-import-job-storage.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
 import {
   BULK_PLOT_IMPORT_ASYNC_MAX_ROWS,
@@ -25,7 +26,8 @@ type BulkImportJobRow = {
   tenant_id: string;
   import_type: string;
   file_hash_sha256: string;
-  payload_jsonb: { rows?: BulkPlotImportInputRow[]; actorEmail?: string; actorFullName?: string };
+  file_storage_key: string | null;
+  payload_jsonb: Record<string, unknown> | null;
   total_records: number;
   processed_records: number;
   success_count: number;
@@ -48,6 +50,7 @@ export class BulkPlotImportJobService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
     private readonly bulkPlotImportService: BulkPlotImportService,
+    private readonly jobStorage: BulkPlotImportJobStorageService,
   ) {}
 
   async createJob(params: {
@@ -73,13 +76,26 @@ export class BulkPlotImportJobService {
     };
     const fileHash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
     const jobId = randomUUID();
+    const stored = await this.jobStorage.persistJobPayload({
+      tenantId: params.tenantId,
+      jobId,
+      payload,
+    });
 
     await this.pool.query(
       `INSERT INTO bulk_import_jobs (
-        id, tenant_id, import_type, file_hash_sha256, payload_jsonb,
+        id, tenant_id, import_type, file_hash_sha256, file_storage_key, payload_jsonb,
         total_records, status, created_by_id
-      ) VALUES ($1, $2, 'PLOTS', $3, $4::jsonb, $5, 'QUEUED', $6)`,
-      [jobId, params.tenantId, fileHash, JSON.stringify(payload), rows.length, params.userId],
+      ) VALUES ($1, $2, 'PLOTS', $3, $4, $5::jsonb, $6, 'QUEUED', $7)`,
+      [
+        jobId,
+        params.tenantId,
+        fileHash,
+        stored.fileStorageKey,
+        JSON.stringify(stored.payloadJsonb),
+        rows.length,
+        params.userId,
+      ],
     );
 
     const job = await this.getJob(params.tenantId, jobId);
@@ -127,8 +143,11 @@ export class BulkPlotImportJobService {
       const job = claimed.rows[0];
       if (!job) return;
 
-      const payload = job.payload_jsonb ?? {};
-      const rows = Array.isArray(payload.rows) ? payload.rows : [];
+      const payload = await this.jobStorage.loadJobPayload({
+        payloadJsonb: job.payload_jsonb,
+        fileStorageKey: job.file_storage_key,
+      });
+      const rows = payload.rows;
       const failureSamples: Array<{ rowIndex: number; clientPlotId: string; message?: string }> = [];
 
       let processedRecords = job.processed_records;

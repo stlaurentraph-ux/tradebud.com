@@ -1,10 +1,12 @@
-import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards, BadRequestException } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Patch, Post, Req, UseGuards, BadRequestException } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.service';
+import { BulkPlotImportIntegratorKeyService } from './bulk-plot-import-integrator-key.service';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
 import { BulkPlotImportPackageService } from './bulk-plot-import-package.service';
+import { BulkPlotImportPolicyService } from './bulk-plot-import-policy.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
 import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.service';
 import type { TracebudImportV1PackageInput } from './bulk-plot-import-package.util';
@@ -36,6 +38,8 @@ export class BulkPlotImportController {
     private readonly bulkPlotImportEvidenceService: BulkPlotImportEvidenceService,
     private readonly bulkPlotImportPackageService: BulkPlotImportPackageService,
     private readonly bulkPlotImportSigningKeyService: BulkPlotImportSigningKeyService,
+    private readonly bulkPlotImportPolicyService: BulkPlotImportPolicyService,
+    private readonly bulkPlotImportIntegratorKeyService: BulkPlotImportIntegratorKeyService,
   ) {}
 
   private getTenantId(req: any): string {
@@ -96,6 +100,44 @@ export class BulkPlotImportController {
       throw new ForbiddenException('Missing authenticated user');
     }
     return this.bulkPlotImportSigningKeyService.revokeKey({ tenantId, userId, keyId });
+  }
+
+  @Get('policy')
+  @ApiOperation({ summary: 'Get tenant bulk import signing policy' })
+  getPolicy(@Req() req: any) {
+    this.assertBulkPlotImportAccess(req);
+    return this.bulkPlotImportPolicyService.getPolicy(this.getTenantId(req));
+  }
+
+  @Patch('policy')
+  @ApiOperation({ summary: 'Update tenant bulk import signing policy' })
+  updatePolicy(
+    @Req() req: any,
+    @Body()
+    body: {
+      requireSignedPackages?: boolean;
+      acceptIntegratorSignatures?: boolean;
+    },
+  ) {
+    this.assertSigningKeyAdmin(req);
+    const tenantId = this.getTenantId(req);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    return this.bulkPlotImportPolicyService.updatePolicy({
+      tenantId,
+      userId,
+      requireSignedPackages: body?.requireSignedPackages,
+      acceptIntegratorSignatures: body?.acceptIntegratorSignatures,
+    });
+  }
+
+  @Get('integrator-keys')
+  @ApiOperation({ summary: 'List Tracebud-approved integrator signing keys' })
+  listIntegratorKeys(@Req() req: any) {
+    this.assertBulkPlotImportAccess(req);
+    return this.bulkPlotImportIntegratorKeyService.listActiveKeys();
   }
 
   @Post('packages/verify')

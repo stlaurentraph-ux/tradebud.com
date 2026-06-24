@@ -1,4 +1,4 @@
-# FEAT-013: Bulk plot import (Phase A–G)
+# FEAT-013: Bulk plot import (Phase A–G2+)
 
 ## Goal
 
@@ -65,11 +65,29 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV, G
 - Unsigned packages import with warning; invalid signatures block import
 - Preview/execute/job endpoints re-verify signed packages server-side
 
+## Scope (Phase G2 — shipped)
+
+- Tenant policy toggles on `tenant_bulk_import_policy`
+- `require_signed_packages` blocks unsigned tracebud_import_v1 packages (package tab only)
+- `GET/PATCH /v1/imports/plots/policy` for admin / compliance_manager
+
+## Scope (Phase G3 — shipped)
+
+- Global `integrator_import_signing_keys` allowlist (Tracebud-maintained)
+- `accept_integrator_signatures` tenant toggle opts into integrator verification
+- `GET /v1/imports/plots/integrator-keys` read-only catalog for dashboard
+- Verification response includes `signerType` (`tenant` | `integrator`)
+
+## Scope (Phase G4 — shipped)
+
+- Large async job payloads (&gt;=512 KiB serialized) stored in Supabase object storage
+- `bulk_import_jobs.file_storage_key` populated; inline `payload_jsonb` holds metadata stub
+- Graceful fallback to inline storage when bucket credentials are unavailable
+
 ## Non-goals (later phases)
 
-- Tracebud-approved integrator key allowlist
-- Tenant policy requiring signed packages for all imports
-- External worker queue / object storage for job payloads
+- External worker queue (Redis/Bull) separate from API process
+- Integrator self-service key registration UI
 
 ## Permissions
 
@@ -125,12 +143,21 @@ Imported plots enter normal compliance pipeline (`pending_check`).
 - [x] Invalid or revoked-key signatures block preview and import
 - [x] Audit events for key lifecycle and signature verification outcomes
 
+### Phase G2+
+
+- [x] Tenant admin can require signed packages for tracebud_import_v1 imports
+- [x] Tenant can opt into Tracebud-approved integrator signatures
+- [x] Integrator keys resolve by `kid` with optional `source_system` allowlist
+- [x] Async jobs spill large payloads to object storage with inline fallback
+
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-job.service.spec.ts`
+- `tracebud-backend/src/plots/bulk-plot-import-job-storage.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-evidence.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-package.service.spec.ts`
+- `tracebud-backend/src/plots/bulk-plot-import-policy.service.spec.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-kml.test.ts`

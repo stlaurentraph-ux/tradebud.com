@@ -8,37 +8,52 @@ import { AppHeader } from '@/components/layout/app-header';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import {
+  getBulkPlotImportPolicy,
+  listBulkPlotImportIntegratorKeys,
   listBulkPlotImportSigningKeys,
   registerBulkPlotImportSigningKey,
   revokeBulkPlotImportSigningKey,
+  updateBulkPlotImportPolicy,
+  type BulkPlotImportIntegratorKey,
+  type BulkPlotImportPolicy,
   type BulkPlotImportSigningKey,
 } from '@/lib/bulk-plot-import';
 
 export default function ImportSigningKeysPage() {
   const [keys, setKeys] = useState<BulkPlotImportSigningKey[]>([]);
+  const [integratorKeys, setIntegratorKeys] = useState<BulkPlotImportIntegratorKey[]>([]);
+  const [policy, setPolicy] = useState<BulkPlotImportPolicy | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ kid: '', label: '', publicKeyPem: '' });
 
-  const loadKeys = async () => {
+  const loadPage = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      setKeys(await listBulkPlotImportSigningKeys());
+      const [tenantKeys, importPolicy, approvedIntegratorKeys] = await Promise.all([
+        listBulkPlotImportSigningKeys(),
+        getBulkPlotImportPolicy(),
+        listBulkPlotImportIntegratorKeys(),
+      ]);
+      setKeys(tenantKeys);
+      setPolicy(importPolicy);
+      setIntegratorKeys(approvedIntegratorKeys);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : 'Could not load signing keys.');
+      setError(loadError instanceof Error ? loadError.message : 'Could not load import signing settings.');
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    void loadKeys();
+    void loadPage();
   }, []);
 
   const handleRegister = async () => {
@@ -48,7 +63,7 @@ export default function ImportSigningKeysPage() {
       await registerBulkPlotImportSigningKey(form);
       toast.success('Import signing key registered.');
       setForm({ kid: '', label: '', publicKeyPem: '' });
-      await loadKeys();
+      await loadPage();
     } catch (registerError) {
       setError(registerError instanceof Error ? registerError.message : 'Could not register signing key.');
     } finally {
@@ -62,9 +77,30 @@ export default function ImportSigningKeysPage() {
     try {
       await revokeBulkPlotImportSigningKey(keyId);
       toast.success('Signing key revoked.');
-      await loadKeys();
+      await loadPage();
     } catch (revokeError) {
       setError(revokeError instanceof Error ? revokeError.message : 'Could not revoke signing key.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handlePolicyChange = async (patch: {
+    requireSignedPackages?: boolean;
+    acceptIntegratorSignatures?: boolean;
+  }) => {
+    if (!policy) return;
+    setIsSaving(true);
+    setError(null);
+    try {
+      const next = await updateBulkPlotImportPolicy({
+        requireSignedPackages: patch.requireSignedPackages ?? policy.requireSignedPackages,
+        acceptIntegratorSignatures: patch.acceptIntegratorSignatures ?? policy.acceptIntegratorSignatures,
+      });
+      setPolicy(next);
+      toast.success('Import policy updated.');
+    } catch (policyError) {
+      setError(policyError instanceof Error ? policyError.message : 'Could not update import policy.');
     } finally {
       setIsSaving(false);
     }
@@ -75,7 +111,7 @@ export default function ImportSigningKeysPage() {
       <div className="flex flex-col">
         <AppHeader
           title="Import signing keys"
-          description="Register Ed25519 public keys used to verify tracebud_import_v1 packages before bulk plot import."
+          description="Register Ed25519 public keys and policy for tracebud_import_v1 package verification."
         />
 
         <main className="space-y-6 p-6">
@@ -86,8 +122,8 @@ export default function ImportSigningKeysPage() {
                 How signing works
               </CardTitle>
               <CardDescription>
-                Unsigned packages remain importable with a warning. If a package includes a signature, Tracebud
-                verifies it against an active tenant key and blocks invalid signatures.
+                Unsigned packages remain importable by default. When a package includes a signature, Tracebud verifies
+                it against tenant keys or approved integrator keys and blocks invalid signatures.
               </CardDescription>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground space-y-2">
@@ -104,6 +140,55 @@ export default function ImportSigningKeysPage() {
               </p>
             </CardContent>
           </Card>
+
+          <PermissionGate permission="settings:edit">
+            <Card>
+              <CardHeader>
+                <CardTitle>Import policy</CardTitle>
+                <CardDescription>
+                  Applies to tracebud_import_v1 package imports only. CSV, GeoJSON, and KML uploads are unaffected.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-start gap-3 rounded-lg border p-4">
+                  <Checkbox
+                    id="require-signed-packages"
+                    checked={policy?.requireSignedPackages ?? false}
+                    disabled={isLoading || isSaving || !policy}
+                    onCheckedChange={(checked) =>
+                      void handlePolicyChange({ requireSignedPackages: checked === true })
+                    }
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="require-signed-packages" className="font-medium">
+                      Require signed packages
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Block unsigned tracebud_import_v1 packages for this organisation.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 rounded-lg border p-4">
+                  <Checkbox
+                    id="accept-integrator-signatures"
+                    checked={policy?.acceptIntegratorSignatures ?? false}
+                    disabled={isLoading || isSaving || !policy}
+                    onCheckedChange={(checked) =>
+                      void handlePolicyChange({ acceptIntegratorSignatures: checked === true })
+                    }
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="accept-integrator-signatures" className="font-medium">
+                      Accept Tracebud-approved integrator signatures
+                    </Label>
+                    <p className="text-sm text-muted-foreground">
+                      Allow packages signed with global integrator keys when the tenant key is not registered locally.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </PermissionGate>
 
           <PermissionGate permission="settings:edit">
             <Card>
@@ -183,6 +268,36 @@ export default function ImportSigningKeysPage() {
                       Revoke
                     </Button>
                   ) : null}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Tracebud-approved integrator keys</CardTitle>
+              <CardDescription>
+                Global keys maintained by Tracebud. Enable integrator acceptance above to trust these signers.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoading ? <p className="text-sm text-muted-foreground">Loading integrator keys…</p> : null}
+              {!isLoading && integratorKeys.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No integrator keys are published yet.</p>
+              ) : null}
+              {integratorKeys.map((key) => (
+                <div key={key.id} className="rounded-lg border p-4">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-medium">{key.label}</p>
+                    <Badge variant="secondary">{key.kid}</Badge>
+                    <Badge variant="outline">{key.integratorId}</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Fingerprint …{key.publicKeyFingerprint}
+                    {key.allowedSourceSystems.length > 0
+                      ? ` · source systems: ${key.allowedSourceSystems.join(', ')}`
+                      : ' · all source systems'}
+                  </p>
                 </div>
               ))}
             </CardContent>

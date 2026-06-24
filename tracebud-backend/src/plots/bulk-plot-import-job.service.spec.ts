@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
+import { BulkPlotImportJobStorageService } from './bulk-plot-import-job-storage.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
 
 function makeRow(index: number) {
@@ -15,8 +16,18 @@ function makeRow(index: number) {
 function makeService(deps?: {
   pool?: { query: jest.Mock };
   bulkPlotImportService?: Partial<BulkPlotImportService>;
+  jobStorage?: Partial<BulkPlotImportJobStorageService>;
 }) {
   const pool = deps?.pool ?? { query: jest.fn() };
+  const jobStorage =
+    deps?.jobStorage ??
+    ({
+      persistJobPayload: jest.fn().mockImplementation(async ({ payload }) => ({
+        fileStorageKey: null,
+        payloadJsonb: payload,
+      })),
+      loadJobPayload: jest.fn().mockResolvedValue({ rows: [] }),
+    } as unknown as BulkPlotImportJobStorageService);
   return {
     service: new BulkPlotImportJobService(
       pool as never,
@@ -30,8 +41,10 @@ function makeService(deps?: {
             rows: [],
           }),
         } as unknown as BulkPlotImportService),
+      jobStorage as BulkPlotImportJobStorageService,
     ),
     pool,
+    jobStorage,
   };
 }
 
@@ -56,6 +69,7 @@ describe('BulkPlotImportJobService.createJob', () => {
               tenant_id: 'tenant_1',
               import_type: 'PLOTS',
               file_hash_sha256: 'abc',
+              file_storage_key: null,
               payload_jsonb: { rows: [] },
               total_records: 501,
               processed_records: 0,
@@ -71,7 +85,8 @@ describe('BulkPlotImportJobService.createJob', () => {
               updated_at: new Date('2026-06-24T10:00:00.000Z'),
             },
           ],
-        }),
+        })
+        .mockResolvedValue({ rows: [] }),
     };
     const { service } = makeService({ pool });
     const rows = Array.from({ length: 501 }, (_, index) => makeRow(index + 1));

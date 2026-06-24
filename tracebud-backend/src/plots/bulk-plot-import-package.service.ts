@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, Inject } from '@nestjs/common';
 import { createPublicKey, verify } from 'crypto';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
+import { BulkPlotImportIntegratorKeyService } from './bulk-plot-import-integrator-key.service';
+import { BulkPlotImportPolicyService } from './bulk-plot-import-policy.service';
 import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.service';
 import {
   assertTracebudImportV1PackageShape,
@@ -12,19 +14,32 @@ import {
 } from './bulk-plot-import-package.util';
 
 export type BulkPlotImportPackageSignatureStatus = 'unsigned' | 'verified' | 'failed';
+export type BulkPlotImportPackageSignerType = 'tenant' | 'integrator';
 
 export type BulkPlotImportPackageVerificationResponse = {
   signatureStatus: BulkPlotImportPackageSignatureStatus;
   contentHashValid: boolean;
   kid?: string;
   signingKeyLabel?: string;
+  signerType?: BulkPlotImportPackageSignerType;
+  integratorId?: string;
   message?: string;
+};
+
+type ResolvedSigningKey = {
+  kid: string;
+  label: string;
+  public_key_pem: string;
+  signerType: BulkPlotImportPackageSignerType;
+  integratorId?: string;
 };
 
 @Injectable()
 export class BulkPlotImportPackageService {
   constructor(
     private readonly signingKeys: BulkPlotImportSigningKeyService,
+    private readonly integratorKeys: BulkPlotImportIntegratorKeyService,
+    private readonly policy: BulkPlotImportPolicyService,
     @Inject(PG_POOL) private readonly pool: Pool,
   ) {}
 
@@ -72,11 +87,12 @@ export class BulkPlotImportPackageService {
       };
     }
 
-    const key = await this.signingKeys.resolveActiveKey({
+    const resolvedKey = await this.resolveSigningKey({
       tenantId: params.tenantId,
       kid: signature.kid,
+      sourceSystem: params.pkg.source_system,
     });
-    if (!key) {
+    if (!resolvedKey) {
       return {
         signatureStatus: 'failed',
         contentHashValid: true,
@@ -86,7 +102,7 @@ export class BulkPlotImportPackageService {
     }
 
     const verified = this.verifyEd25519Signature({
-      publicKeyPem: key.public_key_pem,
+      publicKeyPem: resolvedKey.public_key_pem,
       message: getTracebudImportV1CanonicalMessage(params.pkg),
       signatureBase64: signature.value,
     });
@@ -96,14 +112,21 @@ export class BulkPlotImportPackageService {
           signatureStatus: 'verified',
           contentHashValid: true,
           kid: signature.kid,
-          signingKeyLabel: key.label,
-          message: `Verified signer: ${key.label} (${signature.kid}).`,
+          signingKeyLabel: resolvedKey.label,
+          signerType: resolvedKey.signerType,
+          integratorId: resolvedKey.integratorId,
+          message:
+            resolvedKey.signerType === 'integrator'
+              ? `Verified integrator signer: ${resolvedKey.label} (${signature.kid}).`
+              : `Verified signer: ${resolvedKey.label} (${signature.kid}).`,
         }
       : {
           signatureStatus: 'failed',
           contentHashValid: true,
           kid: signature.kid,
-          signingKeyLabel: key.label,
+          signingKeyLabel: resolvedKey.label,
+          signerType: resolvedKey.signerType,
+          integratorId: resolvedKey.integratorId,
           message: `Signature verification failed for key "${signature.kid}".`,
         };
 
@@ -120,6 +143,8 @@ export class BulkPlotImportPackageService {
             tenantId: params.tenantId,
             kid: signature.kid,
             sourceSystem: params.pkg.source_system,
+            signerType: resolvedKey.signerType,
+            integratorId: resolvedKey.integratorId ?? null,
           }),
         ],
       );
@@ -143,7 +168,52 @@ export class BulkPlotImportPackageService {
     if (verification.signatureStatus === 'failed' || !verification.contentHashValid) {
       throw new BadRequestException(verification.message ?? 'Import package verification failed.');
     }
+    await this.policy.assertSignedPackagesRequired({
+      tenantId: params.tenantId,
+      importPackagePresent: true,
+      signatureStatus: verification.signatureStatus,
+    });
     return verification;
+  }
+
+  private async resolveSigningKey(params: {
+    tenantId: string;
+    kid: string;
+    sourceSystem?: string | null;
+  }): Promise<ResolvedSigningKey | null> {
+    const tenantKey = await this.signingKeys.resolveActiveKey({
+      tenantId: params.tenantId,
+      kid: params.kid,
+    });
+    if (tenantKey) {
+      return {
+        kid: tenantKey.kid,
+        label: tenantKey.label,
+        public_key_pem: tenantKey.public_key_pem,
+        signerType: 'tenant',
+      };
+    }
+
+    const tenantPolicy = await this.policy.getPolicy(params.tenantId);
+    if (!tenantPolicy.acceptIntegratorSignatures) {
+      return null;
+    }
+
+    const integratorKey = await this.integratorKeys.resolveActiveKey({
+      kid: params.kid,
+      sourceSystem: params.sourceSystem,
+    });
+    if (!integratorKey) {
+      return null;
+    }
+
+    return {
+      kid: integratorKey.kid,
+      label: integratorKey.label,
+      public_key_pem: integratorKey.public_key_pem,
+      signerType: 'integrator',
+      integratorId: integratorKey.integrator_id,
+    };
   }
 
   private verifyEd25519Signature(params: {
