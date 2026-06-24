@@ -53,7 +53,8 @@ describe('AuditController integration: gated-entry telemetry listing', () => {
       )
     `);
 
-    controller = new AuditController(pool as any, {} as AuditWriteService);
+    const auditWriteService = new AuditWriteService(pool as any);
+    controller = new AuditController(pool as any, auditWriteService);
   }, 20_000);
 
   afterAll(async () => {
