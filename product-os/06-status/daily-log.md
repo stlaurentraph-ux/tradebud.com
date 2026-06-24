@@ -1,3 +1,12 @@
+### 2026-06-24 (supplier campaign onboarding — ops hardening, branch `feature/backend-supplier-campaign-onboarding`)
+
+- **Deploy smoke** — public preview probes for delivery receipt + campaign invite (`backend-deploy-smoke.json`, `run-backend-deploy-smoke.mjs`).
+- **Migrations** — `db:apply` / `db:verify` scripts for TB-V16-061–063 + bundle `db:apply:supplier-campaign-onboarding`.
+- **Observability** — `public-preview-observability.ts` structured logs + Sentry breadcrumbs on public preview controllers.
+- **Integration** — `supplier-campaign-onboarding.int.spec.ts` (invite → signup claim → CRM submitted).
+- **Guards** — network routing guard asserts `link-pending-network-invites-on-signup` orchestrator.
+- **Docs** — `FEAT-014-supplier-campaign-onboarding.md`; ops commands in `supplier-onboarding.md`; Railway git-push rule in deploy docs.
+
 ### 2026-06-24 (delivery intake QR — Phase E observability & QA closure)
 
 - **Marketing** — `delivery_qr_preview_viewed` + `marketing_cta_clicked` on `/d/` and `/t/`; client preview via `/api/delivery-preview` proxies.

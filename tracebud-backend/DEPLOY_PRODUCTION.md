@@ -20,6 +20,19 @@ EXPO_PUBLIC_API_URL=https://api.tracebud.com/api
 
 (path includes `/api` because Nest `setGlobalPrefix('api')`).
 
+## Deploy rule (production)
+
+**Use git push to the Railway-linked branch** (`main` or your feature branch with auto-deploy). That builds from the monorepo with **Root Directory** `tracebud-backend`.
+
+Do **not** rely on Railway dashboard **Redeploy** or `railway up` from a subdirectory — those snapshots can miss `tracebud-backend/` and fail with `lstat …/tracebud-backend: no such file or directory`. If a deploy looks stale, push to the linked branch instead.
+
+Post-deploy verification:
+
+```bash
+npm run deploy:smoke -w tracebud-backend
+# Expect: health ok + public probe ok (delivery + campaign preview 404s)
+```
+
 ---
 
 ## Part A — Railway (≈15 minutes)

@@ -19,6 +19,22 @@
     "expectStatus": [200],
     "requiredItemKeys": ["step_key", "completed"]
   },
+  "publicProbes": [
+    {
+      "name": "delivery-receipt-preview",
+      "path": "/api/v1/public/harvest/delivery-preview/V-SMOKE404",
+      "method": "GET",
+      "expectStatus": [404],
+      "expectMessageIncludes": "Delivery receipt not found"
+    },
+    {
+      "name": "campaign-invite-preview",
+      "path": "/api/v1/public/requests/campaigns/camp_smoke_404_not_found/preview",
+      "method": "GET",
+      "expectStatus": [404],
+      "expectMessageIncludes": "Campaign not found"
+    }
+  ],
   "deployWait": {
     "maxWaitMs": 600000,
     "pollIntervalMs": 30000

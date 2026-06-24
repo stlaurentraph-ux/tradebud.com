@@ -1,5 +1,6 @@
 import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { observePublicPreviewLookup } from '../observability/public-preview-observability';
 import { RequestsService } from './requests.service';
 
 @ApiTags('Requests Public')
@@ -36,10 +37,24 @@ export class RequestsPublicController {
       'Returns org name, request title, and due date for a sent campaign. Used before farmer sign-in.',
   })
   async getCampaignPreview(@Param('campaignId') campaignId: string) {
+    const startedAt = Date.now();
+    const normalized = campaignId.trim();
     try {
-      const preview = await this.requestsService.getCampaignPublicPreview(campaignId);
+      const preview = await this.requestsService.getCampaignPublicPreview(normalized);
+      observePublicPreviewLookup({
+        surface: 'campaign_invite',
+        ref: normalized,
+        outcome: 'found',
+        durationMs: Date.now() - startedAt,
+      });
       return { preview };
     } catch (error) {
+      observePublicPreviewLookup({
+        surface: 'campaign_invite',
+        ref: normalized,
+        outcome: 'not_found',
+        durationMs: Date.now() - startedAt,
+      });
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -75,4 +90,3 @@ export class RequestsPublicController {
     });
   }
 }
-
