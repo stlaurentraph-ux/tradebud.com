@@ -133,7 +133,7 @@
       "purpose": "campaign_recipient_invites"
     },
     {
-      "supabase": "20260624190000_crm_farmer_phone_reachability.sql",
+      "supabase": "20260624190001_crm_farmer_phone_reachability.sql",
       "backend": "tb_v16_063_crm_farmer_phone_reachability.sql",
       "purpose": "crm_farmer_phone_reachability"
     },
@@ -141,6 +141,11 @@
       "supabase": "20260624190000_enumeration_mapping_region.sql",
       "backend": "tb_v16_062_enumeration_mapping_region.sql",
       "purpose": "enumeration_mapping_region"
+    },
+    {
+      "supabase": "20260624200000_campaign_contact_targets.sql",
+      "backend": "tb_v16_064_campaign_contact_targets.sql",
+      "purpose": "campaign_contact_targets"
     }
   ],
   "supabaseOnly": [

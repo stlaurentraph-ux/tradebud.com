@@ -6,9 +6,14 @@ import { translateNavItemName } from '@/lib/nav-labels';
 import { getIssueSlaUrgency } from '@/lib/compliance-issue-sla';
 import { isMalformedEudrDdsStatusPayloadError } from '@/lib/eudr-dds-status-feedback';
 import type { AdminOrgType, AdminStatus } from '@/lib/admin-service';
+import type {
+  CampaignRecipientFilter,
+  CampaignRecipientOnboardingStatus,
+  CampaignRecipientProgressStepId,
+} from '@/lib/campaign-recipient-timeline';
 
 type SupplyChainRole = User['active_role'] | null | undefined;
-type TranslateFn = (key: string) => string;
+export type TranslateFn = (key: string) => string;
 export type WorkflowBreadcrumb = { label: string; href?: string };
 
 const WORKFLOW_LABELS: Record<string, string> = {
@@ -5309,6 +5314,20 @@ export function getOutreachResponsesSummary(accepted: number, pending: number, t
   );
 }
 
+export function getOutreachResponsesSummaryWithTotal(
+  accepted: number,
+  pending: number,
+  total: number,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.responses.summary_with_total',
+    '{{accepted}} accepted · {{pending}} pending / {{total}}',
+    t,
+    { accepted, pending, total },
+  );
+}
+
 export function getOutreachViewTimelineLabel(t?: TranslateFn): string {
   return wf('workflow.outreach.action.view_timeline', 'View timeline', t);
 }
@@ -9499,7 +9518,7 @@ function resolveContactsAudience(
 }
 
 export function getContactsStatLabel(
-  stat: 'total' | 'active' | 'blocked' | 'organizations' | 'people',
+  stat: 'total' | 'active' | 'blocked' | 'organizations' | 'people' | 'submitted',
   roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
   t?: TranslateFn,
 ): string {
@@ -9525,6 +9544,7 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'workflow.contacts.stat.blocked_exporter'
           : 'workflow.contacts.stat.blocked',
+    submitted: 'workflow.contacts.stat.submitted',
   } as const;
   const fallbackMap = {
     total:
@@ -9547,6 +9567,7 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'Supplier Blockers'
           : 'Blocked',
+    submitted: 'Submitted',
   } as const;
   return wf(keyMap[stat], fallbackMap[stat], t);
 }
@@ -11615,6 +11636,206 @@ export function getContactsCsvWizardLabel(key: string, t?: TranslateFn): string 
     error_import_failed: 'Import failed. Please try again.',
   };
   return wf(keyMap[key] ?? key, fallbackMap[key] ?? key, t);
+}
+
+// --- Campaign recipient timeline & funnel labels ---
+
+export function getCampaignRecipientProgressStepLabel(
+  id: CampaignRecipientProgressStepId,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<CampaignRecipientProgressStepId, string> = {
+    invited: 'workflow.campaign_recipient.step.invited',
+    joined: 'workflow.campaign_recipient.step.joined',
+    responded: 'workflow.campaign_recipient.step.responded',
+    fulfilled: 'workflow.campaign_recipient.step.fulfilled',
+  };
+  const fallbackMap: Record<CampaignRecipientProgressStepId, string> = {
+    invited: 'Invited',
+    joined: 'Joined',
+    responded: 'Responded',
+    fulfilled: 'Fulfilled',
+  };
+  return wf(keyMap[id], fallbackMap[id], t);
+}
+
+export function getCampaignRecipientFunnelProgressLabel(
+  t: TranslateFn | undefined,
+  opts: { fulfilled: number; total: number; percent: number },
+): string {
+  return wf(
+    'workflow.campaign_recipient.funnel.progress',
+    '{{fulfilled}} of {{total}} fulfilled ({{percent}}%)',
+    t,
+    { fulfilled: opts.fulfilled, total: opts.total, percent: opts.percent },
+  );
+}
+
+export function getCampaignRecipientFunnelStatLabel(
+  key: CampaignRecipientProgressStepId,
+  t: TranslateFn | undefined,
+  opts: { count: number },
+): string {
+  const keyMap: Record<CampaignRecipientProgressStepId, string> = {
+    invited: 'workflow.campaign_recipient.funnel.stat.invited',
+    joined: 'workflow.campaign_recipient.funnel.stat.joined',
+    responded: 'workflow.campaign_recipient.funnel.stat.responded',
+    fulfilled: 'workflow.campaign_recipient.funnel.stat.fulfilled',
+  };
+  const fallbackMap: Record<CampaignRecipientProgressStepId, string> = {
+    invited: '{{count}} invited',
+    joined: '{{count}} joined',
+    responded: '{{count}} responded',
+    fulfilled: '{{count}} fulfilled',
+  };
+  return wf(keyMap[key], fallbackMap[key], t, { count: opts.count });
+}
+
+export function getCampaignRecipientOnboardingStatusLabel(
+  status: CampaignRecipientOnboardingStatus,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<CampaignRecipientOnboardingStatus, string> = {
+    invite_sent: 'workflow.campaign_recipient.onboarding.invite_sent',
+    signed_up: 'workflow.campaign_recipient.onboarding.signed_up',
+    on_platform: 'workflow.campaign_recipient.onboarding.on_platform',
+    accepted: 'workflow.campaign_recipient.onboarding.accepted',
+    refused: 'workflow.campaign_recipient.onboarding.refused',
+    fulfilled: 'workflow.campaign_recipient.onboarding.fulfilled',
+  };
+  const fallbackMap: Record<CampaignRecipientOnboardingStatus, string> = {
+    invite_sent: 'Invite sent',
+    signed_up: 'Signed up',
+    on_platform: 'On platform',
+    accepted: 'Accepted',
+    refused: 'Refused',
+    fulfilled: 'Fulfilled',
+  };
+  return wf(keyMap[status], fallbackMap[status], t);
+}
+
+export function getCampaignRecipientTimelineTitle(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.title', 'Campaign timeline', t);
+}
+
+export function getCampaignRecipientTimelineDescription(
+  campaignTitle: string | null | undefined,
+  t?: TranslateFn,
+): string {
+  if (campaignTitle) {
+    return wf(
+      'workflow.campaign_recipient.timeline.description',
+      "Campaign '{{title}}' recipient activity",
+      t,
+      { title: campaignTitle },
+    );
+  }
+  return wf('workflow.campaign_recipient.timeline.description_no_title', 'Recipient activity', t);
+}
+
+export function getCampaignRecipientTimelineLoading(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.loading', 'Loading timeline...', t);
+}
+
+export function getCampaignRecipientTimelineError(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.error', 'Failed to load campaign decisions.', t);
+}
+
+export function getCampaignRecipientTimelineEmptyRecipients(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.empty_recipients', 'No recipients yet.', t);
+}
+
+export function getCampaignRecipientTimelineEmptyFiltered(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.empty_filtered', 'No recipients match this filter.', t);
+}
+
+export function getCampaignRecipientTimelineEmptyActivity(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.empty_activity', 'No activity yet.', t);
+}
+
+export function getCampaignRecipientTimelineTabRecipients(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.tab.recipients', 'Recipients', t);
+}
+
+export function getCampaignRecipientTimelineTabActivity(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.tab.activity', 'Activity', t);
+}
+
+export function getCampaignRecipientTimelineFilterLabel(
+  filter: CampaignRecipientFilter,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<CampaignRecipientFilter, string> = {
+    all: 'workflow.campaign_recipient.filter.all',
+    invite_sent: 'workflow.campaign_recipient.filter.invite_sent',
+    signed_up: 'workflow.campaign_recipient.filter.signed_up',
+    awaiting_response: 'workflow.campaign_recipient.filter.awaiting_response',
+    fulfilled: 'workflow.campaign_recipient.filter.fulfilled',
+    refused: 'workflow.campaign_recipient.filter.refused',
+  };
+  const fallbackMap: Record<CampaignRecipientFilter, string> = {
+    all: 'All',
+    invite_sent: 'Invite sent',
+    signed_up: 'Signed up',
+    awaiting_response: 'Awaiting response',
+    fulfilled: 'Fulfilled',
+    refused: 'Refused',
+  };
+  return wf(keyMap[filter], fallbackMap[filter], t);
+}
+
+export function getCampaignRecipientTimelineLastActivityLabel(
+  relativeTime: string,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.campaign_recipient.timeline.last_activity',
+    'Last activity {{time}}',
+    t,
+    { time: relativeTime },
+  );
+}
+
+export function getCampaignRecipientTimelineLatestDecisionLabel(
+  relativeTime: string,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.campaign_recipient.timeline.latest_decision',
+    'Latest decision {{time}}',
+    t,
+    { time: relativeTime },
+  );
+}
+
+export function getCampaignRecipientTimelineLoadMoreDecisions(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.load_more', 'Load more decisions', t);
+}
+
+export function getCampaignRecipientTimelineCopyEmailLabel(t?: TranslateFn): string {
+  return wf('workflow.campaign_recipient.timeline.copy_email', 'Copy email', t);
+}
+
+// --- Inbound campaign banner labels ---
+
+export function getInboundCampaignBannerTitle(t?: TranslateFn): string {
+  return wf('workflow.inbox.inbound_banner.title', 'New campaign request', t);
+}
+
+export function getInboundCampaignBannerMessage(
+  t: TranslateFn | undefined,
+  opts: { fromOrg: string; title: string; dueDate: string },
+): string {
+  return wf(
+    'workflow.inbox.inbound_banner.message',
+    "{{fromOrg}} invited you to campaign '{{title}}', due {{dueDate}}",
+    t,
+    { fromOrg: opts.fromOrg, title: opts.title, dueDate: opts.dueDate },
+  );
+}
+
+export function getInboundCampaignBannerCta(t?: TranslateFn): string {
+  return wf('workflow.inbox.inbound_banner.cta', 'Fulfill now', t);
 }
 
 type FlatCopyEntry = { key: string; fallback: string; cooperativeFallback?: string };
