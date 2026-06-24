@@ -33,6 +33,8 @@
     "test:integration:network-routing": "node scripts/run-with-root-test-db.mjs jest --runInBand --runTestsByPath src/network/network-routing-delivery.int.spec.ts",
     "db:apply:request-campaign-contact-targets": "node scripts/apply-request-campaign-contact-targets-migration.mjs",
     "db:verify:request-campaign-contact-targets": "node scripts/apply-request-campaign-contact-targets-migration.mjs --verify-only",
+    "db:apply:adr012-outreach": "node scripts/apply-adr012-outreach-migrations.mjs",
+    "db:verify:adr012-outreach": "node scripts/apply-adr012-outreach-migrations.mjs --verify-only",
     "db:apply:rls-phase3": "node scripts/apply-rls-phase3-launch-admin-integrations.mjs",
     "db:verify:rls-phase3": "node scripts/apply-rls-phase3-launch-admin-integrations.mjs --verify-only",
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,md}\"",
