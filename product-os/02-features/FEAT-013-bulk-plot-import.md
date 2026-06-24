@@ -41,9 +41,15 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV, G
 - Dashboard summary-only preview for large payloads (`summaryOnly: true`)
 - Job progress UI with polling on `/plots/bulk-upload`
 
+## Scope (Phase E — shipped)
+
+- KML upload tab on `/plots/bulk-upload`
+- Parses `Placemark` elements with `ExtendedData` / `SimpleData` property aliases
+- Converts KML `Point` and `Polygon` geometries into the existing GeoJSON import pipeline
+- Supports `MultiGeometry` wrappers with a single Point or Polygon child
+
 ## Non-goals (later phases)
 
-- KML file upload
 - Evidence file ZIP import from package references
 - Ed2559/RSA package signature verification
 - External worker queue / object storage for job payloads
@@ -83,10 +89,17 @@ Imported plots enter normal compliance pipeline (`pending_check`).
 - [x] Dashboard shows progress bar and polls until terminal state
 - [x] Sync path still capped at 500 rows with actionable error message
 
+### Phase E
+
+- [x] KML sample with Point + Polygon placemarks maps to import rows
+- [x] ExtendedData `client_plot_id` and producer fields mapped like GeoJSON properties
+- [x] Invalid KML XML rejected client-side before preview
+
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-job.service.spec.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`
+- `apps/dashboard-product/lib/bulk-plot-import-kml.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-package.test.ts`

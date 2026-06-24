@@ -25,6 +25,7 @@ import {
   Download,
   FileJson,
   FileSpreadsheet,
+  Map,
   Package,
   Upload,
   XCircle,
@@ -38,6 +39,10 @@ import {
   BULK_PLOT_IMPORT_GEOJSON_SAMPLE,
   parseAndMapBulkPlotImportGeoJson,
 } from '@/lib/bulk-plot-import-geojson';
+import {
+  BULK_PLOT_IMPORT_KML_SAMPLE,
+  parseAndMapBulkPlotImportKml,
+} from '@/lib/bulk-plot-import-kml';
 import {
   BULK_PLOT_IMPORT_PACKAGE_SAMPLE,
   parseAndVerifyTracebudImportV1Package,
@@ -59,7 +64,7 @@ import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analy
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 
 type Step = 'upload' | 'preview' | 'job' | 'result';
-type ImportSource = 'csv' | 'geojson' | 'package';
+type ImportSource = 'csv' | 'geojson' | 'kml' | 'package';
 
 function downloadTemplate(source: ImportSource) {
   const templates: Record<ImportSource, { body: string; mime: string; filename: string }> = {
@@ -72,6 +77,11 @@ function downloadTemplate(source: ImportSource) {
       body: BULK_PLOT_IMPORT_GEOJSON_SAMPLE,
       mime: 'application/geo+json;charset=utf-8',
       filename: 'tracebud-plot-import-sample.geojson',
+    },
+    kml: {
+      body: BULK_PLOT_IMPORT_KML_SAMPLE,
+      mime: 'application/vnd.google-earth.kml+xml;charset=utf-8',
+      filename: 'tracebud-plot-import-sample.kml',
     },
     package: {
       body: BULK_PLOT_IMPORT_PACKAGE_SAMPLE,
@@ -110,9 +120,9 @@ function statusBadge(status: string) {
 }
 
 function parseImportRows(source: Exclude<ImportSource, 'package'>, text: string): BulkPlotImportInputRow[] {
-  return source === 'csv'
-    ? parseAndMapBulkPlotImportCsv(text)
-    : parseAndMapBulkPlotImportGeoJson(text);
+  if (source === 'csv') return parseAndMapBulkPlotImportCsv(text);
+  if (source === 'kml') return parseAndMapBulkPlotImportKml(text);
+  return parseAndMapBulkPlotImportGeoJson(text);
 }
 
 function countImportRows(source: ImportSource, text: string): number {
@@ -159,7 +169,7 @@ export default function PlotBulkUploadPage() {
       setFileText(text);
       setError(null);
     } catch {
-      setError(`Could not read the ${source === 'csv' ? 'CSV' : source === 'geojson' ? 'GeoJSON' : 'import package'} file.`);
+      setError(`Could not read the ${source === 'csv' ? 'CSV' : source === 'geojson' ? 'GeoJSON' : source === 'kml' ? 'KML' : 'import package'} file.`);
     }
   };
 
@@ -196,7 +206,9 @@ export default function PlotBulkUploadPage() {
           ? 'No valid rows found. Download the template and add at least one plot row.'
           : source === 'geojson'
             ? 'No valid features found. Each feature needs client_plot_id in properties and a Point or Polygon geometry.'
-            : 'No importable plots found. Check producer_ref links and plot geometry in the package.',
+            : source === 'kml'
+              ? 'No valid placemarks found. Each Placemark needs client_plot_id in ExtendedData and a Point or Polygon.'
+              : 'No importable plots found. Check producer_ref links and plot geometry in the package.',
       );
       return;
     }
@@ -296,9 +308,9 @@ export default function PlotBulkUploadPage() {
               <CardHeader>
                 <CardTitle>Upload file</CardTitle>
                 <CardDescription>
-                  CSV supports point plots under 4 ha or cadastral keys. GeoJSON supports inline
-                  Point or Polygon geometry. Import packages use the tracebud_import_v1 producer +
-                  plot bundle with optional content_hash_sha256 integrity checks.
+                  CSV supports point plots under 4 ha or cadastral keys. GeoJSON and KML support
+                  Point or Polygon placemarks/features. Import packages use tracebud_import_v1 with
+                  optional content_hash_sha256 integrity checks.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -306,6 +318,7 @@ export default function PlotBulkUploadPage() {
                   <TabsList>
                     <TabsTrigger value="csv">CSV</TabsTrigger>
                     <TabsTrigger value="geojson">GeoJSON</TabsTrigger>
+                    <TabsTrigger value="kml">KML</TabsTrigger>
                     <TabsTrigger value="package">Import package</TabsTrigger>
                   </TabsList>
 
@@ -382,6 +395,42 @@ export default function PlotBulkUploadPage() {
                       />
                     </div>
                   </TabsContent>
+
+                  <TabsContent value="kml" className="mt-4 space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={() => downloadTemplate('kml')}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download KML sample
+                      </Button>
+                    </div>
+
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <Map className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                      <Label htmlFor="plot-import-kml-file" className="cursor-pointer">
+                        <span className="text-sm font-medium">Choose KML file</span>
+                        <input
+                          id="plot-import-kml-file"
+                          type="file"
+                          accept=".kml,application/vnd.google-earth.kml+xml,text/xml,application/xml"
+                          className="hidden"
+                          onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
+                        />
+                      </Label>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="plot-import-kml-text">Or paste KML</Label>
+                      <textarea
+                        id="plot-import-kml-text"
+                        value={source === 'kml' ? fileText : ''}
+                        onChange={(event) => setFileText(event.target.value)}
+                        rows={12}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                        placeholder={BULK_PLOT_IMPORT_KML_SAMPLE}
+                      />
+                    </div>
+                  </TabsContent>
+
 
                   <TabsContent value="package" className="mt-4 space-y-4">
                     <div className="flex flex-wrap gap-2">
