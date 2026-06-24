@@ -91,7 +91,7 @@ export const impactHub: DraftHubContent = {
   eyebrow: 'Outcomes',
   title: 'Outcomes that hold up to scrutiny',
   description:
-    'Compliance is the entry point — not the goal. Tracebud turns verified origin data into three durable outcomes: supply chains that survive audit, smallholders who capture more value, and a measurable path to nature-positive sourcing.',
+    'Compliance is the entry point — not the goal. Tracebud turns verified origin data into durable outcomes: supply chains that survive audit, smallholders who capture more value, broader market access, a more inclusive sourcing model, and a measurable path to nature-positive sourcing.',
   links: [
     {
       routeId: 'impact-supply-chains',
@@ -104,6 +104,18 @@ export const impactHub: DraftHubContent = {
       href: '/impact/farmer-livelihood',
       title: 'Farmer livelihoods',
       description: 'Verified origin as the entry key to premium markets and fairer prices.',
+    },
+    {
+      routeId: 'impact-market-access',
+      href: '/impact/market-access',
+      title: 'Improved market access',
+      description: 'A reusable compliance passport that opens regulated and premium markets.',
+    },
+    {
+      routeId: 'impact-inclusivity',
+      href: '/impact/inclusivity',
+      title: 'Inclusivity',
+      description: 'Low-barrier tools that bring women, youth, and remote producers into the chain.',
     },
     {
       routeId: 'impact-climate-biodiversity',
@@ -480,6 +492,70 @@ export const draftPages: Record<string, DraftPageContent> = {
       },
     ],
     relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-supply-chains'),
+  },
+  'impact-market-access': {
+    routeId: 'impact-market-access',
+    eyebrow: 'Outcomes',
+    title: 'Improved market access',
+    description:
+      'Regulated and premium markets are closing to undocumented supply. Tracebud turns a one-time origin capture into a reusable compliance passport that opens the doors smallholders are most often shut out of.',
+    sections: [
+      {
+        heading: 'Compliance is now the cost of entry',
+        body: 'EUDR, ESG disclosure, and buyer due-diligence requirements increasingly gate access to EU and other regulated markets. Producers without verifiable origin data are pushed into lower-value, undifferentiated channels — regardless of product quality.',
+      },
+      {
+        heading: 'One passport, many markets',
+        body: "A single verified GeoID and evidence set is reusable across every buyer relationship and regulatory regime a producer needs to satisfy. Capture once in the field; present everywhere access is gated.",
+        bullets: [
+          'EUDR due diligence statements generated from the same plot data',
+          'Premium and certification channels (specialty, Fairtrade, Rainforest Alliance)',
+          'ESG and Scope 3 reporting for downstream buyers',
+          'No repeat field work per buyer or per scheme',
+        ],
+      },
+      {
+        heading: 'Direct trade, fewer intermediaries',
+        body: 'The direct trade marketplace lets verified producers and cooperatives list to buyers with milestone-based escrow and forward supply security — shortening the chain and capturing margin that previously leaked to intermediaries.',
+      },
+      {
+        heading: 'Tracebud connection',
+        body: 'Field capture → reusable compliance passport → multi-market and direct-trade access without repeat cost.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-market-access'),
+  },
+  'impact-inclusivity': {
+    routeId: 'impact-inclusivity',
+    eyebrow: 'Outcomes',
+    title: 'Inclusivity',
+    description:
+      'Compliance technology too often excludes the producers it most affects. Tracebud is built so that low-literacy, low-connectivity, women, youth, and remote producers can participate on equal terms — not be left behind by the digital transition.',
+    sections: [
+      {
+        heading: 'Designed for the hardest contexts first',
+        body: 'The Field App works offline, runs on devices farmers already own, and uses icon-led, low-literacy workflows. Onboarding is by phone number or magic link — no app-store install, no account creation, no connectivity assumption.',
+        bullets: [
+          'Offline-first capture for areas with no reliable signal',
+          'Icon-led, low-literacy field walkthrough',
+          'Phone or magic-link onboarding — no formal ID barrier',
+          'Runs on existing low-cost smartphones',
+        ],
+      },
+      {
+        heading: 'Free entry removes the cost barrier',
+        body: 'Tier 1 is free forever. The producers most often excluded from export markets by upfront software cost can participate without financial risk — a structural inclusion choice, not a trial.',
+      },
+      {
+        heading: 'Women, youth, and cooperative participation',
+        body: 'Farmer-owned data wallets give individual producers — including women and youth who may lack formal land title — a verifiable record of their participation. Cooperatives can enroll members and surface contributions that informal systems leave invisible.',
+      },
+      {
+        heading: 'Tracebud connection',
+        body: 'Low-barrier capture + free entry + farmer-owned identity → equitable participation across the whole producer base.',
+      },
+    ],
+    relatedLinks: impactHub.links.filter((l) => l.routeId !== 'impact-inclusivity'),
   },
 };
 

@@ -24,6 +24,8 @@ export type MarketingRouteId =
   | 'impact-supply-chains'
   | 'impact-farmer-livelihood'
   | 'impact-climate-biodiversity'
+  | 'impact-market-access'
+  | 'impact-inclusivity'
   | 'home-preview'
   | 'draft-index';
 
@@ -56,6 +58,8 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   'impact-supply-chains': false,
   'impact-farmer-livelihood': false,
   'impact-climate-biodiversity': false,
+  'impact-market-access': false,
+  'impact-inclusivity': false,
   'home-preview': false,
   'draft-index': false,
 };

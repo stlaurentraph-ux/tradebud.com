@@ -8,6 +8,8 @@ import type { DraftPageContent } from '@/lib/marketing-draft-content';
 const HERO_IMAGES: Record<string, string> = {
   'impact-supply-chains':       '/images/placeholders/hero-supply-chain.png',
   'impact-farmer-livelihood':   '/images/placeholders/hero-farmer.png',
+  'impact-market-access':       '/images/placeholders/hero-market-access.png',
+  'impact-inclusivity':         '/images/placeholders/hero-inclusivity.png',
   'impact-climate-biodiversity':'/images/placeholders/hero-forest.png',
   'platform-field-app':     '/images/placeholders/platform-field-app.png',
   'platform-dashboard':     '/images/placeholders/platform-dashboard.png',
