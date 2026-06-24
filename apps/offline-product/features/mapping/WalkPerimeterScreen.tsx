@@ -27,6 +27,9 @@ import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMe
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
 import { isSyncSignedIn } from '@/features/auth/signInSync';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
+import { useEnumerationOptional } from '@/features/enumeration/EnumerationContext';
+import { resolveCaptureIntent } from '@/features/enumeration/resolveCaptureIntent';
+import { EnumerationActiveMemberBanner } from '@/components/enumeration/EnumerationActiveMemberBanner';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { navigateHome } from '@/features/navigation/routes';
 import {
@@ -177,12 +180,22 @@ export function WalkPerimeterScreen() {
   } = useWalkPerimeter({ onLocationDenied });
   const { farmer, setFarmer, plots, addPlot, updatePlot, isAppReady } = useAppState();
   const { openSignIn } = useSignInSheet();
+  const enumeration = useEnumerationOptional();
   const params = useLocalSearchParams<{ editPlotId?: string }>();
   const editPlotId = typeof params.editPlotId === 'string' ? params.editPlotId : undefined;
   const editingPlot = useMemo(
     () => (editPlotId ? plots.find((p) => p.id === editPlotId) : undefined),
     [editPlotId, plots],
   );
+
+  useEffect(() => {
+    if (!enumeration?.isEnumerationMode || editPlotId || enumeration.activeMember) return;
+    Alert.alert(
+      t('enumeration_no_active_member_title'),
+      t('enumeration_no_active_member_body'),
+      [{ text: t('close'), onPress: () => router.back() }],
+    );
+  }, [editPlotId, enumeration?.activeMember, enumeration?.isEnumerationMode, t]);
   const editInitDone = useRef<string | null>(null);
   const [farmerIdInput, setFarmerIdInput] = useState(farmer?.id ?? '');
   const [farmerNameInput, setFarmerNameInput] = useState(farmer?.name ?? '');
@@ -772,6 +785,32 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     }
   }, []);
 
+  const resetCaptureFlowState = useCallback(() => {
+    setShowCompletionPage(false);
+    setShowDetailedForm(false);
+    setSelectedMethodPage(null);
+    reset();
+    setCompletionPhotos([]);
+    lastRegisteredPlotIdRef.current = null;
+    lastSavedPlotRef.current = null;
+  }, [reset]);
+
+  const finishEnumerationPlotVisit = useCallback(
+    (next: 'documents' | 'home') => {
+      const pid = lastRegisteredPlotIdRef.current;
+      const farmerId = resolveProfileId();
+      const captureIntent = lastSavedPlotRef.current?.geometryCapture?.captureIntent ?? null;
+      void enumeration?.recordPlotCapturedForMember(farmerId, { captureIntent });
+      resetCaptureFlowState();
+      if (next === 'documents' && pid) {
+        router.replace(`/plot/${encodeURIComponent(pid)}?sub=documents`);
+        return;
+      }
+      router.replace('/(tabs)/');
+    },
+    [enumeration, resetCaptureFlowState, resolveProfileId],
+  );
+
   const openShortPathIfPlotSaved = useCallback(
     (newPlotId: string | undefined, savedPlot: Plot | null) => {
       if (!newPlotId || !savedPlot) {
@@ -820,21 +859,28 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const resolveGeometryCaptureForSave = useCallback((): PlotGeometryCaptureMetadata => {
     const precision = precisionMeters ?? previewPrecisionMeters ?? null;
+    const kind = captureMethod === 'pin' ? 'point' : 'polygon';
     const assessment =
       geometryConfidence ??
       assessGeometryConfidence({
         captureMethod,
-        kind: captureMethod === 'pin' ? 'point' : 'polygon',
+        kind,
         precisionMeters: precision,
         points,
         areaHa: area.hectares,
         declaredAreaHa: parsedDeclaredAreaHa,
       });
+    const captureIntent = resolveCaptureIntent({
+      kind,
+      captureMethod,
+      declaredAreaHa: parsedDeclaredAreaHa,
+    });
     return buildPlotGeometryCaptureMetadata({
       captureMethod,
       assessment,
       manualTraceImagery: captureMethod === 'draw' ? manualTraceImagery : null,
       precisionMeters: precision,
+      captureIntent,
     });
   }, [
     area.hectares,
@@ -855,21 +901,24 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       declaredAreaHectares?: number | null,
       geometryCapture?: PlotGeometryCaptureMetadata | null,
     ) => {
-      if (!farmer?.id || !isSyncSignedIn()) return;
+      if (!resolveProfileId() || !isSyncSignedIn()) return;
+      const uploadFarmerId = resolveProfileId();
       const retry = () => {
         postPlotToBackend({
-          farmerId: farmer.id,
+          farmerId: uploadFarmerId,
           clientPlotId: resolveClientPlotId({ id: plotId }),
           name: displayName.trim() || undefined,
           geometry,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
           geometryCapture: geometryCapture ?? null,
+          producerContactId: resolveProducerContactId(),
+          assignmentId: resolveAssignmentId(),
         }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, retry));
       };
       retry();
     },
-    [farmer?.id, handlePlotUploadResult, precisionMeters],
+    [handlePlotUploadResult, precisionMeters, resolveAssignmentId, resolveProducerContactId, resolveProfileId],
   );
 
   const isUuid = (value: string) =>
@@ -887,11 +936,36 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
   };
 
   const resolveProfileId = useCallback((): string => {
+    if (enumeration?.isEnumerationMode && enumeration.activeMember?.farmerId) {
+      return enumeration.activeMember.farmerId;
+    }
     const typed = farmerIdInput.trim();
     if (isUuid(typed)) return typed;
     if (farmer?.id && isUuid(farmer.id)) return farmer.id;
     return createLocalFarmerId();
-  }, [farmer?.id, farmerIdInput]);
+  }, [enumeration?.activeMember?.farmerId, enumeration?.isEnumerationMode, farmer?.id, farmerIdInput]);
+
+  const resolveProducerContactId = useCallback((): string | undefined => {
+    const farmerId = resolveProfileId();
+    const contactId = enumeration?.producerContactIdForFarmer(farmerId);
+    return contactId?.trim() || undefined;
+  }, [enumeration, resolveProfileId]);
+
+  const resolveAssignmentId = useCallback((): string | undefined => {
+    const farmerId = resolveProfileId();
+    const assignmentId = enumeration?.assignmentIdForFarmer(farmerId);
+    return assignmentId?.trim() || undefined;
+  }, [enumeration, resolveProfileId]);
+
+  const isEnumerationCapture = Boolean(
+    enumeration?.isEnumerationMode && enumeration.activeMember,
+  );
+
+  const geometryComparisonPlots = useMemo(() => {
+    if (!enumeration?.isEnumerationMode || !enumeration.activeMember) return plots;
+    const farmerId = enumeration.activeMember.farmerId;
+    return plots.filter((plot) => plot.farmerId === farmerId);
+  }, [enumeration?.activeMember, enumeration?.isEnumerationMode, plots]);
 
   const suggestedPlotName = useMemo(
     () => proposeUniqueDefaultPlotName(plots, resolveProfileId()),
@@ -1597,7 +1671,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       kind: 'point',
       points: pointPointsPayload,
       areaHa: declaredAreaHectares ?? 0,
-      otherPlots: localPlotRefsForGeometry(plots, editingPlot?.id),
+      otherPlots: localPlotRefsForGeometry(geometryComparisonPlots, editingPlot?.id),
       excludePlotId: editingPlot?.id,
       phase: 'save',
     });
@@ -1675,17 +1749,19 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
 
-    if (farmer && newPlotId) {
+    if (newPlotId) {
       const plotIdForUpload = newPlotId;
       const tryServerUpload = () => {
         postPlotToBackend({
-          farmerId: farmer.id,
+          farmerId,
           clientPlotId: resolveClientPlotId({ id: plotIdForUpload }),
           name: name.trim() || undefined,
           geometry: pointGeometryForUpload,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
           geometryCapture,
+          producerContactId: resolveProducerContactId(),
+          assignmentId: resolveAssignmentId(),
         }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, tryServerUpload));
       };
       finishNewPlotSave(name, newPlotId, tryServerUpload);
@@ -1703,7 +1779,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       kind: 'polygon',
       points,
       areaHa: area.hectares,
-      otherPlots: localPlotRefsForGeometry(plots, editingPlot?.id),
+      otherPlots: localPlotRefsForGeometry(geometryComparisonPlots, editingPlot?.id),
       excludePlotId: editingPlot?.id,
       phase: 'save',
     });
@@ -1847,17 +1923,19 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         return;
       }
 
-      if (farmer && points.length > 0 && !editingPlot && newPlotId) {
+      if (points.length > 0 && !editingPlot && newPlotId) {
         const plotIdForUpload = newPlotId;
         const tryServerUpload = () => {
           postPlotToBackend({
-            farmerId: farmer.id,
+            farmerId,
             clientPlotId: resolveClientPlotId({ id: plotIdForUpload }),
             name: name.trim() || undefined,
             geometry: geometryForUpload,
             declaredAreaHa: declaredAreaHectares ?? null,
             precisionMeters: precisionMeters ?? null,
             geometryCapture,
+            producerContactId: resolveProducerContactId(),
+            assignmentId: resolveAssignmentId(),
           }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, tryServerUpload));
         };
         finishNewPlotSave(name, newPlotId, tryServerUpload);
@@ -2194,6 +2272,21 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const renderPinCaptureActions = () => (
     <View style={{ gap: 8 }}>
+      {isEnumerationCapture && estimatedSize !== 'gte4' ? (
+        <Button
+          variant="outline"
+          testID="enumeration-map-full-boundary"
+          onPress={() => {
+            trackEvent(ANALYTICS_EVENTS.ENUMERATION_CAPTURE_INTENT_FULL_BOUNDARY, {
+              farmerId: enumeration?.activeMember?.farmerId ?? null,
+            });
+            switchToCaptureMethod('walk', 'walk');
+          }}
+          fullWidth
+        >
+          {t('enumeration_map_full_boundary')}
+        </Button>
+      ) : null}
       {isRecording ? (
         <View style={styles.averagingTrackCompact}>
           <View
@@ -2372,6 +2465,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             },
           ]}
         >
+        {isEnumerationCapture && enumeration?.activeMember ? (
+          <EnumerationActiveMemberBanner member={enumeration.activeMember} />
+        ) : null}
         {!showDetailedForm ? (
           <>
             <Card variant="elevated" style={styles.plotLandingCombinedCard}>
@@ -2548,6 +2644,10 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         fullWidth
                         style={{ minHeight: 56 }}
                         onPress={() => {
+                          if (isEnumerationCapture) {
+                            finishEnumerationPlotVisit('documents');
+                            return;
+                          }
                           const pid = lastRegisteredPlotIdRef.current;
                           setShowCompletionPage(false);
                           setShowDetailedForm(false);
@@ -2561,15 +2661,23 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                           router.replace('/(tabs)/explore');
                         }}
                       >
-                        {t('walk_completion_add_land_papers')}
+                        {isEnumerationCapture
+                          ? t('enumeration_completion_add_tenure')
+                          : t('walk_completion_add_land_papers')}
                       </Button>
-                      <ThemedText type="caption" style={styles.completionLandHint}>
-                        {t('walk_completion_land_papers_hint')}
-                      </ThemedText>
+                      {!isEnumerationCapture ? (
+                        <ThemedText type="caption" style={styles.completionLandHint}>
+                          {t('walk_completion_land_papers_hint')}
+                        </ThemedText>
+                      ) : null}
                       <Button
                         variant="secondary"
                         fullWidth
                         onPress={() => {
+                          if (isEnumerationCapture) {
+                            finishEnumerationPlotVisit('home');
+                            return;
+                          }
                           const pid = lastRegisteredPlotIdRef.current;
                           setShowCompletionPage(false);
                           setShowDetailedForm(false);
@@ -2583,7 +2691,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                           router.replace('/(tabs)/explore');
                         }}
                       >
-                        {t('walk_completion_view_plot')}
+                        {isEnumerationCapture
+                          ? t('enumeration_next_member')
+                          : t('walk_completion_view_plot')}
                       </Button>
                     </View>
                   </>
@@ -2624,26 +2734,28 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       />
                     ) : null}
 
-                    <Pressable
-                      onPress={() => {
-                        const pid = lastRegisteredPlotIdRef.current;
-                        setShowCompletionPage(false);
-                        setShowDetailedForm(false);
-                        setSelectedMethodPage(null);
-                        reset();
-                        setCompletionPhotos([]);
-                        if (pid) {
-                          router.replace(`/plot/${encodeURIComponent(pid)}`);
-                          return;
-                        }
-                        router.replace('/(tabs)/explore');
-                      }}
-                      style={styles.completionSkipLink}
-                    >
-                      <ThemedText type="caption" style={styles.completionSkipLinkText}>
-                        {t('walk_completion_skip_photos')}
-                      </ThemedText>
-                    </Pressable>
+                    {!isEnumerationCapture ? (
+                      <Pressable
+                        onPress={() => {
+                          const pid = lastRegisteredPlotIdRef.current;
+                          setShowCompletionPage(false);
+                          setShowDetailedForm(false);
+                          setSelectedMethodPage(null);
+                          reset();
+                          setCompletionPhotos([]);
+                          if (pid) {
+                            router.replace(`/plot/${encodeURIComponent(pid)}`);
+                            return;
+                          }
+                          router.replace('/(tabs)/explore');
+                        }}
+                        style={styles.completionSkipLink}
+                      >
+                        <ThemedText type="caption" style={styles.completionSkipLinkText}>
+                          {t('walk_completion_skip_photos')}
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
                   </>
                 )}
 

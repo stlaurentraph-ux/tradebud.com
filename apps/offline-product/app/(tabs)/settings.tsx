@@ -50,7 +50,10 @@ import {
 import { fetchServerPlotListForUi, peekServerPlotListCache } from '@/features/sync/serverPlotListCache';
 import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
+import { probeFieldSyncInboundChanges } from '@/features/sync/fieldSyncCursor';
+import { buildFieldSyncRestoreScope } from '@/features/sync/fieldSyncRestoreScope';
 import { resolveFieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { formatSyncRunHttpSummary } from '@/features/sync/syncRunHttpTelemetry';
 import { reportSyncFailure } from '@/features/sync/reportSyncFailure';
 import {
@@ -646,7 +649,8 @@ export default function SettingsScreen() {
     syncUsesLocalApi ||
     plotsFetchState === 'failed' ||
     syncAccessFailure != null ||
-    Boolean(queueLastError);
+    Boolean(queueLastError) ||
+    lastSyncMode != null;
 
   const backupStatusDisplay = useMemo(
     () =>
@@ -1163,6 +1167,16 @@ export default function SettingsScreen() {
               plots: syncPlots,
               isSignedIn: true,
             }).catch(() => null);
+            const deltaProbe = await probeFieldSyncInboundChanges({
+              accessToken: syncAccess.token,
+            }).catch(() => ({
+              hasInboundChanges: true,
+              hasCursor: false,
+              delta: null,
+              snapshot: null,
+              changeSet: null,
+              probeFailed: true,
+            }));
             const syncMode = resolveFieldSyncMode({
               needsCloudRestore: cloudParityNeedsRestore,
               unsyncedPlotCount: preSyncPending?.unsyncedPlotCount ?? measuredSyncPending?.unsyncedPlotCount ?? 0,
@@ -1172,7 +1186,34 @@ export default function SettingsScreen() {
                 preSyncPending?.plotsFetchFailed === true ||
                 measuredSyncPending?.plotsFetchFailed === true ||
                 plotsFetchState === 'failed',
+              hasFieldSyncCursor: deltaProbe.hasCursor,
+              cloudDeltaHasInboundChanges: deltaProbe.probeFailed
+                ? undefined
+                : deltaProbe.hasInboundChanges,
             });
+            const skipInboundRestore = syncMode === 'push_only';
+            let restoreScope: ReturnType<typeof buildFieldSyncRestoreScope> | undefined;
+            if (
+              !deltaProbe.probeFailed &&
+              deltaProbe.hasCursor &&
+              deltaProbe.changeSet &&
+              deltaProbe.hasInboundChanges
+            ) {
+              restoreScope = buildFieldSyncRestoreScope(deltaProbe.changeSet);
+              trackEvent(ANALYTICS_EVENTS.FIELD_SYNC_INCREMENTAL_RESTORE, {
+                surface: 'settings_sync',
+              });
+            }
+            if (
+              skipInboundRestore &&
+              deltaProbe.hasCursor &&
+              !deltaProbe.hasInboundChanges &&
+              !deltaProbe.probeFailed
+            ) {
+              trackEvent(ANALYTICS_EVENTS.FIELD_SYNC_DELTA_SKIPPED, {
+                surface: 'settings_sync',
+              });
+            }
             setLastSyncMode(syncMode);
             lastSyncModeRef.current = syncMode;
             if (__DEV__) {
@@ -1186,6 +1227,8 @@ export default function SettingsScreen() {
               syncFarmer,
               syncPlots,
               syncMode,
+              skipInboundRestore,
+              restoreScope,
               t,
               selectedQueueActionTypes: selectedQueueActionTypes,
               allQueueActionTypes: ALL_QUEUE_ACTION_TYPES,
@@ -1624,6 +1667,7 @@ export default function SettingsScreen() {
                       onPress={() => setBackupTechOpen((open) => !open)}
                       style={styles.backupTechToggle}
                       accessibilityRole="button"
+                      testID="settings-backup-tech-toggle"
                     >
                       <ThemedText type="caption" style={styles.backupTechToggleText}>
                         {backupTechOpen
@@ -1657,7 +1701,11 @@ export default function SettingsScreen() {
                           </ThemedText>
                         ) : null}
                         {lastSyncMode ? (
-                          <ThemedText type="caption" style={styles.backupTechDetailText}>
+                          <ThemedText
+                            type="caption"
+                            style={styles.backupTechDetailText}
+                            testID="settings-sync-mode-caption"
+                          >
                             {lastSyncMode === 'push_only'
                               ? t('settings_sync_mode_push_only')
                               : t('settings_sync_mode_full')}

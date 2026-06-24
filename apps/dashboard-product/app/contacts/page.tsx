@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ContactStatusPipeline } from '@/components/contacts/contact-status-pipeline';
 import { listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
 import { DASHBOARD_CONTACT_STATUSES } from '@/lib/dashboardCrmOutreachRegistry';
 import type { ContactActivityType } from '@/lib/contact-activity-types';
@@ -124,6 +125,7 @@ export default function ContactsPage() {
   );
 
   const stats = useMemo(() => {
+    const submitted = contacts.filter((contact) => contact.status === 'submitted').length;
     const active = contacts.filter((contact) =>
       ['invited', 'engaged', 'submitted'].includes(contact.status),
     ).length;
@@ -135,6 +137,7 @@ export default function ContactsPage() {
         people: contacts.length,
         active,
         blocked,
+        submitted,
         total: organizations.length,
       };
     }
@@ -142,6 +145,7 @@ export default function ContactsPage() {
       total: contacts.length,
       active,
       blocked,
+      submitted,
       organizations: 0,
       people: contacts.length,
     };
@@ -179,7 +183,7 @@ export default function ContactsPage() {
         breadcrumbs={buildAppBreadcrumbs(t, { name: navName })}
       />
       <div className="flex-1 space-y-6 p-6">
-        <div className={`grid gap-4 ${useOrganizationGrouping ? 'md:grid-cols-3' : 'md:grid-cols-3'}`}>
+        <div className={`grid gap-4 md:grid-cols-4`}>
           {useOrganizationGrouping ? (
             <>
               <Card>
@@ -208,6 +212,12 @@ export default function ContactsPage() {
               <CardTitle className="text-sm">{getContactsStatLabel('active', audience, t)}</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">{stats.active}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">{getContactsStatLabel('submitted', audience, t)}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-2xl font-bold text-emerald-700">{stats.submitted}</CardContent>
           </Card>
           {!useOrganizationGrouping ? (
             <Card>
@@ -376,7 +386,7 @@ export default function ContactsPage() {
                           </Badge>
                         </td>
                         <td className="px-3 py-2">
-                          <Badge variant="outline">{getContactStatusLabel(contact.status, t)}</Badge>
+                          <ContactStatusPipeline status={contact.status} t={t} />
                         </td>
                         <td className="px-3 py-2">
                           {contact.consent_status !== 'unknown' ? (

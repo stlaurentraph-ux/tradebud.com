@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ProducerConsentPanel } from '@/components/farmers/producer-consent-panel';
+import { ContactStatusPipeline } from '@/components/contacts/contact-status-pipeline';
 import { EditContactForm, type ContactEditDraft } from '@/components/contacts/edit-contact-form';
 import { listContactActivityTypesForRole, resolveContactDirectoryRole } from '@/lib/contact-activity-types';
 import { buildAddColleagueHref, buildOrganizationHref, listOrganizationColleagues } from '@/lib/contact-directory';
@@ -330,7 +331,9 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
                           <div className="text-xs text-muted-foreground">
                             {getProducerDetailCopy('field_directory_status', role, t)}
                           </div>
-                          <div className="mt-1 font-medium">{getContactStatusLabel(contact.status, t)}</div>
+                          <div className="mt-2">
+                            <ContactStatusPipeline status={contact.status} t={t} variant="full" />
+                          </div>
                         </div>
                         <div className="col-span-2">
                           <div className="text-xs text-muted-foreground">

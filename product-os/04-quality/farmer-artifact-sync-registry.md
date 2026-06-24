@@ -54,6 +54,18 @@ Guard: `ui-reload-guard.mjs` — each screen must subscribe to sync bus and/or f
 | **Farmer profile photo** | settings + `farmer` | `audit_sync` + Storage | `farmer_profile_photo_synced` | `restoreLocalFarmerProfilePhotoFromServer` | settings profile |
 | **Offline map packs** | filesystem packs | `audit_sync` (manifest) | prefs audit + local re-download | `restoreMissingOfflineTilePacksFromServer` | walk/map |
 | **In-progress walk trace** | `plot_mapping_drafts` | `audit_sync` | `plot_mapping_draft_saved` / `plot_mapping_draft_cleared` | `restorePlotMappingDraftFromServer` | walk perimeter |
+| **Enumeration roster** | `field_roster_entries` + `settings` (`enumeration_active_member_id`) | Phase D: campaign pack prefetch + provisional link | CRM contact + `farmer_profile` (Phase D) | Phase D: `restoreFieldRosterFromServer` | enumeration home (Phase B: local-only) |
+
+## Phase B enumeration (local-only scaffold)
+
+Until Phase D ships server pack + restore:
+
+- Roster rows are **SQLite-only** (`field_roster_entries`); provisional members get local UUID `farmerId`.
+- Plot upload uses roster `producerContactId` when present; `plotServerSync` bootstraps each distinct `plot.farmerId`.
+- Active member id stored in SQLite settings — not cross-device yet.
+- Register full upload/restore symmetry in Phase D when `GET /v1/me/field-enumeration-pack` lands.
+
+**Phase D (2026-06-24):** Roster prefetch via `GET /v1/me/field-enumeration-pack` merges into `field_roster_entries`. Provisional sync via `POST /v1/me/field-enumeration-provisional-sync` links `producerContactId`. Full cross-device restore remains Phase D+ when desk merge queue ships.
 
 ## Supabase / API subtleties
 

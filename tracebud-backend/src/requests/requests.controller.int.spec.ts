@@ -26,7 +26,8 @@ describe('RequestsController integration: decision timeline', () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS request_campaigns (
         id TEXT PRIMARY KEY,
-        tenant_id TEXT NOT NULL
+        tenant_id TEXT NOT NULL,
+        target_contact_emails TEXT[] NOT NULL DEFAULT '{}'
       )
     `);
     await pool.query(`
@@ -114,6 +115,43 @@ describe('RequestsController integration: decision timeline', () => {
         all: 3,
         accept: 2,
         refuse: 1,
+      },
+      recipients: [
+        {
+          recipient_email: 'accept-1@example.com',
+          onboarding_status: 'accepted',
+          invite_status: null,
+          decision: 'accept',
+          decision_source: 'email_cta',
+          decided_at: '2026-04-22T12:00:00.000Z',
+          updated_at: '2026-04-22T12:00:00.000Z',
+        },
+        {
+          recipient_email: 'accept-2@example.com',
+          onboarding_status: 'accepted',
+          invite_status: null,
+          decision: 'accept',
+          decision_source: 'email_cta',
+          decided_at: '2026-04-22T11:00:00.000Z',
+          updated_at: '2026-04-22T11:00:00.000Z',
+        },
+        {
+          recipient_email: 'refuse-1@example.com',
+          onboarding_status: 'refused',
+          invite_status: null,
+          decision: 'refuse',
+          decision_source: 'email_cta',
+          decided_at: '2026-04-22T10:00:00.000Z',
+          updated_at: '2026-04-22T10:00:00.000Z',
+        },
+      ],
+      recipient_status_counts: {
+        fulfilled: 0,
+        accepted: 2,
+        refused: 1,
+        signed_up: 0,
+        invite_sent: 0,
+        on_platform: 0,
       },
       pagination: {
         decision: 'accept',

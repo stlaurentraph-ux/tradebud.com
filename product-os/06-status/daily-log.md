@@ -1,3 +1,9 @@
+### 2026-06-24 (delivery intake QR — Phase C desk polish)
+
+- Focus: desk scan ergonomics, scanner feedback, handoff variance UX, public preview clarity.
+- Files changed: `harvest-receive-delivery-panel.tsx`, `voucher-qr-scanner-dialog.tsx`, `delivery-handoff-dialog.tsx`, marketing `/d` + `/t`, dashboard `/d`, `delivery-intake-preview-chrome.tsx`, `en.json`, `workflow-terminology-labels.ts`.
+- Verification: `harvest-receive-delivery-panel.test.tsx` pass.
+
 ### 2026-06-24 (field — field-sync-delta cursor wiring)
 
 - **Delta probe** — `GET /v1/me/field-sync-delta` now drives sync mode: persisted cursor (`field_sync_cursor_v1`) stores plot/audit/voucher watermarks; skip full restore when inbound unchanged.

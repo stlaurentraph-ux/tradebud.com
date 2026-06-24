@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
+import { markCrmContactSubmittedOnFulfill } from '../contacts/mark-crm-contact-submitted-on-fulfill';
 import { PG_POOL } from '../db/db.module';
 import { resolveTenantIdsByEmails } from '../network/email-to-tenant-resolution';
 import { GOLDEN_STAGING_TENANT } from '../testing/golden-staging-tenant.constants';
@@ -704,6 +705,13 @@ export class InboxService {
     if (!recipientEmail) {
       return;
     }
+
+    await markCrmContactSubmittedOnFulfill(this.pool, {
+      senderTenantId: input.senderTenantId,
+      recipientEmail,
+      source: 'inbox_fulfillment',
+      campaignId: input.campaignId,
+    });
 
     let insertedDecision = false;
     try {

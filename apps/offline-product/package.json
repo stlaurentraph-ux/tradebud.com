@@ -59,6 +59,7 @@
     "test:maestro": "bash ./scripts/maestro-test.sh",
     "test:maestro:sync": "bash ./scripts/maestro-test.sh settings-sync-smoke.yaml",
     "test:maestro:signed-out-backup": "bash ./scripts/maestro-test.sh signed-out-backup-status-smoke.yaml",
+    "test:maestro:field-sync-delta": "bash ./scripts/maestro-test.sh field-sync-delta-smoke.yaml",
     "test:maestro:seed": "node ./scripts/seed-maestro-simulator.mjs",
     "qa:tenant-isolation": "node ./scripts/field-tenant-isolation-smoke.mjs",
     "qa:tenant-isolation:assert": "node ./scripts/field-tenant-isolation-guard.mjs",

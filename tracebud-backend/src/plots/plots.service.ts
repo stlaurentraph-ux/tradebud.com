@@ -1,11 +1,11 @@
 import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { resolveFarmerIdsForTenant, isFarmerInTenant } from '../common/tenant-farmer-scope';
-import {
-  claimSelfLinkedFarmerProfileForAuthUser,
+import { claimSelfLinkedFarmerProfileForAuthUser,
   isFarmerProfileOwnedByUser,
   listFarmerProfileIdsForUser,
 } from '../auth/farmer-ownership';
+import { claimCampaignInvitesForFieldFarmer } from '../requests/claim-campaign-invites-for-field-farmer';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
@@ -484,6 +484,7 @@ export class PlotsService {
     countryCode?: string;
     fullName?: string | null;
     email?: string | null;
+    campaignId?: string | null;
   }): Promise<{ created: boolean }> {
     const created = await this.ensureFarmerProfileForPlot(params.farmerId, params.userId, {
       countryCode: params.countryCode,
@@ -494,6 +495,14 @@ export class PlotsService {
       params.farmerId,
       params.userId,
     );
+    if (params.email?.trim()) {
+      await claimCampaignInvitesForFieldFarmer(this.pool, {
+        recipientEmail: params.email,
+        farmerProfileId: params.farmerId,
+        actorUserId: params.userId,
+        campaignId: params.campaignId ?? null,
+      }).catch(() => undefined);
+    }
     if (params.fullName?.trim()) {
       await this.pool.query(
         `
@@ -612,6 +621,18 @@ export class PlotsService {
     return true;
   }
 
+  /** Delegated producer bootstrap for cooperative enumeration provisional sync. */
+  async ensureDelegatedProducerProfile(
+    farmerId: string,
+    authUserId: string,
+    options: { tenantId: string; producerDisplayName?: string | null },
+  ): Promise<void> {
+    await this.ensureFarmerProfileForPlot(farmerId, authUserId, {
+      tenantId: options.tenantId,
+      producerDisplayName: options.producerDisplayName ?? null,
+    });
+  }
+
   private async linkProducerToTenantDirectory(input: {
     tenantId: string | null;
     farmerId: string;
@@ -671,6 +692,7 @@ export class PlotsService {
       productionSystem,
       producerContactId,
       geometryCapture,
+      assignmentId,
     } = createDto;
     const displayName = createDto.name?.trim() || null;
     const plotName = displayName || clientPlotId;
@@ -977,6 +999,17 @@ export class PlotsService {
         [row.id, clientPlotId.trim()],
       );
       row.client_plot_id = clientPlotId.trim();
+    }
+
+    if (assignmentId?.trim() && userId && row?.id) {
+      try {
+        await this.createAssignment(String(row.id), assignmentId.trim(), userId);
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01' && code !== '23505') {
+          throw error;
+        }
+      }
     }
 
     return row;

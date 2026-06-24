@@ -2,43 +2,54 @@
 
 ## Canonical sources
 
-- `JTBD_PRD.md`
-- `BUILD_READINESS_ARTIFACTS.md`
-- `MVP_PRD.md`
+- `JTBD_PRD.md`, `BUILD_READINESS_ARTIFACTS.md`, `MVP_PRD.md`
+- `ADR-010-network-invite-orchestration.md`
+- `product-os/04-quality/network-routing-registry.md`
 
 ## Actors
 
-Use canonical role matrix.
+| Actor | Lane |
+|-------|------|
+| Requesting org | Exporter / importer / cooperative — sends campaigns |
+| Dashboard supplier | Off-platform org email — dashboard signup + inbox |
+| Field producer | Off-platform farmer email — field app signup + data sharing |
 
-## Trigger
+## CRM contact states (sender directory)
 
-Defined by relevant journey map in `BUILD_READINESS_ARTIFACTS.md`.
+`new` → `invited` (campaign send) → `engaged` (signup/bootstrap) → `submitted` (evidence fulfilled)
 
-## Happy path
+## Dashboard supplier happy path
 
-Use canonical journey map; do not fork status language.
+1. Send campaign → `create-account?campaign={id}` in email.
+2. Signup → `linkPendingNetworkInvitesOnSignup` (inbox + CRM engaged).
+3. Redirect → `/inbox?campaign={id}`.
 
-## Alternate paths
+## Field producer happy path
 
-Use canonical state branches (changes requested, reopened, etc.).
+1. Send campaign (farmer CRM contact) → `app.tracebud.com/campaign?campaign={id}`.
+2. Field-auth → `tracebudoffline://campaign?campaign={id}`.
+3. Field app stores campaign → sign-in → bootstrap with `campaignId`.
+4. `claimCampaignInvitesForFieldFarmer` claims invite + links `farmer_profile_id`.
+5. Farmer opens **Data sharing** to approve requests.
 
-## Failure paths
+## Field UX (2026-06-24)
 
-Use canonical exception codes and recovery paths.
+- Public campaign preview API → org name + due date on banner and data-sharing context.
+- Home banner uses warning-accent card; onboarding hidden while invite pending.
+- Deep link `/campaign` → Home; data-sharing highlights matching pending grant + success state.
 
-## Required states
+## Dashboard UX (2026-06-24)
 
-Use exact states from canonical state machines.
+- Supplier directory shows pipeline chips (`ContactStatusPipeline`: new → invited → engaged → submitted) and a **Submitted** stat card.
 
-## Handoffs
+## Fulfillment → CRM submitted
 
-Map handoffs to canonical roles only.
+- **Dashboard:** `inbox.service.respond` → `markCrmContactSubmittedOnFulfill` (match sender tenant + recipient email).
+- **Field:** `consent.service.approveGrant` → `markCrmContactSubmittedOnFulfill` (match grantee tenant + `farmer_profile_id`).
 
-## Success outcomes
+## Acceptance criteria
 
-Map to canonical success metrics and acceptance criteria.
-
-## Unresolved risks / questions
-
-- Supplier onboarding flow from invite to active state.
-- External dependency decisions if applicable.
+- [x] Dashboard supplier: create-account campaign deep link + inbox backfill
+- [x] Field farmer: field-auth + app deep link + bootstrap claim
+- [x] CRM `invited` → `engaged` on both lanes
+- [x] Auto `engaged` → `submitted` on fulfill (`markCrmContactSubmittedOnFulfill` — inbox respond + consent approve)

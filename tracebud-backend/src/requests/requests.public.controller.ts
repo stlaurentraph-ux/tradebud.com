@@ -1,11 +1,29 @@
-import { BadRequestException, Body, Controller, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { BadRequestException, Body, Controller, Get, NotFoundException, Param, Post } from '@nestjs/common';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RequestsService } from './requests.service';
 
 @ApiTags('Requests Public')
 @Controller('v1/public/requests')
 export class RequestsPublicController {
   constructor(private readonly requestsService: RequestsService) {}
+
+  @Get('campaigns/:campaignId/preview')
+  @ApiOperation({
+    summary: 'Public campaign invite preview for field-app smart links',
+    description:
+      'Returns org name, request title, and due date for a sent campaign. Used before farmer sign-in.',
+  })
+  async getCampaignPreview(@Param('campaignId') campaignId: string) {
+    try {
+      const preview = await this.requestsService.getCampaignPublicPreview(campaignId);
+      return { preview };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new NotFoundException('Campaign not found');
+    }
+  }
 
   @Post('campaigns/decision-intent')
   async recordDecisionIntent(

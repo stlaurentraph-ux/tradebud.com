@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { TenantHarvestVoucher } from '@/lib/harvest-voucher-client';
+import { LocaleContext } from '@/lib/locale-context';
 import { getHarvestReceiveDeliveryCopy } from '@/lib/workflow-terminology-labels';
 
 type DeliveryHandoffDialogProps = {
@@ -24,6 +25,18 @@ type DeliveryHandoffDialogProps = {
   onConfirmed: () => void;
 };
 
+function parseKgInput(value: string): number | null {
+  const parsed = Number(value.replace(',', '.'));
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function hasMeaningfulWeightVariance(expectedKg: number, receivedKg: number): boolean {
+  if (expectedKg <= 0) return false;
+  const delta = Math.abs(receivedKg - expectedKg);
+  const variancePct = (delta / expectedKg) * 100;
+  return variancePct > 2 || delta > 5;
+}
+
 export function DeliveryHandoffDialog({
   open,
   onOpenChange,
@@ -31,6 +44,13 @@ export function DeliveryHandoffDialog({
   vouchers,
   onConfirmed,
 }: DeliveryHandoffDialogProps) {
+  const localeContext = useContext(LocaleContext);
+  const t = localeContext?.t;
+  const copy = (
+    field: Parameters<typeof getHarvestReceiveDeliveryCopy>[0],
+    values?: Record<string, string | number>,
+  ) => getHarvestReceiveDeliveryCopy(field, t, values);
+
   const expectedKg = vouchers.reduce((sum, voucher) => sum + (voucher.kg ?? 0), 0);
   const [receivedKg, setReceivedKg] = useState(String(Math.round(expectedKg)));
   const [note, setNote] = useState('');
@@ -44,12 +64,14 @@ export function DeliveryHandoffDialog({
     setError(null);
   }, [expectedKg, open]);
 
-  const copy = (field: Parameters<typeof getHarvestReceiveDeliveryCopy>[0], values?: Record<string, string | number>) =>
-    getHarvestReceiveDeliveryCopy(field, undefined, values);
+  const parsedReceivedKg = parseKgInput(receivedKg);
+  const showVarianceWarning = useMemo(() => {
+    if (parsedReceivedKg == null || parsedReceivedKg <= 0) return false;
+    return hasMeaningfulWeightVariance(expectedKg, parsedReceivedKg);
+  }, [expectedKg, parsedReceivedKg]);
 
   const handleConfirm = async () => {
-    const parsed = Number(receivedKg.replace(',', '.'));
-    if (!Number.isFinite(parsed) || parsed <= 0) {
+    if (parsedReceivedKg == null || parsedReceivedKg <= 0) {
       setError(copy('handoff_invalid_weight'));
       return;
     }
@@ -65,7 +87,7 @@ export function DeliveryHandoffDialog({
         },
         body: JSON.stringify({
           intakeRef,
-          receivedKg: parsed,
+          receivedKg: parsedReceivedKg,
           note: note.trim() || undefined,
         }),
       });
@@ -89,17 +111,32 @@ export function DeliveryHandoffDialog({
         </DialogHeader>
 
         <div className="space-y-3 text-sm">
-          <p>
-            {copy('handoff_expected', { kg: Math.round(expectedKg).toLocaleString() })}
-            {vouchers.length > 1 ? ` · ${copy('handoff_plot_count', { count: vouchers.length })}` : null}
-          </p>
-          <ul className="max-h-32 space-y-1 overflow-y-auto rounded-md border border-border px-3 py-2">
+          <div className="rounded-lg border border-border bg-muted/30 p-3">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              {copy('handoff_summary_label')}
+            </p>
+            <p className="mt-1 text-lg font-semibold">
+              {copy('handoff_expected', { kg: Math.round(expectedKg).toLocaleString() })}
+            </p>
+            {vouchers.length > 1 ? (
+              <p className="text-xs text-muted-foreground">
+                {copy('handoff_plot_count', { count: vouchers.length })}
+              </p>
+            ) : null}
+            <p className="mt-1 font-mono text-xs text-muted-foreground">{intakeRef}</p>
+          </div>
+
+          <ul className="max-h-36 space-y-1.5 overflow-y-auto rounded-md border border-border px-3 py-2">
             {vouchers.map((voucher) => (
-              <li key={voucher.id} className="text-muted-foreground">
-                {voucher.plot_name ?? 'Plot'} · {(voucher.kg ?? 0).toLocaleString()} kg
+              <li key={voucher.id} className="flex items-center justify-between gap-2 text-muted-foreground">
+                <span className="truncate">{voucher.plot_name ?? 'Plot'}</span>
+                <span className="shrink-0 font-medium text-foreground">
+                  {(voucher.kg ?? 0).toLocaleString()} kg
+                </span>
               </li>
             ))}
           </ul>
+
           <div className="space-y-2">
             <Label htmlFor="receivedKg">{copy('handoff_received_label')}</Label>
             <Input
@@ -109,6 +146,16 @@ export function DeliveryHandoffDialog({
               onChange={(event) => setReceivedKg(event.target.value)}
             />
           </div>
+
+          {showVarianceWarning ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {copy('handoff_variance_warning', {
+                expected: Math.round(expectedKg).toLocaleString(),
+                received: Math.round(parsedReceivedKg ?? 0).toLocaleString(),
+              })}
+            </p>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor="handoffNote">{copy('handoff_note_label')}</Label>
             <Textarea

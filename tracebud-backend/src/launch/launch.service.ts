@@ -4,7 +4,8 @@ import { Pool } from 'pg';
 import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
-import { claimPendingDeliveryBuyerInvitesOnSignup } from '../harvest/claim-delivery-buyer-invites-on-signup';
+import { linkPendingNetworkInvitesOnSignup } from '../network/link-pending-network-invites-on-signup';
+// Orchestrates claim-delivery-buyer-invites-on-signup + campaign + CRM on signup.
 import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
 export type TrialLifecycleStatus = 'trial_active' | 'trial_expired' | 'paid_active' | 'suspended';
@@ -65,13 +66,13 @@ export class LaunchService {
     return `tenant_${email.trim().toLowerCase().replace(/[^a-z0-9]/gi, '_')}`;
   }
 
-  private async linkPendingDeliveryInvitesForSignup(input: {
+  private async linkPendingNetworkInvitesForSignup(input: {
     tenantId: string;
     email: string;
     actorUserId?: string | null;
     granteeOrgName?: string | null;
   }): Promise<void> {
-    await claimPendingDeliveryBuyerInvitesOnSignup(this.pool, {
+    await linkPendingNetworkInvitesOnSignup(this.pool, this.inboxService, {
       recipientEmail: input.email,
       tenantId: input.tenantId,
       actorUserId: input.actorUserId ?? null,
@@ -684,17 +685,11 @@ export class LaunchService {
             fullName: input.fullName.trim(),
           })
           .catch(() => undefined);
-        await this.linkPendingDeliveryInvitesForSignup({
+        await this.linkPendingNetworkInvitesForSignup({
           tenantId,
           email: normalizedEmail,
           actorUserId: signinPayload.user.id,
         });
-        await this.inboxService
-          .backfillInboxForSignupContact({
-            email: normalizedEmail,
-            recipientTenantId: tenantId,
-          })
-          .catch(() => undefined);
 
         return {
           userId: signinPayload.user.id,
@@ -740,17 +735,11 @@ export class LaunchService {
         fullName: input.fullName.trim(),
       })
       .catch(() => undefined);
-    await this.linkPendingDeliveryInvitesForSignup({
+    await this.linkPendingNetworkInvitesForSignup({
       tenantId,
       email: normalizedEmail,
       actorUserId: signupPayload.user.id,
     });
-    await this.inboxService
-      .backfillInboxForSignupContact({
-        email: normalizedEmail,
-        recipientTenantId: tenantId,
-      })
-      .catch(() => undefined);
 
     return {
       userId: signupPayload.user.id,
@@ -811,7 +800,7 @@ export class LaunchService {
           fullName: input.actorFullName,
         })
         .catch(() => undefined);
-      await this.linkPendingDeliveryInvitesForSignup({
+      await this.linkPendingNetworkInvitesForSignup({
         tenantId: input.tenantId,
         email: input.actorEmail,
         actorUserId: input.actorUserId,

@@ -58,6 +58,7 @@ export async function bootstrapFieldAppProducer(
     farmerId: string;
     fullName?: string;
     countryCode?: string;
+    campaignId?: string;
   },
   options?: { timeoutMs?: number; force?: boolean },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -96,6 +97,7 @@ export async function bootstrapFieldAppProducer(
           farmerId,
           fullName: params.fullName?.trim() || undefined,
           countryCode: params.countryCode?.trim() || undefined,
+          campaignId: params.campaignId?.trim() || undefined,
         }),
         signal: controller.signal,
       });
@@ -104,6 +106,12 @@ export async function bootstrapFieldAppProducer(
         const body = await res.json().catch(() => ({}));
         rememberOwnedFarmerIds(body);
         bootstrappedAtByFarmerId.set(farmerId, Date.now());
+        if (params.campaignId?.trim()) {
+          const { trackEvent, ANALYTICS_EVENTS } = await import('@/features/observability/analytics');
+          trackEvent(ANALYTICS_EVENTS.CAMPAIGN_INVITE_CLAIMED_ON_BOOTSTRAP, {
+            campaignId: params.campaignId.trim(),
+          });
+        }
         return { ok: true };
       }
 
@@ -149,7 +157,7 @@ export async function bootstrapFieldAppProducer(
 /** Best-effort server link before plot sync (creates farmer_profile when missing). */
 export async function ensureFieldProducerBootstrapped(
   farmerId: string,
-  options?: { fullName?: string; force?: boolean },
+  options?: { fullName?: string; force?: boolean; campaignId?: string },
 ): Promise<void> {
   const scopedFarmerId = farmerId.trim();
   if (!scopedFarmerId || !hasSyncAuthSession()) {
@@ -160,6 +168,7 @@ export async function ensureFieldProducerBootstrapped(
     {
       farmerId: scopedFarmerId,
       fullName,
+      campaignId: options?.campaignId?.trim() || undefined,
     },
     { force: options?.force === true },
   ).catch(() => undefined);

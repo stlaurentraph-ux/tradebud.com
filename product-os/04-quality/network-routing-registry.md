@@ -59,9 +59,24 @@ Bulk outreach from importer/exporter/cooperative to contact emails.
 |------|---------|-------------|
 | 1 | Dashboard send campaign | `POST /v1/requests/campaigns/:id/send` |
 | 2 | Backend inbox fan-out | Email → tenant; skip self-tenant and unresolved |
+| 2b | Backend `queueCampaignRecipientInvites` | Unresolved emails → `campaign_recipient_invites` (`sent`) |
 | 3 | Recipient dashboard `/inbox` | `inbox_requests` row per distinct recipient tenant |
 
-**Note:** Field producers without a workspace tenant receive campaign **email/CTA only** — not dashboard inbox rows.
+**Note:** Field producers without a workspace tenant receive campaign **email/CTA only** until signup.
+
+### `dashboard_campaign_supplier_onboarding`
+
+Off-platform supplier targeted by request campaign.
+
+| Step | Surface | Requirement |
+|------|---------|-------------|
+| 1 | Campaign email CTA | Accept → `/requests/intent` → login/signup with `campaign` context |
+| 2 | Signup / login | `supplier-campaign-redirect.ts` → `/inbox?campaign={id}` |
+| 3 | Backend claim | `claimPendingCampaignRecipientInvitesOnSignup` + inbox backfill fallback |
+| 4 | Dashboard `/inbox` | `InboundCampaignBanner` + highlighted pending row |
+| 5 | Sender outreach timeline | `GET /v1/requests/campaigns/:id/decisions` → `recipients[]` onboarding status (`invite_sent` → `signed_up` → `accepted`/`fulfilled`) |
+
+**Dashboard modules:** `lib/supplier-campaign-redirect.ts`, `app/inbox/page.tsx`, `components/inbox/inbound-campaign-banner.tsx`, `components/requests/campaign-decisions-dialog.tsx`, `lib/campaign-recipient-timeline.ts`
 
 ## Guards
 

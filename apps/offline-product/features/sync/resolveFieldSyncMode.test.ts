@@ -40,6 +40,16 @@ describe('resolveFieldSyncMode', () => {
     ).toBe('full');
   });
 
+  it('uses full when delta reports inbound changes even without local work', () => {
+    expect(
+      resolveFieldSyncMode({
+        queuePendingCount: 0,
+        hasFieldSyncCursor: true,
+        cloudDeltaHasInboundChanges: true,
+      }),
+    ).toBe('full');
+  });
+
   it('respects forceFull', () => {
     expect(
       resolveFieldSyncMode({

@@ -4,6 +4,7 @@ import { getTracebudApiBaseUrl } from './runtimeGuards';
 export type FieldSyncDeltaResponse = {
   serverTime: string;
   since?: string | null;
+  geometrySyncMinTier?: 'high' | 'moderate' | 'low';
   farmers: Array<{
     farmerId: string;
     plots: Array<{ id: string; updatedAt: string }>;
@@ -12,8 +13,11 @@ export type FieldSyncDeltaResponse = {
   }>;
 };
 
-export async function fetchFieldSyncDelta(sinceMs?: number): Promise<FieldSyncDeltaResponse> {
-  const accessToken = await getAccessTokenFromSupabase();
+export async function fetchFieldSyncDelta(
+  sinceMs?: number,
+  accessTokenOverride?: string,
+): Promise<FieldSyncDeltaResponse> {
+  const accessToken = accessTokenOverride?.trim() || (await getAccessTokenFromSupabase());
   if (!accessToken) {
     throw new Error('No access token available for field sync delta');
   }

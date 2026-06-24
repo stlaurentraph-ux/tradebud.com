@@ -1,7 +1,66 @@
 // @vitest-environment jsdom
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { CampaignDecisionsDialog } from '@/components/requests/campaign-decisions-dialog';
+
+const basePayload = {
+  campaign_id: 'camp_1',
+  tenant_id: 'tenant_1',
+  last_synced_at: '2026-04-22T12:00:00.000Z',
+  counts: { all: 2, accept: 1, refuse: 1 },
+  recipient_status_counts: {
+    fulfilled: 1,
+    accepted: 0,
+    refused: 1,
+    signed_up: 0,
+    invite_sent: 0,
+    on_platform: 0,
+  },
+  pagination: {
+    decision: 'all' as const,
+    limit: 20,
+    offset: 0,
+    returned: 2,
+    has_more: false,
+  },
+  recipients: [
+    {
+      recipient_email: 'accept@example.com',
+      onboarding_status: 'fulfilled' as const,
+      invite_status: null,
+      decision: 'accept' as const,
+      decision_source: 'inbox_fulfillment',
+      decided_at: '2026-04-22T12:00:00.000Z',
+      updated_at: '2026-04-22T12:00:00.000Z',
+    },
+    {
+      recipient_email: 'refuse@example.com',
+      onboarding_status: 'refused' as const,
+      invite_status: null,
+      decision: 'refuse' as const,
+      decision_source: 'email_cta',
+      decided_at: '2026-04-22T11:00:00.000Z',
+      updated_at: '2026-04-22T11:00:00.000Z',
+    },
+  ],
+  decisions: [
+    {
+      campaign_id: 'camp_1',
+      recipient_email: 'accept@example.com',
+      decision: 'accept' as const,
+      decided_at: '2026-04-22T12:00:00.000Z',
+      source: 'inbox_fulfillment',
+    },
+    {
+      campaign_id: 'camp_1',
+      recipient_email: 'refuse@example.com',
+      decision: 'refuse' as const,
+      decided_at: '2026-04-22T11:00:00.000Z',
+      source: 'email_cta',
+    },
+  ],
+};
 
 describe('CampaignDecisionsDialog', () => {
   const originalFetch = global.fetch;
@@ -11,35 +70,7 @@ describe('CampaignDecisionsDialog', () => {
       'fetch',
       vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({
-          campaign_id: 'camp_1',
-          tenant_id: 'tenant_1',
-          last_synced_at: '2026-04-22T12:00:00.000Z',
-          counts: { all: 2, accept: 1, refuse: 1 },
-          pagination: {
-            decision: 'all',
-            limit: 20,
-            offset: 0,
-            returned: 2,
-            has_more: false,
-          },
-          decisions: [
-            {
-              campaign_id: 'camp_1',
-              recipient_email: 'accept@example.com',
-              decision: 'accept',
-              decided_at: '2026-04-22T12:00:00.000Z',
-              source: 'inbox_fulfillment',
-            },
-            {
-              campaign_id: 'camp_1',
-              recipient_email: 'refuse@example.com',
-              decision: 'refuse',
-              decided_at: '2026-04-22T11:00:00.000Z',
-              source: 'email_cta',
-            },
-          ],
-        }),
+        json: async () => basePayload,
       } as Response),
     );
     sessionStorage.setItem('tracebud_token', 'demo_token');
@@ -51,7 +82,7 @@ describe('CampaignDecisionsDialog', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders decision rows when opened', async () => {
+  it('renders funnel summary and recipient progress rows when opened', async () => {
     render(
       <CampaignDecisionsDialog
         campaignId="camp_1"
@@ -62,14 +93,16 @@ describe('CampaignDecisionsDialog', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText('accept@example.com')).toBeInTheDocument();
+      expect(screen.getByText('1 of 2 fulfilled')).toBeInTheDocument();
     });
-    expect(screen.getByText('refuse@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Inbox fulfillment')).toBeInTheDocument();
-    expect(screen.getByText('Email link')).toBeInTheDocument();
+    expect(screen.getByText('accept@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Evidence attached')).toBeInTheDocument();
+    expect(screen.getAllByText('Refused').length).toBeGreaterThan(0);
   });
 
-  it('shows decision counts on filter tabs', async () => {
+  it('shows activity log with decision counts when tab is selected', async () => {
+    const user = userEvent.setup();
+
     render(
       <CampaignDecisionsDialog
         campaignId="camp_1"
@@ -83,8 +116,12 @@ describe('CampaignDecisionsDialog', () => {
       expect(screen.getByText('accept@example.com')).toBeInTheDocument();
     });
 
-    expect(screen.getByRole('tab', { name: /all/i })).toHaveTextContent('2');
+    await user.click(screen.getByRole('tab', { name: /activity log/i }));
+
+    expect(screen.getByRole('tab', { name: /^all/i })).toHaveTextContent('2');
     expect(screen.getByRole('tab', { name: /accept/i })).toHaveTextContent('1');
     expect(screen.getByRole('tab', { name: /refuse/i })).toHaveTextContent('1');
+    expect(screen.getAllByText('Inbox fulfillment').length).toBeGreaterThan(0);
+    expect(screen.getByText('Email link')).toBeInTheDocument();
   });
 });

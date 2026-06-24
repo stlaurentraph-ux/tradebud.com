@@ -91,15 +91,26 @@ export function buildDeliveryTripQrUrl(tripRef: string, baseUrl?: string): strin
   return `${base}/${normalized}`;
 }
 
+function dashboardOriginBase(dashboardOrigin?: string): string {
+  return (dashboardOrigin ?? process.env.NEXT_PUBLIC_DASHBOARD_ORIGIN ?? 'https://dashboard.tracebud.com')
+    .trim()
+    .replace(/\/$/, '');
+}
+
 export function buildDashboardClaimUrl(ref: string, dashboardOrigin?: string): string {
   const parsed = parseDeliveryIntakeRef(ref);
   if (!parsed) {
     throw new Error('Invalid delivery intake reference');
   }
-  const origin = (dashboardOrigin ?? process.env.NEXT_PUBLIC_DASHBOARD_ORIGIN ?? 'https://dashboard.tracebud.com')
-    .trim()
-    .replace(/\/$/, '');
-  return `${origin}/harvests?claim=${encodeURIComponent(parsed.ref)}`;
+  return `${dashboardOriginBase(dashboardOrigin)}/harvests?claim=${encodeURIComponent(parsed.ref)}`;
+}
+
+export function buildDashboardSignupUrlForClaim(claimRef: string, dashboardOrigin?: string): string {
+  return `${dashboardOriginBase(dashboardOrigin)}/create-account?claim=${encodeURIComponent(claimRef.trim())}`;
+}
+
+export function buildDashboardLoginUrlForClaim(claimRef: string, dashboardOrigin?: string): string {
+  return `${dashboardOriginBase(dashboardOrigin)}/login?next=${encodeURIComponent(buildDashboardClaimUrl(claimRef, dashboardOrigin))}`;
 }
 
 export type DeliveryPublicPreview = {

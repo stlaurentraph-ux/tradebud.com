@@ -44,6 +44,7 @@ import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { clearFieldProducerBootstrapCache } from '@/features/api/fieldAppBootstrap';
+import { handleCampaignInviteDeepLink } from '@/features/campaign/campaignInviteDeepLink';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
 import {
   completeOAuthFromDeepLink,
@@ -75,7 +76,8 @@ import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { getSetting, loadAppState, loadLocalDeliveryReceiptsForFarmer, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
-import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
+import { resolveFieldAppSessionRole } from '@/features/enumeration/fieldAppSessionRole';
+import type { FieldAppRole } from '@/features/auth/fieldRolePermissionRegistry';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
 
@@ -173,6 +175,8 @@ type SignInSheetContextValue = {
   openCreateAccount: () => Promise<void>;
   closeSignIn: () => void;
   isSignedIn: boolean;
+  /** JWT app role when signed in (`farmer` | `agent`). */
+  fieldAppRole: FieldAppRole | null;
   refreshAuth: () => Promise<void>;
   /** Clear sync credentials on this device and update global auth state. */
   signOutOnDevice: () => Promise<void>;
@@ -198,6 +202,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
   const [emailMode, setEmailMode] = useState(false);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [fieldAppRole, setFieldAppRole] = useState<FieldAppRole | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [createWizardVisible, setCreateWizardVisible] = useState(false);
@@ -209,6 +214,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const oauthSignInInFlightRef = useRef(false);
   const refreshAuthInFlightRef = useRef<Promise<void> | null>(null);
   const createWizardVisibleRef = useRef(false);
+
+  const syncFieldAppRole = useCallback(async (signedIn: boolean) => {
+    if (!signedIn) {
+      setFieldAppRole(null);
+      return;
+    }
+    const role = await resolveFieldAppSessionRole().catch(() => null);
+    setFieldAppRole(role);
+  }, []);
 
   const countUnsyncedPlots = useCallback(async (): Promise<number> => {
     if (!farmer?.id || plots.length === 0) return 0;
@@ -424,6 +438,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       if (!hasSyncAuthSession()) {
         setIsSignedIn(false);
         setEmail('');
+        await syncFieldAppRole(false);
         return;
       }
       if (generationAtStart !== getAuthUiGeneration()) {
@@ -441,6 +456,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       if (!hasSyncAuthSession()) {
         setIsSignedIn(false);
         setEmail('');
+        await syncFieldAppRole(false);
         return;
       }
       setIsSignedIn(true);
@@ -459,6 +475,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       if (!hasSyncAuthSession()) {
         setIsSignedIn(false);
         setEmail('');
+        await syncFieldAppRole(false);
         return;
       }
       if (!access.ok && access.reason === 'session_expired') {
@@ -471,6 +488,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       } catch {
         // Credentials are on device; farmer alignment is best-effort on refresh.
       }
+      await syncFieldAppRole(true);
     })();
 
     refreshAuthInFlightRef.current = run;
@@ -481,7 +499,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         refreshAuthInFlightRef.current = null;
       }
     }
-  }, [adoptHydratedAuthSession, syncLocalFarmerFromAuth]);
+  }, [adoptHydratedAuthSession, syncFieldAppRole, syncLocalFarmerFromAuth]);
 
   useEffect(() => {
     void refreshAuth().finally(() => setAuthReady(true));
@@ -568,6 +586,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const sub = Linking.addEventListener('url', (event) => {
+      if (handleCampaignInviteDeepLink(event.url)) return;
       if (!isOAuthCallbackUrl(event.url)) return;
       if (deliverOAuthDeepLink(event.url)) return;
 
@@ -598,6 +617,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     await unregisterFarmerPushToken().catch(() => undefined);
     abortSyncAuthForSignOut();
     setIsSignedIn(false);
+    setFieldAppRole(null);
     setEmail('');
     setPassword('');
     setHint(null);
@@ -788,6 +808,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         openCreateAccount,
         closeSignIn,
         isSignedIn,
+        fieldAppRole,
         refreshAuth,
         signOutOnDevice,
         promptBackupConsent,

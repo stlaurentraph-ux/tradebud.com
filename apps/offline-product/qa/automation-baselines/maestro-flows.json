@@ -6,6 +6,7 @@
     "app-store-ipad-screenshots-nav.yaml",
     "app-store-ipad-screenshots.yaml",
     "cross-device-restore-smoke.yaml",
+    "field-sync-delta-smoke.yaml",
     "land-title-photo.yaml",
     "mark-three-corners.yaml",
     "oauth-callback-missing-url-smoke.yaml",

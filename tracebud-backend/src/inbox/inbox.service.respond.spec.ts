@@ -36,6 +36,10 @@ describe('InboxService respond fulfillment', () => {
         return { rows: [] };
       }
 
+      if (normalized.includes('UPDATE crm_contacts') && normalized.includes("status = 'submitted'")) {
+        return { rows: [{ id: 'contact_1' }] };
+      }
+
       return { rows: [] };
     });
 
@@ -69,6 +73,14 @@ describe('InboxService respond fulfillment', () => {
         const payload = JSON.parse(String(params?.[2] ?? '{}'));
         return payload.notes === 'FPIC packet uploaded' && payload.evidencePackageIds?.includes('pkg_1');
       }),
+    ).toBe(true);
+    expect(
+      calls.some(([sql, params]) =>
+        sql.includes('crm_contacts') &&
+        sql.includes("status = 'submitted'") &&
+        params?.[0] === 'tenant_importer' &&
+        params?.[1] === 'exporter@tracebud.test',
+      ),
     ).toBe(true);
   });
 });

@@ -86,6 +86,14 @@ Unchanged voucher lifecycle. New side effect: `voucher_buyer_claims` on desk cla
 - Marketing → signup/login → auto-claim (`?claim=` persisted through onboarding) — **shipped 2026-06-24**
 - Bulk scan mode + ZXing fallback when `BarcodeDetector` unavailable — **shipped 2026-06-24**
 
+## Phase C (desk intake polish)
+
+- Collapsed desk scan row (primary Scan QR + paste/add secondary) — **shipped 2026-06-24**
+- Scanner viewfinder, success flash, duplicate debounce, bulk toggle inside dialog — **shipped 2026-06-24**
+- Handoff variance warning + receipt summary card — **shipped 2026-06-24**
+- Marketing/dashboard public preview: status badge, 3-step explainer, trip line chips — **shipped 2026-06-24**
+- Auto-claim banner on desk when `?claim=` present — **shipped 2026-06-24**
+
 ## Dependencies
 
 - `TRACEBUD_BACKEND_URL` on marketing + dashboard

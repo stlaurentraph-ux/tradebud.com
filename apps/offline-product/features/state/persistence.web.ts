@@ -585,6 +585,53 @@ export async function clearPlotMappingDraft(farmerId: string): Promise<void> {
   delete memPlotMappingDrafts[farmerId];
 }
 
+export type FieldRosterEntryRow = {
+  farmerId: string;
+  source: 'roster' | 'provisional';
+  fullName: string;
+  village: string;
+  phone: string | null;
+  nationalId: string | null;
+  email: string | null;
+  producerContactId: string | null;
+  campaignId: string | null;
+  assignmentId: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: number;
+  updatedAt: number;
+};
+
+let memFieldRoster: FieldRosterEntryRow[] = [];
+
+export async function loadFieldRosterEntries(): Promise<FieldRosterEntryRow[]> {
+  return [...memFieldRoster];
+}
+
+export async function loadFieldRosterEntryByFarmerId(
+  farmerId: string,
+): Promise<FieldRosterEntryRow | null> {
+  return memFieldRoster.find((row) => row.farmerId === farmerId.trim()) ?? null;
+}
+
+export async function persistFieldRosterEntry(entry: FieldRosterEntryRow): Promise<void> {
+  const idx = memFieldRoster.findIndex((row) => row.farmerId === entry.farmerId);
+  if (idx >= 0) {
+    memFieldRoster[idx] = entry;
+  } else {
+    memFieldRoster.push(entry);
+  }
+}
+
+export async function updateFieldRosterMemberStatus(
+  farmerId: string,
+  status: FieldRosterEntryRow['status'],
+): Promise<void> {
+  const row = memFieldRoster.find((entry) => entry.farmerId === farmerId.trim());
+  if (!row) return;
+  row.status = status;
+  row.updatedAt = Date.now();
+}
+
 export async function deletePlotLocalData(plotId: string): Promise<void> {
   const links = await loadPlotServerLinks().catch((): Record<string, string> => ({}));
   const serverPlotId = links[plotId]?.trim();

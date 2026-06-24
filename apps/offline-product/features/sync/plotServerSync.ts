@@ -17,8 +17,7 @@ import {
 } from '@/features/compliance/plotGeometryQuality';
 import { createTranslator, type TranslateFn } from '@/features/i18n/translate';
 import { defaultLocale, isSupportedLanguage } from '@/features/i18n/config';
-import { getSetting } from '@/features/state/persistence';
-import { loadPlotCadastralKey, loadPlotServerLinks, persistPlotServerLinks, savePlotServerLink } from '@/features/state/persistence';
+import { getSetting, loadFieldRosterEntryByFarmerId, loadPlotCadastralKey, loadPlotServerLinks, persistPlotServerLinks, savePlotServerLink } from '@/features/state/persistence';
 import {
   resolveConfirmedServerPlotIdForLocal,
   reconcilePlotServerLinks,
@@ -314,6 +313,15 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
   await ensureFieldProducerBootstrapped(farmerId, {
     fullName: params.farmerDisplayName,
   });
+  const rosterFarmerIds = [...new Set(localPlots.map((plot) => plot.farmerId.trim()).filter(Boolean))];
+  for (const memberFarmerId of rosterFarmerIds) {
+    if (memberFarmerId === farmerId) continue;
+    const rosterRow = await loadFieldRosterEntryByFarmerId(memberFarmerId);
+    await ensureFieldProducerBootstrapped(memberFarmerId, {
+      fullName: rosterRow?.fullName,
+      campaignId: rosterRow?.campaignId ?? undefined,
+    });
+  }
 
   let backendPlots: unknown[];
   let plotServerLinks: Record<string, string>;
@@ -418,7 +426,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
     if (orphanLink.linked) {
       uploaded += 1;
       plotServerLinks = orphanLink.plotServerLinks;
-      await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+      await queuePlotDependentSyncAfterUpload(plot.id, plot.farmerId);
       if (uploaded < unsynced.length) {
         await sleep(PLOT_UPLOAD_GAP_MS);
       }
@@ -436,8 +444,9 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
       continue;
     }
 
+    const rosterRow = await loadFieldRosterEntryByFarmerId(plot.farmerId);
     const r = await postPlotToBackend({
-      farmerId,
+      farmerId: plot.farmerId,
       clientPlotId: resolveClientPlotId(plot),
       name: plot.name?.trim() || undefined,
       geometry,
@@ -445,6 +454,8 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
       precisionMeters: plot.precisionMetersAtSave ?? null,
       cadastralKey: ck,
       geometryCapture: plot.geometryCapture ?? null,
+      producerContactId: rosterRow?.producerContactId,
+      assignmentId: rosterRow?.assignmentId,
     });
 
     if (r.ok) {
@@ -453,7 +464,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
         await ensureServerPlotClientIdentity({ plot, serverPlotId: r.serverPlotId });
         await savePlotServerLink(plot.id, r.serverPlotId);
         plotServerLinks = { ...plotServerLinks, [plot.id]: r.serverPlotId };
-        await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+        await queuePlotDependentSyncAfterUpload(plot.id, plot.farmerId);
       } else {
         try {
           const refreshed = await fetchBackendPlotsForSyncScope({
@@ -468,7 +479,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
             await ensureServerPlotClientIdentity({ plot, serverPlotId });
             await savePlotServerLink(plot.id, serverPlotId);
             plotServerLinks = { ...plotServerLinks, [plot.id]: serverPlotId };
-            await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+            await queuePlotDependentSyncAfterUpload(plot.id, plot.farmerId);
           }
         } catch {
           // Response omitted id; next sync pass will reconcile orphans.
@@ -494,7 +505,7 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
           uploaded += 1;
           await savePlotServerLink(plot.id, serverPlotId);
           plotServerLinks = { ...plotServerLinks, [plot.id]: serverPlotId };
-          await queuePlotDependentSyncAfterUpload(plot.id, farmerId);
+          await queuePlotDependentSyncAfterUpload(plot.id, plot.farmerId);
           if (uploaded < unsynced.length) {
             await sleep(PLOT_UPLOAD_GAP_MS);
           }

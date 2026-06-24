@@ -7,7 +7,9 @@
 export type NetworkRoutingFlowId =
   | 'field_delivery_to_buyer_tenant'
   | 'dashboard_consent_to_field_app'
-  | 'dashboard_campaign_inbox_fanout';
+  | 'dashboard_campaign_inbox_fanout'
+  | 'dashboard_campaign_supplier_onboarding'
+  | 'field_campaign_supplier_onboarding';
 
 export type NetworkRoutingFlow = {
   readonly id: NetworkRoutingFlowId;
@@ -88,6 +90,53 @@ export const NETWORK_ROUTING_FLOWS: readonly NetworkRoutingFlow[] = [
       'apps/dashboard-product/app/inbox/page.tsx',
       'apps/dashboard-product/app/outreach/page.tsx',
     ],
+  },
+  {
+    id: 'dashboard_campaign_supplier_onboarding',
+    description: 'Off-platform dashboard supplier signs up from campaign email and receives inbox backfill.',
+    emailResolver: EMAIL_TENANT_RESOLUTION_MODULE,
+    preconditions: [
+      'campaign target email in request_campaigns.target_contact_emails',
+      'crm_contacts row invited for supplier email',
+    ],
+    backendModules: [
+      'contacts/claim-supplier-contacts-on-signup.ts',
+      'requests/campaign-recipient-invite.ts',
+      'requests/claim-campaign-recipient-invites-on-signup.ts',
+      'network/link-pending-network-invites-on-signup.ts',
+      'inbox/inbox.service.ts',
+      'requests/requests.service.ts',
+    ],
+    fieldAppSurfaces: [],
+    dashboardSurfaces: [
+      'apps/dashboard-product/app/create-account/page.tsx',
+      'apps/dashboard-product/lib/supplier-campaign-redirect.ts',
+    ],
+  },
+  {
+    id: 'field_campaign_supplier_onboarding',
+    description:
+      'Off-platform farmer opens field-auth campaign link, signs in, and bootstrap claims campaign_recipient_invites.',
+    emailResolver: EMAIL_TENANT_RESOLUTION_MODULE,
+    preconditions: [
+      'crm_contacts.contact_type = farmer for recipient email',
+      'campaign_recipient_invites row for unresolved email',
+      'field-app-bootstrap links farmer_profile to auth user',
+    ],
+    backendModules: [
+      'requests/claim-campaign-invites-for-field-farmer.ts',
+      'requests/campaign-recipient-invite.ts',
+      'plots/plots.service.ts',
+      'plots/field-app.controller.ts',
+    ],
+    fieldAppSurfaces: [
+      'apps/offline-product/app/campaign.tsx',
+      'apps/offline-product/features/campaign/campaignInviteContext.ts',
+      'apps/offline-product/features/campaign/campaignInviteDeepLink.ts',
+      'apps/offline-product/features/api/fieldAppBootstrap.ts',
+      'apps/offline-product/app/data-sharing.tsx',
+    ],
+    dashboardSurfaces: [],
   },
 ] as const;
 

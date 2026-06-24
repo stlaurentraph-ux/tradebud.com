@@ -204,6 +204,22 @@ function assertSignOutPersistenceFlow(manifest) {
   if (!flow) throw new Error('nightly smoke must include sign-out-persistence-smoke.yaml');
 }
 
+function assertFieldSyncDeltaFlow(manifest) {
+  const flow = manifest.nightlyFlows.find(
+    (item) => item.flowFile === 'field-sync-delta-smoke.yaml',
+  );
+  if (!flow) {
+    throw new Error('nightly smoke must include field-sync-delta-smoke.yaml (DEVICE_SMOKE §11b subset)');
+  }
+  if (flow.seedProfile !== 'delta_sync_idle') {
+    throw new Error('field-sync-delta-smoke must use seedProfile delta_sync_idle');
+  }
+  const seed = read('scripts/seed-maestro-simulator.mjs');
+  if (!seed.includes('delta_sync_idle') || !seed.includes('field_sync_cursor_v1')) {
+    throw new Error('seed-maestro-simulator.mjs must support delta_sync_idle with field_sync_cursor_v1');
+  }
+}
+
 function main() {
   const manifest = loadJson('qa/automation-baselines/maestro-nightly-smoke.json');
   assertManifestShape(manifest);
@@ -212,6 +228,7 @@ function main() {
   assertSignedOutBackupFlow(manifest);
   assertOAuthMaestroFlows(manifest);
   assertSignOutPersistenceFlow(manifest);
+  assertFieldSyncDeltaFlow(manifest);
   assertRunnerScripts(manifest);
   assertWorkflowSchedule(manifest);
   assertPackageScripts();

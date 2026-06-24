@@ -4,6 +4,8 @@ const mocks = vi.hoisted(() => ({
   hasSyncAuthSession: vi.fn(() => true),
   loadAppState: vi.fn(),
   prepareFieldSyncContext: vi.fn(),
+  probeFieldSyncInboundChanges: vi.fn(),
+  persistFieldSyncCursorFromDelta: vi.fn(async () => undefined),
   restoreCloudMediaFromServer: vi.fn(),
   restoreLocalDeliveryReceiptsFromServer: vi.fn(),
   hydrateLocalSyncMarkersFromServer: vi.fn(async () => ({
@@ -18,6 +20,7 @@ const mocks = vi.hoisted(() => ({
   pruneRedundantPendingUploadActions: vi.fn(async () => 0),
   emitServerPlotSyncChanged: vi.fn(),
   withFieldSyncSession: vi.fn(),
+  trackEvent: vi.fn(),
 }));
 
 vi.mock('@/features/api/syncAuthSession', () => ({
@@ -30,6 +33,11 @@ vi.mock('@/features/state/persistence', () => ({
 
 vi.mock('@/features/sync/resolveFieldSyncScope', () => ({
   prepareFieldSyncContext: mocks.prepareFieldSyncContext,
+}));
+
+vi.mock('@/features/sync/fieldSyncCursor', () => ({
+  probeFieldSyncInboundChanges: mocks.probeFieldSyncInboundChanges,
+  persistFieldSyncCursorFromDelta: mocks.persistFieldSyncCursorFromDelta,
 }));
 
 vi.mock('@/features/sync/restoreCloudMediaFromServer', () => ({
@@ -57,7 +65,21 @@ vi.mock('@/features/sync/runFieldSyncSession', () => ({
 }));
 
 vi.mock('@/features/sync/syncQueueMutex', () => ({
-  getSyncQueueLockSnapshot: vi.fn(() => ({ locked: false, phase: 'idle', lockStartedAt: null, waitingSince: null, waiterCount: 0 })),
+  getSyncQueueLockSnapshot: vi.fn(() => ({
+    locked: false,
+    phase: 'idle',
+    lockStartedAt: null,
+    waitingSince: null,
+    waiterCount: 0,
+  })),
+}));
+
+vi.mock('@/features/observability/analytics', () => ({
+  ANALYTICS_EVENTS: {
+    FIELD_SYNC_DELTA_SKIPPED: 'field_sync_delta_skipped',
+    FIELD_SYNC_INCREMENTAL_RESTORE: 'field_sync_incremental_restore',
+  },
+  trackEvent: mocks.trackEvent,
 }));
 
 import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
@@ -74,13 +96,34 @@ describe('restoreCloudStateOnFocus', () => {
       waiterCount: 0,
     });
     mocks.hasSyncAuthSession.mockReturnValue(true);
-    mocks.withFieldSyncSession.mockImplementation(async (fn: () => Promise<unknown>) => ({
-      ok: true,
-      value: await fn(),
-    }));
+    mocks.withFieldSyncSession.mockImplementation(
+      async (fn: (session: { accessToken: string }) => Promise<unknown>) => ({
+        ok: true,
+        value: await fn({ accessToken: 'token-1' }),
+      }),
+    );
+    mocks.probeFieldSyncInboundChanges.mockResolvedValue({
+      hasInboundChanges: true,
+      hasCursor: false,
+      delta: null,
+      snapshot: null,
+      changeSet: null,
+      probeFailed: false,
+    });
     mocks.loadAppState.mockResolvedValue({
       farmer: { id: 'farmer-1', name: 'Ada', role: 'farmer' },
-      plots: [{ id: 'plot-1', farmerId: 'farmer-1', name: 'Plot 1', createdAt: 1, areaSquareMeters: 1000, areaHectares: 0.1, kind: 'point', points: [{ latitude: 1, longitude: 2 }] }],
+      plots: [
+        {
+          id: 'plot-1',
+          farmerId: 'farmer-1',
+          name: 'Plot 1',
+          createdAt: 1,
+          areaSquareMeters: 1000,
+          areaHectares: 0.1,
+          kind: 'point',
+          points: [{ latitude: 1, longitude: 2 }],
+        },
+      ],
     });
     mocks.prepareFieldSyncContext.mockResolvedValue({
       farmerId: 'server-farmer-1',
@@ -88,7 +131,18 @@ describe('restoreCloudStateOnFocus', () => {
       rekeyed: false,
     });
     mocks.restoreCloudMediaFromServer.mockResolvedValue({
-      activePlots: [{ id: 'plot-1', farmerId: 'farmer-1', name: 'Plot 1', createdAt: 1, areaSquareMeters: 1000, areaHectares: 0.1, kind: 'point', points: [{ latitude: 1, longitude: 2 }] }],
+      activePlots: [
+        {
+          id: 'plot-1',
+          farmerId: 'farmer-1',
+          name: 'Plot 1',
+          createdAt: 1,
+          areaSquareMeters: 1000,
+          areaHectares: 0.1,
+          kind: 'point',
+          points: [{ latitude: 1, longitude: 2 }],
+        },
+      ],
       plotsRestored: 0,
       declarationsRestored: 0,
       evidenceRestored: 1,
@@ -135,5 +189,70 @@ describe('restoreCloudStateOnFocus', () => {
     );
     expect(mocks.restoreLocalDeliveryReceiptsFromServer).toHaveBeenCalled();
     expect(mocks.emitServerPlotSyncChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('skips heavy restore when delta reports no inbound changes', async () => {
+    mocks.probeFieldSyncInboundChanges.mockResolvedValue({
+      hasInboundChanges: false,
+      hasCursor: true,
+      delta: { serverTime: '2026-06-24T12:00:00.000Z', farmers: [] },
+      snapshot: { cursorMs: 1, auditByFarmer: {}, voucherFingerprint: '' },
+      changeSet: null,
+      probeFailed: false,
+    });
+
+    const result = await restoreCloudStateOnFocus({ force: true });
+    expect(result?.skippedByDelta).toBe(true);
+    expect(result?.totalRestored).toBe(0);
+    expect(mocks.restoreCloudMediaFromServer).not.toHaveBeenCalled();
+    expect(mocks.restoreLocalDeliveryReceiptsFromServer).not.toHaveBeenCalled();
+    expect(mocks.emitServerPlotSyncChanged).not.toHaveBeenCalled();
+    expect(mocks.trackEvent).toHaveBeenCalledWith('field_sync_delta_skipped', {
+      surface: 'focus_pull',
+    });
+  });
+
+  it('passes incremental restore scope when delta reports plot changes', async () => {
+    mocks.probeFieldSyncInboundChanges.mockResolvedValue({
+      hasInboundChanges: true,
+      hasCursor: true,
+      delta: { serverTime: '2026-06-24T12:00:00.000Z', farmers: [] },
+      snapshot: { cursorMs: 1, auditByFarmer: {}, voucherFingerprint: '' },
+      changeSet: {
+        changedServerPlotIds: ['server-plot-1'],
+        vouchersChanged: false,
+        auditChangedFarmerIds: [],
+      },
+      probeFailed: false,
+    });
+    mocks.restoreCloudMediaFromServer.mockResolvedValue({
+      activePlots: [],
+      plotsRestored: 0,
+      declarationsRestored: 0,
+      evidenceRestored: 0,
+      groundTruthRestored: 0,
+      landTitleRestored: 0,
+      devicePreferencesRestored: false,
+      profilePhotoRestored: false,
+      mappingDraftRestored: false,
+      offlinePacksQueued: 0,
+      fetchFailed: false,
+      downloadFailed: 0,
+      incrementalRestore: true,
+    });
+
+    const result = await restoreCloudStateOnFocus({ force: true });
+    expect(result?.incrementalRestore).toBe(true);
+    expect(mocks.restoreCloudMediaFromServer).toHaveBeenCalledWith(
+      expect.objectContaining({
+        restoreScope: expect.objectContaining({
+          restoreVouchers: false,
+          restoreFarmerAuditArtifacts: false,
+        }),
+      }),
+    );
+    expect(mocks.trackEvent).toHaveBeenCalledWith('field_sync_incremental_restore', {
+      surface: 'focus_pull',
+    });
   });
 });

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T08:16:02.115Z",
-  "canonicalEventCount": 43,
+  "generatedAt": "2026-06-24T08:51:13.496Z",
+  "canonicalEventCount": 44,
   "canonicalEvents": [
     "dashboard_campaign_archive_failure",
     "dashboard_campaign_archive_success",
@@ -14,6 +14,7 @@
     "dashboard_contact_status_change_failure",
     "dashboard_contact_status_changed",
     "dashboard_exporter_lineage_step_clicked",
+    "dashboard_inbound_campaign_request_viewed",
     "dashboard_inbox_respond_failure",
     "dashboard_inbox_respond_success",
     "dashboard_issue_create_success",
@@ -67,6 +68,7 @@
     "DELIVERY_DESK_TRIP_CLAIM_SUCCESS",
     "DELIVERY_QR_PREVIEW_VIEWED",
     "EXPORTER_LINEAGE_STEP_CLICKED",
+    "INBOUND_CAMPAIGN_REQUEST_VIEWED",
     "INBOX_RESPOND_FAILURE",
     "INBOX_RESPOND_SUCCESS",
     "ISSUE_CREATE_SUCCESS",
@@ -76,7 +78,6 @@
     "PACKAGE_CREATE_SUCCESS",
     "PACKAGE_SEAL_FAILURE",
     "PACKAGE_SEAL_SUCCESS",
-    "PLOT_GEOMETRY_APPROVED",
     "PLOT_GEOMETRY_REVISION_APPLIED",
     "REACT_RENDER_ERROR",
     "SESSION_START",
@@ -97,6 +98,7 @@
     "dashboard_contact_status_change_failure",
     "dashboard_contact_status_changed",
     "dashboard_exporter_lineage_step_clicked",
+    "dashboard_inbound_campaign_request_viewed",
     "dashboard_inbox_respond_failure",
     "dashboard_inbox_respond_success",
     "dashboard_issue_create_success",
@@ -120,7 +122,6 @@
     "delivery_desk_scan_success",
     "delivery_desk_trip_claim_success",
     "delivery_qr_preview_viewed",
-    "plot_geometry_approved",
     "plot_geometry_revision_applied"
   ]
 }

@@ -28,6 +28,7 @@ export const DASHBOARD_EVENTS = {
   CAMPAIGN_SEND_FAILURE: 'dashboard_campaign_send_failure',
   INBOX_RESPOND_SUCCESS: 'dashboard_inbox_respond_success',
   INBOX_RESPOND_FAILURE: 'dashboard_inbox_respond_failure',
+  INBOUND_CAMPAIGN_REQUEST_VIEWED: 'dashboard_inbound_campaign_request_viewed',
   CAMPAIGN_ARCHIVE_SUCCESS: 'dashboard_campaign_archive_success',
   CAMPAIGN_ARCHIVE_FAILURE: 'dashboard_campaign_archive_failure',
   CONTACT_STATUS_CHANGED: 'dashboard_contact_status_changed',

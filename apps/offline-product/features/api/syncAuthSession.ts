@@ -421,6 +421,9 @@ export function abortSyncAuthForSignOut(): void {
   syncAuthDismissedByUser = true;
   clearInMemorySyncAuth();
   void persistSyncAuthSignOutLatch().catch(() => undefined);
+  void import('@/features/sync/fieldSyncCursor')
+    .then((m) => m.clearFieldSyncCursor())
+    .catch(() => undefined);
 }
 
 export async function hydrateSyncAuthFromSettings(): Promise<void> {

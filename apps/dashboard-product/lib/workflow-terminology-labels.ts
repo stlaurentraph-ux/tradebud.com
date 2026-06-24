@@ -5509,6 +5509,45 @@ const HARVEST_RECEIVE_DELIVERY_COPY: Record<string, { key: string; fallback: str
     fallback: 'No new deliveries directed to your organisation yet.',
   },
   scan_cta: { key: 'workflow.harvest.receive.scan_cta', fallback: 'Scan QR' },
+  scan_title: { key: 'workflow.harvest.receive.scan_title', fallback: 'Scan delivery QR' },
+  scan_description: {
+    key: 'workflow.harvest.receive.scan_description',
+    fallback: 'Point the camera at the receipt QR or a shared delivery link.',
+  },
+  scan_bulk_title: { key: 'workflow.harvest.receive.scan_bulk_title', fallback: 'Bulk scan delivery QR' },
+  scan_bulk_description: {
+    key: 'workflow.harvest.receive.scan_bulk_description',
+    fallback: 'Keep scanning codes from the same truck visit. The camera stays open until you close it.',
+  },
+  scan_bulk_toggle: {
+    key: 'workflow.harvest.receive.scan_bulk_toggle',
+    fallback: 'Keep scanning (truck visit)',
+  },
+  scan_session_count: {
+    key: 'workflow.harvest.receive.scan_session_count',
+    fallback: '{{count}} code(s) scanned this session',
+  },
+  scan_detected_toast: {
+    key: 'workflow.harvest.receive.scan_detected_toast',
+    fallback: 'Scanned {{ref}}',
+  },
+  scan_close: { key: 'workflow.harvest.receive.scan_close', fallback: 'Close' },
+  scan_camera_error: {
+    key: 'workflow.harvest.receive.scan_camera_error',
+    fallback: 'Camera access failed. Paste the code manually instead.',
+  },
+  scan_unsupported: {
+    key: 'workflow.harvest.receive.scan_unsupported',
+    fallback: 'Camera scanning is not supported in this browser. Paste the voucher code instead.',
+  },
+  auto_claim_banner_title: {
+    key: 'workflow.harvest.receive.auto_claim_banner_title',
+    fallback: 'Delivery link detected',
+  },
+  auto_claim_banner_body: {
+    key: 'workflow.harvest.receive.auto_claim_banner_body',
+    fallback: 'Confirm physical handoff to stage this delivery for batch assembly.',
+  },
   trip_added: {
     key: 'workflow.harvest.receive.trip_added',
     fallback: '{{count}} voucher(s) from trip added',
@@ -5528,6 +5567,15 @@ const HARVEST_RECEIVE_DELIVERY_COPY: Record<string, { key: string; fallback: str
   handoff_expected: {
     key: 'workflow.harvest.receive.handoff_expected',
     fallback: 'Expected from receipt: {{kg}} kg',
+  },
+  handoff_summary_label: {
+    key: 'workflow.harvest.receive.handoff_summary_label',
+    fallback: 'Receipt summary',
+  },
+  handoff_variance_warning: {
+    key: 'workflow.harvest.receive.handoff_variance_warning',
+    fallback:
+      'Received weight ({{received}} kg) differs from the receipt ({{expected}} kg). Add a desk note if the variance is expected.',
   },
   handoff_plot_count: {
     key: 'workflow.harvest.receive.handoff_plot_count',

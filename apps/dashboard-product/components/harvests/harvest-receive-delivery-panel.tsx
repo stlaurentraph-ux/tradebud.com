@@ -61,7 +61,6 @@ export function HarvestReceiveDeliveryPanel({ initialClaimRef = null }: HarvestR
   const [lookupBusy, setLookupBusy] = useState(false);
   const [browseOpen, setBrowseOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
-  const [bulkScanMode, setBulkScanMode] = useState(false);
   const [handoffOpen, setHandoffOpen] = useState(false);
   const [pendingHandoff, setPendingHandoff] = useState<PendingHandoff | null>(null);
   const autoClaimHandled = useRef<string | null>(null);
@@ -287,6 +286,16 @@ export function HarvestReceiveDeliveryPanel({ initialClaimRef = null }: HarvestR
           <CardDescription>{copy('description')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {resolvedClaimRef ? (
+            <div
+              className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5 text-sm"
+              role="status"
+            >
+              <p className="font-medium">{copy('auto_claim_banner_title')}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{copy('auto_claim_banner_body')}</p>
+            </div>
+          ) : null}
+
           {!isLoading && directedInbox.length > 0 ? (
             <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
               <p className="text-sm font-medium">{copy('inbox_title')}</p>
@@ -313,52 +322,40 @@ export function HarvestReceiveDeliveryPanel({ initialClaimRef = null }: HarvestR
             <p className="text-xs text-muted-foreground">{copy('inbox_empty')}</p>
           ) : null}
 
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={qrInput}
-              onChange={(event) => setQrInput(event.target.value)}
-              placeholder={copy('qr_placeholder')}
-              aria-label={copy('qr_aria')}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') {
-                  event.preventDefault();
-                  void handleQrLookup();
-                }
-              }}
-            />
+          <div className="space-y-2">
             <Button
               type="button"
-              variant={bulkScanMode ? 'default' : 'outline'}
-              className="shrink-0"
-              onClick={() => {
-                setBulkScanMode((current) => !current);
-                setScannerOpen(true);
-              }}
-            >
-              <Camera className="mr-2 h-4 w-4" />
-              {copy('bulk_scan_cta')}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="shrink-0"
-              onClick={() => {
-                setBulkScanMode(false);
-                setScannerOpen(true);
-              }}
+              className="w-full sm:w-auto"
+              onClick={() => setScannerOpen(true)}
             >
               <Camera className="mr-2 h-4 w-4" />
               {copy('scan_cta')}
             </Button>
-            <Button
-              type="button"
-              className="shrink-0"
-              disabled={lookupBusy || !qrInput.trim()}
-              onClick={() => void handleQrLookup()}
-            >
-              {lookupBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {copy('qr_cta')}
-            </Button>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                className="flex-1"
+                value={qrInput}
+                onChange={(event) => setQrInput(event.target.value)}
+                placeholder={copy('qr_placeholder')}
+                aria-label={copy('qr_aria')}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void handleQrLookup();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="shrink-0"
+                disabled={lookupBusy || !qrInput.trim()}
+                onClick={() => void handleQrLookup()}
+              >
+                {lookupBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {copy('qr_cta')}
+              </Button>
+            </div>
           </div>
 
           {isLoading ? (
@@ -490,7 +487,6 @@ export function HarvestReceiveDeliveryPanel({ initialClaimRef = null }: HarvestR
       <VoucherQrScannerDialog
         open={scannerOpen}
         onOpenChange={setScannerOpen}
-        bulkMode={bulkScanMode}
         onDetected={(qrRef) => void registerQrRef(qrRef, 'scan')}
       />
 

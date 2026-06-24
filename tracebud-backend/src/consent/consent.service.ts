@@ -18,6 +18,7 @@ import {
 } from './consent-lineage-access';
 import { SOLD_LINEAGE_RETENTION_YEARS, soldLineageRetentionUntil } from './consent-retention';
 import { PushNotificationService } from './push-notification.service';
+import { markCrmContactSubmittedOnFulfill } from '../contacts/mark-crm-contact-submitted-on-fulfill';
 
 export type ConsentGrantStatus = 'pending' | 'active' | 'revoked' | 'denied';
 export type ConsentPurposeCode =
@@ -214,6 +215,12 @@ export class ConsentService {
         farmer_id: farmerId,
         grantee_tenant_id: row.grantee_tenant_id,
         approved_by_user_id: userId,
+      });
+      await markCrmContactSubmittedOnFulfill(this.pool, {
+        senderTenantId: row.grantee_tenant_id,
+        farmerProfileId: farmerId,
+        source: 'consent_grant_approved',
+        consentGrantId: row.id,
       });
       return this.mapRow(row);
     } catch (error) {

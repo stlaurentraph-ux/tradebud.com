@@ -143,6 +143,16 @@ Use a plot with **land title photos or tenure documents** queued locally, plus *
 - [ ] Force-quit during walk capture → reopen app → plot data not corrupted (or clear recovery path)
 - [ ] Stuck sync: Settings queue shows last error; `INCIDENT_RUNBOOK.md` steps resolve or escalate
 
+### 11b. Field-sync-delta (cursor skip + incremental restore)
+
+Point at production API after at least one successful **Sync now** (establishes `field_sync_cursor_v1`).
+
+- [ ] **Second Sync now** with no cloud changes: Technical details shows **upload queue only (skipped cloud restore)** — not a full pull from cloud (same as §7b)
+- [ ] Tab away and return (focus restore): no full cloud pull when delta reports unchanged inbound (`field_sync_delta_skipped` in analytics if instrumented)
+- [ ] Device A adds delivery only → Device B focus or **Sync now**: receipts update without full plot/media re-download (**incremental restore**)
+- [ ] Mid-sync airplane mode: queue retains pending work; online retry completes without duplicate harvest rows
+- [ ] **Simulator (Maestro):** `MAESTRO_SEED_PROFILE=delta_sync_idle npm run test:maestro:seed` then `npm run test:maestro:field-sync-delta` — asserts `field-sync-delta-smoke.yaml` entry points
+
 ## 12. Cross-device restore (second device)
 
 Use the same farmer account on a **second phone or tablet** after the first device has synced.
@@ -159,6 +169,7 @@ Use the same farmer account on a **second phone or tablet** after the first devi
 - [ ] Device B: Walk my plot offers to continue in-progress boundary from Device A
 - [ ] Device B: Offline map pack preference restored (tiles re-download in background)
 - [ ] Device B: Settings → Sync now → "Backup complete" with no pending queue
+- [ ] Device B: second **Sync now** with no new cloud changes → Technical details **upload queue only (skipped cloud restore)** when cursor matches server (`field-sync-delta`)
 
 ## Sign-off
 
@@ -176,4 +187,4 @@ This writes `DEVICE_SMOKE_SIGNOFF.json` (must match `git HEAD` for `npm run upda
 
 **Engineering follow-up:** file issues for any failed row; attach Sentry event or Settings error text.
 
-**Automated subset (nightly Maestro):** `cross-device-restore-smoke.yaml` with `MAESTRO_SEED_PROFILE=cross_device_b` validates restore UX entry points on simulator (full two-device check remains manual).
+**Automated subset (nightly Maestro):** `cross-device-restore-smoke.yaml` with `MAESTRO_SEED_PROFILE=cross_device_b` validates restore UX entry points on simulator (full two-device check remains manual). `field-sync-delta-smoke.yaml` with `delta_sync_idle` seed exercises §11b UI entry points (airplane / push_only caption remain manual on device).

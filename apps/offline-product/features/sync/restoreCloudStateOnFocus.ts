@@ -1,6 +1,11 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import { loadAppState } from '@/features/state/persistence';
+import {
+  persistFieldSyncCursorFromDelta,
+  probeFieldSyncInboundChanges,
+} from '@/features/sync/fieldSyncCursor';
+import { buildFieldSyncRestoreScope } from '@/features/sync/fieldSyncRestoreScope';
 import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import { restoreCloudMediaFromServer } from '@/features/sync/restoreCloudMediaFromServer';
 import { hydrateLocalSyncMarkersFromServer } from '@/features/sync/hydrateLocalSyncMarkersFromServer';
@@ -8,6 +13,8 @@ import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreL
 import { pruneRedundantPendingUploadActions } from '@/features/sync/pruneRedundantPendingUploadActions';
 import { emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { withFieldSyncSession } from '@/features/sync/runFieldSyncSession';
+import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 export type FocusCloudRestoreResult = {
   activePlots: Plot[];
@@ -24,6 +31,8 @@ export type FocusCloudRestoreResult = {
   fetchFailed: boolean;
   downloadFailed: number;
   totalRestored: number;
+  skippedByDelta?: boolean;
+  incrementalRestore?: boolean;
 };
 
 const FOCUS_PULL_MIN_INTERVAL_MS = 30_000;
@@ -44,14 +53,28 @@ function countFocusRestore(result: Omit<FocusCloudRestoreResult, 'totalRestored'
   );
 }
 
-import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
+function emptyFocusRestoreResult(activePlots: Plot[]): FocusCloudRestoreResult {
+  return {
+    activePlots,
+    plotsRestored: 0,
+    receiptsRestored: 0,
+    declarationsRestored: 0,
+    evidenceRestored: 0,
+    groundTruthRestored: 0,
+    landTitleRestored: 0,
+    devicePreferencesRestored: false,
+    profilePhotoRestored: false,
+    mappingDraftRestored: false,
+    offlinePacksQueued: 0,
+    fetchFailed: false,
+    downloadFailed: 0,
+    totalRestored: 0,
+  };
+}
 
-/**
- * Pull-only cross-device restore for tab/screen focus (no upload or queue drain).
- * Matches the restore phase of `runFieldSyncPipeline` without push steps.
- */
 export async function restoreCloudStateOnFocus(options?: {
   force?: boolean;
+  skipDeltaGate?: boolean;
 }): Promise<FocusCloudRestoreResult | null> {
   if (!hasSyncAuthSession()) return null;
   if (getSyncQueueLockSnapshot().locked) return null;
@@ -61,7 +84,7 @@ export async function restoreCloudStateOnFocus(options?: {
     return null;
   }
 
-  const opened = await withFieldSyncSession(async () => {
+  const opened = await withFieldSyncSession(async (session) => {
     const diskState = await loadAppState();
     const localFarmer = diskState.farmer;
     if (!localFarmer?.id) return null;
@@ -72,20 +95,43 @@ export async function restoreCloudStateOnFocus(options?: {
       localPlots,
     });
 
+    let restoreScope: ReturnType<typeof buildFieldSyncRestoreScope> | undefined;
+
+    if (!options?.skipDeltaGate) {
+      const probe = await probeFieldSyncInboundChanges({
+        accessToken: session.accessToken,
+      });
+      if (!probe.probeFailed && probe.hasCursor && !probe.hasInboundChanges) {
+        if (probe.delta) {
+          await persistFieldSyncCursorFromDelta(probe.delta).catch(() => undefined);
+        }
+        trackEvent(ANALYTICS_EVENTS.FIELD_SYNC_DELTA_SKIPPED, { surface: 'focus_pull' });
+        return { ...emptyFocusRestoreResult(localPlots), skippedByDelta: true };
+      }
+      if (!probe.probeFailed && probe.hasCursor && probe.changeSet && probe.hasInboundChanges) {
+        restoreScope = buildFieldSyncRestoreScope(probe.changeSet);
+        trackEvent(ANALYTICS_EVENTS.FIELD_SYNC_INCREMENTAL_RESTORE, { surface: 'focus_pull' });
+      }
+    }
+
     const media = await restoreCloudMediaFromServer({
       apiFarmerId: farmerId,
       ownedFarmerIds,
       localPlots,
       localFarmer,
       includeDeclarations: true,
+      restoreScope,
     });
 
-    const receiptRestore = await restoreLocalDeliveryReceiptsFromServer({
-      apiFarmerId: farmerId,
-      profileFarmerId: localFarmer.id,
-      ownedFarmerIds,
-      localPlots: media.activePlots,
-    });
+    const receiptRestore =
+      restoreScope && !restoreScope.restoreVouchers
+        ? { restoredCount: 0, fetchFailed: false }
+        : await restoreLocalDeliveryReceiptsFromServer({
+            apiFarmerId: farmerId,
+            profileFarmerId: localFarmer.id,
+            ownedFarmerIds,
+            localPlots: media.activePlots,
+          });
 
     await hydrateLocalSyncMarkersFromServer({
       apiFarmerId: farmerId,
@@ -110,23 +156,23 @@ export async function restoreCloudStateOnFocus(options?: {
       offlinePacksQueued: media.offlinePacksQueued,
       fetchFailed: media.fetchFailed || receiptRestore.fetchFailed,
       downloadFailed: media.downloadFailed,
+      incrementalRestore: media.incrementalRestore === true,
     };
 
-    return {
-      ...partial,
-      totalRestored: countFocusRestore(partial),
-    } satisfies FocusCloudRestoreResult;
+    const probeAfter = await probeFieldSyncInboundChanges({
+      accessToken: session.accessToken,
+    }).catch(() => null);
+    if (probeAfter?.delta) {
+      await persistFieldSyncCursorFromDelta(probeAfter.delta).catch(() => undefined);
+    }
+
+    return { ...partial, totalRestored: countFocusRestore(partial) };
   });
 
   if (!opened.ok) return null;
-
   lastFocusPullAt = now;
   const result = opened.value;
   if (!result) return null;
-
-  if (result.totalRestored > 0) {
-    emitServerPlotSyncChanged();
-  }
-
+  if (result.totalRestored > 0) emitServerPlotSyncChanged();
   return result;
 }

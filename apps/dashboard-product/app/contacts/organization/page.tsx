@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Building2, UserPlus } from 'lucide-react';
 import { AppHeader } from '@/components/layout/app-header';
 import { PermissionGate } from '@/components/common/permission-gate';
+import { ContactStatusPipeline } from '@/components/contacts/contact-status-pipeline';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -221,7 +222,7 @@ function ContactOrganizationPageContent() {
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">{contact.email}</td>
                           <td className="px-4 py-3">
-                            <Badge variant="outline">{getContactStatusLabel(contact.status, t)}</Badge>
+                            <ContactStatusPipeline status={contact.status} t={t} />
                           </td>
                           <td className="px-4 py-3">
                             {contact.consent_status !== 'unknown' ? (

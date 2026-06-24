@@ -7,6 +7,7 @@ import {
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
+import { readPendingCampaignInviteId } from '@/features/campaign/campaignInviteContext';
 import type { Plot } from '@/features/state/AppStateContext';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import { getOAuthErrorContext } from '@/features/auth/oauthFlowError';
@@ -53,8 +54,10 @@ export async function signInAndSyncPlots(params: {
     await saveAndApplyPasswordSession(email, params.password, data.session);
 
     if (params.farmerId) {
+      const campaignId = await readPendingCampaignInviteId();
       const bootstrap = await bootstrapFieldAppProducer({
         farmerId: params.farmerId,
+        campaignId: campaignId ?? undefined,
       });
       if (!bootstrap.ok) {
         await clearPersistedSyncAuth();

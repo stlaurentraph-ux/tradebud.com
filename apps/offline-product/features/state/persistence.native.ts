@@ -210,6 +210,142 @@ export async function initDatabase() {
   await ensurePlotLegalSchemaExtras(db);
   await ensureLocalDeliveryReceiptsSchema(db);
   await ensurePlotMappingDraftsSchema(db);
+  await ensureFieldRosterSchema(db);
+}
+
+export type FieldRosterEntryRow = {
+  farmerId: string;
+  source: 'roster' | 'provisional';
+  fullName: string;
+  village: string;
+  phone: string | null;
+  nationalId: string | null;
+  email: string | null;
+  producerContactId: string | null;
+  campaignId: string | null;
+  assignmentId: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: number;
+  updatedAt: number;
+};
+
+async function ensureFieldRosterSchema(db: SQLite.SQLiteDatabase) {
+  await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS field_roster_entries (
+      farmerId TEXT PRIMARY KEY NOT NULL,
+      source TEXT NOT NULL,
+      fullName TEXT NOT NULL,
+      village TEXT NOT NULL,
+      phone TEXT,
+      nationalId TEXT,
+      email TEXT,
+      producerContactId TEXT,
+      campaignId TEXT,
+      assignmentId TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL
+    );
+  `);
+  try {
+    await db.execAsync('ALTER TABLE field_roster_entries ADD COLUMN assignmentId TEXT;');
+  } catch {
+    // Column already exists.
+  }
+}
+
+function mapFieldRosterRow(row: Record<string, unknown>): FieldRosterEntryRow {
+  return {
+    farmerId: String(row.farmerId),
+    source: row.source === 'roster' ? 'roster' : 'provisional',
+    fullName: String(row.fullName ?? ''),
+    village: String(row.village ?? ''),
+    phone: row.phone != null ? String(row.phone) : null,
+    nationalId: row.nationalId != null ? String(row.nationalId) : null,
+    email: row.email != null ? String(row.email) : null,
+    producerContactId: row.producerContactId != null ? String(row.producerContactId) : null,
+    campaignId: row.campaignId != null ? String(row.campaignId) : null,
+    assignmentId: row.assignmentId != null ? String(row.assignmentId) : null,
+    status:
+      row.status === 'in_progress' || row.status === 'completed'
+        ? row.status
+        : 'pending',
+    createdAt: Number(row.createdAt ?? 0),
+    updatedAt: Number(row.updatedAt ?? 0),
+  };
+}
+
+export async function loadFieldRosterEntries(): Promise<FieldRosterEntryRow[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Record<string, unknown>>(
+    'SELECT * FROM field_roster_entries ORDER BY fullName COLLATE NOCASE ASC, village COLLATE NOCASE ASC;',
+  );
+  return (rows ?? []).map(mapFieldRosterRow);
+}
+
+export async function loadFieldRosterEntryByFarmerId(
+  farmerId: string,
+): Promise<FieldRosterEntryRow | null> {
+  const id = farmerId.trim();
+  if (!id) return null;
+  const db = await getDb();
+  const row = await db.getFirstAsync<Record<string, unknown>>(
+    'SELECT * FROM field_roster_entries WHERE farmerId = ? LIMIT 1;',
+    [id],
+  );
+  return row ? mapFieldRosterRow(row) : null;
+}
+
+export async function persistFieldRosterEntry(entry: FieldRosterEntryRow): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    `
+      INSERT INTO field_roster_entries (
+        farmerId, source, fullName, village, phone, nationalId, email,
+        producerContactId, campaignId, assignmentId, status, createdAt, updatedAt
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(farmerId) DO UPDATE SET
+        source = excluded.source,
+        fullName = excluded.fullName,
+        village = excluded.village,
+        phone = excluded.phone,
+        nationalId = excluded.nationalId,
+        email = excluded.email,
+        producerContactId = excluded.producerContactId,
+        campaignId = excluded.campaignId,
+        assignmentId = excluded.assignmentId,
+        status = excluded.status,
+        updatedAt = excluded.updatedAt
+    `,
+    [
+      entry.farmerId,
+      entry.source,
+      entry.fullName,
+      entry.village,
+      entry.phone,
+      entry.nationalId,
+      entry.email,
+      entry.producerContactId,
+      entry.campaignId,
+      entry.assignmentId,
+      entry.status,
+      entry.createdAt,
+      entry.updatedAt,
+    ],
+  );
+}
+
+export async function updateFieldRosterMemberStatus(
+  farmerId: string,
+  status: FieldRosterEntryRow['status'],
+): Promise<void> {
+  const id = farmerId.trim();
+  if (!id) return;
+  const db = await getDb();
+  await db.runAsync(
+    'UPDATE field_roster_entries SET status = ?, updatedAt = ? WHERE farmerId = ?;',
+    [status, Date.now(), id],
+  );
 }
 
 async function ensurePlotMappingDraftsSchema(db: SQLite.SQLiteDatabase) {

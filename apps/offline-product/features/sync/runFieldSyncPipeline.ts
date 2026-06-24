@@ -50,6 +50,8 @@ import {
   type SyncRunHttpSummary,
 } from '@/features/sync/syncRunHttpTelemetry';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
+import { persistFieldSyncCursorAfterPipeline } from '@/features/sync/fieldSyncCursor';
+import type { FieldSyncRestoreScope } from '@/features/sync/fieldSyncRestoreScope';
 
 export type FieldSyncPipelineParams = {
   accessToken: string;
@@ -63,6 +65,10 @@ export type FieldSyncPipelineParams = {
    * push_only: incremental upload — warm links, prune, enqueue, drain queue only.
    */
   syncMode?: FieldSyncMode;
+  /** Skip cloud pull phase (delta gate / push-only sync). */
+  skipInboundRestore?: boolean;
+  /** Incremental restore scope when delta reports partial inbound changes. */
+  restoreScope?: FieldSyncRestoreScope;
   /** When empty, all queue action types are considered selected. */
   selectedQueueActionTypes: PendingSyncAction['actionType'][];
   allQueueActionTypes: PendingSyncAction['actionType'][];
@@ -163,6 +169,8 @@ async function runFieldSyncPipelineBody(
     maxQueuePasses = 4,
     onPhase,
     syncMode = 'full',
+    skipInboundRestore = false,
+    restoreScope,
   } = params;
 
   const setPhase = (phase: SyncQueuePhase) => {
@@ -177,13 +185,14 @@ async function runFieldSyncPipelineBody(
   let plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
   let backendPlotsForReceipts: unknown[] = [];
 
-  if (syncMode === 'full') {
+  if (syncMode === 'full' && !skipInboundRestore) {
     setPhase('restoring_plots');
     reportSyncStepStart('plot_list', { phase: 'restore', plotCount: syncPlots.length });
     const restoreResult = await restoreLocalPlotsFromServer({
       apiFarmerId,
       ownedFarmerIds: farmerScopeIds,
       localPlots: syncPlots,
+      serverPlotIdsScope: restoreScope?.serverPlotIds,
     });
     if (restoreResult.restoredCount > 0) {
       activePlots = restoreResult.mergedPlots;
@@ -201,12 +210,15 @@ async function runFieldSyncPipelineBody(
       localPlots: activePlots,
     });
 
-    const receiptRestoreResult = await restoreLocalDeliveryReceiptsFromServer({
-      apiFarmerId,
-      profileFarmerId: syncFarmer.id,
-      ownedFarmerIds: farmerScopeIds,
-      localPlots: activePlots,
-    });
+    const receiptRestoreResult =
+      restoreScope && !restoreScope.restoreVouchers
+        ? { restoredCount: 0, fetchFailed: false, vouchers: [] as unknown[] }
+        : await restoreLocalDeliveryReceiptsFromServer({
+            apiFarmerId,
+            profileFarmerId: syncFarmer.id,
+            ownedFarmerIds: farmerScopeIds,
+            localPlots: activePlots,
+          });
     if (receiptRestoreResult.restoredCount > 0) {
       outcome.receiptsRestored = receiptRestoreResult.restoredCount;
     }
@@ -235,6 +247,7 @@ async function runFieldSyncPipelineBody(
       ownedFarmerIds: farmerScopeIds,
       localFarmer: syncFarmer,
       localPlots: activePlots,
+      restoreScope,
     });
     if (cloudRestoreResult.declarationsRestored > 0) {
       outcome.declarationsRestored = cloudRestoreResult.declarationsRestored;
@@ -569,7 +582,13 @@ async function runFieldSyncPipelineBody(
     remainingPending: outcome.remainingPending ?? 0,
     plotsRestored: outcome.plotsRestored ?? 0,
     skipQueueDrain,
+    skipInboundRestore,
+    incrementalRestore: restoreScope != null,
   });
+
+  if (!outcome.plotsFetchFailed && !outcome.queueFetchFailed) {
+    await persistFieldSyncCursorAfterPipeline(params.accessToken).catch(() => undefined);
+  }
 
   // Refresh Harvests / My Plots after every completed sync, including restore-only runs.
   emitServerPlotSyncChanged();

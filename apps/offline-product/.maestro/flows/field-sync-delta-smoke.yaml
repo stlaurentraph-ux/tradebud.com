@@ -1,0 +1,19 @@
+appId: com.tracebud.app
+---
+# DEVICE_SMOKE §11 subset — field-sync-delta UI entry points.
+# Bootstrap: MAESTRO_SEED_PROFILE=delta_sync_idle before this flow (nightly runner).
+# Manual on device: mid-sync airplane toggle, push_only caption after unchanged cloud,
+# incremental receipt restore on Device B (§11 + §12 delta rows).
+- launchApp
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    id: "settings-cloud-parity-section"
+- assertVisible:
+    text: ".*Backup.*"
+- tapOn:
+    id: "settings-backup-tech-toggle"
+    optional: true
+- tapOn:
+    id: "settings-sync-now"
+    optional: true
