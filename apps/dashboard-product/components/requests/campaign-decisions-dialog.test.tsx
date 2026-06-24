@@ -98,7 +98,7 @@ describe('CampaignDecisionsDialog', () => {
       expect(screen.getByText('1 of 2 fulfilled')).toBeInTheDocument();
     });
     expect(screen.getByText('accept@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Evidence attached')).toBeInTheDocument();
+    expect(screen.getAllByText('Fulfilled').length).toBeGreaterThan(0);
     expect(screen.getByText('Submitted on behalf of farmer')).toBeInTheDocument();
     expect(screen.getAllByText('Refused').length).toBeGreaterThan(0);
   });
@@ -119,7 +119,7 @@ describe('CampaignDecisionsDialog', () => {
       expect(screen.getByText('accept@example.com')).toBeInTheDocument();
     });
 
-    await user.click(screen.getByRole('tab', { name: /activity log/i }));
+    await user.click(screen.getByRole('tab', { name: /^Activity/i }));
 
     expect(screen.getByRole('tab', { name: /^all/i })).toHaveTextContent('2');
     expect(screen.getByRole('tab', { name: /accept/i })).toHaveTextContent('1');

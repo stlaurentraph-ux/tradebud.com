@@ -346,3 +346,35 @@ export async function mockExporterPackageReadinessApis(
     await route.continue();
   });
 }
+
+export async function mockPlotGeometryApprovalApis(
+  page: Page,
+  options: { approved: boolean },
+): Promise<void> {
+  const approvedAt = options.approved ? new Date().toISOString() : null;
+
+  await page.route('**/api/plots/*/approve-geometry', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ geometry_approved_at: new Date().toISOString() }),
+    });
+  });
+
+  await page.route('**/api/plots/*/map-preview', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry_approved_at: approvedAt,
+        geometry_capture: {
+          geometryConfidenceTier: options.approved ? 'high' : 'low',
+          capturedAt: new Date().toISOString(),
+          captureMethod: 'gps_walk',
+          vertexCount: 4,
+          areaSqM: 5000,
+        },
+      }),
+    });
+  });
+}

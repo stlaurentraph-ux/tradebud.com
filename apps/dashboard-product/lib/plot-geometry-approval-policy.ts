@@ -11,9 +11,7 @@ export type PlotGeometryApprovalState = {
 
 const APPROVAL_ROLES: TenantRole[] = [
   'exporter',
-  'compliance_manager',
   'country_reviewer',
-  'admin',
 ];
 
 export function canApprovePlotGeometry(role: TenantRole | null | undefined): boolean {
