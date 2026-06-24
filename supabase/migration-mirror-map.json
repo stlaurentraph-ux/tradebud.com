@@ -116,6 +116,26 @@
       "supabase": "20260622130000_harvest_transaction_client_event_id.sql",
       "backend": "tb_v16_059_harvest_transaction_client_event_id.sql",
       "purpose": "harvest_transaction_client_event_id"
+    },
+    {
+      "supabase": "20260624140000_delivery_trip_ref.sql",
+      "backend": "tb_v16_060_delivery_trip_ref.sql",
+      "purpose": "delivery_trip_ref"
+    },
+    {
+      "supabase": "20260624160000_campaign_recipient_farmer_claim.sql",
+      "backend": "tb_v16_062_campaign_recipient_farmer_claim.sql",
+      "purpose": "campaign_recipient_farmer_claim"
+    },
+    {
+      "supabase": "20260624180000_campaign_recipient_invites.sql",
+      "backend": "tb_v16_061_campaign_recipient_invites.sql",
+      "purpose": "campaign_recipient_invites"
+    },
+    {
+      "supabase": "20260624190000_enumeration_mapping_region.sql",
+      "backend": "tb_v16_062_enumeration_mapping_region.sql",
+      "purpose": "enumeration_mapping_region"
     }
   ],
   "supabaseOnly": [

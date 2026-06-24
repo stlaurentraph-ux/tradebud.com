@@ -8,7 +8,7 @@ import { isMalformedEudrDdsStatusPayloadError } from '@/lib/eudr-dds-status-feed
 import type { AdminOrgType, AdminStatus } from '@/lib/admin-service';
 
 type SupplyChainRole = User['active_role'] | null | undefined;
-type TranslateFn = (key: string) => string;
+export type TranslateFn = (key: string) => string;
 export type WorkflowBreadcrumb = { label: string; href?: string };
 
 const WORKFLOW_LABELS: Record<string, string> = {
@@ -5309,6 +5309,20 @@ export function getOutreachResponsesSummary(accepted: number, pending: number, t
   );
 }
 
+export function getOutreachResponsesSummaryWithTotal(
+  accepted: number,
+  pending: number,
+  total: number,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.responses.summary_with_total',
+    '{{accepted}} / {{total}} accepted',
+    t,
+    { accepted, pending, total },
+  );
+}
+
 export function getOutreachViewTimelineLabel(t?: TranslateFn): string {
   return wf('workflow.outreach.action.view_timeline', 'View timeline', t);
 }
@@ -5334,6 +5348,210 @@ export function getOutreachWizardDescription(role?: SupplyChainRole, t?: Transla
       : 'Create a new request campaign for producer, plot, or evidence data',
     t,
   );
+}
+
+export function getInboundCampaignBannerTitle(t?: TranslateFn): string {
+  return wf('workflow.inbox.inbound_banner.title', 'You have a pending data request', t);
+}
+
+export function getInboundCampaignBannerMessage(
+  t?: TranslateFn,
+  values?: { fromOrg?: string; title?: string; dueDate?: string },
+): string {
+  return wf(
+    'workflow.inbox.inbound_banner.message',
+    '{{fromOrg}} has requested {{title}} — due {{dueDate}}',
+    t,
+    values as Record<string, string>,
+  );
+}
+
+export function getInboundCampaignBannerCta(t?: TranslateFn): string {
+  return wf('workflow.inbox.inbound_banner.cta', 'Fulfil request now', t);
+}
+
+export function getCampaignRecipientTimelineTitle(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.title', 'Recipient timeline', t);
+}
+
+export function getCampaignRecipientTimelineDescription(
+  campaignTitle?: string | null,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.timeline.description',
+    campaignTitle ? `Recipients for "${campaignTitle}"` : 'Recipient onboarding and decision status',
+    t,
+  );
+}
+
+export function getCampaignRecipientTimelineLoading(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.loading', 'Loading recipient timeline...', t);
+}
+
+export function getCampaignRecipientTimelineError(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.error', 'Could not load recipients. Please try again.', t);
+}
+
+export function getCampaignRecipientTimelineTitle2(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.title2', 'Timeline', t);
+}
+
+export function getCampaignRecipientTimelineTabRecipients(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.tab.recipients', 'Recipients', t);
+}
+
+export function getCampaignRecipientTimelineTabActivity(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.tab.activity', 'Activity', t);
+}
+
+export function getCampaignRecipientTimelineEmptyRecipients(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.empty.recipients', 'No recipients yet.', t);
+}
+
+export function getCampaignRecipientTimelineEmptyFiltered(t?: TranslateFn): string {
+  return wf(
+    'workflow.outreach.timeline.empty.filtered',
+    'No recipients match this filter.',
+    t,
+  );
+}
+
+export function getCampaignRecipientTimelineEmptyActivity(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.empty.activity', 'No decisions recorded yet.', t);
+}
+
+export function getCampaignRecipientTimelineFilterLabel(
+  filter: import('@/lib/campaign-recipient-timeline').CampaignRecipientFilter,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    all: 'workflow.outreach.timeline.filter.all',
+    invite_sent: 'workflow.outreach.timeline.filter.invite_sent',
+    signed_up: 'workflow.outreach.timeline.filter.signed_up',
+    awaiting_response: 'workflow.outreach.timeline.filter.awaiting_response',
+    fulfilled: 'workflow.outreach.timeline.filter.fulfilled',
+    refused: 'workflow.outreach.timeline.filter.refused',
+  };
+  const fallbackMap: Record<string, string> = {
+    all: 'All',
+    invite_sent: 'Invited',
+    signed_up: 'Signed up',
+    awaiting_response: 'Awaiting response',
+    fulfilled: 'Fulfilled',
+    refused: 'Refused',
+  };
+  const key = keyMap[filter] ?? 'workflow.outreach.timeline.filter.all';
+  return wf(key, fallbackMap[filter] ?? filter, t);
+}
+
+export function getCampaignRecipientTimelineCopyEmailLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.copy_email', 'Copy email address', t);
+}
+
+export function getCampaignRecipientTimelineLastActivityLabel(
+  relativeTime: string,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.timeline.last_activity',
+    'Last activity {{relativeTime}}',
+    t,
+    { relativeTime },
+  );
+}
+
+export function getCampaignRecipientTimelineLatestDecisionLabel(
+  relativeTime: string,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.timeline.latest_decision',
+    'Last decision {{relativeTime}}',
+    t,
+    { relativeTime },
+  );
+}
+
+export function getCampaignRecipientTimelineLoadMoreDecisions(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.load_more', 'Load more decisions', t);
+}
+
+export function getCampaignRecipientOnboardingStatusLabel(
+  status: import('@/lib/campaign-recipient-timeline').CampaignRecipientOnboardingStatus,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    fulfilled: 'workflow.outreach.onboarding_status.fulfilled',
+    accepted: 'workflow.outreach.onboarding_status.accepted',
+    refused: 'workflow.outreach.onboarding_status.refused',
+    signed_up: 'workflow.outreach.onboarding_status.signed_up',
+    invite_sent: 'workflow.outreach.onboarding_status.invite_sent',
+    on_platform: 'workflow.outreach.onboarding_status.on_platform',
+  };
+  const fallbackMap: Record<string, string> = {
+    fulfilled: 'Fulfilled',
+    accepted: 'Accepted',
+    refused: 'Refused',
+    signed_up: 'Signed up',
+    invite_sent: 'Invite sent',
+    on_platform: 'On platform',
+  };
+  const key = keyMap[status] ?? 'workflow.outreach.onboarding_status.unknown';
+  return wf(key, fallbackMap[status] ?? status, t);
+}
+
+export function getCampaignRecipientFunnelProgressLabel(
+  t?: TranslateFn,
+  values?: { fulfilled?: number; total?: number; percent?: number },
+): string {
+  return wf(
+    'workflow.outreach.funnel.progress',
+    '{{fulfilled}} of {{total}} fulfilled ({{percent}}%)',
+    t,
+    values as Record<string, number> | undefined,
+  );
+}
+
+export function getCampaignRecipientFunnelStatLabel(
+  key: import('@/lib/campaign-recipient-timeline').CampaignRecipientProgressStepId,
+  t?: TranslateFn,
+  values?: { count?: number },
+): string {
+  const keyMap: Record<string, string> = {
+    invited: 'workflow.outreach.funnel.stat.invited',
+    joined: 'workflow.outreach.funnel.stat.joined',
+    responded: 'workflow.outreach.funnel.stat.responded',
+    fulfilled: 'workflow.outreach.funnel.stat.fulfilled',
+  };
+  const fallbackMap: Record<string, string> = {
+    invited: '{{count}} invited',
+    joined: '{{count}} joined',
+    responded: '{{count}} responded',
+    fulfilled: '{{count}} fulfilled',
+  };
+  const labelKey = keyMap[key] ?? 'workflow.outreach.funnel.stat.unknown';
+  return wf(labelKey, fallbackMap[key] ?? key, t, values as Record<string, number> | undefined);
+}
+
+export function getCampaignRecipientProgressStepLabel(
+  id: import('@/lib/campaign-recipient-timeline').CampaignRecipientProgressStepId,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    invited: 'workflow.outreach.progress_step.invited',
+    joined: 'workflow.outreach.progress_step.joined',
+    responded: 'workflow.outreach.progress_step.responded',
+    fulfilled: 'workflow.outreach.progress_step.fulfilled',
+  };
+  const fallbackMap: Record<string, string> = {
+    invited: 'Invited',
+    joined: 'Joined',
+    responded: 'Responded',
+    fulfilled: 'Fulfilled',
+  };
+  const labelKey = keyMap[id] ?? 'workflow.outreach.progress_step.unknown';
+  return wf(labelKey, fallbackMap[id] ?? id, t);
 }
 
 export function getComplianceHubScoreLabel(t?: TranslateFn): string {
@@ -9473,7 +9691,7 @@ function resolveContactsAudience(
 }
 
 export function getContactsStatLabel(
-  stat: 'total' | 'active' | 'blocked' | 'organizations' | 'people',
+  stat: 'total' | 'active' | 'blocked' | 'organizations' | 'people' | 'submitted',
   roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
   t?: TranslateFn,
 ): string {
@@ -9499,6 +9717,7 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'workflow.contacts.stat.blocked_exporter'
           : 'workflow.contacts.stat.blocked',
+    submitted: 'workflow.contacts.stat.submitted',
   } as const;
   const fallbackMap = {
     total:
@@ -9521,6 +9740,7 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'Supplier Blockers'
           : 'Blocked',
+    submitted: 'Data Submitted',
   } as const;
   return wf(keyMap[stat], fallbackMap[stat], t);
 }

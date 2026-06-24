@@ -123,6 +123,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/requests/campaigns/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public campaign invite preview for field-app smart links
+         * @description Returns org name, request title, and due date for a sent campaign. Used before farmer sign-in to display context for QR-code smart links.
+         */
+        get: operations["getPublicCampaignPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/plots": {
         parameters: {
             query?: never;
@@ -3328,6 +3348,38 @@ export interface operations {
             };
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
+            404: components["responses"]["BadRequest"];
+        };
+    };
+    getPublicCampaignPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preview?: {
+                            campaignId: string;
+                            title: string;
+                            fromOrg: string;
+                            /** Format: date-time */
+                            dueAt?: string | null;
+                            senderTenantId: string;
+                        };
+                    };
+                };
+            };
             404: components["responses"]["BadRequest"];
         };
     };

@@ -252,6 +252,35 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/BadRequest"
+  /v1/public/requests/campaigns/{id}/preview:
+    get:
+      tags: [Requests Public]
+      operationId: getPublicCampaignPreview
+      summary: Public campaign invite preview for field-app smart links
+      description: >
+        Returns org name, request title, and due date for a sent campaign.
+        Used before farmer sign-in to display context for QR-code smart links.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Campaign preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  preview:
+                    type: object
+                    properties:
+                      campaignId: { type: string }
+                      title: { type: string }
+                      fromOrg: { type: string }
+                      dueAt: { type: string, format: date-time, nullable: true }
+                      senderTenantId: { type: string }
+                    required: [campaignId, title, fromOrg, senderTenantId]
+        "404":
+          $ref: "#/components/responses/BadRequest"
   /v1/plots:
     post:
       tags: [Plots]

@@ -380,7 +380,7 @@ export class FieldEnumerationService {
 
   private mapContactToPackMember(row: ContactRow & { plot_count: string }) {
     const village =
-      villageFromContactTags(row.tags) ?? row.organization?.trim() || null;
+      villageFromContactTags(row.tags) ?? (row.organization?.trim() || null);
     return {
       farmerId: String(row.farmer_profile_id),
       fullName: row.full_name?.trim() || 'Producer',
