@@ -175,12 +175,35 @@ function assertCrossDeviceRestoreFlow(manifest) {
   }
 }
 
+function assertOAuthMaestroFlows(manifest) {
+  const signInSheet = manifest.nightlyFlows.find(
+    (item) => item.flowFile === 'oauth-sign-in-sheet-smoke.yaml',
+  );
+  if (!signInSheet) {
+    throw new Error('nightly smoke must include oauth-sign-in-sheet-smoke.yaml (DEVICE_SMOKE §4 subset)');
+  }
+  if (signInSheet.seedProfile !== 'backed_up_offline') {
+    throw new Error('oauth-sign-in-sheet-smoke must use seedProfile backed_up_offline');
+  }
+  const callbackMissing = manifest.nightlyFlows.find(
+    (item) => item.flowFile === 'oauth-callback-missing-url-smoke.yaml',
+  );
+  if (!callbackMissing) {
+    throw new Error('nightly smoke must include oauth-callback-missing-url-smoke.yaml');
+  }
+  const seed = read('scripts/seed-maestro-simulator.mjs');
+  if (!seed.includes('backed_up_offline')) {
+    throw new Error('seed-maestro-simulator.mjs must support backed_up_offline profile');
+  }
+}
+
 function main() {
   const manifest = loadJson('qa/automation-baselines/maestro-nightly-smoke.json');
   assertManifestShape(manifest);
   assertFlowsBaseline(manifest);
   assertCrossDeviceRestoreFlow(manifest);
   assertSignedOutBackupFlow(manifest);
+  assertOAuthMaestroFlows(manifest);
   assertRunnerScripts(manifest);
   assertWorkflowSchedule(manifest);
   assertPackageScripts();

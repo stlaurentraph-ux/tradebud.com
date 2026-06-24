@@ -9,6 +9,7 @@ import { isExistingAuthUserAtSignup } from '@/features/auth/oauthExistingAccount
 import { deriveDisplayNameFromEmail } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile, getFieldAppEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import { fieldAppBlocksDashboardOAuthSignIn } from '@/features/auth/fieldAppEligibility';
+import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
@@ -109,6 +110,13 @@ export async function completeOAuthFarmerSession(params: {
     params.session.access_token,
     params.session.expires_at,
   );
+
+  trackOAuthStep('session_persist', {
+    provider: params.session.user.identities?.some((row) => row.provider === 'apple')
+      ? 'apple'
+      : 'google',
+    path: 'native',
+  });
 
   void runPostOAuthConnectTasks({
     fullName: nameFromSession,

@@ -1534,6 +1534,7 @@ export default function SettingsScreen() {
                       variant="primary"
                       size="md"
                       fullWidth
+                      testID="settings-open-sign-in"
                       onPress={() =>
                         openSignIn({
                           variant: 'sync',

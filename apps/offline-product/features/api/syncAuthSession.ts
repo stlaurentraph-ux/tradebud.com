@@ -14,8 +14,8 @@ import {
   saveOAuthAccessTokenCache,
   type SyncAuthCredentials,
 } from '@/features/security/syncAuthStorage';
-import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
-import { clearOAuthCallbackDedupState } from '@/features/auth/oauthCallbackUrl';
+import { mapPasswordSignInError, mapSetPasswordError } from '@/features/auth/mapAuthError';
+import { clearOAuthOrchestratorState } from '@/features/auth/oauthOrchestrator';
 import { getFieldAppEmailFromSession } from '@/features/auth/oauthSession';
 import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import {
@@ -505,7 +505,7 @@ export async function clearPersistedSyncAuth(): Promise<void> {
     } finally {
       supabaseClient = null;
     }
-    clearOAuthCallbackDedupState();
+    clearOAuthOrchestratorState();
   });
 }
 
@@ -566,8 +566,8 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
     let accessToken: string | null;
     try {
       accessToken = await getAccessTokenFromSupabase();
-    } catch {
-      return null;
+    } catch (error) {
+      throw error;
     }
     if (!accessToken) {
       return null;
@@ -577,7 +577,7 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
       refresh_token: currentRefreshToken,
     });
     if (error) {
-      return null;
+      throw new Error(mapSetPasswordError(error));
     }
     return supabase;
   }

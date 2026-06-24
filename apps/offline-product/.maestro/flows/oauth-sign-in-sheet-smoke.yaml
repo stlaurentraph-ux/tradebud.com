@@ -1,0 +1,17 @@
+appId: com.tracebud.app
+---
+# DEVICE_SMOKE §4 subset — OAuth sign-in sheet wiring (does not complete Google/Apple UI).
+# Bootstrap: MAESTRO_SEED_PROFILE=backed_up_offline (signed out, English locale).
+- launchApp
+- tapOn:
+    id: "tab-settings"
+- tapOn:
+    id: "settings-open-sign-in"
+- assertVisible:
+    id: "sign-in-sheet"
+- assertVisible:
+    id: "sign-in-oauth-google"
+- assertVisible:
+    id: "sign-in-oauth-apple"
+- assertVisible:
+    id: "sign-in-use-email"

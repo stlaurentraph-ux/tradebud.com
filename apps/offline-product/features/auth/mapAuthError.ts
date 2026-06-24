@@ -12,7 +12,10 @@ export type SignInErrorCode =
   | 'settings_password_too_short'
   | 'settings_password_mismatch'
   | 'settings_password_weak'
-  | 'settings_password_same_as_old';
+  | 'settings_password_same_as_old'
+  | 'settings_password_save_failed'
+  | 'settings_password_reauth_required'
+  | 'settings_password_network';
 
 export function mapPasswordSignInError(error: AuthError | { message?: string; code?: string }): SignInErrorCode {
   const msg = (error.message ?? '').toLowerCase();
@@ -33,23 +36,57 @@ export function mapPasswordSignInError(error: AuthError | { message?: string; co
 
 export function mapSetPasswordError(
   error: { message?: string; code?: string },
-): SignInErrorCode | 'settings_password_sign_in_required' | 'settings_password_no_email' {
+):
+  | SignInErrorCode
+  | 'settings_password_sign_in_required'
+  | 'settings_password_no_email'
+  | 'settings_password_save_failed'
+  | 'settings_password_reauth_required'
+  | 'settings_password_network' {
   const msg = (error.message ?? '').toLowerCase();
   const code = (error.code ?? '').toLowerCase();
 
+  if (
+    msg.includes('reauth') ||
+    msg.includes('re-authenticate') ||
+    msg.includes('recent login') ||
+    code === 'insufficient_aal'
+  ) {
+    return 'settings_password_reauth_required';
+  }
   if (msg.includes('at least') && msg.includes('password')) {
     return 'settings_password_too_short';
   }
-  if (msg.includes('weak') || code === 'weak_password') {
+  if (
+    msg.includes('weak') ||
+    msg.includes('pwned') ||
+    msg.includes('breach') ||
+    msg.includes('easy to guess') ||
+    code === 'weak_password'
+  ) {
     return 'settings_password_weak';
   }
   if (msg.includes('different from the old') || msg.includes('should be different')) {
     return 'settings_password_same_as_old';
   }
-  if (msg.includes('session') || msg.includes('jwt') || code === 'session_not_found') {
+  if (
+    msg.includes('session') ||
+    msg.includes('jwt') ||
+    msg.includes('not authenticated') ||
+    msg.includes('auth session missing') ||
+    code === 'session_not_found'
+  ) {
     return 'settings_password_sign_in_required';
   }
-  return 'sign_in_failed';
+  if (
+    msg.includes('network') ||
+    msg.includes('fetch') ||
+    msg.includes('timeout') ||
+    msg.includes('connection')
+  ) {
+    return 'settings_password_network';
+  }
+  return 'settings_password_save_failed';
 }
 
 export function mapSignUpError(error: AuthError | { message?: string }): SignInErrorCode | string {
@@ -131,6 +168,12 @@ export function formatSignInErrorMessage(
       return t('settings_password_sign_in_required');
     case 'settings_password_no_email':
       return t('settings_password_no_email');
+    case 'settings_password_save_failed':
+      return t('settings_password_save_failed');
+    case 'settings_password_reauth_required':
+      return t('settings_password_reauth_required');
+    case 'settings_password_network':
+      return t('settings_password_network');
     case 'sign_in_session_expired':
       return t('sign_in_session_expired');
     default:

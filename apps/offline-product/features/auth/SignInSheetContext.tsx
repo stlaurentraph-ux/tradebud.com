@@ -45,9 +45,11 @@ import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { clearFieldProducerBootstrapCache } from '@/features/api/fieldAppBootstrap';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
-import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
-import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
-import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
+import {
+  completeOAuthFromDeepLink,
+  deliverOAuthDeepLink,
+  isOAuthCallbackUrl,
+} from '@/features/auth/oauthOrchestrator';
 import { alignFarmerWithAuthUser } from '@/features/auth/alignFarmerWithAuthUser';
 import {
   bootstrapFarmerProfile,
@@ -68,7 +70,7 @@ import {
   postAuthSyncPlotCountHint,
   shouldOfferPostAuthSync,
 } from '@/features/sync/postAuthSyncOffer';
-import type { OAuthProvider } from '@/features/auth/oauthSignIn';
+import type { OAuthProvider } from '@/features/auth/oauthOrchestrator';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -567,38 +569,25 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sub = Linking.addEventListener('url', (event) => {
       if (!isOAuthCallbackUrl(event.url)) return;
-      if (deliverOAuthCallbackUrl(event.url)) return;
+      if (deliverOAuthDeepLink(event.url)) return;
 
       void (async () => {
-        try {
-          await hydrateSyncAuthFromSettings();
-          if (hasSyncAuthSession()) {
-            const { email: signedInEmail } = getAuthCredentials();
-            if (signedInEmail) setEmail(signedInEmail);
-            setIsSignedIn(true);
-            await closeAllAuthSurfaces();
-            void syncLocalFarmerFromAuth();
-            return;
-          }
-
-          const session = await sessionFromOAuthCallbackUrl(event.url);
-          const result = await completeOAuthFarmerSession({
-            session,
-            farmerId: farmer?.id,
-            localPlots: plots,
-          });
-          if (!result.ok || !hasSyncAuthSession()) return;
+        const outcome = await completeOAuthFromDeepLink({
+          url: event.url,
+          farmerId: farmer?.id,
+          localPlots: plots,
+        });
+        if (outcome.status === 'already_signed_in' || outcome.status === 'completed') {
+          if (!hasSyncAuthSession()) return;
           trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'oauth', source: 'deep_link' });
           const { email: signedInEmail } = getAuthCredentials();
           if (signedInEmail) setEmail(signedInEmail);
           setIsSignedIn(true);
           await closeAllAuthSurfaces();
           void syncLocalFarmerFromAuth();
-          if (result.apiUnreachable) {
+          if (outcome.status === 'completed' && outcome.result.apiUnreachable) {
             Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
           }
-        } catch {
-          // Deep-link handler is best-effort when no in-app OAuth waiter is active.
         }
       })();
     });
@@ -708,6 +697,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           method: provider,
           source: 'in_app',
           reason: result.message,
+          ...(result.oauthStep ? { oauth_step: result.oauthStep } : {}),
+          ...(result.oauthPath ? { oauth_path: result.oauthPath } : {}),
         });
         return;
       }
@@ -863,7 +854,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
               accessibilityLabel={t('sign_in_skip')}
               onPress={closeSignIn}
             />
-            <View style={authSheetStyles.card}>
+            <View testID="sign-in-sheet" style={authSheetStyles.card}>
               <View style={authSheetStyles.headerRow}>
                 {emailMode ? (
                   <Pressable
@@ -901,6 +892,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                     onApple={() => void handleOAuthSignIn('apple')}
                   />
                   <Pressable
+                    testID="sign-in-use-email"
                     onPress={() => {
                       setHint(null);
                       setEmailMode(true);

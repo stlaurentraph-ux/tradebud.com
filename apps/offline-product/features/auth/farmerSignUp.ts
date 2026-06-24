@@ -5,6 +5,8 @@ import { getFieldAppEmailConfirmUrl } from '@/features/auth/fieldAppAuthUrls';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
 import { mapSignUpError } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
+import { getOAuthErrorContext } from '@/features/auth/oauthFlowError';
+import { trackOAuthFailure } from '@/features/auth/oauthTelemetry';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
 import {
   hasSyncAuthSession,
@@ -87,6 +89,13 @@ export async function signUpWithOAuthAndSyncPlots(params: {
     if (hasSyncAuthSession()) {
       return { ok: true, existingAccount: true };
     }
-    return { ok: false, message: mapOAuthErrorToCode(e) };
+    trackOAuthFailure(params.provider, e);
+    const ctx = getOAuthErrorContext(e);
+    return {
+      ok: false,
+      message: mapOAuthErrorToCode(e),
+      ...(ctx.step ? { oauthStep: ctx.step } : {}),
+      ...(ctx.path ? { oauthPath: ctx.path } : {}),
+    };
   }
 }

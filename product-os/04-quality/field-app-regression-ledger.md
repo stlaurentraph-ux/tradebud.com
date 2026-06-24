@@ -25,6 +25,7 @@ Living list of **bug classes that have reached preview/production more than once
 | FR-011 | iPad missing land docs/photos | Plot count parity OK but media not compared | `measureCloudParitySummary` media + `ui-reload-guard` | §12 documents + field photos |
 | FR-012 | Unknown buyer email blocks harvest | Pre-invite API returned 400 | `deliveryBuyerInviteMessages.test.ts` + `network-routing-delivery.int.spec.ts` | §5 buyer invite |
 | FR-013 | Sync now floods audit 401/429 / duplicate audit_sync rows | Immediate POST + re-enqueue during sync prep | `cloud-audit-sync-guard.mjs` + `queueFieldCloudAuditSync.test.ts` | §8 Sync now |
+| FR-014 | Google wizard completes → “Could not sign in with Google or Apple” on iOS | Native Google fails with no browser fallback; stale native URL scheme; SSO NULL token columns | `ios-oauth-guard.mjs` + `oauth:verify:ios` + `oauth-sso-health-check.mjs` + `oauth-orchestrator-guard.mjs` + Maestro `oauth-*-smoke.yaml` | §4 OAuth sign-in |
 
 ## Release gate (preview OTA)
 

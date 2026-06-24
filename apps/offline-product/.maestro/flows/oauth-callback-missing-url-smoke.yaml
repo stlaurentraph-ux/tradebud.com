@@ -1,0 +1,9 @@
+appId: com.tracebud.app
+---
+# OAuth cold-start callback route — missing deep link shows recoverable error UI.
+- openLink: tracebudoffline://auth/callback
+- assertVisible:
+    id: "auth-callback-error"
+- assertVisible:
+    id: "auth-callback-error-title"
+    text: ".*Could not finish sign-in.*"

@@ -42,10 +42,11 @@ Run after `npm run qa:full` passes. Use a **physical device** for GPS, camera, a
 - [ ] **Android:** Google Cloud → Android OAuth client has package `com.tracebud.app` + EAS upload **SHA-1** (expo.dev → Credentials → Android)
 - [ ] **Android:** Same OAuth client → **Advanced settings** → **Enable custom URI scheme** (fixes Error 400 “Custom URI scheme is not enabled”). Wait ~5 min; no rebuild needed for this toggle alone.
 - [ ] **Android smoke (required before pilot APK):** On a physical device with the preview APK, tap Google sign-in once — account picker must appear (not “Access blocked”). CI `oauth:verify:android` does not cover this.
+- [ ] **iOS smoke (required before preview OTA):** On a physical iPhone with the preview build, tap Google sign-in once — account picker → return to app → signed in (not “Could not sign in with Google or Apple”). CI `oauth:verify:ios` does not cover this.
 - [ ] Google sign-in → backup offer when unsynced plots exist; upload succeeds
 - [ ] iOS: Apple sign-in completes (or skip on Android)
 - [ ] New OAuth account without display name → name step in create-account wizard → save → Home
-- [ ] Engineering: `npm run oauth:verify:android` passes before Android preview build; `npm run release:preflight:production:online` before store submit
+- [ ] Engineering: `npm run oauth:verify:android` passes before Android preview build; `npm run oauth:verify:ios` before iOS preview OTA; `npm run release:preflight:production:online` before store submit
 
 ## 5. Harvest (online + offline queue)
 
