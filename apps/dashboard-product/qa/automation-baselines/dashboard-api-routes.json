@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T08:20:29.467Z",
+  "generatedAt": "2026-06-24T08:35:28.512Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -521,14 +521,6 @@
       "failClosed": true
     },
     {
-      "dashboardPath": "/api/launch/geometry-policy",
-      "category": "backend-proxy",
-      "backendPaths": [
-        "/v1/launch/geometry-policy"
-      ],
-      "failClosed": true
-    },
-    {
       "dashboardPath": "/api/launch/onboarding",
       "category": "backend-proxy",
       "backendPaths": [
@@ -558,14 +550,6 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/plots"
-      ],
-      "failClosed": true
-    },
-    {
-      "dashboardPath": "/api/plots/[id]/approve-geometry",
-      "category": "backend-proxy",
-      "backendPaths": [
-        "/v1/plots/{id}/approve-geometry"
       ],
       "failClosed": true
     },

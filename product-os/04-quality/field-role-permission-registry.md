@@ -11,9 +11,13 @@ Guard: `role-permission-guard.mjs`
 | `farmer` | Own plots, harvests, evidence | Default field app |
 | `agent` | Field capture on behalf of farmers | Allowed when JWT role is agent |
 
+## Dual-use (dashboard + field app)
+
+Cooperative, exporter, and other dashboard workspace roles **may** sign into the field app with the same OAuth identity. First sign-in sets `field_app_linked` via `ensureFarmerOAuthProfile`. Enforced in `fieldAppEligibility.ts`.
+
 ## Blocked at field app sign-in
 
-Dashboard workspace roles (`exporter`, `cooperative`, `admin`, `compliance_manager`, `country_reviewer`) unless `field_app_linked` bootstrap completed. Enforced in `fieldAppEligibility.ts`.
+- Sandbox demo emails and OAuth identity mismatch (see `hasOAuthIdentityEmailMismatch`).
 
 ## Permissions (MVP)
 
