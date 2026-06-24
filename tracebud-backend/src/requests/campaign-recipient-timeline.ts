@@ -6,8 +6,17 @@ export type CampaignRecipientOnboardingStatus =
   | 'invite_sent'
   | 'on_platform';
 
+export type CampaignRecipientTargetContact = {
+  contact_id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+};
+
 export type CampaignRecipientInviteRow = {
-  recipient_email: string;
+  contact_id?: string | null;
+  recipient_email: string | null;
+  delivery_channel?: string | null;
   status: string;
   claimed_tenant_id: string | null;
   claimed_farmer_profile_id?: string | null;
@@ -22,7 +31,10 @@ export type CampaignRecipientDecisionRow = {
 };
 
 export type CampaignRecipientTimelineEntry = {
-  recipient_email: string;
+  contact_id: string | null;
+  recipient_email: string | null;
+  recipient_label: string;
+  delivery_channel: string | null;
   onboarding_status: CampaignRecipientOnboardingStatus;
   invite_status: string | null;
   decision: 'accept' | 'refuse' | null;
@@ -88,16 +100,23 @@ export function deriveCampaignRecipientOnboardingStatus(
 }
 
 export function buildCampaignRecipientTimeline(input: {
-  targetEmails: readonly string[];
+  targetEmails?: readonly string[];
+  targetContacts?: readonly CampaignRecipientTargetContact[];
   invites: readonly CampaignRecipientInviteRow[];
   decisions: readonly CampaignRecipientDecisionRow[];
 }): {
   recipients: CampaignRecipientTimelineEntry[];
   status_counts: CampaignRecipientStatusCounts;
 } {
+  const inviteByContactId = new Map<string, CampaignRecipientInviteRow>();
   const inviteByEmail = new Map<string, CampaignRecipientInviteRow>();
   for (const invite of input.invites) {
-    inviteByEmail.set(normalizeEmail(invite.recipient_email), invite);
+    if (invite.contact_id) {
+      inviteByContactId.set(invite.contact_id, invite);
+    }
+    if (invite.recipient_email) {
+      inviteByEmail.set(normalizeEmail(invite.recipient_email), invite);
+    }
   }
 
   const decisionByEmail = new Map<string, CampaignRecipientDecisionRow>();
@@ -105,8 +124,64 @@ export function buildCampaignRecipientTimeline(input: {
     decisionByEmail.set(normalizeEmail(decision.recipient_email), decision);
   }
 
+  const status_counts: CampaignRecipientStatusCounts = { ...EMPTY_STATUS_COUNTS };
+  const recipients: CampaignRecipientTimelineEntry[] = [];
+
+  const pushRecipient = (params: {
+    contact_id: string | null;
+    recipient_email: string | null;
+    recipient_label: string;
+    delivery_channel: string | null;
+    invite: CampaignRecipientInviteRow | null;
+    decision: CampaignRecipientDecisionRow | null;
+  }) => {
+    const onboarding_status = deriveCampaignRecipientOnboardingStatus(params.invite, params.decision);
+    status_counts[onboarding_status] += 1;
+    const decidedAt = toIso(params.decision?.decided_at);
+    const sentAt = toIso(params.invite?.sent_at ?? null);
+    const updatedAt =
+      decidedAt && sentAt
+        ? new Date(decidedAt) > new Date(sentAt)
+          ? decidedAt
+          : sentAt
+        : decidedAt ?? sentAt;
+
+    recipients.push({
+      contact_id: params.contact_id,
+      recipient_email: params.recipient_email,
+      recipient_label: params.recipient_label,
+      delivery_channel: params.delivery_channel,
+      onboarding_status,
+      invite_status: params.invite?.status ?? null,
+      decision: params.decision?.decision ?? null,
+      decision_source: params.decision?.source ?? null,
+      decided_at: decidedAt,
+      updated_at: updatedAt,
+    });
+  };
+
+  if (input.targetContacts && input.targetContacts.length > 0) {
+    for (const contact of input.targetContacts) {
+      const email = contact.email?.trim().toLowerCase() ?? null;
+      const invite =
+        inviteByContactId.get(contact.contact_id) ??
+        (email ? inviteByEmail.get(email) ?? null : null);
+      const decision = email ? decisionByEmail.get(email) ?? null : null;
+      pushRecipient({
+        contact_id: contact.contact_id,
+        recipient_email: email,
+        recipient_label: email ?? contact.phone?.trim() ?? contact.full_name,
+        delivery_channel:
+          invite?.delivery_channel ?? (email ? 'email' : contact.phone ? 'desk_only' : null),
+        invite,
+        decision,
+      });
+    }
+    return { recipients, status_counts };
+  }
+
   const emails = new Set<string>();
-  for (const email of input.targetEmails) {
+  for (const email of input.targetEmails ?? []) {
     const normalized = normalizeEmail(email);
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
       emails.add(normalized);
@@ -119,32 +194,16 @@ export function buildCampaignRecipientTimeline(input: {
     emails.add(email);
   }
 
-  const status_counts: CampaignRecipientStatusCounts = { ...EMPTY_STATUS_COUNTS };
-  const recipients: CampaignRecipientTimelineEntry[] = [];
-
   for (const recipientEmail of Array.from(emails).sort()) {
     const invite = inviteByEmail.get(recipientEmail) ?? null;
     const decision = decisionByEmail.get(recipientEmail) ?? null;
-    const onboarding_status = deriveCampaignRecipientOnboardingStatus(invite, decision);
-    status_counts[onboarding_status] += 1;
-
-    const decidedAt = toIso(decision?.decided_at);
-    const sentAt = toIso(invite?.sent_at ?? null);
-    const updatedAt =
-      decidedAt && sentAt
-        ? new Date(decidedAt) > new Date(sentAt)
-          ? decidedAt
-          : sentAt
-        : decidedAt ?? sentAt;
-
-    recipients.push({
+    pushRecipient({
+      contact_id: invite?.contact_id ?? null,
       recipient_email: recipientEmail,
-      onboarding_status,
-      invite_status: invite?.status ?? null,
-      decision: decision?.decision ?? null,
-      decision_source: decision?.source ?? null,
-      decided_at: decidedAt,
-      updated_at: updatedAt,
+      recipient_label: recipientEmail,
+      delivery_channel: invite?.delivery_channel ?? 'email',
+      invite,
+      decision,
     });
   }
 

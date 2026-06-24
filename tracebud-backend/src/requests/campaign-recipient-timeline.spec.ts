@@ -78,7 +78,7 @@ describe('campaign-recipient-timeline', () => {
       ],
     });
 
-    expect(result.recipients.map((row) => [row.recipient_email, row.onboarding_status])).toEqual([
+    expect(result.recipients.map((row) => [row.recipient_label, row.onboarding_status])).toEqual([
       ['done@example.com', 'fulfilled'],
       ['existing@example.com', 'on_platform'],
       ['invite@example.com', 'invite_sent'],
@@ -93,5 +93,39 @@ describe('campaign-recipient-timeline', () => {
       invite_sent: 1,
       on_platform: 1,
     });
+  });
+
+  it('builds contact-centric recipient timeline with desk-only label', () => {
+    const result = buildCampaignRecipientTimeline({
+      targetContacts: [
+        {
+          contact_id: 'contact_1',
+          full_name: 'Kofi Mensah',
+          email: null,
+          phone: '+233555000',
+        },
+      ],
+      invites: [
+        {
+          contact_id: 'contact_1',
+          recipient_email: null,
+          delivery_channel: 'desk_only',
+          status: 'pending',
+          claimed_tenant_id: null,
+          sent_at: null,
+        },
+      ],
+      decisions: [],
+    });
+
+    expect(result.recipients).toHaveLength(1);
+    expect(result.recipients[0]).toMatchObject({
+      contact_id: 'contact_1',
+      recipient_email: null,
+      recipient_label: '+233555000',
+      delivery_channel: 'desk_only',
+      onboarding_status: 'invite_sent',
+    });
+    expect(result.status_counts.invite_sent).toBe(1);
   });
 });

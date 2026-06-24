@@ -3,6 +3,7 @@ import {
   computeCampaignFunnelMetrics,
   filterCampaignRecipients,
   formatCampaignRecipientOnboardingStatus,
+  getCampaignRecipientDisplayLabel,
   getRecipientProgressSteps,
   summarizeCampaignRecipientStatusCounts,
   type CampaignRecipientStatusCounts,
@@ -30,6 +31,15 @@ describe('campaign-recipient-timeline', () => {
     expect(summarizeCampaignRecipientStatusCounts(counts)).toBe(
       '1 fulfilled · 2 accepted · 3 joined · 4 invite sent',
     );
+  });
+
+  it('uses recipient label fallback for desk-only rows', () => {
+    expect(
+      getCampaignRecipientDisplayLabel({
+        recipient_label: '+233555000',
+        recipient_email: null,
+      }),
+    ).toBe('+233555000');
   });
 
   it('provides badge classes per onboarding status', () => {
