@@ -22,10 +22,12 @@ type AreaInfo = {
   hectares: number;
 };
 
+import { WALK_CAPTURE_MAX_ACCURACY_M } from '@/features/mapping/walkCaptureCoaching';
+
 type CaptureMode = 'walk' | 'vertex_avg' | 'manual_trace';
 
 const WALK_MIN_DISTANCE_M = 4;
-const WALK_MAX_ACCURACY_M = 12;
+const WALK_MAX_ACCURACY_M = WALK_CAPTURE_MAX_ACCURACY_M;
 
 function toRad(deg: number) {
   return (deg * Math.PI) / 180;
@@ -107,6 +109,8 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
   const [lastError, setLastError] = useState<string | null>(null);
   const [area, setArea] = useState<AreaInfo>({ squareMeters: 0, hectares: 0 });
   const [precisionMeters, setPrecisionMeters] = useState<number | null>(null);
+  const [lastSpeedMps, setLastSpeedMps] = useState<number | null>(null);
+  const [gpsFixDropped, setGpsFixDropped] = useState(false);
   const [mode, setMode] = useState<CaptureMode>('walk');
   const watchRef = useRef<Location.LocationSubscription | null>(null);
   const samplesRef = useRef<SamplePoint[]>([]);
@@ -132,6 +136,7 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
     const accuracy = sample.accuracyMeters;
 
     if (accuracy != null && accuracy > WALK_MAX_ACCURACY_M && last) {
+      setGpsFixDropped(true);
       return;
     }
 
@@ -155,6 +160,7 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
       latitude: averaged.latitude,
       longitude: averaged.longitude,
     };
+    setGpsFixDropped(false);
 
     setPoints((prev) => {
       const nextPoints = [...prev, averaged];
@@ -228,6 +234,11 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
             setPrecisionMeters(bestPrecision);
           }
 
+          const speedMps = typeof speed === 'number' && speed >= 0 ? speed : null;
+          if (speedMps != null) {
+            setLastSpeedMps(speedMps);
+          }
+
           const sample: SamplePoint = {
             latitude: roundWgs84Coordinate(latitude),
             longitude: roundWgs84Coordinate(longitude),
@@ -237,8 +248,17 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
             altitudeAccuracyMeters:
               typeof altitudeAccuracy === 'number' ? altitudeAccuracy : null,
             headingDegrees: typeof heading === 'number' ? heading : null,
-            speedMps: typeof speed === 'number' ? speed : null,
+            speedMps,
           };
+
+          if (
+            modeRef.current === 'walk' &&
+            bestPrecision != null &&
+            bestPrecision <= WALK_MAX_ACCURACY_M &&
+            lastEmittedRef.current
+          ) {
+            setGpsFixDropped(false);
+          }
 
           setSamples((prev) => {
             const next: SamplePoint[] = [...prev, sample];
@@ -268,6 +288,8 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
     setLastError(null);
     setArea({ squareMeters: 0, hectares: 0 });
     setPrecisionMeters(null);
+    setLastSpeedMps(null);
+    setGpsFixDropped(false);
     clearWalkEmitState();
   };
 
@@ -363,6 +385,8 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
     samples,
     area,
     precisionMeters,
+    lastSpeedMps,
+    gpsFixDropped,
     isRecording,
     lastError,
     mode,
