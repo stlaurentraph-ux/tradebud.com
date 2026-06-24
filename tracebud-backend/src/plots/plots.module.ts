@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
+import { ContactsModule } from '../contacts/contacts.module';
 import { ConsentModule } from '../consent/consent.module';
 import { DbModule } from '../db/db.module';
 import { LaunchModule } from '../launch/launch.module';
+import { BulkPlotImportController } from './bulk-plot-import.controller';
+import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
+import { BulkPlotImportService } from './bulk-plot-import.service';
+import { CadastralParcelController } from './cadastral-parcel.controller';
+import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service';
 import { FieldAppController } from './field-app.controller';
-import { FieldEnumerationService } from './field-enumeration.service';
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
 import { PlotsController } from './plots.controller';
 import { PlotsService } from './plots.service';
@@ -15,11 +20,18 @@ import { GfwService } from '../compliance/gfw.service';
 import { FdpCommodityService } from '../compliance/fdp-commodity.service';
 
 @Module({
-  imports: [DbModule, ConsentModule, LaunchModule],
-  controllers: [PlotsController, FieldAppController],
+  imports: [DbModule, ConsentModule, LaunchModule, ContactsModule],
+  controllers: [
+    PlotsController,
+    FieldAppController,
+    CadastralParcelController,
+    BulkPlotImportController,
+  ],
   providers: [
     PlotsService,
-    FieldEnumerationService,
+    BulkPlotImportService,
+    BulkPlotImportJobService,
+    CadastralParcelLookupService,
     TenureParseService,
     EvidenceDocumentsService,
     TenureReviewAlertService,
@@ -28,6 +40,5 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     GfwContextService,
     FdpCommodityService,
   ],
-  exports: [FieldEnumerationService],
 })
 export class PlotsModule {}

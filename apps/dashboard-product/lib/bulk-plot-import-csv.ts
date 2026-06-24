@@ -124,7 +124,7 @@ export function mapBulkPlotImportCsvRows(rows: BulkPlotImportCsvRow[]): BulkPlot
         }
         continue;
       }
-      mapped[field] = value.trim() || null;
+      mapped[field] = value.trim() || undefined;
     }
 
     if (!mapped.clientPlotId) {

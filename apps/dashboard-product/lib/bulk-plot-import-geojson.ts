@@ -161,7 +161,7 @@ export function parseAndMapBulkPlotImportGeoJson(text: string): BulkPlotImportIn
   const features = root.type === 'FeatureCollection' ? root.features : [root];
 
   return features
-    .map((feature, index) => {
+    .map((feature, index): BulkPlotImportInputRow | null => {
       const mapped = mapProperties(feature.properties ?? undefined);
       const geometry = toImportGeometry(feature.geometry);
       const clientPlotId = mapped.clientPlotId?.trim() ?? '';
@@ -175,7 +175,7 @@ export function parseAndMapBulkPlotImportGeoJson(text: string): BulkPlotImportIn
         clientPlotId,
         ...mapped,
         geometry,
-      } satisfies BulkPlotImportInputRow;
+      };
     })
-    .filter((row): row is BulkPlotImportInputRow => row != null);
+    .filter((row): row is BulkPlotImportInputRow => row !== null);
 }

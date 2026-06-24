@@ -197,7 +197,7 @@ function mapPlotToRow(params: {
     rowIndex,
     clientPlotId,
     producerFullName: producer.full_name?.trim() || undefined,
-    producerEmail: producer.email?.trim() || null,
+    producerEmail: producer.email?.trim() || undefined,
     producerPhone: producer.phone?.trim() || null,
     producerCountry: producer.country_iso?.trim().toUpperCase() || plot.country_iso?.trim().toUpperCase(),
     plotName: plot.plot_name?.trim() || null,
