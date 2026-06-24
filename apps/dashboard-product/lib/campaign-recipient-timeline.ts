@@ -77,8 +77,11 @@ export function getCampaignRecipientChannelIcon(
   if (channel === 'email') {
     return '📧';
   }
-  if (channel === 'whatsapp') {
+  if (channel === 'whatsapp' || channel === 'sms') {
     return '📱';
+  }
+  if (channel === 'desk_only') {
+    return '🏢';
   }
   return null;
 }

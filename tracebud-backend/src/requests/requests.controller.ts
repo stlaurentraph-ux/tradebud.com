@@ -200,6 +200,17 @@ export class RequestsController {
     });
   }
 
+  @Post('campaigns/:id/recipients/:contactId/desk-claim-link')
+  async issueDeskClaimLink(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('contactId') contactId: string,
+  ) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.requestsService.issueCampaignDeskClaimLink(tenantId, id, contactId);
+  }
+
   @Post('campaigns/:id/archive')
   async archiveCampaign(@Req() req: any, @Param('id') id: string) {
     this.requireRequestsAccess(req);

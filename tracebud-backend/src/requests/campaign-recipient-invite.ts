@@ -7,7 +7,7 @@ export type QueueCampaignRecipientInvitesResult = {
 
 export type CampaignInviteDelivery = {
   contact_id: string;
-  delivery_channel: 'email' | 'whatsapp' | 'desk_only';
+  delivery_channel: 'email' | 'whatsapp' | 'sms' | 'desk_only';
   delivery_address: string | null;
   recipient_email?: string | null;
   claim_token_hash?: string | null;

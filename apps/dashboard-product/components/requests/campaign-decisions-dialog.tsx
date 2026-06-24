@@ -4,6 +4,7 @@ import { useContext, useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { CheckCircle2, Clock, Copy, XCircle } from 'lucide-react';
 import { AsyncState } from '@/components/common/async-state';
+import { CampaignDeskQrPrintSheet } from '@/components/requests/campaign-desk-qr-print-sheet';
 import { CampaignRecipientFunnelSummary } from '@/components/requests/campaign-recipient-funnel-summary';
 import { CampaignRecipientProgressStepper } from '@/components/requests/campaign-recipient-progress-stepper';
 import { Badge } from '@/components/ui/badge';
@@ -39,6 +40,7 @@ import {
 import {
   getCampaignRecipientOnboardingStatusLabel,
   getCampaignRecipientFulfillmentSourceLabel,
+  getCampaignRecipientDeskQrPrintLabel,
   getCampaignRecipientTimelineCopyEmailLabel,
   getCampaignRecipientTimelineDescription,
   getCampaignRecipientTimelineEmptyActivity,
@@ -78,15 +80,21 @@ function formatRelativeTimestamp(iso: string | null | undefined): string | null 
 }
 
 function RecipientRow({
+  campaignId,
   recipient,
   t,
 }: {
+  campaignId: string;
   recipient: CampaignRecipientTimelineEntry;
   t?: (key: string) => string;
 }) {
   const displayLabel = getCampaignRecipientDisplayLabel(recipient);
   const channelIcon = getCampaignRecipientChannelIcon(recipient.delivery_channel);
   const [copied, setCopied] = useState(false);
+  const [deskPrintOpen, setDeskPrintOpen] = useState(false);
+  const [deskClaimUrl, setDeskClaimUrl] = useState<string | null>(null);
+  const [deskClaimExpiresAt, setDeskClaimExpiresAt] = useState<string | null>(null);
+  const [deskPrintLoading, setDeskPrintLoading] = useState(false);
   const relativeTime = formatRelativeTimestamp(recipient.updated_at);
   const steps = getRecipientProgressSteps(recipient.onboarding_status);
 
@@ -103,7 +111,40 @@ function RecipientRow({
     }
   };
 
+  const handlePrintDeskQr = async () => {
+    if (!recipient.contact_id) {
+      return;
+    }
+    setDeskPrintLoading(true);
+    try {
+      const token = window.sessionStorage.getItem('tracebud_token');
+      const response = await fetch(
+        `/api/requests/campaigns/${encodeURIComponent(campaignId)}/recipients/${encodeURIComponent(recipient.contact_id)}/desk-claim-link`,
+        {
+          method: 'POST',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        },
+      );
+      const body = (await response.json()) as {
+        claimUrl?: string;
+        claimExpiresAt?: string;
+        error?: string;
+      };
+      if (!response.ok || !body.claimUrl) {
+        throw new Error(body.error ?? 'Failed to prepare desk QR.');
+      }
+      setDeskClaimUrl(body.claimUrl);
+      setDeskClaimExpiresAt(body.claimExpiresAt ?? null);
+      setDeskPrintOpen(true);
+    } catch {
+      // Silent failure — buyer can retry.
+    } finally {
+      setDeskPrintLoading(false);
+    }
+  };
+
   return (
+    <>
     <div className="flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2">
@@ -150,8 +191,32 @@ function RecipientRow({
           ) : null}
         </div>
       </div>
-      <CampaignRecipientProgressStepper steps={steps} compact t={t} />
+      <div className="flex flex-col items-stretch gap-2 sm:items-end">
+        {recipient.delivery_channel === 'desk_only' && recipient.contact_id ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={deskPrintLoading}
+            onClick={() => void handlePrintDeskQr()}
+          >
+            {getCampaignRecipientDeskQrPrintLabel(t)}
+          </Button>
+        ) : null}
+        <CampaignRecipientProgressStepper steps={steps} compact t={t} />
+      </div>
     </div>
+    {deskClaimUrl ? (
+      <CampaignDeskQrPrintSheet
+        open={deskPrintOpen}
+        onOpenChange={setDeskPrintOpen}
+        recipientLabel={displayLabel}
+        claimUrl={deskClaimUrl}
+        claimExpiresAt={deskClaimExpiresAt}
+        t={t}
+      />
+    ) : null}
+    </>
   );
 }
 
@@ -251,6 +316,7 @@ export function CampaignDecisionsDialog({
                         filteredRecipients.map((recipient) => (
                           <RecipientRow
                             key={recipient.contact_id ?? recipient.recipient_email ?? recipient.recipient_label}
+                            campaignId={campaignId ?? ''}
                             recipient={recipient}
                             t={t}
                           />
