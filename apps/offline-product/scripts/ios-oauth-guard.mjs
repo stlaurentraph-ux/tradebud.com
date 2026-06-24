@@ -43,8 +43,8 @@ function main() {
     issues.push('app/_layout.tsx must import googleOAuthEnv so OTA bundles inline EXPO_PUBLIC_GOOGLE_*');
   }
 
-  if (!oauthOrchestrator.includes('Platform.OS === \'ios\' && !__DEV__')) {
-    issues.push('oauthOrchestrator.ts must allow iOS EAS browser fallback when native Google fails');
+  if (!oauthOrchestrator.includes('shouldAllowGoogleNativeBrowserFallback')) {
+    issues.push('oauthOrchestrator.ts must delegate browser fallback to oauthOrchestratorPolicy');
   }
 
   if (!verifyOAuth.includes('EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID')) {

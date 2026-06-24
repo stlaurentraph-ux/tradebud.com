@@ -63,6 +63,13 @@ function main() {
     issues.push('oauthCallbackBridge.ts must re-export from oauthCallbackWaiter');
   }
 
+  if (!orchestrator.includes('shouldAllowGoogleNativeBrowserFallback')) {
+    issues.push('oauthOrchestrator.ts must delegate browser fallback to oauthOrchestratorPolicy');
+  }
+  if (!fs.existsSync(path.join(root, 'features/auth/oauthOrchestratorPolicy.ts'))) {
+    issues.push('missing features/auth/oauthOrchestratorPolicy.ts');
+  }
+
   if (!fs.existsSync(path.join(root, 'features/auth/oauthCallbackWaiter.ts'))) {
     issues.push('missing features/auth/oauthCallbackWaiter.ts');
   }

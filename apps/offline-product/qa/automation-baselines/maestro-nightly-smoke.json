@@ -46,6 +46,12 @@
       "flowFile": "signed-out-backup-status-smoke.yaml",
       "seedProfile": "backed_up_offline",
       "description": "DEVICE_SMOKE §10 subset — signed-out home shows Backed up when plot links exist"
+    },
+    {
+      "id": "sign_out_persistence",
+      "flowFile": "sign-out-persistence-smoke.yaml",
+      "seedProfile": "backed_up_offline",
+      "description": "Sign-out latch — signed-out UI persists across tab navigation"
     }
   ]
 }

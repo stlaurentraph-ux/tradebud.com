@@ -15,6 +15,7 @@ const guards = [
   'ios-oauth-guard.mjs',
   'oauth-orchestrator-guard.mjs',
   'oauth-maestro-guard.mjs',
+  'sign-out-soak-guard.mjs',
   'registry-md-parity-guard.mjs',
   'pending-sync-registry-guard.mjs',
   'ui-reload-guard.mjs',

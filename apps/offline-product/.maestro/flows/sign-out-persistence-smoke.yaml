@@ -1,0 +1,14 @@
+appId: com.tracebud.app
+---
+# Sign-out latch persistence — signed-out seed stays signed out across tab navigation.
+- launchApp
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    id: "settings-open-sign-in"
+- tapOn:
+    id: "tab-home"
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    id: "settings-open-sign-in"

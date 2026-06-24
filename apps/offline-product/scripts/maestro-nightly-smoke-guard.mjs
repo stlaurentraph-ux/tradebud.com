@@ -197,6 +197,13 @@ function assertOAuthMaestroFlows(manifest) {
   }
 }
 
+function assertSignOutPersistenceFlow(manifest) {
+  const flow = manifest.nightlyFlows.find(
+    (item) => item.flowFile === 'sign-out-persistence-smoke.yaml',
+  );
+  if (!flow) throw new Error('nightly smoke must include sign-out-persistence-smoke.yaml');
+}
+
 function main() {
   const manifest = loadJson('qa/automation-baselines/maestro-nightly-smoke.json');
   assertManifestShape(manifest);
@@ -204,6 +211,7 @@ function main() {
   assertCrossDeviceRestoreFlow(manifest);
   assertSignedOutBackupFlow(manifest);
   assertOAuthMaestroFlows(manifest);
+  assertSignOutPersistenceFlow(manifest);
   assertRunnerScripts(manifest);
   assertWorkflowSchedule(manifest);
   assertPackageScripts();

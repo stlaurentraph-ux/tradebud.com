@@ -134,6 +134,8 @@ Use a plot with **land title photos or tenure documents** queued locally, plus *
 - [ ] Sign in as different user → backup consent only offers **local** unsynced plots for upload
 - [ ] OAuth user: Settings unsynced plot count matches My Plots (not stuck at 0)
 - [ ] **Simulator (Maestro):** `MAESTRO_SEED_PROFILE=backed_up_offline npm run test:maestro:seed` then `npm run test:maestro:signed-out-backup` — asserts `signed-out-backup-status-smoke.yaml`
+- [ ] **Sign-out persistence (Maestro):** `maestro test .maestro/flows/sign-out-persistence-smoke.yaml`
+- [ ] **Sign-out soak (device):** sign out 3× with pending queue; tab away — UI stays signed out
 
 ## 11. Flaky network & recovery
 

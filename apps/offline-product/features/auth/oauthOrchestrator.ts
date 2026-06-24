@@ -25,6 +25,10 @@ import {
 import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
 import { trackOAuthBrowserFallback, trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
+import {
+  resolveOAuthColdStartPhase,
+  shouldAllowGoogleNativeBrowserFallback,
+} from '@/features/auth/oauthOrchestratorPolicy';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
@@ -190,10 +194,11 @@ export async function runOAuthSignIn(provider: OAuthProvider): Promise<Session> 
         if (message === 'sign_in_oauth_cancelled') {
           throw error;
         }
-        const allowBrowserFallback =
-          Platform.OS === 'android' ||
-          (Platform.OS === 'ios' && !__DEV__) ||
-          (__DEV__ && Constants.isDevice === false);
+        const allowBrowserFallback = shouldAllowGoogleNativeBrowserFallback({
+          platform: Platform.OS as 'ios' | 'android' | 'web',
+          isDev: __DEV__,
+          isSimulatorInDev: __DEV__ && Constants.isDevice === false,
+        });
         if (allowBrowserFallback) {
           trackOAuthBrowserFallback(provider, error);
           trackOAuthStep('browser_fallback', { provider, path: 'native' });
@@ -243,18 +248,16 @@ export async function completeOAuthFromDeepLink(
 export async function runOAuthColdStartCallback(
   params: OAuthDeepLinkCompleteParams & { url: string | null },
 ): Promise<OAuthColdStartResult> {
-  if (!params.url) {
-    return { status: 'missing_url' };
-  }
-
-  if (deliverOAuthDeepLink(params.url)) {
-    return { status: 'delivered_to_waiter' };
-  }
+  const phase = resolveOAuthColdStartPhase({
+    url: params.url,
+    deliveredToWaiter: params.url ? deliverOAuthDeepLink(params.url) : false,
+    hasSession: false,
+  });
+  if (phase === 'missing_url') return { status: 'missing_url' };
+  if (phase === 'delivered_to_waiter') return { status: 'delivered_to_waiter' };
 
   await hydrateSyncAuthFromSettings();
-  if (hasSyncAuthSession()) {
-    return { status: 'already_signed_in' };
-  }
+  if (hasSyncAuthSession()) return { status: 'already_signed_in' };
 
   try {
     const session = await sessionFromOAuthCallbackUrl(params.url);
