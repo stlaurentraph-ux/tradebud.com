@@ -21,6 +21,7 @@ import { PG_POOL } from '../db/db.module';
 import { CreateHarvestDto } from './dto/create-harvest.dto';
 import { BackfillHarvestDeliveryDateDto } from './dto/backfill-harvest-delivery-date.dto';
 import { ClaimVoucherDto } from './dto/claim-voucher.dto';
+import { ConfirmDeliveryHandoffDto } from './dto/confirm-delivery-handoff.dto';
 import { HarvestService } from './harvest.service';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
 import { SubmitDdsPackageDto } from './dto/submit-dds-package.dto';
@@ -28,6 +29,7 @@ import { DdsPackageEvidenceDocumentDto } from './dto/dds-package-evidence-docume
 import { LaunchService } from '../launch/launch.service';
 import { resolveDashboardRole } from '../billing/billing-access';
 import { ConsentService } from '../consent/consent.service';
+import { parseDeliveryTripRef } from './delivery-qr-ref';
 
 const DASHBOARD_HARVEST_ROLES = new Set(['exporter', 'cooperative', 'compliance_manager', 'admin']);
 
@@ -252,6 +254,22 @@ export class HarvestController {
     const role = deriveRoleFromSupabaseUser(req.user);
     this.assertDashboardHarvestRole(role);
     const userId = req.user?.id as string | undefined;
+    const tripRef = parseDeliveryTripRef(dto.qrRef);
+    if (tripRef) {
+      const preview = await this.harvestService.getDeliveryTripPublicPreview(tripRef);
+      for (const line of preview.lines) {
+        const lookup = await this.harvestService.getVoucherByQrRef(line.qrRef);
+        const allowed = await this.consentService.canTenantAccessVoucher(
+          lookup.voucher.id,
+          tenantId,
+        );
+        if (!allowed) {
+          throw new ForbiddenException('CONSENT_REQUIRED');
+        }
+      }
+      const vouchers = await this.harvestService.claimTripForTenant(tenantId, tripRef, userId);
+      return { vouchers, tripRef };
+    }
     const lookup = await this.harvestService.getVoucherByQrRef(dto.qrRef);
     const allowed = await this.consentService.canTenantAccessVoucher(lookup.voucher.id, tenantId);
     if (!allowed) {
@@ -259,6 +277,25 @@ export class HarvestController {
     }
     const voucher = await this.harvestService.claimVoucherForTenant(tenantId, dto.qrRef, userId);
     return { voucher };
+  }
+
+  @Post('vouchers/handoff-confirm')
+  @ApiOperation({
+    summary: 'Record physical delivery handoff confirmation',
+    description:
+      'Buyer confirms received weight at intake. Emits delivery_handoff_confirmed audit event.',
+  })
+  async confirmDeliveryHandoff(@Body() dto: ConfirmDeliveryHandoffDto, @Req() req: any) {
+    const tenantId = this.getTenantId(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    this.assertDashboardHarvestRole(role);
+    const userId = req.user?.id as string | undefined;
+    const confirmation = await this.harvestService.confirmDeliveryHandoff(tenantId, userId, {
+      intakeRef: dto.intakeRef,
+      receivedKg: dto.receivedKg,
+      note: dto.note,
+    });
+    return { confirmation };
   }
 
   @Post('packages')
@@ -390,7 +427,7 @@ export class HarvestController {
     this.requireTenantClaim(req);
     await this.enforcePackageReadAccess(id, req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
-    return this.harvestService.evaluateDdsPackageReadiness(id);
+    return this.harvestService.evaluateDdsPackageReadiness(id, tenantId);
   }
 
   @Get('packages/:id/risk-score')

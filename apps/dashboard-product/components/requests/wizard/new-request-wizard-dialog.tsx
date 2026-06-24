@@ -16,6 +16,8 @@ import {
   parseBackendErrorMessage,
   resolveCampaignDueDateIso,
 } from '@/lib/request-campaign-payload';
+import { sendRequestCampaign } from '@/lib/request-campaign-client';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
 
 type WizardMode = 'request' | 'campaign';
 
@@ -336,24 +338,43 @@ export function NewRequestWizardDialog({
 
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
+      trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_CREATE_FAILURE, {
+        request_type: payload.request_type,
+        status: 'DRAFT',
+      });
       throw new Error(parseBackendErrorMessage(body, 'Failed to create campaign.'));
     }
     const campaignId = extractCampaignIdFromResponse(body);
+    trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_CREATE_SUCCESS, {
+      request_type: payload.request_type,
+      recipient_count: targets.length,
+    });
 
     if (status === 'Sent') {
       if (!campaignId) {
+        trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_SEND_FAILURE, {
+          request_type: payload.request_type,
+          reason: 'missing_campaign_id',
+        });
         throw new Error(
           'Campaign was saved but no campaign id was returned. Refresh the page and send the draft from Outreach.',
         );
       }
-      const sendResponse = await fetch(`/api/requests/campaigns/${encodeURIComponent(campaignId)}/send`, {
-        method: 'POST',
-        headers: getAuthHeaders(),
-      });
-      const sendBody = await sendResponse.json().catch(() => ({}));
-      if (!sendResponse.ok) {
-        throw new Error(parseBackendErrorMessage(sendBody, 'Campaign created but failed to send.'));
+      try {
+        await sendRequestCampaign(campaignId);
+      } catch (sendError) {
+        trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_SEND_FAILURE, {
+          request_type: payload.request_type,
+          reason: 'send_api_failed',
+        });
+        throw sendError instanceof Error
+          ? sendError
+          : new Error('Campaign created but failed to send.');
       }
+      trackDashboardEvent(DASHBOARD_EVENTS.CAMPAIGN_SEND_SUCCESS, {
+        request_type: payload.request_type,
+        recipient_count: targets.length,
+      });
     }
   };
 

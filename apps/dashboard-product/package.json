@@ -25,8 +25,10 @@
     "e2e:golden-paths": "playwright test",
     "e2e:golden-paths:assert": "node scripts/dashboard-playwright-guard.mjs",
     "e2e:golden-paths:install": "playwright install chromium",
+    "analytics:slice:assert": "node ./scripts/dashboard-analytics-slice-guard.mjs --strict",
+    "analytics:slice:write-baseline": "node ./scripts/dashboard-analytics-slice-guard.mjs --write-baseline",
     "qa:structural": "node ./scripts/run-structural-guards.mjs",
-    "qa:structural:ci": "node ./scripts/run-structural-guards.mjs"
+    "qa:structural:ci": "node ./scripts/run-structural-guards.mjs --ci"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -60,6 +62,7 @@
     "@sentry/nextjs": "^10.57.0",
     "@supabase/supabase-js": "^2.98.0",
     "@vercel/analytics": "1.6.1",
+    "@zxing/browser": "^0.2.0",
     "autoprefixer": "^10.4.20",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -82,10 +85,10 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.51.1",
     "@tailwindcss/postcss": "^4.2.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@playwright/test": "^1.51.1",
     "@testing-library/user-event": "^14.6.1",
     "@types/node": "^22",
     "@types/react": "19.2.14",

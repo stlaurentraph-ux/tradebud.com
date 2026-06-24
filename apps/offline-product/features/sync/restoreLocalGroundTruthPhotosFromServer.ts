@@ -242,6 +242,7 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
             latitude: typeof photo.latitude === 'number' ? photo.latitude : null,
             longitude: typeof photo.longitude === 'number' ? photo.longitude : null,
             direction: normalizeDirection(photo.direction),
+            storagePath: downloaded.storagePath,
           });
           onRestored();
           continue;

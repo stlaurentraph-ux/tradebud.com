@@ -45,6 +45,7 @@ export type CommercialPermission =
   | 'requests:view'
   | 'requests:create'
   | 'requests:send'
+  | 'requests:archive'
   | 'requests:respond'
   | 'outreach:view'
   | 'inbox:view'
@@ -139,6 +140,7 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:view',
     'requests:create',
     'requests:send',
+    'requests:archive',
     'outreach:view',
     'inbox:view',
     'contacts:view',
@@ -176,6 +178,7 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:view',
     'requests:create',
     'requests:send',
+    'requests:archive',
     'requests:respond',
     'outreach:view',
     'inbox:view',
@@ -222,6 +225,7 @@ const TIER_PERMISSION_MATRIX: Record<CommercialTier, CommercialPermission[]> = {
     'requests:view',
     'requests:create',
     'requests:send',
+    'requests:archive',
     'requests:respond',
     'outreach:view',
     'inbox:view',

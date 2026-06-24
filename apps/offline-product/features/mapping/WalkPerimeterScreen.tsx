@@ -73,11 +73,21 @@ import {
   assessPlotGeometryQuality,
   localPlotRefsForGeometry,
   localPolygonQualityMessage,
+  type LocalGeometryQualityIssue,
 } from '@/features/compliance/plotGeometryQuality';
 import {
   hasUnsavedMappingProgress,
   runWithMappingDiscardConfirm,
 } from '@/features/mapping/mappingDiscardConfirm';
+import {
+  isWalkStartGateReady,
+  isWeakGpsForWalkCoach,
+  resolveWalkLiveHint,
+  shouldSuggestAlternateCapture,
+  walkStartGateSecondsRemaining,
+  WALK_CAPTURE_POOR_GPS_M,
+  type WalkCoachHintTone,
+} from '@/features/mapping/walkCaptureCoaching';
 import {
   hasDuplicatePlotName,
   proposeUniqueDefaultPlotName,
@@ -109,6 +119,32 @@ function geometryQualityAlertTitle(
     : t('walk_invalid_boundary_title');
 }
 
+function promptBlockingPlotGeometryIssues(params: {
+  blockingIssues: LocalGeometryQualityIssue[];
+  t: (key: string) => string;
+  onWalkAgain: () => void;
+  onTraceOnMap: () => void;
+}): boolean {
+  const { blockingIssues, t, onWalkAgain, onTraceOnMap } = params;
+  const message = localPolygonQualityMessage(blockingIssues, t);
+  const title = geometryQualityAlertTitle(blockingIssues, t);
+  const recoverable = blockingIssues.some(
+    (issue) => issue.code === 'GEO-104' || issue.code === 'GEO-105',
+  );
+
+  if (!recoverable) {
+    Alert.alert(title, message);
+    return true;
+  }
+
+  Alert.alert(title, message, [
+    { text: t('cancel'), style: 'cancel' },
+    { text: t('walk_geometry_walk_again'), onPress: onWalkAgain },
+    { text: t('walk_geo_confidence_cta_trace'), onPress: onTraceOnMap },
+  ]);
+  return true;
+}
+
 type CaptureMethod = 'walk' | 'draw' | 'centroid' | 'pin';
 type CaptureMethodPage = CaptureMethod;
 
@@ -125,6 +161,8 @@ export function WalkPerimeterScreen() {
     samples,
     area,
     precisionMeters,
+    lastSpeedMps,
+    gpsFixDropped,
     isRecording,
     lastError,
     mode,
@@ -167,7 +205,6 @@ export function WalkPerimeterScreen() {
   const [cornerHoldAnchor, setCornerHoldAnchor] = useState(0);
   const [pinHoldAnchor, setPinHoldAnchor] = useState(0);
   const wasRecordingRef = useRef(false);
-  const [showGpsWarning, setShowGpsWarning] = useState(false);
   const [deviceRegion, setDeviceRegion] = useState<Region | null>(null);
   const [manualTraceImagery, setManualTraceImagery] = useState<{
     imagerySource: ManualTraceImagerySource;
@@ -179,6 +216,10 @@ export function WalkPerimeterScreen() {
   const [alternateCaptureOpen, setAlternateCaptureOpen] = useState(false);
   const [mapScrollLock, setMapScrollLock] = useState(false);
   const [drawTracingActive, setDrawTracingActive] = useState(false);
+  const [gpsStableSeconds, setGpsStableSeconds] = useState(0);
+  const [walkStartGateOverride, setWalkStartGateOverride] = useState(false);
+  const [weakGpsWalkSeconds, setWeakGpsWalkSeconds] = useState(0);
+  const alternateCaptureSuggestedRef = useRef(false);
 
   useMappingDraftCloudSync({
     farmerId: farmer?.id,
@@ -284,23 +325,49 @@ export function WalkPerimeterScreen() {
 
   useEffect(() => {
     if (!isRecording) return;
-    const t = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
   }, [isRecording]);
 
+  const showCapturePageEarly = !showCompletionPage;
+  const isWalkCaptureModeEarly = captureMethod === 'walk' && selectedMethodPage === 'walk';
+
   useEffect(() => {
-    if (!isRecording) return;
-    if (precisionMeters != null && precisionMeters > 10) {
-      setShowGpsWarning(true);
-      const to = setTimeout(() => setShowGpsWarning(false), 2200);
-      return () => clearTimeout(to);
+    if (!showCapturePageEarly || !isWalkCaptureModeEarly || isRecording) {
+      setGpsStableSeconds(0);
+      return;
     }
-    if (recordingSeconds > 0 && recordingSeconds % 8 === 0 && Math.random() > 0.7) {
-      setShowGpsWarning(true);
-      const to = setTimeout(() => setShowGpsWarning(false), 2200);
-      return () => clearTimeout(to);
+    const tick = setInterval(() => {
+      const preview = previewPrecisionMeters ?? precisionMeters;
+      if (preview != null && preview <= 10) {
+        setGpsStableSeconds((seconds) => Math.min(seconds + 1, 6));
+      } else {
+        setGpsStableSeconds(0);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [
+    captureMethod,
+    isRecording,
+    isWalkCaptureModeEarly,
+    precisionMeters,
+    previewPrecisionMeters,
+    selectedMethodPage,
+    showCapturePageEarly,
+  ]);
+
+  useEffect(() => {
+    if (!isRecording || captureMethod !== 'walk') {
+      setWeakGpsWalkSeconds(0);
+      return;
     }
-  }, [isRecording, precisionMeters, recordingSeconds]);
+    const tick = setInterval(() => {
+      if (isWeakGpsForWalkCoach(precisionMeters)) {
+        setWeakGpsWalkSeconds((seconds) => seconds + 1);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [captureMethod, isRecording, precisionMeters]);
 
   const boundaryPointCount = points.length;
 
@@ -915,6 +982,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     // Stay in trace mode so the map does not flip marker/overlay modes while clearing.
   }, [safeClearBoundary]);
 
+  const restartWalkedBoundaryCapture = useCallback(() => {
+    safeClearBoundary();
+    if (captureMethod === 'walk' && selectedMethodPage === 'walk') {
+      void startRecording();
+    }
+  }, [captureMethod, safeClearBoundary, selectedMethodPage, startRecording]);
+
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
   const resolvedLandingPlotName = useMemo(
@@ -1147,29 +1221,92 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     if (!showCapturePage || captureMethod !== 'walk' || selectedMethodPage !== 'walk') {
       return null;
     }
-    if (!isRecording) {
-      if (points.length >= 3) {
-        return t('walk_hint_close_loop');
-      }
-      return null;
-    }
-    if (points.length >= 3 && area.hectares >= 0.02) {
-      return t('walk_hint_close_loop');
-    }
-    if (effectivePrecisionMeters != null && effectivePrecisionMeters > 15) {
-      return t('walk_tip_recording_phone');
-    }
-    return t('walk_tip_walk_edge');
+    const hint = resolveWalkLiveHint({
+      isRecording,
+      pointCount: points.length,
+      areaHectares: area.hectares,
+      precisionMeters: effectivePrecisionMeters,
+      speedMps: isRecording ? lastSpeedMps : null,
+      gpsFixDropped,
+      boundaryPoints: points,
+    });
+    if (!hint) return null;
+    return {
+      text: hint.params ? t(hint.key, hint.params) : t(hint.key),
+      tone: hint.tone,
+    };
   }, [
     area.hectares,
     captureMethod,
     effectivePrecisionMeters,
+    gpsFixDropped,
     isRecording,
-    points.length,
+    lastSpeedMps,
+    points,
     selectedMethodPage,
     showCapturePage,
     t,
   ]);
+
+  const walkPreviewPrecision = previewPrecisionMeters ?? precisionMeters;
+  const walkStartGateReady = isWalkStartGateReady({
+    precisionMeters: walkPreviewPrecision,
+    stableSeconds: gpsStableSeconds,
+    override: walkStartGateOverride,
+  });
+  const walkStartGateRemaining = walkStartGateSecondsRemaining(gpsStableSeconds);
+
+  const handleStartWalkRecording = useCallback(() => {
+    if (!walkStartGateReady) return;
+    alternateCaptureSuggestedRef.current = false;
+    setWeakGpsWalkSeconds(0);
+    void startRecording();
+  }, [startRecording, walkStartGateReady]);
+
+  const handleStartWalkAnyway = useCallback(() => {
+    setWalkStartGateOverride(true);
+    alternateCaptureSuggestedRef.current = false;
+    setWeakGpsWalkSeconds(0);
+    void startRecording();
+  }, [startRecording]);
+
+  useEffect(() => {
+    if (
+      !shouldSuggestAlternateCapture({
+        isRecording,
+        alreadySuggested: alternateCaptureSuggestedRef.current,
+        weakGpsSeconds: weakGpsWalkSeconds,
+      })
+    ) {
+      return;
+    }
+    alternateCaptureSuggestedRef.current = true;
+    Alert.alert(t('walk_coach_alternate_title'), t('walk_coach_alternate_body'), [
+      {
+        text: t('walk_coach_keep_walking'),
+        style: 'cancel',
+      },
+      {
+        text: t('walk_method_centroid'),
+        onPress: () => switchToCaptureMethod('centroid', 'centroid'),
+      },
+      {
+        text: t('walk_geo_confidence_cta_trace'),
+        onPress: () => {
+          void enterManualTraceRef.current('confidence_cta');
+        },
+      },
+    ]);
+  }, [isRecording, switchToCaptureMethod, t, weakGpsWalkSeconds]);
+
+  const walkCoachHintStyle = useCallback(
+    (tone: WalkCoachHintTone) => {
+      if (tone === 'warning') return [styles.walkCaptureHint, styles.walkCoachHintWarning];
+      if (tone === 'caution') return [styles.walkCaptureHint, styles.walkCoachHintCaution];
+      return styles.walkCaptureHint;
+    },
+    [styles.walkCaptureHint, styles.walkCoachHintCaution, styles.walkCoachHintWarning],
+  );
 
   const drawCaptureHint = useMemo(() => {
     if (!showCapturePage || captureMethod !== 'draw') {
@@ -1211,7 +1348,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       holdPercent: cornerHoldPercent,
       savedCornerCount: points.length,
       secondsRemaining: cornerHoldSecondsRemaining,
-      poorGps: effectivePrecisionMeters != null && effectivePrecisionMeters > 15,
+      poorGps: effectivePrecisionMeters != null && effectivePrecisionMeters > WALK_CAPTURE_POOR_GPS_M,
     });
   }, [
     captureMethod,
@@ -1465,10 +1602,12 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       phase: 'save',
     });
     if (pointGeometryQuality.blockingIssues.length > 0) {
-      Alert.alert(
-        geometryQualityAlertTitle(pointGeometryQuality.blockingIssues, t),
-        localPolygonQualityMessage(pointGeometryQuality.blockingIssues, t),
-      );
+      promptBlockingPlotGeometryIssues({
+        blockingIssues: pointGeometryQuality.blockingIssues,
+        t,
+        onWalkAgain: restartWalkedBoundaryCapture,
+        onTraceOnMap: openManualTraceFromConfidence,
+      });
       return;
     }
 
@@ -1560,10 +1699,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
 
-    if (precisionMeters != null && precisionMeters > 10) {
-      Alert.alert(t('walk_poor_gps_title'), t('walk_poor_gps_body'));
-    }
-
     const polygonGeometryQuality = assessPlotGeometryQuality({
       kind: 'polygon',
       points,
@@ -1573,10 +1708,12 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       phase: 'save',
     });
     if (polygonGeometryQuality.blockingIssues.length > 0) {
-      Alert.alert(
-        geometryQualityAlertTitle(polygonGeometryQuality.blockingIssues, t),
-        localPolygonQualityMessage(polygonGeometryQuality.blockingIssues, t),
-      );
+      promptBlockingPlotGeometryIssues({
+        blockingIssues: polygonGeometryQuality.blockingIssues,
+        t,
+        onWalkAgain: restartWalkedBoundaryCapture,
+        onTraceOnMap: openManualTraceFromConfidence,
+      });
       return;
     }
 
@@ -1736,7 +1873,15 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           detail: localPolygonQualityMessage(polygonGeometryQuality.warnings, t),
         }),
         [
-          { text: t('geo_quality_fix_boundary'), style: 'cancel' },
+          {
+            text: t('geo_quality_fix_boundary'),
+            style: 'cancel',
+            onPress: restartWalkedBoundaryCapture,
+          },
+          {
+            text: t('walk_geo_confidence_cta_trace'),
+            onPress: openManualTraceFromConfidence,
+          },
           { text: t('geo_quality_save_on_phone'), onPress: completePolygonSave },
         ],
       );
@@ -1815,9 +1960,25 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const renderWalkCaptureActions = () => (
     <View style={{ gap: 8 }}>
+      {!isRecording && !walkStartGateReady ? (
+        <ThemedText type="caption" style={styles.walkCoachStartChip} testID="walk-coach-start-settling">
+          {walkStartGateRemaining > 0
+            ? t('walk_coach_start_settling', { seconds: walkStartGateRemaining })
+            : t('walk_wait_strong_gps')}
+        </ThemedText>
+      ) : null}
+      {!isRecording && walkStartGateReady ? (
+        <ThemedText type="caption" style={[styles.walkCoachStartChip, styles.walkCoachStartReady]}>
+          {t('walk_coach_start_ready')}
+        </ThemedText>
+      ) : null}
       {walkCaptureHint ? (
-        <ThemedText type="caption" style={styles.walkCaptureHint}>
-          {walkCaptureHint}
+        <ThemedText
+          type="caption"
+          style={walkCoachHintStyle(walkCaptureHint.tone)}
+          testID="walk-coach-hint"
+        >
+          {walkCaptureHint.text}
         </ThemedText>
       ) : null}
       {!isRecording ? (
@@ -1825,7 +1986,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           variant="secondary"
           style={{ backgroundColor: '#0A7F59', minHeight: 56 }}
           icon={<Ionicons name="play-outline" size={20} color="#FFFFFF" />}
-          onPress={startRecording}
+          onPress={handleStartWalkRecording}
+          disabled={!walkStartGateReady}
           fullWidth
         >
           {points.length === 0 ? t('start_walking') : t('walk_start_recording')}
@@ -1841,6 +2003,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           {t('walk_stop_and_save')}
         </Button>
       )}
+      {!isRecording && !walkStartGateReady ? (
+        <Pressable onPress={handleStartWalkAnyway} hitSlop={8} testID="walk-start-anyway">
+          <ThemedText type="caption" style={styles.walkCoachStartAnyway}>
+            {t('walk_coach_start_anyway')}
+          </ThemedText>
+        </Pressable>
+      ) : null}
       {!isRecording && points.length >= 3 ? (
         <Button variant="primary" onPress={handleWalkStopAndSave} fullWidth>
           {editingPlot ? t('walk_save_boundary') : t('walk_complete_geolocation')}
@@ -2530,6 +2699,14 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       youMarkerFollowsPosition={isRecording}
                     />
                   </MapView>
+                  {isRecording && gpsFixDropped && points.length > 0 ? (
+                    <View style={styles.walkCoachMapChip} pointerEvents="none" testID="walk-coach-gps-paused">
+                      <Ionicons name="pause-circle-outline" size={14} color="#FFFFFF" />
+                      <ThemedText type="caption" style={styles.walkCoachMapChipText}>
+                        {t('walk_coach_gps_paused_map')}
+                      </ThemedText>
+                    </View>
+                  ) : null}
                   {isRecording ? (
                     <View style={styles.recordingMapBadge} pointerEvents="none">
                       <Animated.View

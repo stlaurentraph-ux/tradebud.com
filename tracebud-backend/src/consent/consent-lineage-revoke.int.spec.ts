@@ -8,9 +8,10 @@ import { PlotsService } from '../plots/plots.service';
 import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
 import { createPlotsServiceForIntTest } from '../testing/plots-service.mock';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_consent_lineage_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, targetSchema: string) {
@@ -27,7 +28,7 @@ const coopReq = (userId: string) => ({
   },
 });
 
-describeIfDb('Consent sold-lineage revocation integration', () => {
+describe('Consent sold-lineage revocation integration', () => {
   jest.setTimeout(60_000);
 
   let pool: Pool;

@@ -1,3 +1,116 @@
+### 2026-06-24 (field — field-sync-delta cursor wiring)
+
+- **Delta probe** — `GET /v1/me/field-sync-delta` now drives sync mode: persisted cursor (`field_sync_cursor_v1`) stores plot/audit/voucher watermarks; skip full restore when inbound unchanged.
+- **Surfaces** — Settings Sync now, conservative auto-backup, and focus pull (`restoreCloudStateOnFocus`) probe before heavy restore; cursor advanced after successful pipeline.
+- **Analytics** — `field_sync_delta_skipped` when focus pull skips restore; cursor cleared on sign-out.
+- **Guards** — `field-sync-mode-guard.mjs` extended; `fieldSyncDeltaEvaluate.test.ts` + mode/focus tests.
+
+### 2026-06-24 (delivery intake QR — Phase B complete)
+
+- **Handoff** — desk confirms received kg + optional note before staging; `POST /v1/harvest/vouchers/handoff-confirm`; audit `delivery_handoff_confirmed`.
+- **Signup auto-claim** — marketing `/d/` and `/t/` link to `/create-account?claim=` and `/login?next=/harvests?claim=`; onboarding step 3 redirects to claim.
+- **Bulk scan** — continuous camera mode on delivery desk; `@zxing/browser` fallback when native `BarcodeDetector` missing.
+
+### 2026-06-24 (delivery intake QR — Phase B partial)
+
+- **Trip QR** — `T-…` refs on multi-plot delivery; `tracebud.com/t/{ref}` marketing preview; desk claims all vouchers in one scan.
+- **Show buyer** — full-screen QR sheet on single + multi-plot receipts; ECC level H on QR encode.
+- **Migration** — `voucher.delivery_trip_ref` (`tb_v16_060`).
+
+### 2026-06-24 (delivery intake QR — ADR-009 Phase A)
+
+- **ADR-009 + FEAT-011** — smart-link QR (`tracebud.com/d/V-…`), public preview API, desk inbox/scan/auto-claim, field intake advisory.
+- **Backend** — `GET /v1/public/harvest/delivery-preview/:qrRef`; `directed_to_tenant` on tenant voucher list.
+- **Dashboard** — `/d/[ref]` preview, camera scan dialog, directed inbox, `?claim=` auto-stage.
+- **Field** — QR encodes smart URL; pre-submit buyer-intake advisory on unverified plots.
+- **Marketing** — `/d/[ref]` public receipt page with register CTA.
+
+### 2026-06-24 (capture quality S6.4 — geometry approval for shipment)
+
+- **Backend** — `geometry_approved_at` on plot; `tenant_geometry_policy`; `POST /v1/plots/:id/approve-geometry`; package readiness `GEOMETRY_APPROVAL_*` codes; approval cleared on geometry supersession.
+- **Dashboard** — `PlotGeometryApprovalCard` on plot detail; exporter package warnings for unapproved low-confidence plots.
+- **Migrations** — `tb_v16_052`, `tb_v16_053`, Supabase `20260624120000`.
+
+### 2026-06-24 (field — OAuth reliability: iOS fallback, telemetry, guards)
+
+- **iOS Google fallback** — installable iOS (EAS preview/production) falls back to browser OAuth when native Google fails; Metro physical dev unchanged (no double prompt).
+- **Step telemetry** — `oauth_step`, `oauth_browser_fallback` analytics events; `OAuthFlowError` with pipeline step on failures (`native_prompt` → `session_persist`).
+- **Guards** — `ios-oauth-guard.mjs`, `oauth:verify:ios`, `oauth:sso-health-check.mjs`, `oauth-orchestrator-guard.mjs`, `oauth-maestro-guard.mjs`; FR-014 regression ledger row.
+- **Maestro** — `oauth-sign-in-sheet-smoke.yaml` + `oauth-callback-missing-url-smoke.yaml` (§4 subset; Google account picker still manual on device).
+- **Orchestrator** — `oauthOrchestrator.ts` centralizes native/browser sign-in, callback waiters, deep-link completion, and cold-start callback.
+- **OTA gates** — `ota:preview:preflight` (tests + oauth:verify + SSO health + sign-off); production preflight also runs OAuth verify + SSO health.
+
+### 2026-06-24 (field — capture quality S6 + preview OTA)
+
+- **Set password errors** — password-save failures no longer map to generic “Could not sign in”; session/reauth/network-specific copy in Settings.
+- **Pre-upload review card** — low/moderate confidence prompts before plot save with one-tap “Trace on map” + save anyway; analytics `geometry_pre_upload_review_*`.
+- **Product OS** — ADR-008 capture quality tiers; `field-capture-quality-registry.md`; FEAT-003 §S6 roadmap (Bluetooth GNSS last-resort stub).
+- **Preview OTA** — `update:preview:ios` with password + capture-quality bundle (`DEVICE_SMOKE_SIGNOFF_SKIP=1` — signoff commit stale).
+
+### 2026-06-23 (field + backend — structural safeguards for invite + cloud audit defer)
+
+- **Buyer invite guards** — expanded `networkRoutingRegistry` field surfaces; `backend-network-routing-guard` checks signup claim + invite UX modules; DEVICE smoke §5 buyer invite; FR-012 regression ledger row.
+- **Cloud audit defer guards** — `FARMER_CLOUD_SYNC_PREP_OPTIONS` in `farmerArtifactRegistry.ts`; new `cloud-audit-sync-guard.mjs`; `enqueueFarmerCloudSyncActions.test.ts`; FR-013 regression ledger row; registry docs for markers and sync prep.
+
+### 2026-06-19 (field + backend — unknown buyer email delivery)
+
+- **Invite flow** — unknown dashboard email creates voucher with `intended_recipient_email`, `voucher_buyer_invites` row, optional Resend invite; returns `buyerInvite` on harvest POST.
+- **Signup claim** — `claimPendingDeliveryBuyerInvitesOnSignup` runs on dashboard signup + workspace setup; sets `intended_recipient_tenant_id`, activates consent, marks invite `claimed`; buyer sees voucher in dashboard.
+- **Ship ops** — `db:apply:voucher-buyer-invites`, Supabase mirror `20260623120000`, `DEPLOY_PRODUCTION.md` §2d, device checklist §5a.
+- **Postgres connection hygiene** — default `PG_POOL_MAX=5`, pool drain on shutdown, shared `migration-db-client.mjs` + `check:db-connection`, Railway/docs updated.
+- **Field UX** — clearer Deliver to copy; legacy unknown-email Alert → QR-only retry; invite success Alert → receipt.
+- **Tests** — integration unknown-email path; `deliveryBuyerInviteMessages.test.ts`.
+
+### 2026-06-19 (backend — farmer-initiated delivery consent)
+
+- **Directed delivery** — `ensureActiveConsentForDirectedDelivery` auto-creates/activates `SHIPMENT_PREPARATION` grants when farmer delivers to resolved buyer tenant/email; revoked/denied still block.
+- **Tests** — `delivery-consent-grant.spec.ts`; integration test for cold-email delivery path; field app copy updated.
+
+### 2026-06-19 (backend — cross-surface network routing)
+
+- **Shared resolver** — `email-to-tenant-resolution.ts` (signup contacts + admin_users) used by delivery routing and inbox campaign fan-out.
+- **Buyer visibility** — `resolveFarmerIdsForTenant` unions active `consent_grants` farmers.
+- **Structural** — `networkRoutingRegistry.ts`, guard, integration test `network-routing-delivery.int.spec.ts`.
+
+### 2026-06-19 (dashboard — compliance issues + exporter structural)
+
+- **Operational issues** — `dashboardComplianceIssuesRegistry.ts` + 3 guards; kanban/detail PermissionGate; analytics (`ISSUE_*`); Playwright `compliance-issues-status.spec.ts`; backend `requests_operational_issues` binding.
+- **Exporter critical path** — `dashboardExporterWorkflowRegistry.ts` + guard; package detail `assemble-shipment-action` testid; Playwright `exporter-package-readiness.spec.ts`.
+- **Golden paths** — Playwright manifest 4 → 6 (slice 4.6); `qa:structural:ci` green.
+
+### 2026-06-19 (dashboard — CRM/outreach phase 4)
+
+- **Contact create analytics** — success/failure in `createContact`.
+- **Programmes page** — uses `useRequestCampaigns` + registry mappers + campaign client actions (removed duplicate POST).
+- **Playwright** — `outreach-campaign-actions.spec.ts` golden path for send/archive; manifest + guard updated (4 paths).
+
+### 2026-06-19 (dashboard — CRM/outreach phase 3)
+
+- **Outreach actions** — send draft + archive on `/outreach` table; `request-campaign-client.ts`; `requests:send` PermissionGate.
+- **Contact analytics** — status change events in `updateContactStatus`.
+- **Parity** — sponsor + country_reviewer bindings; backend widened for compliance_manager/country_reviewer network access.
+
+### 2026-06-19 (dashboard — CRM/outreach phase 2)
+
+- **Analytics** — 6 campaign/inbox events wired in wizard + inbox; baseline updated (23 canonical events).
+- **Permission gates** — `requests:send` on wizard review step; `requests:create` on save draft.
+- **Backend parity** — `dashboard-backend-network-parity-guard.mjs`; widened backend campaign/inbox roles for cooperative + importer.
+
+### 2026-06-19 (dashboard — CRM/outreach structural contracts)
+
+- **Registry** — `dashboardCrmOutreachRegistry.ts` (contact/campaign/inbox statuses, request types, UI mappers, network page contracts).
+- **Guards** — `dashboard-crm-guard`, `dashboard-campaign-guard`, `dashboard-network-permission-guard` wired in orchestrator.
+- **UI** — outreach uses registry mapper + `requests:create` PermissionGate; inbox uses `mapInboxStatusToUi`; contact pages import `DASHBOARD_CONTACT_STATUSES`.
+- **Docs** — `dashboard-crm-outreach-registry.md`, runbook + cursor rule updated.
+
+### 2026-06-19 (dashboard — structural automation phase 2)
+
+- **Legal/DDS registry** — `dashboardLegalWorkflowRegistry.ts` + guard (roles, workflows, DDS/compliance statuses).
+- **Permission matrix** — `dashboard-permission-matrix-guard.mjs` (commercial permissions, nav, onboarding).
+- **Backend parity** — `dashboard-backend-role-parity-guard.mjs` (TenantRole ↔ backend AppRole).
+- **Analytics** — `dashboard-analytics-slice-guard.mjs` with baseline; strict in `qa:structural:ci`.
+- **check:dashboard** — includes `qa:structural`.
+
 ### 2026-06-19 (backend — structural automation phase 2)
 
 - **Audit registry v2** — 117 `audit_log` events categorized; strict `--ci` src scan for unregistered emits.

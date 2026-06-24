@@ -43,17 +43,21 @@ export function draftRowToPayload(row: PlotMappingDraftRow): PlotMappingDraftPay
 
 export async function queuePlotMappingDraftSync(
   draft: PlotMappingDraftRow,
+  options?: { deferPost?: boolean; skipIfSynced?: boolean },
 ): Promise<'synced' | 'queued' | 'skipped'> {
   if (!draft.farmerId?.trim() || draft.points.length === 0) return 'skipped';
   return queueFieldCloudAuditSync({
     eventType: PLOT_MAPPING_DRAFT_AUDIT,
     scopeId: draft.farmerId,
     payload: draftRowToPayload(draft) as unknown as Record<string, unknown>,
+    deferPost: options?.deferPost,
+    skipIfSynced: options?.skipIfSynced,
   });
 }
 
 export async function queuePlotMappingDraftClearSync(
   farmerId: string,
+  options?: { deferPost?: boolean; skipIfSynced?: boolean },
 ): Promise<'synced' | 'queued' | 'skipped'> {
   const id = farmerId.trim();
   if (!id) return 'skipped';
@@ -62,6 +66,8 @@ export async function queuePlotMappingDraftClearSync(
     eventType: PLOT_MAPPING_DRAFT_CLEARED_AUDIT,
     scopeId: id,
     payload: { farmerId: id, clearedAt: Date.now() },
+    deferPost: options?.deferPost,
+    skipIfSynced: options?.skipIfSynced,
   });
 }
 
@@ -132,8 +138,8 @@ export async function restorePlotMappingDraftFromServer(params: {
 export async function saveAndSyncPlotMappingDraft(draft: PlotMappingDraftRow): Promise<void> {
   await persistPlotMappingDraft(draft);
   if (draft.points.length === 0) {
-    await queuePlotMappingDraftClearSync(draft.farmerId).catch(() => undefined);
+    await queuePlotMappingDraftClearSync(draft.farmerId, { deferPost: true }).catch(() => undefined);
     return;
   }
-  await queuePlotMappingDraftSync(draft).catch(() => undefined);
+  await queuePlotMappingDraftSync(draft, { deferPost: true }).catch(() => undefined);
 }

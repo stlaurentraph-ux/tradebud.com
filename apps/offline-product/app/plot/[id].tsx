@@ -19,8 +19,9 @@ import { Input } from '@/components/ui/input';
 import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
-import { subscribeServerPlotSyncChanged, emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
+import { useFocusCloudPull, useReloadOnServerPlotSyncChanged } from '@/features/sync/useFocusCloudPull';
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import { useLanguage } from '@/features/state/LanguageContext';
 import {
   fetchPlotTenureVerification,
@@ -74,9 +75,6 @@ import {
 import { countGeoVerifiedGroundTruthDirections } from '@/features/compliance/groundTruthPhotoGeo';
 import { resolveBackendPlotMetaForLocal, resolveServerPlotIdForLocal, reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
-import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
-import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
-import { restoreCloudMediaFromServer } from '@/features/sync/restoreCloudMediaFromServer';
 import { hasDuplicatePlotName } from '@/features/plots/plotNameValidation';
 import { resolveHarvestPlotPickerId, resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
 import {
@@ -110,7 +108,7 @@ export default function PlotDetailScreen() {
     from?: string;
     receiptId?: string;
   }>();
-  const { plots, farmer, updatePlot, removePlot } = useAppState();
+  const { plots, farmer, updatePlot, removePlot, reloadFromDisk } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
 
   const plotId = typeof id === 'string' ? id : '';
@@ -235,35 +233,6 @@ export default function PlotDetailScreen() {
     }
   }, [plot?.id, plotId]);
 
-  const restoreCloudMediaIfSignedIn = useCallback(async () => {
-    if (!farmer?.id || !hasSyncAuthSession()) return;
-    try {
-      const { farmerId, ownedFarmerIds } = await prepareFieldSyncContext({
-        profileFarmerId: farmer.id,
-        localPlots: plots,
-      });
-      const result = await restoreCloudMediaFromServer({
-        apiFarmerId: farmerId,
-        ownedFarmerIds,
-        localPlots: plots,
-        localFarmer: farmer,
-      });
-      const restored =
-        result.evidenceRestored +
-        result.groundTruthRestored +
-        result.landTitleRestored +
-        (result.devicePreferencesRestored ? 1 : 0) +
-        (result.profilePhotoRestored ? 1 : 0) +
-        (result.mappingDraftRestored ? 1 : 0) +
-        result.offlinePacksQueued;
-      if (restored > 0) {
-        emitServerPlotSyncChanged();
-      }
-    } catch {
-      // Non-blocking; full Sync now still available from Settings.
-    }
-  }, [farmer?.id, plots]);
-
   useEffect(() => {
     if (!farmer?.id) {
       setProducerEvidenceKinds([]);
@@ -366,37 +335,27 @@ export default function PlotDetailScreen() {
     void refreshTenureVerification();
   }, [refreshTenureVerification]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      void (async () => {
-        void refreshBackendPlots(false);
-        void refreshTenureVerification();
-        if (hasSyncAuthSession() && farmer?.id) {
-          await restoreCloudMediaIfSignedIn();
-          if (cancelled) return;
-        }
-        await refreshPlotLocalMedia();
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, [
-      farmer?.id,
-      refreshBackendPlots,
-      refreshPlotLocalMedia,
-      refreshTenureVerification,
-      restoreCloudMediaIfSignedIn,
-    ]),
-  );
-
-  useEffect(() => {
-    return subscribeServerPlotSyncChanged(() => {
-      void refreshBackendPlots(true);
-      void refreshTenureVerification();
-      void refreshPlotLocalMedia();
-    });
+  const refreshAfterCloudPull = useCallback(async () => {
+    await refreshBackendPlots(false);
+    await refreshTenureVerification();
+    await refreshPlotLocalMedia();
   }, [refreshBackendPlots, refreshPlotLocalMedia, refreshTenureVerification]);
+
+  useFocusCloudPull({
+    isSignedIn: hasSyncAuthSession(),
+    reloadFromDisk,
+    onPullComplete: refreshAfterCloudPull,
+    enabled: Boolean(farmer?.id),
+  });
+
+  useReloadOnServerPlotSyncChanged({
+    reloadFromDisk,
+    onSyncChanged: async () => {
+      await refreshBackendPlots(true);
+      await refreshTenureVerification();
+      await refreshPlotLocalMedia();
+    },
+  });
 
   useEffect(() => {
     if (!backendPlotId) return;

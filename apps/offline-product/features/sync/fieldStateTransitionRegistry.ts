@@ -45,3 +45,9 @@ export const RESTORE_PIPELINE_STAGES = [
 ] as const;
 
 export type RestorePipelineStage = (typeof RESTORE_PIPELINE_STAGES)[number];
+
+/** Device marker prefix for farmer-scoped cloud audit uploads (queueFieldCloudAuditSync). */
+export const FIELD_CLOUD_AUDIT_SYNC_MARKER_PREFIX = 'audit_cloud_synced:' as const;
+
+/** Inbound hydrate markers — this device pulled server state (deviceSyncMarkers.ts). */
+export const INBOUND_HYDRATED_MARKER_PREFIX = 'cloud_inbound_hydrated:' as const;

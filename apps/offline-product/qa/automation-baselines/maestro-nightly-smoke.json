@@ -29,6 +29,29 @@
       "flowFile": "cross-device-restore-smoke.yaml",
       "seedProfile": "cross_device_b",
       "description": "DEVICE_SMOKE §12 subset — Device B empty media, restore entry points"
+    },
+    {
+      "id": "oauth_sign_in_sheet",
+      "flowFile": "oauth-sign-in-sheet-smoke.yaml",
+      "seedProfile": "backed_up_offline",
+      "description": "DEVICE_SMOKE §4 subset — OAuth sign-in sheet CTAs (no Google UI automation)"
+    },
+    {
+      "id": "oauth_callback_missing_url",
+      "flowFile": "oauth-callback-missing-url-smoke.yaml",
+      "description": "OAuth cold-start callback error UI when deep link is empty"
+    },
+    {
+      "id": "signed_out_backup_status",
+      "flowFile": "signed-out-backup-status-smoke.yaml",
+      "seedProfile": "backed_up_offline",
+      "description": "DEVICE_SMOKE §10 subset — signed-out home shows Backed up when plot links exist"
+    },
+    {
+      "id": "sign_out_persistence",
+      "flowFile": "sign-out-persistence-smoke.yaml",
+      "seedProfile": "backed_up_offline",
+      "description": "Sign-out latch — signed-out UI persists across tab navigation"
     }
   ]
 }

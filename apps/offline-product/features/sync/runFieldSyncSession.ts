@@ -4,6 +4,10 @@ import {
   verifySyncAccessToken,
   type VerifySyncAccessTokenResult,
 } from '@/features/api/syncAuthSession';
+import {
+  beginOwnedFarmerIdsSessionCache,
+  endOwnedFarmerIdsSessionCache,
+} from '@/features/api/fieldAppBootstrap';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import {
   beginServerPlotFetchRun,
@@ -45,6 +49,7 @@ export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult
 
   beginServerPlotFetchRun();
   beginSyncAccessTokenRun(verify.token);
+  beginOwnedFarmerIdsSessionCache();
 
   return {
     ok: true,
@@ -53,6 +58,7 @@ export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult
       apiBaseUrl: getTracebudApiBaseUrl(),
     },
     end: () => {
+      endOwnedFarmerIdsSessionCache();
       endSyncAccessTokenRun();
       endServerPlotFetchRun();
     },

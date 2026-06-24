@@ -67,10 +67,30 @@ export async function syncGroundTruthPhotosWithFiles(params: {
   const resolved: Array<Record<string, unknown>> = [];
 
   for (const photo of params.photos) {
+    const existingStoragePath =
+      typeof photo.storagePath === 'string' && photo.storagePath.trim().length > 0
+        ? photo.storagePath.trim()
+        : null;
+
     if (!isLocalEvidenceUri(photo.uri)) {
       summary.metadataOnlyCount += 1;
       resolved.push({
         uri: photo.uri,
+        ...(existingStoragePath ? { storagePath: existingStoragePath } : {}),
+        takenAt: photo.takenAt,
+        latitude: photo.latitude ?? null,
+        longitude: photo.longitude ?? null,
+        direction: photo.direction ?? null,
+        label: 'ground_truth_photo',
+      });
+      continue;
+    }
+
+    if (existingStoragePath) {
+      summary.metadataOnlyCount += 1;
+      resolved.push({
+        uri: photo.uri,
+        storagePath: existingStoragePath,
         takenAt: photo.takenAt,
         latitude: photo.latitude ?? null,
         longitude: photo.longitude ?? null,

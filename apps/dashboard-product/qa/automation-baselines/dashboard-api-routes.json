@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-21T13:52:45.589Z",
+  "generatedAt": "2026-06-24T08:35:28.512Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -280,6 +280,14 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/harvest/delivery-preview/[qrRef]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/public/harvest/delivery-preview/{qrRef}"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/harvest/packages",
       "category": "backend-proxy",
       "backendPaths": [
@@ -359,6 +367,14 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/harvest/vouchers/claim"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/vouchers/handoff-confirm",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/vouchers/handoff-confirm"
       ],
       "failClosed": true
     },

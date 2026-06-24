@@ -72,9 +72,9 @@ describe('plotServerLink', () => {
     expect(next['local-1']).toBe('server-1');
   });
 
-  it('does not treat stale persisted links as confirmed when server list is empty', () => {
+  it('trusts persisted device links when server list is temporarily empty', () => {
     const links = { 'local-1': 'server-from-old-db' };
-    expect(resolveConfirmedServerPlotIdForLocal(localPlot, [], links)).toBeNull();
+    expect(resolveConfirmedServerPlotIdForLocal(localPlot, [], links)).toBe('server-from-old-db');
   });
 
   it('does not confirm sync from area-only fuzzy match', () => {

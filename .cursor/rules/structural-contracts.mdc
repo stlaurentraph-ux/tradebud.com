@@ -12,7 +12,7 @@ When changing behavior in app surfaces, check whether a **registry** owns the in
 | Surface | Registry docs | Command |
 |---------|---------------|---------|
 | Offline field | `farmer-artifact-sync-registry.md`, `field-role-permission-registry.md`, `field-state-transition-registry.md` | `cd apps/offline-product && npm run qa:structural` |
-| Dashboard | `dashboard-rbac-registry.md` | `cd apps/dashboard-product && npm run qa:structural` |
+| Dashboard | `dashboard-rbac-registry.md`, `dashboard-legal-workflow-registry.md`, `dashboard-crm-outreach-registry.md` | `cd apps/dashboard-product && npm run qa:structural` |
 | Backend | `backend-structural-contracts.md` | `cd tracebud-backend && npm run qa:structural` |
 | Marketing | `marketing-structural-contracts.md` | `cd apps/marketing && npm run qa:structural` |
 

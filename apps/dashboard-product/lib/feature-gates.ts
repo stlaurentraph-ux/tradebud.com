@@ -18,7 +18,7 @@ const FEATURE_GATE_CONFIG: readonly FeatureGateConfig[] = [
     defaultEnabled: true,
     owner: 'Dashboard + Product Eng',
     deferredReason: 'Disable with NEXT_PUBLIC_FEATURE_REQUEST_CAMPAIGNS=false to hide campaign routes.',
-    routes: ['/outreach', '/inbox'],
+    routes: ['/outreach', '/inbox', '/programmes'],
   },
   {
     key: 'annual_reporting',

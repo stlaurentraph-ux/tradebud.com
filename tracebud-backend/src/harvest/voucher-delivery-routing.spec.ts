@@ -23,12 +23,18 @@ describe('voucher-delivery-routing', () => {
     });
   });
 
-  it('resolves buyer email to tenant and validates consent', async () => {
+  it('resolves buyer email to tenant and ensures consent', async () => {
     const pool = {
       query: jest
         .fn()
-        .mockResolvedValueOnce({ rows: [{ tenant_id: 'tenant_exporter' }], rowCount: 1 })
-        .mockResolvedValueOnce({ rows: [{ '?column?': 1 }], rowCount: 1 }),
+        .mockResolvedValueOnce({
+          rows: [{ email: 'buyer@coop.example', tenant_id: 'tenant_exporter' }],
+          rowCount: 1,
+        })
+        .mockResolvedValueOnce({
+          rows: [{ id: 'grant-1', status: 'active', purpose_code: 'COMPLIANCE_COLLECTION' }],
+          rowCount: 1,
+        }),
     } as unknown as Pool;
 
     await expect(
@@ -42,9 +48,52 @@ describe('voucher-delivery-routing', () => {
     });
   });
 
-  it('rejects delivery when consent is missing', async () => {
+  it('auto-grants consent when delivering to tenant without prior grant', async () => {
     const pool = {
-      query: jest.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [{ id: 'grant-new' }], rowCount: 1 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
+    } as unknown as Pool;
+
+    await expect(
+      resolveVoucherDeliveryRecipient(pool, {
+        farmerId: 'farmer-1',
+        deliverToTenantId: 'tenant_exporter',
+      }),
+    ).resolves.toEqual({
+      intendedRecipientTenantId: 'tenant_exporter',
+      intendedRecipientEmail: null,
+    });
+  });
+
+  it('returns pending invite when buyer email is not on Tracebud yet', async () => {
+    const pool = {
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 })
+        .mockResolvedValueOnce({ rows: [], rowCount: 0 }),
+    } as unknown as Pool;
+
+    await expect(
+      resolveVoucherDeliveryRecipient(pool, {
+        farmerId: 'farmer-1',
+        deliverToEmail: 'newbuyer@example.com',
+      }),
+    ).resolves.toEqual({
+      intendedRecipientTenantId: null,
+      intendedRecipientEmail: 'newbuyer@example.com',
+      pendingBuyerInvite: true,
+    });
+  });
+
+  it('rejects delivery when consent was revoked', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [{ id: 'grant-1', status: 'revoked', purpose_code: 'COMPLIANCE_COLLECTION' }],
+        rowCount: 1,
+      }),
     } as unknown as Pool;
 
     await expect(
@@ -56,7 +105,7 @@ describe('voucher-delivery-routing', () => {
   });
 
   it('resolves tenant from signup contact email', async () => {
-    const pool = makePool([{ tenant_id: 'tenant_1' }]);
+    const pool = makePool([{ email: 'ops@example.com', tenant_id: 'tenant_1' }]);
     await expect(resolveTenantIdForBuyerEmail(pool, 'Ops@Example.com')).resolves.toBe('tenant_1');
   });
 

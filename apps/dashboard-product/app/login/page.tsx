@@ -8,9 +8,11 @@ import { useAuth } from '@/lib/auth-context';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LocaleContext } from '@/lib/locale-context';
 import { getAuthCopy } from '@/lib/workflow-terminology-labels';
+import { buildCreateAccountHrefFromSearchParams } from '@/lib/supplier-campaign-redirect';
 import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 export default function LoginPage() {
@@ -156,12 +158,13 @@ function LoginPageContent() {
                       : getAuthCopy('forgot_password', t)}
                   </button>
                 </div>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   placeholder={getAuthCopy('placeholder_password', t)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  showPasswordLabel={getAuthCopy('show_password', t)}
+                  hidePasswordLabel={getAuthCopy('hide_password', t)}
                   className="bg-secondary"
                   required
                 />
@@ -180,7 +183,7 @@ function LoginPageContent() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 {getAuthCopy('new_to_tracebud', t)}{' '}
-                <Link href="/create-account" className="font-medium text-primary hover:underline">
+                <Link href={buildCreateAccountHrefFromSearchParams(searchParams)} className="font-medium text-primary hover:underline">
                   {getAuthCopy('create_workspace', t)}
                 </Link>
               </p>

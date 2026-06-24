@@ -55,7 +55,7 @@ export default function OfflineMapsScreen() {
     await setSetting('offlineTilesActivePackId', packId);
     await refreshPacks();
     if (farmer) {
-      await queueFieldDevicePreferencesSync(farmer).catch(() => undefined);
+      await queueFieldDevicePreferencesSync(farmer, { deferPost: true }).catch(() => undefined);
     }
     Alert.alert(t('offline_maps_ready_title'), t('offline_maps_ready_body'), [
       { text: t('ok'), onPress: () => goBackOrHome(router) },

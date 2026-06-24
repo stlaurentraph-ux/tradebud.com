@@ -223,6 +223,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                   <Button
                     variant="default"
                     disabled
+                    data-testid="assemble-shipment-action"
                     title={getPackageAssembleBlockedHint(role, t)}
                     aria-disabled="true"
                   >
@@ -230,7 +231,7 @@ export default function PackageDetailPage({ params }: PackageDetailPageProps) {
                     {getAssembleShipmentActionLabel(role, t)}
                   </Button>
                 ) : (
-                  <Button asChild variant="default">
+                  <Button asChild variant="default" data-testid="assemble-shipment-action">
                     <Link href={`/packages/${pkg.id}/assemble`}>
                       <Lock className="mr-2 h-4 w-4" />
                       {getAssembleShipmentActionLabel(role, t)}

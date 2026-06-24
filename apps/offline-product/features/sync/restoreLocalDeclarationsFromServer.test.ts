@@ -19,6 +19,10 @@ vi.mock('@/features/sync/resolveFieldSyncScope', () => ({
   fetchBackendPlotsForSyncScope: mocks.fetchBackendPlotsForSyncScope,
 }));
 
+vi.mock('@/features/sync/queueDeclarationAuditSync', () => ({
+  markDeclarationAuditSynced: vi.fn(async () => undefined),
+}));
+
 vi.mock('@/features/state/persistence', () => ({
   loadAppState: mocks.loadAppState,
   loadPlotServerLinks: mocks.loadPlotServerLinks,

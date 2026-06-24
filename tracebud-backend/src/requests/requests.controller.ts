@@ -34,7 +34,7 @@ export class RequestsController {
 
   private requireRequestsAccess(req: any): void {
     const role = deriveRoleFromSupabaseUser(req?.user);
-    if (!['admin', 'exporter', 'compliance_manager'].includes(role)) {
+    if (!['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer'].includes(role)) {
       throw new ForbiddenException('This role cannot access request campaigns.');
     }
   }

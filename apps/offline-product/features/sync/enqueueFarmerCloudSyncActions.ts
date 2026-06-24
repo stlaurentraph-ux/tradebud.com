@@ -1,5 +1,6 @@
 import type { FarmerProfile } from '@/features/state/AppStateContext';
 import { getSetting, loadPlotMappingDraft } from '@/features/state/persistence';
+import { FARMER_CLOUD_SYNC_PREP_OPTIONS } from '@/features/sync/farmerArtifactRegistry';
 import { queuePlotMappingDraftSync } from '@/features/sync/plotMappingDraft';
 import { queueFieldDevicePreferencesSync } from '@/features/sync/syncFieldDevicePreferences';
 import { queueFarmerProfilePhotoSync } from '@/features/sync/syncFarmerProfilePhoto';
@@ -21,7 +22,7 @@ export async function enqueueFarmerCloudSyncActions(
   };
   if (!farmer?.id?.trim()) return result;
 
-  const prefs = await queueFieldDevicePreferencesSync(farmer);
+  const prefs = await queueFieldDevicePreferencesSync(farmer, FARMER_CLOUD_SYNC_PREP_OPTIONS);
   result.devicePreferences = prefs !== 'skipped';
 
   const photoUri = (await getSetting('farmerProfilePhotoUri').catch(() => null))?.trim();
@@ -29,13 +30,14 @@ export async function enqueueFarmerCloudSyncActions(
     const photo = await queueFarmerProfilePhotoSync({
       farmerId: farmer.id,
       localUri: photoUri,
+      ...FARMER_CLOUD_SYNC_PREP_OPTIONS,
     });
     result.profilePhoto = photo !== 'skipped';
   }
 
   const draft = await loadPlotMappingDraft(farmer.id).catch(() => null);
   if (draft && draft.points.length > 0) {
-    const draftSync = await queuePlotMappingDraftSync(draft);
+    const draftSync = await queuePlotMappingDraftSync(draft, FARMER_CLOUD_SYNC_PREP_OPTIONS);
     result.mappingDraft = draftSync !== 'skipped';
   }
 

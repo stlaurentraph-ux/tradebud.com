@@ -18,6 +18,7 @@ import {
   Send,
   Save,
 } from 'lucide-react';
+import { PermissionGate } from '@/components/common/permission-gate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -238,14 +239,18 @@ export function StepReviewSend({
           Back
         </Button>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={handleSaveDraft} disabled={isLoading} className="gap-2">
-            {isSavingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            Save as Draft
-          </Button>
-          <Button onClick={handleSend} disabled={isLoading} className="gap-2">
-            {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {mode === 'campaign' ? 'Launch Campaign' : 'Send Request'}
-          </Button>
+          <PermissionGate permission="requests:create">
+            <Button variant="outline" onClick={handleSaveDraft} disabled={isLoading} className="gap-2">
+              {isSavingDraft ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              Save as Draft
+            </Button>
+          </PermissionGate>
+          <PermissionGate permission="requests:send">
+            <Button onClick={handleSend} disabled={isLoading} className="gap-2">
+              {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              {mode === 'campaign' ? 'Launch Campaign' : 'Send Request'}
+            </Button>
+          </PermissionGate>
         </div>
       </div>
     </div>

@@ -56,11 +56,8 @@ function main() {
       if (!source.includes(`'${role}'`)) {
         issues.push(`${entry.id}: ${entry.file} no longer references role '${role}'`);
       }
-      if (appRoles.includes(role) === false && role !== 'importer') {
-        // importer used in contacts controller but not AppRole union — documented drift
-        if (!['importer'].includes(role)) {
-          issues.push(`${entry.id}: role '${role}' not in AppRole union (roles.ts)`);
-        }
+      if (appRoles.includes(role) === false && !['importer', 'sponsor'].includes(role)) {
+        issues.push(`${entry.id}: role '${role}' not in AppRole union (roles.ts)`);
       }
     }
     if (!mdPath.includes(entry.id) && fs.existsSync(mdPath)) {

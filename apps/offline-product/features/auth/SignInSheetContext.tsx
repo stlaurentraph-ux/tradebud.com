@@ -45,9 +45,11 @@ import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { clearFieldProducerBootstrapCache } from '@/features/api/fieldAppBootstrap';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
-import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
-import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
-import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
+import {
+  completeOAuthFromDeepLink,
+  deliverOAuthDeepLink,
+  isOAuthCallbackUrl,
+} from '@/features/auth/oauthOrchestrator';
 import { alignFarmerWithAuthUser } from '@/features/auth/alignFarmerWithAuthUser';
 import {
   bootstrapFarmerProfile,
@@ -68,7 +70,7 @@ import {
   postAuthSyncPlotCountHint,
   shouldOfferPostAuthSync,
 } from '@/features/sync/postAuthSyncOffer';
-import type { OAuthProvider } from '@/features/auth/oauthSignIn';
+import type { OAuthProvider } from '@/features/auth/oauthOrchestrator';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -206,6 +208,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const backupConfirmedCallbackRef = useRef<(() => void | Promise<void>) | undefined>(undefined);
   const oauthSignInInFlightRef = useRef(false);
   const refreshAuthInFlightRef = useRef<Promise<void> | null>(null);
+  const createWizardVisibleRef = useRef(false);
 
   const countUnsyncedPlots = useCallback(async (): Promise<number> => {
     if (!farmer?.id || plots.length === 0) return 0;
@@ -390,6 +393,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     return true;
   }, [syncLocalFarmerFromAuth]);
 
+  useEffect(() => {
+    createWizardVisibleRef.current = createWizardVisible;
+  }, [createWizardVisible]);
+
   const refreshAuth = useCallback(async () => {
     if (oauthSignInInFlightRef.current) {
       return;
@@ -405,26 +412,48 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       if (oauthSignInInFlightRef.current) {
         return;
       }
+      if (createWizardVisibleRef.current) {
+        if (hasSyncAuthSession()) {
+          const { email: savedEmail } = getAuthCredentials();
+          if (savedEmail) setEmail(savedEmail);
+          setIsSignedIn(true);
+          setCreateWizardVisible(false);
+        }
+        return;
+      }
       if (!hasSyncAuthSession()) {
         setIsSignedIn(false);
         setEmail('');
         return;
       }
       if (generationAtStart !== getAuthUiGeneration()) {
+        if (!hasSyncAuthSession()) {
+          setIsSignedIn(false);
+          setEmail('');
+          return;
+        }
         await adoptHydratedAuthSession();
         return;
       }
 
       const { email: savedEmail } = getAuthCredentials();
       if (savedEmail) setEmail(savedEmail);
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        setEmail('');
+        return;
+      }
       setIsSignedIn(true);
 
       const access = await verifySyncAccessToken();
       if (oauthSignInInFlightRef.current) {
         return;
       }
-      if (generationAtStart !== getAuthUiGeneration()) {
-        await adoptHydratedAuthSession();
+      if (generationAtStart !== getAuthUiGeneration() || !hasSyncAuthSession()) {
+        setIsSignedIn(hasSyncAuthSession());
+        if (!hasSyncAuthSession()) {
+          setEmail('');
+        }
         return;
       }
       if (!hasSyncAuthSession()) {
@@ -455,51 +484,25 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   }, [adoptHydratedAuthSession, syncLocalFarmerFromAuth]);
 
   useEffect(() => {
-    const sub = Linking.addEventListener('url', (event) => {
-      if (!isOAuthCallbackUrl(event.url)) return;
-      if (deliverOAuthCallbackUrl(event.url)) return;
-
-      void (async () => {
-        try {
-          await hydrateSyncAuthFromSettings();
-          if (hasSyncAuthSession()) {
-            const { email: signedInEmail } = getAuthCredentials();
-            if (signedInEmail) setEmail(signedInEmail);
-            setIsSignedIn(true);
-            void syncLocalFarmerFromAuth();
-            return;
-          }
-
-          const session = await sessionFromOAuthCallbackUrl(event.url);
-          const result = await completeOAuthFarmerSession({
-            session,
-            farmerId: farmer?.id,
-            localPlots: plots,
-          });
-          if (!result.ok || !hasSyncAuthSession()) return;
-          trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'oauth', source: 'deep_link' });
-          const { email: signedInEmail } = getAuthCredentials();
-          if (signedInEmail) setEmail(signedInEmail);
-          setIsSignedIn(true);
-          void syncLocalFarmerFromAuth();
-          if (result.apiUnreachable) {
-            Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
-          }
-        } catch {
-          // Deep-link handler is best-effort when no in-app OAuth waiter is active.
-        }
-      })();
-    });
-    return () => sub.remove();
-  }, [farmer?.id, plots, syncLocalFarmerFromAuth, t]);
-
-  useEffect(() => {
     void refreshAuth().finally(() => setAuthReady(true));
   }, [refreshAuth]);
 
   const dismissWelcome = useCallback(async () => {
     setWelcomeVisible(false);
     await setSetting(ACCOUNT_WELCOME_DISMISSED_KEY, '1');
+  }, []);
+
+  const closeAllAuthSurfaces = useCallback(async () => {
+    setVisible(false);
+    setCreateWizardVisible(false);
+    setWelcomeVisible(false);
+    setHint(null);
+    setPassword('');
+    setEmailMode(false);
+    setOauthLoading(null);
+    setLoading(false);
+    onSuccessRef.current = undefined;
+    await setSetting(ACCOUNT_WELCOME_DISMISSED_KEY, '1').catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -517,11 +520,22 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setCreateWizardVisible(true);
   }, [dismissWelcome]);
 
-  const showSignUpSuccess = () => {
-    setIsSignedIn(true);
-    Alert.alert(t('farmer_signup_success_title'), t('farmer_signup_success_body'));
-    void offerBackupAfterAuth();
-  };
+  const finishSuccessfulSignUp = useCallback(
+    async (options?: { existingAccount?: boolean }) => {
+      await closeAllAuthSurfaces();
+      if (!(await adoptHydratedAuthSession())) {
+        Alert.alert(t('sign_in'), t('sign_in_oauth_failed'));
+        return;
+      }
+      if (options?.existingAccount) {
+        Alert.alert(t('sign_in'), t('sign_up_oauth_existing_account'));
+      } else {
+        Alert.alert(t('farmer_signup_success_title'), t('farmer_signup_success_body'));
+      }
+      void offerBackupAfterAuth();
+    },
+    [adoptHydratedAuthSession, closeAllAuthSurfaces, offerBackupAfterAuth, t],
+  );
 
   const closeSignIn = useCallback(() => {
     setVisible(false);
@@ -531,7 +545,57 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     onSuccessRef.current = undefined;
   }, []);
 
+  const finishSuccessfulSignIn = useCallback(
+    async (options?: { farmerSyncAlreadyDone?: boolean }) => {
+      if (!hasSyncAuthSession()) {
+        setIsSignedIn(false);
+        return;
+      }
+      setIsSignedIn(true);
+      setPassword('');
+      const onSuccess = onSuccessRef.current;
+      await closeAllAuthSurfaces();
+      if (onSuccess) {
+        void Promise.resolve(onSuccess());
+      }
+      if (!options?.farmerSyncAlreadyDone) {
+        void syncLocalFarmerFromAuth();
+      }
+      void offerBackupAfterAuth();
+    },
+    [closeAllAuthSurfaces, offerBackupAfterAuth, syncLocalFarmerFromAuth],
+  );
+
+  useEffect(() => {
+    const sub = Linking.addEventListener('url', (event) => {
+      if (!isOAuthCallbackUrl(event.url)) return;
+      if (deliverOAuthDeepLink(event.url)) return;
+
+      void (async () => {
+        const outcome = await completeOAuthFromDeepLink({
+          url: event.url,
+          farmerId: farmer?.id,
+          localPlots: plots,
+        });
+        if (outcome.status === 'already_signed_in' || outcome.status === 'completed') {
+          if (!hasSyncAuthSession()) return;
+          trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'oauth', source: 'deep_link' });
+          const { email: signedInEmail } = getAuthCredentials();
+          if (signedInEmail) setEmail(signedInEmail);
+          setIsSignedIn(true);
+          await closeAllAuthSurfaces();
+          void syncLocalFarmerFromAuth();
+          if (outcome.status === 'completed' && outcome.result.apiUnreachable) {
+            Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
+          }
+        }
+      })();
+    });
+    return () => sub.remove();
+  }, [closeAllAuthSurfaces, farmer?.id, plots, syncLocalFarmerFromAuth, t]);
+
   const signOutOnDevice = useCallback(async () => {
+    await unregisterFarmerPushToken().catch(() => undefined);
     abortSyncAuthForSignOut();
     setIsSignedIn(false);
     setEmail('');
@@ -540,9 +604,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setVisible(false);
     setEmailMode(false);
     onSuccessRef.current = undefined;
-    await unregisterFarmerPushToken().catch(() => undefined);
     clearFieldProducerBootstrapCache();
-    await clearPersistedSyncAuth();
+    void clearPersistedSyncAuth().catch(() => undefined);
+    void import('@/features/sync/deviceSyncMarkers').then(({ clearAllInboundHydratedMarkers }) =>
+      clearAllInboundHydratedMarkers(),
+    );
   }, []);
 
   const openSignIn = useCallback((options?: OpenSignInOptions) => {
@@ -577,22 +643,6 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         ? 'sign_in_to_sync_body'
         : 'sign_in_oauth_sub';
 
-  const finishSuccessfulSignIn = async () => {
-    if (!hasSyncAuthSession()) {
-      setIsSignedIn(false);
-      return;
-    }
-    setIsSignedIn(true);
-    setPassword('');
-    await syncLocalFarmerFromAuth();
-    closeSignIn();
-    const onSuccess = onSuccessRef.current;
-    if (onSuccess) {
-      void Promise.resolve(onSuccess());
-    }
-    void offerBackupAfterAuth();
-  };
-
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
     oauthSignInInFlightRef.current = true;
     setOauthLoading(provider);
@@ -610,7 +660,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
             method: provider,
             source: 'in_app_recovered',
           });
-          await finishSuccessfulSignIn();
+          setOauthLoading(null);
+          await finishSuccessfulSignIn({ farmerSyncAlreadyDone: true });
           return;
         }
         setIsSignedIn(false);
@@ -646,6 +697,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           method: provider,
           source: 'in_app',
           reason: result.message,
+          ...(result.oauthStep ? { oauth_step: result.oauthStep } : {}),
+          ...(result.oauthPath ? { oauth_path: result.oauthPath } : {}),
         });
         return;
       }
@@ -660,7 +713,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         return;
       }
       setOauthLoading(null);
-      await finishSuccessfulSignIn();
+      await finishSuccessfulSignIn({ farmerSyncAlreadyDone: true });
       if (result.apiUnreachable) {
         Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
       }
@@ -670,7 +723,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           method: provider,
           source: 'in_app_recovered',
         });
-        await finishSuccessfulSignIn();
+        setOauthLoading(null);
+        await finishSuccessfulSignIn({ farmerSyncAlreadyDone: true });
         return;
       }
       const message = formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e));
@@ -756,12 +810,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         farmerId={farmer?.id}
         localPlots={plots}
         onClose={() => setCreateWizardVisible(false)}
-        onSuccess={() => {
-          setCreateWizardVisible(false);
-          showSignUpSuccess();
-          void refreshAuth()
-            .then(() => syncLocalFarmerFromAuth())
-            .catch(() => undefined);
+        onSuccess={(options) => {
+          void finishSuccessfulSignUp(options);
         }}
         onSignInInstead={() => {
           setCreateWizardVisible(false);
@@ -804,7 +854,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
               accessibilityLabel={t('sign_in_skip')}
               onPress={closeSignIn}
             />
-            <View style={authSheetStyles.card}>
+            <View testID="sign-in-sheet" style={authSheetStyles.card}>
               <View style={authSheetStyles.headerRow}>
                 {emailMode ? (
                   <Pressable
@@ -842,6 +892,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                     onApple={() => void handleOAuthSignIn('apple')}
                   />
                   <Pressable
+                    testID="sign-in-use-email"
                     onPress={() => {
                       setHint(null);
                       setEmailMode(true);
@@ -867,10 +918,14 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                     dense
                   />
                   <Input
+                    key={visible ? 'sign-in-password' : 'sign-in-password-closed'}
                     label={t('label_password')}
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    showPasswordToggle
+                    showPasswordAccessibilityLabel={t('show_password')}
+                    hidePasswordAccessibilityLabel={t('hide_password')}
                     placeholder="••••••••"
                     dense
                   />

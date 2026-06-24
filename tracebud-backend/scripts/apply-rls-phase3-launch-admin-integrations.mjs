@@ -1,23 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { Client } from 'pg';
+import { withMigrationClient } from './migration-db-client.mjs';
 
 function loadMigrationSql() {
   const sqlPath = resolve(process.cwd(), 'sql', 'tb_v16_030_rls_phase3_launch_admin_and_integrations.sql');
   return readFileSync(sqlPath, 'utf8');
-}
-
-function assertDbUrl() {
-  const url =
-    process.env.RLS_PHASE3_DATABASE_URL ||
-    process.env.DATABASE_URL ||
-    process.env.TEST_DATABASE_URL;
-  if (!url) {
-    throw new Error(
-      'RLS_PHASE3_DATABASE_URL, DATABASE_URL, or TEST_DATABASE_URL is required to apply TB-V16-030.',
-    );
-  }
-  return url;
 }
 
 async function verifyPhase3(client) {
@@ -132,29 +119,24 @@ async function verifyPhase3(client) {
 
 async function run() {
   const verifyOnly = process.argv.includes('--verify-only');
-  const connectionString = assertDbUrl();
-  const client = new Client({
-    connectionString,
-    ssl: { rejectUnauthorized: false },
-  });
 
-  await client.connect();
-  try {
-    if (!verifyOnly) {
-      await client.query(loadMigrationSql());
-    }
-    await verifyPhase3(client);
-    if (verifyOnly) {
-      console.log('Verified TB-V16-030 phase-3 RLS hardening.');
-    } else {
-      console.log('Applied and verified TB-V16-030 phase-3 RLS hardening.');
-    }
-  } finally {
-    await client.end();
-  }
+  await withMigrationClient(
+    async (client) => {
+      if (!verifyOnly) {
+        await client.query(loadMigrationSql());
+      }
+      await verifyPhase3(client);
+      console.log(
+        verifyOnly
+          ? 'Verified TB-V16-030 phase-3 RLS hardening.'
+          : 'Applied and verified TB-V16-030 phase-3 RLS hardening.',
+      );
+    },
+    { overrideEnvKeys: ['RLS_PHASE3_DATABASE_URL'] },
+  );
 }
 
 run().catch((error) => {
-  console.error(error instanceof Error ? error.message : error);
+  console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 });

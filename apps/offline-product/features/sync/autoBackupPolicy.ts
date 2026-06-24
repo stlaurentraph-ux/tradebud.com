@@ -159,7 +159,7 @@ export async function evaluateConservativeAutoBackup(params: {
     work,
     signedIn: true,
   });
-  const skipQueueDrain = params.work.hasWork
+  const skipQueueDrain = work.hasWork
     ? await shouldSkipAutoQueueDrain()
     : true;
   return { work, gate, skipQueueDrain };

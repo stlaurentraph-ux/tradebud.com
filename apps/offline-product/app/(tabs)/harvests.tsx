@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -20,6 +19,10 @@ import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { buildDeliveryReceiptCatalog } from '@/features/harvest/buildDeliveryReceiptCatalog';
 import { loadFieldScopedDeliveryReceipts } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
+import {
+  resolveHarvestSubmitWithUnknownBuyerFallback,
+  showBuyerInviteAlert,
+} from '@/features/harvest/completeHarvestSubmitFlow';
 import {
   buyerLabelForDeliveryRecipient,
   normalizeLocalDeliveryReceipts,
@@ -39,13 +42,18 @@ import {
   resolveLocalPlotForHarvestSubmit,
 } from '@/features/harvest/mergeHarvestPlotOptions';
 import { resolveServerPlotIdForLocal } from '@/features/plots/plotServerLink';
+import {
+  assessDeliveryBuyerIntakeEligibility,
+  resolveBackendPlotStatusForLocalPlot,
+} from '@/features/harvest/assessDeliveryBuyerIntakeEligibility';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
 import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
-import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import { useFocusCloudPull, useReloadOnServerPlotSyncChanged } from '@/features/sync/useFocusCloudPull';
 import { loadPlotServerLinks } from '@/features/state/persistence';
 
 export default function HarvestsScreen() {
@@ -53,7 +61,7 @@ export default function HarvestsScreen() {
   const appColors = useAppColors();
   const styles = useThemedStyles(createHarvestScreenStyles);
   const params = useLocalSearchParams<{ plotId?: string; record?: string; focus?: string; receiptsPlot?: string }>();
-  const { farmer, plots: localPlots } = useAppState();
+  const { farmer, plots: localPlots, reloadFromDisk } = useAppState();
   const { t, lang, openLanguagePicker } = useLanguage();
   const { isSignedIn, openSignIn } = useSignInSheet();
 
@@ -147,17 +155,21 @@ export default function HarvestsScreen() {
     void refreshHarvestData();
   }, [refreshHarvestData, params.plotId]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refreshHarvestData();
-    }, [refreshHarvestData]),
-  );
-
-  useEffect(() => {
-    return subscribeServerPlotSyncChanged(() => {
-      void refreshHarvestData({ forcePlotFetch: true });
-    });
+  const refreshAfterCloudPull = useCallback(async () => {
+    await refreshHarvestData({ forcePlotFetch: true });
   }, [refreshHarvestData]);
+
+  useFocusCloudPull({
+    isSignedIn,
+    reloadFromDisk,
+    onPullComplete: refreshAfterCloudPull,
+    enabled: Boolean(farmer?.id),
+  });
+
+  useReloadOnServerPlotSyncChanged({
+    reloadFromDisk,
+    onSyncChanged: refreshAfterCloudPull,
+  });
 
   /** Server plots plus local plots not returned by the API (offline / not synced yet). */
   const mergedHarvestPlots = useMemo(
@@ -377,6 +389,22 @@ export default function HarvestsScreen() {
       isDeliveryRecipientComplete(deliveryRecipient),
   );
 
+  const deliveryIntakeAdvisory = useMemo(() => {
+    if (!selectedPlotId || !isSignedIn) return null;
+    const serverPlotId = resolveServerPlotIdForLocal(selectedPlotId, plotServerLinks);
+    const plotStatus = resolveBackendPlotStatusForLocalPlot(backendPlots, serverPlotId);
+    if (plotStatus == null) return null;
+    const eligibility = assessDeliveryBuyerIntakeEligibility(plotStatus);
+    return eligibility.ready ? null : eligibility;
+  }, [backendPlots, isSignedIn, plotServerLinks, selectedPlotId]);
+
+  useEffect(() => {
+    if (!deliveryIntakeAdvisory) return;
+    trackEvent(ANALYTICS_EVENTS.DELIVERY_INTAKE_ADVISORY_SHOWN, {
+      plotStatus: deliveryIntakeAdvisory.plotStatus,
+    });
+  }, [deliveryIntakeAdvisory]);
+
   const startNewHarvestFlow = () => {
     if (!isSignedIn) {
       openSignIn({ variant: 'sync' });
@@ -577,6 +605,14 @@ export default function HarvestsScreen() {
               </View>
             </Card>
 
+            {deliveryIntakeAdvisory ? (
+              <Card style={styles.intakeAdvisoryCard}>
+                <ThemedText type="caption" style={styles.intakeAdvisoryText}>
+                  {t(deliveryIntakeAdvisory.advisoryKey)}
+                </ThemedText>
+              </Card>
+            ) : null}
+
             <DeliveryRecipientFields
               t={t}
               value={deliveryRecipient}
@@ -613,17 +649,26 @@ export default function HarvestsScreen() {
 
                   const plotName = String(localPlot.name ?? t('plot_fallback'));
 
-                  const result = await submitHarvestRecord({
-                    farmerId: farmer.id,
-                    selectedPlotId,
-                    kg: validation.value,
-                    localPlots,
-                    backendPlots,
-                    plotServerLinks,
-                    deliveryRecipient,
-                    plotName,
-                    buyerLabel: buyerLabelForDeliveryRecipient(deliveryRecipient, t),
+                  const runSubmit = (recipient: DeliveryRecipientSelection | null) =>
+                    submitHarvestRecord({
+                      farmerId: farmer.id,
+                      selectedPlotId,
+                      kg: validation.value,
+                      localPlots,
+                      backendPlots,
+                      plotServerLinks,
+                      deliveryRecipient: recipient,
+                      plotName,
+                      buyerLabel: buyerLabelForDeliveryRecipient(recipient, t),
+                    });
+
+                  let result = await runSubmit(deliveryRecipient);
+                  result = await resolveHarvestSubmitWithUnknownBuyerFallback({
+                    result,
+                    t,
+                    retryWithRecipient: runSubmit,
                   });
+
                   if (result.status === 'error') {
                     setMessage(
                       'messageKey' in result && result.messageKey
@@ -633,34 +678,62 @@ export default function HarvestsScreen() {
                     return;
                   }
 
-                  if (result.status === 'queued') {
+                  const finishSuccess = async (submitResult: typeof result) => {
+                    if (submitResult.status === 'queued') {
+                      void refreshHarvestData();
+                      setWeightInput('');
+                      setDeliveryRecipient(null);
+                      setShowRecordWeight(false);
+                      setShowNewHarvestLog(false);
+                      setMessage(null);
+                      router.push(
+                        deliveryReceiptHref(submitResult.receiptId, { fresh: true, from: 'harvests' }),
+                      );
+                      return;
+                    }
+
+                    if (submitResult.status !== 'synced') return;
+
+                    const receiptScope = await loadFieldScopedDeliveryReceipts({
+                      profileFarmerId: farmer.id,
+                      localPlots,
+                      isSignedIn: true,
+                    });
+                    const voucherPayload = await fetchMergedServerVouchers(
+                      receiptScope.voucherFarmerIds,
+                    );
+                    const refreshedVouchers = normalizeVoucherRows(voucherPayload);
+                    setVouchers(refreshedVouchers);
                     void refreshHarvestData();
                     setWeightInput('');
                     setDeliveryRecipient(null);
                     setShowRecordWeight(false);
                     setShowNewHarvestLog(false);
                     setMessage(null);
-                    router.push(deliveryReceiptHref(result.receiptId, { fresh: true, from: 'harvests' }));
+                    router.push(
+                      deliveryReceiptHref(submitResult.receiptId, { fresh: true, from: 'harvests' }),
+                    );
+                  };
+
+                  if (result.status === 'queued') {
+                    await finishSuccess(result);
                     return;
                   }
 
-                  const receiptScope = await loadFieldScopedDeliveryReceipts({
-                    profileFarmerId: farmer.id,
-                    localPlots,
-                    isSignedIn: true,
-                  });
-                  const voucherPayload = await fetchMergedServerVouchers(
-                    receiptScope.voucherFarmerIds,
-                  );
-                  const refreshedVouchers = normalizeVoucherRows(voucherPayload);
-                  setVouchers(refreshedVouchers);
-                  void refreshHarvestData();
-                  setWeightInput('');
-                  setDeliveryRecipient(null);
-                  setShowRecordWeight(false);
-                  setShowNewHarvestLog(false);
-                  setMessage(null);
-                  router.push(deliveryReceiptHref(result.receiptId, { fresh: true, from: 'harvests' }));
+                  if (result.status === 'synced' && result.buyerInvite?.pending) {
+                    showBuyerInviteAlert({
+                      t,
+                      invite: result.buyerInvite,
+                      onContinue: () => {
+                        void finishSuccess(result);
+                      },
+                    });
+                    return;
+                  }
+
+                  if (result.status === 'synced') {
+                    await finishSuccess(result);
+                  }
                 } catch (e) {
                   setMessage(e instanceof Error ? e.message : String(e));
                 }

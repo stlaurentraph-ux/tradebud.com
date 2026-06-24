@@ -3,6 +3,8 @@ import * as Crypto from 'expo-crypto';
 import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
+import { OAuthFlowError } from '@/features/auth/oauthFlowError';
+import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 
 function fullNameFromCredential(
   fullName: AppleAuthentication.AppleAuthenticationFullName | null,
@@ -17,12 +19,13 @@ function fullNameFromCredential(
 export async function signInWithAppleNative(): Promise<Session> {
   const available = await AppleAuthentication.isAvailableAsync();
   if (!available) {
-    throw new Error('sign_in_oauth_failed');
+    throw new OAuthFlowError('sign_in_oauth_failed', { step: 'native_prompt', path: 'native' });
   }
 
   let credential: AppleAuthentication.AppleAuthenticationCredential;
   const rawNonce = Crypto.randomUUID();
   try {
+    trackOAuthStep('native_prompt', { provider: 'apple', path: 'native' });
     credential = await AppleAuthentication.signInAsync({
       requestedScopes: [
         AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
@@ -33,14 +36,16 @@ export async function signInWithAppleNative(): Promise<Session> {
   } catch (e) {
     const code = e && typeof e === 'object' && 'code' in e ? String((e as { code: string }).code) : '';
     if (code === 'ERR_REQUEST_CANCELED') {
-      throw new Error('sign_in_oauth_cancelled');
+      throw new OAuthFlowError('sign_in_oauth_cancelled', { step: 'native_prompt', path: 'native' });
     }
-    throw new Error('sign_in_oauth_failed');
+    throw new OAuthFlowError('sign_in_oauth_failed', { step: 'native_prompt', path: 'native' });
   }
 
   if (!credential.identityToken) {
-    throw new Error('sign_in_oauth_failed');
+    throw new OAuthFlowError('sign_in_oauth_failed', { step: 'native_token_exchange', path: 'native' });
   }
+
+  trackOAuthStep('native_token_exchange', { provider: 'apple', path: 'native' });
 
   const supabase = getSupabaseAuthClient();
   const { data, error } = await supabase.auth.signInWithIdToken({
@@ -50,11 +55,16 @@ export async function signInWithAppleNative(): Promise<Session> {
   });
 
   if (error) {
-    throw new Error(error.message);
+    throw new OAuthFlowError(error.message || 'sign_in_oauth_failed', {
+      step: 'supabase_id_token',
+      path: 'native',
+    });
   }
   if (!data.session) {
-    throw new Error('No session returned from OAuth.');
+    throw new OAuthFlowError('sign_in_oauth_failed', { step: 'supabase_id_token', path: 'native' });
   }
+
+  trackOAuthStep('supabase_id_token', { provider: 'apple', path: 'native' });
 
   const fullName = fullNameFromCredential(credential.fullName);
   if (fullName) {

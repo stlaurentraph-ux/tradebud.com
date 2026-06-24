@@ -2,6 +2,8 @@ import { harvestDateIsoFromMs } from '@/features/harvest/harvestDeliveryDate';
 import { postHarvestToBackend } from '@/features/api/postPlot';
 import { logError, getUserMessage } from '@/features/errors/ErrorLogger';
 import { readHarvestSubmitQrCodeRef } from '@/features/harvest/resolveDeliveryQrCode';
+import { readHarvestSubmitBuyerInvite } from '@/features/harvest/readHarvestSubmitBuyerInvite';
+import type { HarvestBuyerInvite } from '@/features/harvest/readHarvestSubmitBuyerInvite';
 import { resolveLocalPlotForHarvestSubmit } from '@/features/harvest/mergeHarvestPlotOptions';
 import { resolveServerPlotIdForLocal, type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
@@ -13,14 +15,14 @@ import {
 } from '@/features/harvest/DeliveryRecipientFields';
 
 export type SubmitHarvestResult =
-  | { status: 'synced'; qrCodeRef: string | null; receiptId: string }
+  | { status: 'synced'; qrCodeRef: string | null; receiptId: string; buyerInvite?: HarvestBuyerInvite | null }
   | { status: 'queued'; messageKey: 'harvest_queued_offline' | 'harvest_queued_plot_not_synced'; receiptId: string }
   | {
       status: 'error';
-      messageKey: 'harvest_plot_not_on_device';
+      messageKey: 'harvest_plot_not_on_device' | 'delivery_unknown_buyer_email';
       message: string;
     }
-  | { status: 'error'; message: string };
+  | { status: 'error'; message: string; messageKey?: string };
 
 function resolveServerPlotId(
   localPlot: Plot,
@@ -49,6 +51,7 @@ export async function submitHarvestRecord(params: {
   deliveryRecipient?: DeliveryRecipientSelection | null;
   plotName?: string;
   buyerLabel?: string;
+  deliveryTripRef?: string | null;
 }): Promise<SubmitHarvestResult> {
   const localPlot = resolveLocalPlotForHarvestSubmit({
     selectedPlotId: params.selectedPlotId,
@@ -100,16 +103,19 @@ export async function submitHarvestRecord(params: {
         harvestDate: harvestDateIsoFromMs(createdAt),
         clientEventId,
         ...deliveryPayload,
+        deliveryTripRef: params.deliveryTripRef?.trim() || undefined,
       });
       const qrCodeRef = readHarvestSubmitQrCodeRef(response);
+      const buyerInvite = readHarvestSubmitBuyerInvite(response);
       await persistLocalReceipt(false, qrCodeRef);
       trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_SUCCESS, {
         plotId: localPlot.id,
         serverPlotId,
         kg: params.kg,
         deliveryMode: params.deliveryRecipient?.mode ?? 'unspecified',
+        buyerInvitePending: buyerInvite?.pending === true,
       });
-      return { status: 'synced', qrCodeRef, receiptId: clientEventId };
+      return { status: 'synced', qrCodeRef, receiptId: clientEventId, buyerInvite };
     } catch (e) {
       const classified = logError(e, {
         context: 'harvest_submission',
@@ -121,6 +127,13 @@ export async function submitHarvestRecord(params: {
           plotId: localPlot.id,
           reason: classified.code ?? classified.category,
         });
+        if (/no buyer organisation found/i.test(classified.message)) {
+          return {
+            status: 'error',
+            messageKey: 'delivery_unknown_buyer_email',
+            message: classified.message,
+          };
+        }
         return { status: 'error', message: classified.message };
       }
       if (classified.category === 'server') {

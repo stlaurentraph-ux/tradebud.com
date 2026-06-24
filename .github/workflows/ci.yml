@@ -772,6 +772,10 @@ jobs:
         working-directory: tracebud-backend
         run: npm test
 
+      - name: Database URL split script tests (no secrets)
+        working-directory: tracebud-backend
+        run: npm run test:scripts
+
       - name: Ensure benchmark-admin claims config exists
         run: |
           if [ -z "$BENCHMARK_ADMIN_ROLE_CLAIMS" ]; then

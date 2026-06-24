@@ -5,8 +5,11 @@ import {
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
+import { isExistingAuthUserAtSignup } from '@/features/auth/oauthExistingAccount';
+import { deriveDisplayNameFromEmail } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile, getFieldAppEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import { fieldAppBlocksDashboardOAuthSignIn } from '@/features/auth/fieldAppEligibility';
+import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
@@ -78,6 +81,8 @@ export async function completeOAuthFarmerSession(params: {
   fullName?: string;
   farmerId?: string;
   localPlots?: Plot[];
+  /** Set when completing OAuth from the create-account wizard. */
+  signupFlowStartedAtMs?: number;
 }): Promise<SignInSyncResult> {
   if (fieldAppBlocksDashboardOAuthSignIn(params.session)) {
     return { ok: false, message: 'sign_in_dashboard_account' };
@@ -94,7 +99,10 @@ export async function completeOAuthFarmerSession(params: {
   }
 
   const nameFromSession =
-    params.fullName || getNameFromSession(params.session) || '';
+    params.fullName ||
+    getNameFromSession(params.session) ||
+    deriveDisplayNameFromEmail(email) ||
+    '';
 
   await saveAndApplyOAuthSyncAuth(
     email,
@@ -103,6 +111,13 @@ export async function completeOAuthFarmerSession(params: {
     params.session.expires_at,
   );
 
+  trackOAuthStep('session_persist', {
+    provider: params.session.user.identities?.some((row) => row.provider === 'apple')
+      ? 'apple'
+      : 'google',
+    path: 'native',
+  });
+
   void runPostOAuthConnectTasks({
     fullName: nameFromSession,
     session: params.session,
@@ -110,5 +125,9 @@ export async function completeOAuthFarmerSession(params: {
     localPlots: params.localPlots,
   });
 
-  return { ok: true, missingName: !nameFromSession };
+  const existingAccount =
+    params.signupFlowStartedAtMs != null &&
+    isExistingAuthUserAtSignup(params.session, params.signupFlowStartedAtMs);
+
+  return { ok: true, missingName: !nameFromSession, existingAccount };
 }

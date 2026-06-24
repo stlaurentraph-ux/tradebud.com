@@ -9,7 +9,9 @@ import { ActionButton as Button } from '@/components/ui/action-button';
 import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
 import { formatDeliveryRecipientLabel } from '@/features/harvest/formatDeliveryRecipientLabel';
 import type { LoggedDeliverySnapshot } from '@/features/harvest/loggedDeliverySnapshot';
+import { buildDeliveryQrUrl } from '@/features/harvest/buildDeliveryQrUrl';
 import { shareDeliveryReceipt } from '@/features/harvest/shareDeliveryReceipt';
+import { ShowBuyerQrSheet } from '@/components/harvest/ShowBuyerQrSheet';
 import type { TranslateFn } from '@/features/i18n/translate';
 import {
   createDeliveryLoggedPanelStyles,
@@ -50,10 +52,12 @@ export function DeliveryLoggedPanel({
   const shareCaptureRef = useRef<View>(null);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const [showBuyerQr, setShowBuyerQr] = useState(false);
 
   const isQueued = delivery.mode === 'queued';
   const qrCode = delivery.qrCodeRef?.trim() ?? '';
   const hasQr = qrCode.length > 0;
+  const qrPayload = hasQr ? buildDeliveryQrUrl(qrCode) : '';
   const needsBuyerQr = buyerNeedsQr(delivery.deliveryRecipient);
   const dateLabel = new Date(delivery.recordedAt).toLocaleDateString(undefined, {
     month: 'short',
@@ -72,7 +76,7 @@ export function DeliveryLoggedPanel({
 
   const handleShare = async () => {
     if (!hasQr) return;
-    const shareMessage = t('voucher_share_message', { code: qrCode, payload: qrCode });
+    const shareMessage = t('voucher_share_message', { code: qrCode, payload: qrPayload });
     setShareBusy(true);
     setShareNote(null);
     try {
@@ -94,7 +98,7 @@ export function DeliveryLoggedPanel({
         <>
           <View style={styles.qrWrap}>
             <View style={styles.qrInner}>
-              <QRCode value={qrCode} size={176} color="#111111" backgroundColor="#FFFFFF" ecl="M" />
+              <QRCode value={qrPayload} size={176} color="#111111" backgroundColor="#FFFFFF" ecl="H" />
             </View>
           </View>
           <ThemedText type="defaultSemiBold" style={styles.qrReadyTitle}>
@@ -251,13 +255,22 @@ export function DeliveryLoggedPanel({
             onPress={onSyncNow}
           />
         ) : hasQr ? (
-          <Button
-            title={t('harvest_receipt_share')}
-            variant="primary"
-            loading={shareBusy}
-            disabled={shareBusy}
-            onPress={() => void handleShare()}
-          />
+          <>
+            <Button
+              title={t('show_buyer_qr')}
+              variant="primary"
+              onPress={() => setShowBuyerQr(true)}
+            />
+            <Button
+              title={t('harvest_receipt_share')}
+              variant="secondary"
+              style={styles.secondaryBtn}
+              textStyle={styles.secondaryBtnText}
+              loading={shareBusy}
+              disabled={shareBusy}
+              onPress={() => void handleShare()}
+            />
+          </>
         ) : null}
 
         <Button
@@ -277,6 +290,21 @@ export function DeliveryLoggedPanel({
       </Pressable>
 
       {shareNote ? <ThemedText type="caption" style={styles.shareNote}>{shareNote}</ThemedText> : null}
+
+      <ShowBuyerQrSheet
+        visible={showBuyerQr}
+        onClose={() => setShowBuyerQr(false)}
+        t={t}
+        qrPayload={qrPayload}
+        humanCode={qrCode}
+        title={t('show_buyer_qr_title')}
+        subtitle={t('harvest_share_qr')}
+        metaLines={[
+          delivery.plotName,
+          `${Math.round(delivery.kg).toLocaleString()} kg`,
+          dateLabel,
+        ]}
+      />
     </>
   );
 }

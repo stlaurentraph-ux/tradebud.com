@@ -11,6 +11,7 @@ Documents **role gates** on Nest controllers (403 scope). Runtime ownership proo
 |----|------------|-------|
 | `harvest_dds_workspace` | `harvest/harvest.controller.ts` | exporter, cooperative, admin, compliance_manager |
 | `requests_campaigns` | `requests/requests.controller.ts` | admin, exporter, compliance_manager |
+| `requests_operational_issues` | `requests/requests.controller.ts` | admin, exporter, compliance_manager, cooperative, importer, country_reviewer, sponsor |
 | `requests_evidence` | `requests/requests.controller.ts` | admin, exporter, compliance_manager, cooperative |
 | `contacts_crm` | `contacts/contacts.controller.ts` | admin, exporter, importer, cooperative |
 | `inbox_requests` | `inbox/inbox.controller.ts` | exporter, admin, compliance_manager, agent |
@@ -25,6 +26,7 @@ Documents **role gates** on Nest controllers (403 scope). Runtime ownership proo
 ## Notes
 
 - `importer` appears in contacts CRM but is not an `AppRole` JWT claim today — tracked as known drift.
+- `sponsor` appears on operational issues routes but is not an `AppRole` JWT claim today — tracked as known drift.
 - Field plot sync uses assignment/ownership checks beyond role list.
 
 ## When adding a controller gate

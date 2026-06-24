@@ -21,6 +21,32 @@ export const DASHBOARD_EVENTS = {
   REACT_RENDER_ERROR: 'dashboard_react_render_error',
   UPSTREAM_BLOCKER_ALERT_CLICKED: 'dashboard_upstream_blocker_alert_clicked',
   PLOT_GEOMETRY_REVISION_APPLIED: 'plot_geometry_revision_applied',
+  PLOT_GEOMETRY_APPROVED: 'plot_geometry_approved',
+  CAMPAIGN_CREATE_SUCCESS: 'dashboard_campaign_create_success',
+  CAMPAIGN_CREATE_FAILURE: 'dashboard_campaign_create_failure',
+  CAMPAIGN_SEND_SUCCESS: 'dashboard_campaign_send_success',
+  CAMPAIGN_SEND_FAILURE: 'dashboard_campaign_send_failure',
+  INBOX_RESPOND_SUCCESS: 'dashboard_inbox_respond_success',
+  INBOX_RESPOND_FAILURE: 'dashboard_inbox_respond_failure',
+  CAMPAIGN_ARCHIVE_SUCCESS: 'dashboard_campaign_archive_success',
+  CAMPAIGN_ARCHIVE_FAILURE: 'dashboard_campaign_archive_failure',
+  CONTACT_STATUS_CHANGED: 'dashboard_contact_status_changed',
+  CONTACT_STATUS_CHANGE_FAILURE: 'dashboard_contact_status_change_failure',
+  CONTACT_CREATE_SUCCESS: 'dashboard_contact_create_success',
+  CONTACT_CREATE_FAILURE: 'dashboard_contact_create_failure',
+  ISSUE_STATUS_CHANGED: 'dashboard_issue_status_changed',
+  ISSUE_STATUS_CHANGE_FAILURE: 'dashboard_issue_status_change_failure',
+  ISSUE_CREATE_SUCCESS: 'dashboard_issue_create_success',
+  ISSUE_REMEDIATION_CLICKED: 'dashboard_issue_remediation_clicked',
+  DELIVERY_QR_PREVIEW_VIEWED: 'delivery_qr_preview_viewed',
+  DELIVERY_DESK_SCAN_STARTED: 'delivery_desk_scan_started',
+  DELIVERY_DESK_SCAN_SUCCESS: 'delivery_desk_scan_success',
+  DELIVERY_DESK_CLAIM_SUCCESS: 'delivery_desk_claim_success',
+  DELIVERY_DESK_CLAIM_FAILURE: 'delivery_desk_claim_failure',
+  DELIVERY_DESK_AUTO_CLAIM: 'delivery_desk_auto_claim',
+  DELIVERY_DESK_TRIP_CLAIM_SUCCESS: 'delivery_desk_trip_claim_success',
+  DELIVERY_DESK_HANDOFF_CONFIRMED: 'delivery_desk_handoff_confirmed',
+  DELIVERY_TRIP_PREVIEW_VIEWED: 'delivery_trip_preview_viewed',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -33,6 +59,13 @@ const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.PACKAGE_SEAL_FAILURE,
   DASHBOARD_EVENTS.UI_ACTION_FAILED,
   DASHBOARD_EVENTS.REACT_RENDER_ERROR,
+  DASHBOARD_EVENTS.CAMPAIGN_CREATE_FAILURE,
+  DASHBOARD_EVENTS.CAMPAIGN_SEND_FAILURE,
+  DASHBOARD_EVENTS.INBOX_RESPOND_FAILURE,
+  DASHBOARD_EVENTS.CAMPAIGN_ARCHIVE_FAILURE,
+  DASHBOARD_EVENTS.CONTACT_STATUS_CHANGE_FAILURE,
+  DASHBOARD_EVENTS.CONTACT_CREATE_FAILURE,
+  DASHBOARD_EVENTS.ISSUE_STATUS_CHANGE_FAILURE,
 ]);
 
 function compactProps(properties?: DashboardEventProps): Record<string, string | number | boolean> {
@@ -51,7 +84,6 @@ export function trackDashboardEvent(
   const props = compactProps(properties);
 
   if (process.env.NODE_ENV === 'development') {
-    // eslint-disable-next-line no-console
     console.log('[DashboardAnalytics]', name, props);
   }
 

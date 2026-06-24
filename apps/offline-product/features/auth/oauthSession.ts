@@ -1,7 +1,7 @@
 import type { Session } from '@supabase/supabase-js';
 
 import {
-  getAuthenticatedSupabaseClient,
+  getAuthenticatedSupabaseClientWithSession,
   getSupabaseAuthClient,
 } from '@/features/api/syncAuthSession';
 import { getAppRoleFromSession, isDashboardWorkspaceRole } from '@/features/auth/fieldAppEligibility';
@@ -70,7 +70,7 @@ export async function ensureFarmerOAuthProfile(fullName?: string, session?: Sess
     },
   };
 
-  const client = (await getAuthenticatedSupabaseClient()) ?? getSupabaseAuthClient();
+  const client = (await getAuthenticatedSupabaseClientWithSession()) ?? getSupabaseAuthClient();
   await Promise.race([
     client.auth.updateUser(payload).then(({ error }) => {
       if (error) throw error;

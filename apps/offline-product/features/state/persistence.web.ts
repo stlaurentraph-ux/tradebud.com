@@ -15,6 +15,7 @@ export type PlotPhoto = {
   latitude?: number | null;
   longitude?: number | null;
   direction?: 'north' | 'east' | 'south' | 'west' | null;
+  storagePath?: string | null;
 };
 
 export type PlotTitlePhoto = {
@@ -156,6 +157,15 @@ export async function updatePlotTitlePhotoAfterUpload(
   );
 }
 
+export async function updatePlotGroundPhotoAfterUpload(
+  photoId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
+  memPhotos = memPhotos.map((row) =>
+    row.id === photoId ? { ...row, uri: params.uri, storagePath: params.storagePath } : row,
+  );
+}
+
 export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitlePhoto[]> {
   return memTitlePhotos.filter((p) => p.plotId === plotId);
 }
@@ -166,6 +176,33 @@ export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
 
 export function isPlotTitlePhotoPendingUpload(photo: Pick<PlotTitlePhoto, 'storagePath'>): boolean {
   return !photo.storagePath?.trim();
+}
+
+export function isPlotGroundPhotoPendingUpload(
+  photo: Pick<PlotPhoto, 'uri' | 'storagePath'>,
+): boolean {
+  if (photo.storagePath?.trim()) return false;
+  const uri = photo.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isPlotEvidencePendingUpload(
+  item: Pick<PlotEvidenceItem, 'uri' | 'storagePath'>,
+): boolean {
+  if (item.storagePath?.trim()) return false;
+  const uri = item.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isLocalDeliveryReceiptPendingUpload(
+  receipt: Pick<LocalDeliveryReceiptRow, 'pendingSync' | 'qrCodeRef'>,
+): boolean {
+  if (!receipt.pendingSync) return false;
+  return !receipt.qrCodeRef?.trim();
 }
 
 export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
@@ -503,6 +540,16 @@ export async function setSetting(key: string, value: string): Promise<void> {
 
 export async function deleteSetting(key: string): Promise<void> {
   delete memSettings[key];
+}
+
+export async function deleteSettingsByPrefix(prefix: string): Promise<void> {
+  const trimmed = prefix.trim();
+  if (!trimmed) return;
+  for (const key of Object.keys(memSettings)) {
+    if (key.startsWith(trimmed)) {
+      delete memSettings[key];
+    }
+  }
 }
 
 export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<void> {
