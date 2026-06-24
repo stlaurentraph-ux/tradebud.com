@@ -346,3 +346,56 @@ export async function mockExporterPackageReadinessApis(
     await route.continue();
   });
 }
+
+export async function mockPlotGeometryApprovalApis(
+  page: Page,
+  options?: { approved?: boolean },
+): Promise<void> {
+  let approved = options?.approved ?? false;
+  const plotId = GOLDEN_EXPORTER_SMOKE.packageId;
+
+  await page.route('**/api/plots/*/map-preview', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: plotId,
+        name: 'Plot PW-1',
+        kind: 'polygon',
+        area_ha: 2.5,
+        status: 'under_review',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [30.0612, -1.9441],
+              [30.0624, -1.9441],
+              [30.0624, -1.9432],
+              [30.0612, -1.9432],
+              [30.0612, -1.9441],
+            ],
+          ],
+        },
+        geometry_capture: { geometryConfidenceTier: 'low' },
+        geometry_approved_at: approved ? new Date().toISOString() : null,
+      }),
+    });
+  });
+
+  await page.route('**/api/plots/*/approve-geometry', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    approved = true;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ geometry_approved_at: new Date().toISOString() }),
+    });
+  });
+}

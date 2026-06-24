@@ -26,6 +26,7 @@ import {
   getOutreachPageSubtitle,
   getOutreachPageTitle,
   getOutreachRecipientCountLabel,
+  getOutreachFunnelSummary,
   getOutreachResponsesSummaryWithTotal,
   getOutreachSendDraftLabel,
   getOutreachStatusLabel,
@@ -261,12 +262,13 @@ function OutreachPageContent() {
                             {new Date(campaign.updated_at ?? campaign.created_at).toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
-                            {getOutreachResponsesSummaryWithTotal(
-                              accepted,
-                              pending,
-                              recipientCount,
-                              t,
-                            )}
+                            {getOutreachFunnelSummary(campaign.recipient_status_counts, t) ||
+                              getOutreachResponsesSummaryWithTotal(
+                                accepted,
+                                pending,
+                                recipientCount,
+                                t,
+                              )}
                           </TableCell>
                           <TableCell>
                             <Badge className={statusBadgeClass[status]}>{getOutreachStatusLabel(status, t)}</Badge>

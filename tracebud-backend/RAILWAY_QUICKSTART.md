@@ -70,7 +70,7 @@ npm run railway:sync:gfw
 `-s tradebud.com` selects the API service (`api.tracebud.com`) without the interactive picker.
 Do not paste shell comments on the same line as `railway link` — `#` is passed as an argument.
 
-5. **Deploy** (or push to `main` if auto-deploy is on).
+5. **Deploy** by pushing to the GitHub branch linked in Railway (auto-deploy). Do **not** use dashboard **Redeploy** or `railway up` from a subdirectory — use **git push** so the monorepo root + `tracebud-backend` Root Directory resolve correctly.
 6. **Settings** → **Networking** → generate **Public domain** if none yet.
 
 ## 2) Smoke test

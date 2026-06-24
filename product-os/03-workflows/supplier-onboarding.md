@@ -47,6 +47,24 @@
 - **Dashboard:** `inbox.service.respond` → `markCrmContactSubmittedOnFulfill` (match sender tenant + recipient email).
 - **Field:** `consent.service.approveGrant` → `markCrmContactSubmittedOnFulfill` (match grantee tenant + `farmer_profile_id`).
 
+## Ops commands
+
+```bash
+# Apply or verify TB-V16-061–063 (prod/staging DATABASE_URL in tracebud-backend/.env.local)
+npm run db:apply:supplier-campaign-onboarding -w tracebud-backend
+npm run db:verify:supplier-campaign-onboarding -w tracebud-backend
+
+# Post-deploy smoke (health + public preview 404 probes + optional auth probe)
+npm run deploy:smoke -w tracebud-backend
+
+# Integration: invite → signup claim → CRM submitted
+npm run test:integration:supplier-onboarding -w tracebud-backend
+```
+
+**Railway:** deploy API by **git push** to the linked branch only — not manual Redeploy from a stale snapshot (`DEPLOY_PRODUCTION.md`).
+
+**Branch:** ops hardening lives on `feature/backend-supplier-campaign-onboarding`, not `feature/delivery-intake-qr`.
+
 ## Acceptance criteria
 
 - [x] Dashboard supplier: create-account campaign deep link + inbox backfill

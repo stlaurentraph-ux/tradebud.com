@@ -57,6 +57,18 @@ function assertManifestShape(manifest) {
   if (manifest.authProbe?.bearerEnv !== 'TRACEBUD_SMOKE_BEARER_TOKEN') {
     throw new Error('manifest authProbe.bearerEnv must be TRACEBUD_SMOKE_BEARER_TOKEN');
   }
+  if (!Array.isArray(manifest.publicProbes) || manifest.publicProbes.length < 2) {
+    throw new Error('manifest must define at least two publicProbes');
+  }
+}
+
+function assertPublicPreviewRoutes(manifest) {
+  const names = new Set((manifest.publicProbes ?? []).map((probe) => probe.name));
+  for (const required of ['delivery-receipt-preview', 'campaign-invite-preview']) {
+    if (!names.has(required)) {
+      throw new Error(`manifest publicProbes must include ${required}`);
+    }
+  }
 }
 
 function assertRunnerAlignment(manifest) {
@@ -70,6 +82,9 @@ function assertRunnerAlignment(manifest) {
   }
   if (!runner.includes('checkAuthProbe')) {
     throw new Error(`${manifest.runnerModule} must run authenticated auth probe`);
+  }
+  if (!runner.includes('checkPublicProbes')) {
+    throw new Error(`${manifest.runnerModule} must run public preview probes`);
   }
   if (!runner.includes('waitForHealthyDeploy')) {
     throw new Error(`${manifest.runnerModule} must support deploy wait polling`);
@@ -109,6 +124,7 @@ function assertPackageScripts() {
 function main() {
   const manifest = loadManifest();
   assertManifestShape(manifest);
+  assertPublicPreviewRoutes(manifest);
   assertRunnerAlignment(manifest);
   assertWorkflow(manifest);
   assertLaunchController(manifest);

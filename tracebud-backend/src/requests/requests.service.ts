@@ -22,6 +22,7 @@ import {
   countDeliverableRecipients,
   legacyEmailDeliveryRecipients,
   planCampaignDeliveries,
+  type CampaignDeliveryChannel,
   type CampaignDeliveryRecipient,
 } from './campaign-delivery-plan';
 import {
@@ -29,6 +30,15 @@ import {
   type CampaignRecipientStatusCounts,
   type CampaignRecipientTimelineEntry,
 } from './campaign-recipient-timeline';
+import {
+  buildRecipientStatusCountsForCampaign,
+  isCampaignEligibleForRecipientFunnel,
+} from './campaign-recipient-list-funnel';
+import {
+  enrichCampaignRecipientForSender,
+  isFarmerCampaignRecipient,
+  canResendCampaignRecipientInvite,
+} from './campaign-recipient-sender-actions';
 import {
   buildCampaignClaimUrl,
   defaultCampaignClaimExpiresAt,
@@ -649,7 +659,9 @@ export class RequestsService {
     }
   }
 
-  async list(tenantId: string): Promise<RequestCampaignRecord[]> {
+  async list(
+    tenantId: string,
+  ): Promise<Array<RequestCampaignRecord & { recipient_status_counts?: CampaignRecipientStatusCounts }>> {
     try {
       const result = await this.pool.query<RequestCampaignRecord>(
         `
@@ -660,10 +672,188 @@ export class RequestsService {
         `,
         [tenantId],
       );
-      return result.rows.map((row) => this.mapRow(row));
+      const campaigns = result.rows.map((row) => this.mapRow(row));
+      return await this.enrichCampaignsWithRecipientFunnel(tenantId, campaigns);
     } catch (error) {
       this.mapDatabaseError(error);
     }
+  }
+
+  private async enrichCampaignsWithRecipientFunnel(
+    tenantId: string,
+    campaigns: RequestCampaignRecord[],
+  ): Promise<Array<RequestCampaignRecord & { recipient_status_counts?: CampaignRecipientStatusCounts }>> {
+    const eligible = campaigns.filter((campaign) =>
+      isCampaignEligibleForRecipientFunnel(campaign.status),
+    );
+    if (eligible.length === 0) {
+      return campaigns;
+    }
+
+    const campaignIds = eligible.map((campaign) => campaign.id);
+    const contactIds = Array.from(
+      new Set(
+        eligible.flatMap((campaign) => campaign.target_contact_ids ?? []).filter((id) => id.length > 0),
+      ),
+    );
+
+    const contactsById = new Map<
+      string,
+      { contact_id: string; full_name: string; email: string | null; phone: string | null }
+    >();
+    if (contactIds.length > 0) {
+      try {
+        const contactsResult = await this.pool.query<{
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+        }>(
+          `
+            SELECT id, full_name, email, phone
+            FROM crm_contacts
+            WHERE tenant_id = $1
+              AND id = ANY($2::text[])
+          `,
+          [tenantId, contactIds],
+        );
+        for (const row of contactsResult.rows) {
+          contactsById.set(row.id, {
+            contact_id: row.id,
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone,
+          });
+        }
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01') {
+          throw error;
+        }
+      }
+    }
+
+    const invitesByCampaign = new Map<
+      string,
+      Array<{
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_channel: string | null;
+        status: string;
+        claimed_tenant_id: string | null;
+        claimed_farmer_profile_id: string | null;
+        sent_at: string | null;
+      }>
+    >();
+    try {
+      const inviteResult = await this.pool.query<{
+        campaign_id: string;
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_channel: string | null;
+        status: string;
+        claimed_tenant_id: string | null;
+        claimed_farmer_profile_id: string | null;
+        sent_at: string | null;
+      }>(
+        `
+          SELECT
+            campaign_id,
+            contact_id,
+            LOWER(recipient_email) AS recipient_email,
+            delivery_channel,
+            status,
+            claimed_tenant_id,
+            claimed_farmer_profile_id,
+            sent_at
+          FROM campaign_recipient_invites
+          WHERE sender_tenant_id = $1
+            AND campaign_id = ANY($2::text[])
+        `,
+        [tenantId, campaignIds],
+      );
+      for (const row of inviteResult.rows) {
+        const bucket = invitesByCampaign.get(row.campaign_id) ?? [];
+        bucket.push(row);
+        invitesByCampaign.set(row.campaign_id, bucket);
+      }
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code !== '42P01' && code !== '42703') {
+        throw error;
+      }
+    }
+
+    const decisionsByCampaign = new Map<
+      string,
+      Array<{
+        recipient_email: string;
+        decision: 'accept' | 'refuse';
+        source: string;
+        fulfillment_source: string | null;
+        contact_id: string | null;
+        decided_at: string;
+      }>
+    >();
+    const decisionsResult = await this.pool.query<{
+      campaign_id: string;
+      recipient_email: string;
+      decision: 'accept' | 'refuse';
+      source: string;
+      fulfillment_source: string | null;
+      contact_id: string | null;
+      decided_at: string;
+    }>(
+      `
+        SELECT
+          decision.campaign_id,
+          decision.recipient_email,
+          decision.decision,
+          decision.source,
+          decision.fulfillment_source,
+          decision.contact_id,
+          decision.decided_at
+        FROM request_campaign_recipient_decisions decision
+        INNER JOIN request_campaigns campaign
+          ON campaign.id = decision.campaign_id
+        WHERE campaign.tenant_id = $1
+          AND decision.campaign_id = ANY($2::text[])
+      `,
+      [tenantId, campaignIds],
+    );
+    for (const row of decisionsResult.rows) {
+      const bucket = decisionsByCampaign.get(row.campaign_id) ?? [];
+      bucket.push({
+        recipient_email: row.recipient_email,
+        decision: row.decision,
+        source: row.source,
+        fulfillment_source: row.fulfillment_source,
+        contact_id: row.contact_id,
+        decided_at: new Date(row.decided_at).toISOString(),
+      });
+      decisionsByCampaign.set(row.campaign_id, bucket);
+    }
+
+    const funnelByCampaignId = new Map<string, CampaignRecipientStatusCounts>();
+    for (const campaign of eligible) {
+      const targetContacts = (campaign.target_contact_ids ?? [])
+        .map((contactId) => contactsById.get(contactId))
+        .filter((contact): contact is NonNullable<typeof contact> => Boolean(contact));
+      funnelByCampaignId.set(
+        campaign.id,
+        buildRecipientStatusCountsForCampaign({
+          campaign,
+          targetContacts,
+          invites: invitesByCampaign.get(campaign.id) ?? [],
+          decisions: decisionsByCampaign.get(campaign.id) ?? [],
+        }),
+      );
+    }
+
+    return campaigns.map((campaign) => {
+      const recipient_status_counts = funnelByCampaignId.get(campaign.id);
+      return recipient_status_counts ? { ...campaign, recipient_status_counts } : campaign;
+    });
   }
 
   /**
@@ -803,12 +993,13 @@ export class RequestsService {
       const campaignResult = await this.pool.query<{
         id: string;
         tenant_id: string;
+        status: RequestCampaignRecord['status'];
         target_contact_emails: string[] | null;
         target_contact_ids: string[] | null;
         require_farmer_app_confirmation: boolean;
       }>(
         `
-          SELECT id, tenant_id, target_contact_emails, target_contact_ids, require_farmer_app_confirmation
+          SELECT id, tenant_id, status, target_contact_emails, target_contact_ids, require_farmer_app_confirmation
           FROM request_campaigns
           WHERE tenant_id = $1
             AND id = $2
@@ -1034,13 +1225,43 @@ export class RequestsService {
             : counts.all;
       const hasMore = offset + decisions.length < totalForFilter;
 
+      const deliveryRecipients: CampaignDeliveryRecipient[] = timeline.recipients.map((recipient) => {
+        const channel: CampaignDeliveryChannel =
+          recipient.delivery_channel === 'whatsapp' ||
+          recipient.delivery_channel === 'desk_only' ||
+          recipient.delivery_channel === 'email'
+            ? recipient.delivery_channel
+            : 'email';
+        return {
+          contact_id: recipient.contact_id ?? `legacy:${recipient.recipient_email ?? 'unknown'}`,
+          full_name: recipient.recipient_label,
+          email: recipient.recipient_email,
+          phone: null,
+          delivery_channel: channel,
+          delivery_address: recipient.recipient_email,
+        };
+      });
+      const contactTypes = await this.resolveDeliveryContactTypes(tenantId, deliveryRecipients);
+      const dashboardBaseUrl = this.getDashboardBaseUrl();
+      const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
+      const campaignStatus = campaignResult.rows[0].status;
+      const enrichedRecipients = timeline.recipients.map((recipient) =>
+        enrichCampaignRecipientForSender(recipient, {
+          campaignId,
+          campaignStatus,
+          dashboardBaseUrl,
+          fieldAuthBaseUrl,
+          isFarmerRecipient: isFarmerCampaignRecipient(recipient, contactTypes),
+        }),
+      );
+
       return {
         campaign_id: campaignId,
         tenant_id: tenantId,
         last_synced_at: decisions[0]?.decided_at ?? null,
         decisions,
         counts,
-        recipients: timeline.recipients,
+        recipients: enrichedRecipients,
         recipient_status_counts: timeline.status_counts,
         pagination: {
           decision: decisionFilter,
@@ -1055,6 +1276,205 @@ export class RequestsService {
         throw error;
       }
       this.mapDatabaseError(error);
+    }
+  }
+
+  async resendCampaignRecipientInvite(
+    tenantId: string,
+    campaignId: string,
+    recipientEmail: string,
+    actorUserId?: string | null,
+  ): Promise<{ ok: true; recipient_email: string }> {
+    const normalizedEmail = recipientEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new BadRequestException('recipient_email must be a valid email address.');
+    }
+
+    try {
+      const campaignResult = await this.pool.query<RequestCampaignRecord>(
+        `
+          SELECT *
+          FROM request_campaigns
+          WHERE tenant_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, campaignId],
+      );
+      const campaignRow = campaignResult.rows[0];
+      if (!campaignRow) {
+        throw new BadRequestException('Campaign not found.');
+      }
+      const campaign = this.mapRow(campaignRow);
+
+      const decisionsResult = await this.pool.query<{
+        recipient_email: string;
+        decision: 'accept' | 'refuse';
+        source: string;
+        fulfillment_source: string | null;
+        contact_id: string | null;
+        decided_at: string;
+      }>(
+        `
+          SELECT recipient_email, decision, source, fulfillment_source, contact_id, decided_at
+          FROM request_campaign_recipient_decisions
+          WHERE campaign_id = $1
+            AND LOWER(recipient_email) = $2
+          LIMIT 1
+        `,
+        [campaignId, normalizedEmail],
+      );
+
+      let inviteRow: {
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_channel: string | null;
+        status: string;
+        claimed_tenant_id: string | null;
+        claimed_farmer_profile_id: string | null;
+        sent_at: string | null;
+      } | null = null;
+      try {
+        const inviteResult = await this.pool.query<{
+          contact_id: string | null;
+          recipient_email: string | null;
+          delivery_channel: string | null;
+          status: string;
+          claimed_tenant_id: string | null;
+          claimed_farmer_profile_id: string | null;
+          sent_at: string | null;
+        }>(
+          `
+            SELECT
+              contact_id,
+              LOWER(recipient_email) AS recipient_email,
+              delivery_channel,
+              status,
+              claimed_tenant_id,
+              claimed_farmer_profile_id,
+              sent_at
+            FROM campaign_recipient_invites
+            WHERE campaign_id = $1
+              AND sender_tenant_id = $2
+              AND LOWER(recipient_email) = $3
+            LIMIT 1
+          `,
+          [campaignId, tenantId, normalizedEmail],
+        );
+        inviteRow = inviteResult.rows[0] ?? null;
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01' && code !== '42703') {
+          throw error;
+        }
+      }
+
+      const timeline = buildCampaignRecipientTimeline({
+        targetEmails: [normalizedEmail],
+        invites: inviteRow ? [inviteRow] : [],
+        decisions: decisionsResult.rows.map((row) => ({
+          recipient_email: row.recipient_email,
+          decision: row.decision,
+          source: row.source,
+          fulfillment_source: row.fulfillment_source,
+          contact_id: row.contact_id,
+          decided_at: new Date(row.decided_at).toISOString(),
+        })),
+      });
+      const recipient = timeline.recipients[0];
+      if (!recipient) {
+        throw new BadRequestException('Recipient not found on this campaign.');
+      }
+
+      if (
+        !canResendCampaignRecipientInvite({
+          onboardingStatus: recipient.onboarding_status,
+          campaignStatus: campaign.status,
+          recipientEmail: recipient.recipient_email,
+          deliveryChannel: recipient.delivery_channel,
+        })
+      ) {
+        throw new BadRequestException('This recipient is not eligible for invite resend.');
+      }
+
+      const plannedDeliveries = await this.loadCampaignDeliveryRecipients(tenantId, campaign);
+      const delivery =
+        plannedDeliveries.find(
+          (entry) => entry.email?.trim().toLowerCase() === normalizedEmail,
+        ) ??
+        plannedDeliveries.find(
+          (entry) =>
+            inviteRow?.contact_id &&
+            entry.contact_id === inviteRow.contact_id,
+        );
+      if (!delivery) {
+        throw new BadRequestException('Recipient delivery channel could not be resolved.');
+      }
+
+      if (delivery.delivery_channel === 'email') {
+        const emailDelivery = await this.dispatchCampaignEmails(campaign, [delivery]);
+        if (emailDelivery.sentCount === 0) {
+          const reason = emailDelivery.failureMessages[0];
+          throw new BadRequestException(
+            reason ? `Invite resend failed. ${reason}` : 'Invite resend failed.',
+          );
+        }
+      } else if (delivery.delivery_channel === 'whatsapp') {
+        const whatsappDelivery = await this.dispatchCampaignWhatsApp(campaign, [delivery]);
+        if (whatsappDelivery.sentCount === 0) {
+          throw new BadRequestException('WhatsApp invite resend failed.');
+        }
+      } else {
+        throw new BadRequestException('Desk-only recipients cannot receive automated resends.');
+      }
+
+      try {
+        await this.pool.query(
+          `
+            UPDATE campaign_recipient_invites
+            SET sent_at = NOW()
+            WHERE campaign_id = $1
+              AND sender_tenant_id = $2
+              AND LOWER(recipient_email) = $3
+          `,
+          [campaignId, tenantId, normalizedEmail],
+        );
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01') {
+          throw error;
+        }
+      }
+
+      await this.emitCampaignAudit('campaign_recipient_invite_resent', {
+        campaign_id: campaignId,
+        tenant_id: tenantId,
+        recipient_email: normalizedEmail,
+        actor_user_id: actorUserId ?? null,
+        delivery_channel: delivery.delivery_channel,
+      });
+
+      return { ok: true, recipient_email: normalizedEmail };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
+  }
+
+  private async emitCampaignAudit(eventType: string, payload: Record<string, unknown>): Promise<void> {
+    try {
+      await this.pool.query(`INSERT INTO audit_log (event_type, payload) VALUES ($1, $2::jsonb)`, [
+        eventType,
+        JSON.stringify(payload),
+      ]);
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return;
+      }
+      throw error;
     }
   }
 

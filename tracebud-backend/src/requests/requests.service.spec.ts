@@ -27,7 +27,12 @@ function createRequestsService(pool: unknown) {
 function mockListDecisionsPoolQueries(
   pool: { query: jest.Mock },
   input: {
-    campaign?: { id: string; tenant_id: string; target_contact_emails?: string[] };
+    campaign?: {
+      id: string;
+      tenant_id: string;
+      target_contact_emails?: string[];
+      status?: string;
+    };
     counts?: { all_count: string; accept_count: string; refuse_count: string };
     timelineDecisions?: Array<Record<string, unknown>>;
     invites?: Array<Record<string, unknown>>;
@@ -39,6 +44,9 @@ function mockListDecisionsPoolQueries(
       rows: [
         {
           target_contact_emails: [],
+          target_contact_ids: [],
+          require_farmer_app_confirmation: false,
+          status: 'RUNNING',
           ...input.campaign,
         },
       ],
@@ -47,14 +55,19 @@ function mockListDecisionsPoolQueries(
       rows: [input.counts ?? { all_count: '0', accept_count: '0', refuse_count: '0' }],
     })
     .mockResolvedValueOnce({
-      rows: input.timelineDecisions ?? [],
+      rows: (input.timelineDecisions ?? []).map((row) => ({
+        fulfillment_source: null,
+        contact_id: null,
+        ...row,
+      })),
     })
     .mockResolvedValueOnce({
       rows: input.invites ?? [],
     })
     .mockResolvedValueOnce({
       rows: input.paginatedDecisions ?? [],
-    });
+    })
+    .mockResolvedValue({ rows: [] });
 }
 
 describe('RequestsService', () => {
@@ -98,7 +111,7 @@ describe('RequestsService', () => {
 
     const result = await service.listDecisions('tenant_1', 'camp_1');
 
-    expect(pool.query).toHaveBeenCalledTimes(5);
+    expect(pool.query).toHaveBeenCalledTimes(6);
     expect(result.campaign_id).toBe('camp_1');
     expect(result.tenant_id).toBe('tenant_1');
     expect(result.last_synced_at).toBe('2026-04-22T12:00:00.000Z');
@@ -187,10 +200,17 @@ describe('RequestsService', () => {
           delivery_channel: 'email',
           onboarding_status: 'accepted',
           invite_status: null,
+          fulfillment_source: null,
           decision: 'accept',
           decision_source: 'email_cta',
           decided_at: '2026-04-22T12:05:00.000Z',
           updated_at: '2026-04-22T12:05:00.000Z',
+          share_links: {
+            recipient_lane: 'dashboard',
+            connect_url: 'https://dashboard.tracebud.com/create-account?campaign=camp_contract',
+            inbox_url: 'https://dashboard.tracebud.com/inbox?campaign=camp_contract',
+          },
+          can_resend_invite: true,
         },
         {
           contact_id: null,
@@ -199,10 +219,17 @@ describe('RequestsService', () => {
           delivery_channel: 'email',
           onboarding_status: 'accepted',
           invite_status: null,
+          fulfillment_source: null,
           decision: 'accept',
           decision_source: 'email_cta',
           decided_at: '2026-04-22T11:00:00.000Z',
           updated_at: '2026-04-22T11:00:00.000Z',
+          share_links: {
+            recipient_lane: 'dashboard',
+            connect_url: 'https://dashboard.tracebud.com/create-account?campaign=camp_contract',
+            inbox_url: 'https://dashboard.tracebud.com/inbox?campaign=camp_contract',
+          },
+          can_resend_invite: true,
         },
         {
           contact_id: null,
@@ -211,10 +238,17 @@ describe('RequestsService', () => {
           delivery_channel: 'email',
           onboarding_status: 'refused',
           invite_status: null,
+          fulfillment_source: null,
           decision: 'refuse',
           decision_source: 'email_cta',
           decided_at: '2026-04-22T10:00:00.000Z',
           updated_at: '2026-04-22T10:00:00.000Z',
+          share_links: {
+            recipient_lane: 'dashboard',
+            connect_url: 'https://dashboard.tracebud.com/create-account?campaign=camp_contract',
+            inbox_url: 'https://dashboard.tracebud.com/inbox?campaign=camp_contract',
+          },
+          can_resend_invite: false,
         },
       ],
       recipient_status_counts: {

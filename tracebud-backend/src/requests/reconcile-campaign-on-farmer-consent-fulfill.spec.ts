@@ -4,7 +4,7 @@ import { reconcileCampaignOnFarmerConsentFulfill } from './reconcile-campaign-on
 
 describe('reconcileCampaignOnFarmerConsentFulfill', () => {
   it('records farmer_app_phone fulfillment for claimed WhatsApp invites', async () => {
-    const query = jest.fn(async (sql: string) => {
+    const query = jest.fn(async (sql: string, params?: unknown[]) => {
       const normalized = sql.replace(/\s+/g, ' ').trim();
 
       if (normalized.includes('FROM campaign_recipient_invites')) {

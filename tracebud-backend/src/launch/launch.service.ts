@@ -5,7 +5,6 @@ import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
 import { linkPendingNetworkInvitesOnSignup } from '../network/link-pending-network-invites-on-signup';
-// Orchestrates claim-delivery-buyer-invites-on-signup + campaign + CRM on signup.
 import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
 export type TrialLifecycleStatus = 'trial_active' | 'trial_expired' | 'paid_active' | 'suspended';

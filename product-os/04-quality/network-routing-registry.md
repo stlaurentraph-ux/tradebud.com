@@ -83,6 +83,7 @@ Off-platform supplier targeted by request campaign.
 - `backend-network-routing-guard.mjs` — resolver wired in delivery + inbox; consent in tenant scope; registry modules exist
 - `voucher-delivery-routing.spec.ts` — unit tests for consent gate + email resolution
 - `test:integration:network-routing` — consent → delivery → buyer voucher list
+- `test:integration:supplier-onboarding` — campaign invite → signup claim → CRM submitted
 
 ## When changing routing
 

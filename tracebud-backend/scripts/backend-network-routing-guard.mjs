@@ -95,11 +95,16 @@ function main() {
     issues.push('Missing src/harvest/delivery-buyer-invite.ts');
   }
 
+  const orchestratorPath = path.join(root, 'src/network/link-pending-network-invites-on-signup.ts');
+  if (!fs.existsSync(orchestratorPath)) {
+    issues.push('Missing src/network/link-pending-network-invites-on-signup.ts');
+  }
+
   const launchPath = path.join(root, 'src/launch/launch.service.ts');
   if (fs.existsSync(launchPath)) {
     const launchSource = fs.readFileSync(launchPath, 'utf8');
-    if (!launchSource.includes('claim-delivery-buyer-invites-on-signup')) {
-      issues.push('launch.service.ts must claim delivery buyer invites on signup');
+    if (!launchSource.includes('link-pending-network-invites-on-signup')) {
+      issues.push('launch.service.ts must orchestrate link-pending-network-invites-on-signup on signup');
     }
   } else {
     issues.push('Missing src/launch/launch.service.ts');

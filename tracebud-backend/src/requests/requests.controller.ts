@@ -200,6 +200,26 @@ export class RequestsController {
     });
   }
 
+  @Post('campaigns/:id/recipients/resend')
+  async resendRecipientInvite(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { recipient_email?: string },
+  ) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    const recipientEmail = body?.recipient_email?.trim();
+    if (!recipientEmail) {
+      throw new BadRequestException('recipient_email is required.');
+    }
+    return this.requestsService.resendCampaignRecipientInvite(
+      tenantId,
+      id,
+      recipientEmail,
+      req.user?.id ?? null,
+    );
+  }
+
   @Post('campaigns/:id/archive')
   async archiveCampaign(@Req() req: any, @Param('id') id: string) {
     this.requireRequestsAccess(req);
