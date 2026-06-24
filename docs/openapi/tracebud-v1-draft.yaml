@@ -257,7 +257,8 @@ paths:
       tags: [Requests Public]
       operationId: getCampaignPublicPreview
       summary: Public campaign invite preview for field-app smart links
-      description: Returns org name, request title, and due date for a sent campaign. Used before farmer sign-in.
+      description: Returns org name, request title, and due date for a sent campaign. Used before farmer sign-in. No auth required.
+      security: []
       parameters:
         - $ref: "#/components/parameters/IdPath"
       responses:
@@ -267,16 +268,26 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [preview]
                 properties:
                   preview:
                     type: object
+                    required: [campaignId, title, fromOrg, senderTenantId]
                     properties:
-                      campaign_id: { type: string }
-                      title: { type: string }
-                      from_org: { type: string }
-                      due_at: { type: string, format: date-time }
+                      campaignId:
+                        type: string
+                      title:
+                        type: string
+                      fromOrg:
+                        type: string
+                      dueAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      senderTenantId:
+                        type: string
         "404":
-          $ref: "#/components/responses/BadRequest"
+          description: Campaign not found
   /v1/plots:
     post:
       tags: [Plots]
