@@ -1,8 +1,8 @@
-# FEAT-013: Bulk plot import (Phase A + B)
+# FEAT-013: Bulk plot import (Phase A + B + C)
 
 ## Goal
 
-Let cooperatives and exporters onboard existing producer + plot data from CSV or GeoJSON without field re-capture.
+Let cooperatives and exporters onboard existing producer + plot data from CSV, GeoJSON, or tracebud_import_v1 packages without field re-capture.
 
 ## Scope (Phase A — shipped)
 
@@ -23,12 +23,21 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV or
 - Polygon rows accept optional `declared_area_ha` (defaults to 0.01 ha when omitted)
 - Point geometry rows still require `declared_area_ha` and remain capped at &lt;4 ha
 
+## Scope (Phase C — shipped)
+
+- `tracebud_import_v1` JSON import package tab on `/plots/bulk-upload`
+- Canonical package fields: `format_version`, `source_system`, `exported_at`, `producers[]`, `plots[]`
+- Join plots to producers via `producer_ref`
+- Optional `content_hash_sha256` integrity verification (canonical JSON hash)
+- `evidence_references[]` surfaced as non-importable metadata notice
+- `signature` field rejected until asymmetric verification lands (hash-only integrity for now)
+
 ## Non-goals (later phases)
 
 - KML file upload
 - Async `bulk_import_jobs` (&gt;500 rows)
-- `tracebud_import_v1` signed portability package
-- Evidence file ZIP import
+- Evidence file ZIP import from package references
+- Ed2559/RSA package signature verification
 
 ## Permissions
 
@@ -65,8 +74,16 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV or
 - [x] Point feature with GeoJSON geometry respects &lt;4 ha cap
 - [x] Invalid GeoJSON root rejected client-side before preview
 
+### Phase C
+
+- [x] tracebud_import_v1 sample package maps producers + plots to import rows
+- [x] content_hash_sha256 mismatch rejected before preview
+- [x] Unknown producer_ref plots skipped with user-visible notice
+- [x] evidence_references counted but not imported
+
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`
+- `apps/dashboard-product/lib/bulk-plot-import-package.test.ts`

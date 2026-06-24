@@ -25,6 +25,7 @@ import {
   Download,
   FileJson,
   FileSpreadsheet,
+  Package,
   Upload,
   XCircle,
 } from 'lucide-react';
@@ -38,6 +39,11 @@ import {
   parseAndMapBulkPlotImportGeoJson,
 } from '@/lib/bulk-plot-import-geojson';
 import {
+  BULK_PLOT_IMPORT_PACKAGE_SAMPLE,
+  parseAndVerifyTracebudImportV1Package,
+  parseTracebudImportV1Package,
+} from '@/lib/bulk-plot-import-package';
+import {
   executeBulkPlotImport,
   previewBulkPlotImport,
   type BulkPlotImportExecuteResponse,
@@ -47,20 +53,32 @@ import {
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 
 type Step = 'upload' | 'preview' | 'result';
-type ImportSource = 'csv' | 'geojson';
+type ImportSource = 'csv' | 'geojson' | 'package';
 
 function downloadTemplate(source: ImportSource) {
-  const isCsv = source === 'csv';
-  const blob = new Blob(
-    [isCsv ? BULK_PLOT_IMPORT_TEMPLATE_CSV : BULK_PLOT_IMPORT_GEOJSON_SAMPLE],
-    { type: isCsv ? 'text/csv;charset=utf-8' : 'application/geo+json;charset=utf-8' },
-  );
+  const templates: Record<ImportSource, { body: string; mime: string; filename: string }> = {
+    csv: {
+      body: BULK_PLOT_IMPORT_TEMPLATE_CSV,
+      mime: 'text/csv;charset=utf-8',
+      filename: 'tracebud-plot-import-template.csv',
+    },
+    geojson: {
+      body: BULK_PLOT_IMPORT_GEOJSON_SAMPLE,
+      mime: 'application/geo+json;charset=utf-8',
+      filename: 'tracebud-plot-import-sample.geojson',
+    },
+    package: {
+      body: BULK_PLOT_IMPORT_PACKAGE_SAMPLE,
+      mime: 'application/json;charset=utf-8',
+      filename: 'tracebud-import-v1-sample.json',
+    },
+  };
+  const template = templates[source];
+  const blob = new Blob([template.body], { type: template.mime });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = isCsv
-    ? 'tracebud-plot-import-template.csv'
-    : 'tracebud-plot-import-sample.geojson';
+  anchor.download = template.filename;
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -85,10 +103,22 @@ function statusBadge(status: string) {
   );
 }
 
-function parseImportRows(source: ImportSource, text: string): BulkPlotImportInputRow[] {
+function parseImportRows(source: Exclude<ImportSource, 'package'>, text: string): BulkPlotImportInputRow[] {
   return source === 'csv'
     ? parseAndMapBulkPlotImportCsv(text)
     : parseAndMapBulkPlotImportGeoJson(text);
+}
+
+function countImportRows(source: ImportSource, text: string): number {
+  if (!text.trim()) return 0;
+  try {
+    if (source === 'package') {
+      return parseTracebudImportV1Package(text).rows.length;
+    }
+    return parseImportRows(source, text).length;
+  } catch {
+    return 0;
+  }
 }
 
 export default function PlotBulkUploadPage() {
@@ -99,6 +129,7 @@ export default function PlotBulkUploadPage() {
   const [mappedRows, setMappedRows] = useState<BulkPlotImportInputRow[]>([]);
   const [preview, setPreview] = useState<BulkPlotImportPreviewResponse | null>(null);
   const [result, setResult] = useState<BulkPlotImportExecuteResponse | null>(null);
+  const [packageNotice, setPackageNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
 
@@ -106,6 +137,7 @@ export default function PlotBulkUploadPage() {
     setSource(nextSource);
     setFileText('');
     setError(null);
+    setPackageNotice(null);
     setPreview(null);
     setResult(null);
     setMappedRows([]);
@@ -119,15 +151,33 @@ export default function PlotBulkUploadPage() {
       setFileText(text);
       setError(null);
     } catch {
-      setError(`Could not read the ${source === 'csv' ? 'CSV' : 'GeoJSON'} file.`);
+      setError(`Could not read the ${source === 'csv' ? 'CSV' : source === 'geojson' ? 'GeoJSON' : 'import package'} file.`);
     }
   };
 
   const handlePreview = async () => {
     setError(null);
+    setPackageNotice(null);
     let rows: BulkPlotImportInputRow[] = [];
     try {
-      rows = parseImportRows(source, fileText);
+      if (source === 'package') {
+        const parsed = await parseAndVerifyTracebudImportV1Package(fileText);
+        rows = parsed.rows;
+        if (parsed.evidenceReferenceCount > 0) {
+          setPackageNotice(
+            `${parsed.evidenceReferenceCount} evidence reference(s) in the package will not be imported in this release.`,
+          );
+        }
+        if (parsed.skippedPlotCount > 0) {
+          setPackageNotice(
+            (parsed.evidenceReferenceCount > 0
+              ? `${parsed.evidenceReferenceCount} evidence reference(s) skipped. `
+              : '') + `${parsed.skippedPlotCount} plot(s) skipped: ${parsed.skipMessages.join(' ')}`,
+          );
+        }
+      } else {
+        rows = parseImportRows(source, fileText);
+      }
     } catch (parseError) {
       setError(parseError instanceof Error ? parseError.message : 'Could not parse file.');
       return;
@@ -136,7 +186,9 @@ export default function PlotBulkUploadPage() {
       setError(
         source === 'csv'
           ? 'No valid rows found. Download the template and add at least one plot row.'
-          : 'No valid features found. Each feature needs client_plot_id in properties and a Point or Polygon geometry.',
+          : source === 'geojson'
+            ? 'No valid features found. Each feature needs client_plot_id in properties and a Point or Polygon geometry.'
+            : 'No importable plots found. Check producer_ref links and plot geometry in the package.',
       );
       return;
     }
@@ -172,14 +224,7 @@ export default function PlotBulkUploadPage() {
     }
   };
 
-  const parsedRowCount = (() => {
-    if (!fileText.trim()) return 0;
-    try {
-      return parseImportRows(source, fileText).length;
-    } catch {
-      return 0;
-    }
-  })();
+  const parsedRowCount = countImportRows(source, fileText);
 
   return (
     <PermissionGate permission="plots:bulk_upload">
@@ -204,7 +249,8 @@ export default function PlotBulkUploadPage() {
                 <CardTitle>Upload file</CardTitle>
                 <CardDescription>
                   CSV supports point plots under 4 ha or cadastral keys. GeoJSON supports inline
-                  Point or Polygon geometry with producer properties on each feature.
+                  Point or Polygon geometry. Import packages use the tracebud_import_v1 producer +
+                  plot bundle with optional content_hash_sha256 integrity checks.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -212,6 +258,7 @@ export default function PlotBulkUploadPage() {
                   <TabsList>
                     <TabsTrigger value="csv">CSV</TabsTrigger>
                     <TabsTrigger value="geojson">GeoJSON</TabsTrigger>
+                    <TabsTrigger value="package">Import package</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="csv" className="mt-4 space-y-4">
@@ -287,6 +334,45 @@ export default function PlotBulkUploadPage() {
                       />
                     </div>
                   </TabsContent>
+
+                  <TabsContent value="package" className="mt-4 space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => downloadTemplate('package')}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download tracebud_import_v1 sample
+                      </Button>
+                    </div>
+
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <Package className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                      <Label htmlFor="plot-import-package-file" className="cursor-pointer">
+                        <span className="text-sm font-medium">Choose import package JSON</span>
+                        <input
+                          id="plot-import-package-file"
+                          type="file"
+                          accept=".json,application/json"
+                          className="hidden"
+                          onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
+                        />
+                      </Label>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="plot-import-package-text">Or paste import package</Label>
+                      <textarea
+                        id="plot-import-package-text"
+                        value={source === 'package' ? fileText : ''}
+                        onChange={(event) => setFileText(event.target.value)}
+                        rows={14}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                        placeholder={BULK_PLOT_IMPORT_PACKAGE_SAMPLE}
+                      />
+                    </div>
+                  </TabsContent>
                 </Tabs>
 
                 {fileText ? (
@@ -297,6 +383,12 @@ export default function PlotBulkUploadPage() {
                   <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                     <span>{error}</span>
+                  </div>
+                ) : null}
+
+                {packageNotice ? (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-900 dark:text-amber-200">
+                    {packageNotice}
                   </div>
                 ) : null}
 
@@ -317,6 +409,12 @@ export default function PlotBulkUploadPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {packageNotice ? (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-900 dark:text-amber-200">
+                    {packageNotice}
+                  </div>
+                ) : null}
+
                 <Table>
                   <TableHeader>
                     <TableRow>
