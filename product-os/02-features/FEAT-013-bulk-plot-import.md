@@ -1,8 +1,8 @@
-# FEAT-013: Bulk plot import (Phase A + B + C)
+# FEAT-013: Bulk plot import (Phase A–D)
 
 ## Goal
 
-Let cooperatives and exporters onboard existing producer + plot data from CSV, GeoJSON, or tracebud_import_v1 packages without field re-capture.
+Let cooperatives and exporters onboard existing producer + plot data from CSV, GeoJSON, or tracebud_import_v1 packages without field re-capture — including large cooperative onboarding batches.
 
 ## Scope (Phase A — shipped)
 
@@ -32,12 +32,21 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV, G
 - `evidence_references[]` surfaced as non-importable metadata notice
 - `signature` field rejected until asymmetric verification lands (hash-only integrity for now)
 
+## Scope (Phase D — shipped)
+
+- Async `bulk_import_jobs` persistence (`bulk_import_jobs` table, Section 50.3 aligned)
+- `POST /v1/imports/plots/jobs` queues imports above 500 rows (up to 50,000)
+- `GET /v1/imports/plots/jobs/:id` exposes progress counters and terminal status
+- In-process background processing in 100-row batches with resumable counters
+- Dashboard summary-only preview for large payloads (`summaryOnly: true`)
+- Job progress UI with polling on `/plots/bulk-upload`
+
 ## Non-goals (later phases)
 
 - KML file upload
-- Async `bulk_import_jobs` (&gt;500 rows)
 - Evidence file ZIP import from package references
 - Ed2559/RSA package signature verification
+- External worker queue / object storage for job payloads
 
 ## Permissions
 
@@ -52,38 +61,32 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV, G
 
 ## State transitions
 
+### Sync import (≤500 rows)
+
 - Row `VALIDATION_FAILED` → blocked in preview
 - Valid row → `IMPORTED` or `DUPLICATE_SKIPPED` (existing `clientPlotId`)
-- Imported plots enter normal compliance pipeline (`pending_check`)
+
+### Async job (&gt;500 rows)
+
+- Job `QUEUED` → `PROCESSING` → `COMPLETED` | `PARTIAL` | `FAILED`
+- Counters: `processed_records`, `success_count`, `failure_count`, `duplicate_skipped_count`
+
+Imported plots enter normal compliance pipeline (`pending_check`).
 
 ## Acceptance criteria
 
-### Phase A
+### Phase D
 
-- [x] Cooperative user uploads template CSV with 2 rows → preview shows READY/FAILED per row
-- [x] Import creates CRM farmer contacts when email absent but name present
-- [x] Re-import same `client_plot_id` for same producer → `DUPLICATE_SKIPPED`, no error
-- [x] Point row ≥4 ha rejected in preview
-- [x] Cadastral row hydrates polygon when fixture exists
-- [x] Backend API access registry row `bulk_plot_import`
-
-### Phase B
-
-- [x] GeoJSON FeatureCollection with Point + Polygon features maps to import rows
-- [x] Polygon feature imports with declared area from properties
-- [x] Point feature with GeoJSON geometry respects &lt;4 ha cap
-- [x] Invalid GeoJSON root rejected client-side before preview
-
-### Phase C
-
-- [x] tracebud_import_v1 sample package maps producers + plots to import rows
-- [x] content_hash_sha256 mismatch rejected before preview
-- [x] Unknown producer_ref plots skipped with user-visible notice
-- [x] evidence_references counted but not imported
+- [x] Import with 501 rows queues job instead of synchronous execute
+- [x] Job status endpoint returns progress counters while processing
+- [x] Terminal job status reflects mixed success (`PARTIAL`) and total failure (`FAILED`)
+- [x] Dashboard shows progress bar and polls until terminal state
+- [x] Sync path still capped at 500 rows with actionable error message
 
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
+- `tracebud-backend/src/plots/bulk-plot-import-job.service.spec.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-package.test.ts`

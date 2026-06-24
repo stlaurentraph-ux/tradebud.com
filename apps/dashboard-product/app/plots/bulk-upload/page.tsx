@@ -44,15 +44,21 @@ import {
   parseTracebudImportV1Package,
 } from '@/lib/bulk-plot-import-package';
 import {
+  BULK_PLOT_IMPORT_SYNC_MAX_ROWS,
   executeBulkPlotImport,
+  getBulkPlotImportJob,
+  isBulkPlotImportJobTerminal,
   previewBulkPlotImport,
+  queueBulkPlotImportJob,
   type BulkPlotImportExecuteResponse,
   type BulkPlotImportInputRow,
+  type BulkPlotImportJobResponse,
   type BulkPlotImportPreviewResponse,
 } from '@/lib/bulk-plot-import';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 
-type Step = 'upload' | 'preview' | 'result';
+type Step = 'upload' | 'preview' | 'job' | 'result';
 type ImportSource = 'csv' | 'geojson' | 'package';
 
 function downloadTemplate(source: ImportSource) {
@@ -129,6 +135,7 @@ export default function PlotBulkUploadPage() {
   const [mappedRows, setMappedRows] = useState<BulkPlotImportInputRow[]>([]);
   const [preview, setPreview] = useState<BulkPlotImportPreviewResponse | null>(null);
   const [result, setResult] = useState<BulkPlotImportExecuteResponse | null>(null);
+  const [activeJob, setActiveJob] = useState<BulkPlotImportJobResponse | null>(null);
   const [packageNotice, setPackageNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
@@ -140,6 +147,7 @@ export default function PlotBulkUploadPage() {
     setPackageNotice(null);
     setPreview(null);
     setResult(null);
+    setActiveJob(null);
     setMappedRows([]);
     setStep('upload');
   };
@@ -195,7 +203,9 @@ export default function PlotBulkUploadPage() {
     setMappedRows(rows);
     setIsWorking(true);
     try {
-      const response = await previewBulkPlotImport(rows);
+      const response = await previewBulkPlotImport(rows, {
+        summaryOnly: rows.length > BULK_PLOT_IMPORT_SYNC_MAX_ROWS,
+      });
       setPreview(response);
       setStep('preview');
     } catch (previewError) {
@@ -205,11 +215,44 @@ export default function PlotBulkUploadPage() {
     }
   };
 
+  const pollImportJob = async (jobId: string): Promise<BulkPlotImportJobResponse> => {
+    for (let attempt = 0; attempt < 120; attempt += 1) {
+      const job = await getBulkPlotImportJob(jobId);
+      setActiveJob(job);
+      if (isBulkPlotImportJobTerminal(job.status)) {
+        trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_JOB_COMPLETED, {
+          job_id: job.id,
+          status: job.status,
+          imported_count: job.successCount,
+          failed_count: job.failureCount,
+        });
+        return job;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    throw new Error('Import job timed out while processing.');
+  };
+
   const handleImport = async () => {
     if (!mappedRows.length) return;
     setIsWorking(true);
     setError(null);
     try {
+      if (mappedRows.length > BULK_PLOT_IMPORT_SYNC_MAX_ROWS) {
+        const queued = await queueBulkPlotImportJob(mappedRows);
+        setActiveJob(queued);
+        setStep('job');
+        const finished = await pollImportJob(queued.id);
+        setActiveJob(finished);
+        if (finished.successCount > 0) {
+          markOnboardingAction('first_plot_captured');
+        }
+        toast.success(
+          `Import job ${finished.status.toLowerCase()}: ${finished.successCount} imported, ${finished.failureCount} failed.`,
+        );
+        return;
+      }
+
       const response = await executeBulkPlotImport(mappedRows);
       setResult(response);
       setStep('result');
@@ -225,13 +268,18 @@ export default function PlotBulkUploadPage() {
   };
 
   const parsedRowCount = countImportRows(source, fileText);
+  const isLargeImport = mappedRows.length > BULK_PLOT_IMPORT_SYNC_MAX_ROWS;
+  const importProgressPercent =
+    activeJob && activeJob.totalRecords > 0
+      ? Math.round((activeJob.processedRecords / activeJob.totalRecords) * 100)
+      : 0;
 
   return (
     <PermissionGate permission="plots:bulk_upload">
       <div className="flex flex-col">
         <AppHeader
           title="Bulk plot import"
-          description="Import producer-linked plots from CSV or GeoJSON FeatureCollection."
+          description="Import producer-linked plots from CSV, GeoJSON, or tracebud_import_v1 packages. Large imports queue async jobs."
           actions={
             <Button variant="outline" size="sm" asChild>
               <Link href="/plots">
@@ -406,12 +454,22 @@ export default function PlotBulkUploadPage() {
                 <CardDescription>
                   {preview.readyCount} ready · {preview.failedCount} blocked · {preview.totalRows}{' '}
                   total
+                  {preview.summaryOnly
+                    ? ` · showing ${preview.rows.length} sample validation issue(s)`
+                    : ''}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {packageNotice ? (
                   <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-900 dark:text-amber-200">
                     {packageNotice}
+                  </div>
+                ) : null}
+
+                {isLargeImport ? (
+                  <div className="rounded-md border border-blue-500/30 bg-blue-500/5 p-3 text-sm">
+                    This import exceeds {BULK_PLOT_IMPORT_SYNC_MAX_ROWS} rows and will run as an async
+                    background job with progress tracking.
                   </div>
                 ) : null}
 
@@ -457,10 +515,58 @@ export default function PlotBulkUploadPage() {
                   >
                     <Upload className="mr-2 h-4 w-4" />
                     {isWorking
-                      ? 'Importing…'
-                      : `Import ${preview.readyCount} plot${preview.readyCount === 1 ? '' : 's'}`}
+                      ? isLargeImport
+                        ? 'Queueing job…'
+                        : 'Importing…'
+                      : isLargeImport
+                        ? `Queue import job (${preview.readyCount} ready plots)`
+                        : `Import ${preview.readyCount} plot${preview.readyCount === 1 ? '' : 's'}`}
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {step === 'job' && activeJob ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>Import job running</CardTitle>
+                <CardDescription>
+                  {activeJob.processedRecords} / {activeJob.totalRecords} processed · status{' '}
+                  {activeJob.status}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                  <div
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${importProgressPercent}%` }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {activeJob.successCount} imported · {activeJob.duplicateSkippedCount} duplicates
+                  skipped · {activeJob.failureCount} failed
+                </p>
+                {isBulkPlotImportJobTerminal(activeJob.status) ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={() => router.push('/plots')}>
+                      View plots
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setStep('upload');
+                        setFileText('');
+                        setPreview(null);
+                        setActiveJob(null);
+                        setMappedRows([]);
+                      }}
+                    >
+                      Import another file
+                    </Button>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Processing in the background…</p>
+                )}
               </CardContent>
             </Card>
           ) : null}

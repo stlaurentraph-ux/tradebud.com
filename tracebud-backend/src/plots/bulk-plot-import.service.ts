@@ -10,7 +10,8 @@ import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service'
 import { CreatePlotDto } from './dto/create-plot.dto';
 import { PlotsService } from './plots.service';
 import {
-  BULK_PLOT_IMPORT_MAX_ROWS,
+  BULK_PLOT_IMPORT_ASYNC_MAX_ROWS,
+  BULK_PLOT_IMPORT_SYNC_MAX_ROWS,
   BULK_PLOT_POINT_MAX_AREA_HA,
   type BulkPlotImportExecuteResponse,
   type BulkPlotImportInputRow,
@@ -50,8 +51,15 @@ export class BulkPlotImportService {
     private readonly cadastralLookup: CadastralParcelLookupService,
   ) {}
 
-  preview(_tenantId: string, rows: BulkPlotImportInputRow[]): BulkPlotImportPreviewResponse {
-    this.assertRowLimit(rows);
+  preview(
+    _tenantId: string,
+    rows: BulkPlotImportInputRow[],
+    options?: { summaryOnly?: boolean },
+  ): BulkPlotImportPreviewResponse {
+    if (options?.summaryOnly) {
+      return this.previewSummary(rows);
+    }
+    this.assertSyncRowLimit(rows);
     const previews = rows.map((row, index) => this.previewRow(row, index + 1));
     const readyCount = previews.filter((row) => row.status === 'READY').length;
     return {
@@ -62,15 +70,47 @@ export class BulkPlotImportService {
     };
   }
 
+  private previewSummary(rows: BulkPlotImportInputRow[]): BulkPlotImportPreviewResponse {
+    this.assertAsyncRowLimit(rows);
+    const sampleFailures: BulkPlotImportRowPreview[] = [];
+    let readyCount = 0;
+    let failedCount = 0;
+
+    for (let index = 0; index < rows.length; index += 1) {
+      const preview = this.previewRow(rows[index], rows[index]?.rowIndex ?? index + 1);
+      if (preview.status === 'READY') {
+        readyCount += 1;
+      } else {
+        failedCount += 1;
+        if (sampleFailures.length < 25) {
+          sampleFailures.push(preview);
+        }
+      }
+    }
+
+    return {
+      totalRows: rows.length,
+      readyCount,
+      failedCount,
+      rows: sampleFailures,
+      summaryOnly: true,
+    };
+  }
+
   async execute(params: {
     tenantId: string;
     userId: string;
     rows: BulkPlotImportInputRow[];
     actorEmail?: string;
     actorFullName?: string;
+    skipRowLimit?: boolean;
   }): Promise<BulkPlotImportExecuteResponse> {
     const { tenantId, userId, rows } = params;
-    this.assertRowLimit(rows);
+    if (!params.skipRowLimit) {
+      this.assertSyncRowLimit(rows);
+    } else {
+      this.assertAsyncRowLimit(rows);
+    }
 
     const producerCache = new Map<string, ResolvedProducer>();
     const results: BulkPlotImportRowResult[] = [];
@@ -165,13 +205,24 @@ export class BulkPlotImportService {
     };
   }
 
-  private assertRowLimit(rows: BulkPlotImportInputRow[]): void {
+  private assertSyncRowLimit(rows: BulkPlotImportInputRow[]): void {
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new BadRequestException('At least one import row is required.');
     }
-    if (rows.length > BULK_PLOT_IMPORT_MAX_ROWS) {
+    if (rows.length > BULK_PLOT_IMPORT_SYNC_MAX_ROWS) {
       throw new BadRequestException(
-        `Bulk plot import supports up to ${BULK_PLOT_IMPORT_MAX_ROWS} rows per job.`,
+        `Synchronous bulk plot import supports up to ${BULK_PLOT_IMPORT_SYNC_MAX_ROWS} rows. Queue an async job for larger imports.`,
+      );
+    }
+  }
+
+  private assertAsyncRowLimit(rows: BulkPlotImportInputRow[]): void {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw new BadRequestException('At least one import row is required.');
+    }
+    if (rows.length > BULK_PLOT_IMPORT_ASYNC_MAX_ROWS) {
+      throw new BadRequestException(
+        `Bulk plot import supports up to ${BULK_PLOT_IMPORT_ASYNC_MAX_ROWS} rows per job.`,
       );
     }
   }

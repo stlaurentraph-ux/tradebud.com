@@ -52,6 +52,7 @@ export type BulkPlotImportPreviewResponse = {
   readyCount: number;
   failedCount: number;
   rows: BulkPlotImportRowPreview[];
+  summaryOnly?: boolean;
 };
 
 export type BulkPlotImportExecuteResponse = {
@@ -62,6 +63,34 @@ export type BulkPlotImportExecuteResponse = {
   rows: BulkPlotImportRowResult[];
 };
 
-export const BULK_PLOT_IMPORT_MAX_ROWS = 500;
+export type BulkPlotImportJobStatus =
+  | 'QUEUED'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'PARTIAL';
+
+export type BulkPlotImportJobResponse = {
+  id: string;
+  status: BulkPlotImportJobStatus;
+  importType: 'PLOTS';
+  totalRecords: number;
+  processedRecords: number;
+  successCount: number;
+  failureCount: number;
+  duplicateSkippedCount: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  errorSummary?: Record<string, unknown> | null;
+};
+
+export const BULK_PLOT_IMPORT_SYNC_MAX_ROWS = 500;
+
+export const BULK_PLOT_IMPORT_ASYNC_MAX_ROWS = 50_000;
+
+/** @deprecated Use BULK_PLOT_IMPORT_SYNC_MAX_ROWS */
+export const BULK_PLOT_IMPORT_MAX_ROWS = BULK_PLOT_IMPORT_SYNC_MAX_ROWS;
 
 export const BULK_PLOT_POINT_MAX_AREA_HA = 4;

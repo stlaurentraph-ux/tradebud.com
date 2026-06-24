@@ -15,7 +15,33 @@ export type BulkPlotImportPreviewResponse = {
   readyCount: number;
   failedCount: number;
   rows: BulkPlotImportPreviewRow[];
+  summaryOnly?: boolean;
 };
+
+export type BulkPlotImportJobStatus =
+  | 'QUEUED'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
+  | 'PARTIAL';
+
+export type BulkPlotImportJobResponse = {
+  id: string;
+  status: BulkPlotImportJobStatus;
+  importType: 'PLOTS';
+  totalRecords: number;
+  processedRecords: number;
+  successCount: number;
+  failureCount: number;
+  duplicateSkippedCount: number;
+  startedAt: string | null;
+  completedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  errorSummary?: Record<string, unknown> | null;
+};
+
+export const BULK_PLOT_IMPORT_SYNC_MAX_ROWS = 500;
 
 export type BulkPlotImportExecuteRow = {
   rowIndex: number;
@@ -87,11 +113,15 @@ async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> 
 
 export async function previewBulkPlotImport(
   rows: BulkPlotImportInputRow[],
+  options?: { summaryOnly?: boolean },
 ): Promise<BulkPlotImportPreviewResponse> {
-  trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PREVIEW, { row_count: rows.length });
+  trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PREVIEW, {
+    row_count: rows.length,
+    summary_only: options?.summaryOnly === true,
+  });
   return requestJson<BulkPlotImportPreviewResponse>('/api/imports/plots/preview', {
     method: 'POST',
-    body: JSON.stringify({ rows }),
+    body: JSON.stringify({ rows, summaryOnly: options?.summaryOnly === true }),
   });
 }
 
@@ -116,4 +146,24 @@ export async function executeBulkPlotImport(
     });
     throw error;
   }
+}
+
+export async function queueBulkPlotImportJob(
+  rows: BulkPlotImportInputRow[],
+): Promise<BulkPlotImportJobResponse> {
+  trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_JOB_QUEUED, { row_count: rows.length });
+  return requestJson<BulkPlotImportJobResponse>('/api/imports/plots/jobs', {
+    method: 'POST',
+    body: JSON.stringify({ rows }),
+  });
+}
+
+export async function getBulkPlotImportJob(jobId: string): Promise<BulkPlotImportJobResponse> {
+  return requestJson<BulkPlotImportJobResponse>(`/api/imports/plots/jobs/${jobId}`, {
+    method: 'GET',
+  });
+}
+
+export function isBulkPlotImportJobTerminal(status: BulkPlotImportJobStatus): boolean {
+  return status === 'COMPLETED' || status === 'FAILED' || status === 'PARTIAL';
 }

@@ -24,6 +24,9 @@ export const DASHBOARD_EVENTS = {
   BULK_PLOT_IMPORT_PREVIEW: 'dashboard_bulk_plot_import_preview',
   BULK_PLOT_IMPORT_SUCCESS: 'dashboard_bulk_plot_import_success',
   BULK_PLOT_IMPORT_FAILURE: 'dashboard_bulk_plot_import_failure',
+  BULK_PLOT_IMPORT_JOB_QUEUED: 'dashboard_bulk_plot_import_job_queued',
+  BULK_PLOT_IMPORT_JOB_COMPLETED: 'dashboard_bulk_plot_import_job_completed',
+  INBOUND_CAMPAIGN_REQUEST_VIEWED: 'inbound_campaign_request_viewed',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];

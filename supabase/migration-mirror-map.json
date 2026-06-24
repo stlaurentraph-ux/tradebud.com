@@ -111,6 +111,11 @@
       "supabase": "20260622130000_harvest_transaction_client_event_id.sql",
       "backend": "tb_v16_059_harvest_transaction_client_event_id.sql",
       "purpose": "harvest_transaction_client_event_id"
+    },
+    {
+      "supabase": "20260624200000_bulk_import_jobs.sql",
+      "backend": "tb_v16_064_bulk_import_jobs.sql",
+      "purpose": "bulk_import_jobs"
     }
   ],
   "supabaseOnly": [

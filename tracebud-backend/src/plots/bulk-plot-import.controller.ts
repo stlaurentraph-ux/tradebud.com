@@ -1,7 +1,8 @@
-import { Body, Controller, ForbiddenException, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
 import type { BulkPlotImportInputRow } from './bulk-plot-import.types';
 
@@ -17,7 +18,10 @@ const BULK_PLOT_IMPORT_ROLES = [
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/imports/plots')
 export class BulkPlotImportController {
-  constructor(private readonly bulkPlotImportService: BulkPlotImportService) {}
+  constructor(
+    private readonly bulkPlotImportService: BulkPlotImportService,
+    private readonly bulkPlotImportJobService: BulkPlotImportJobService,
+  ) {}
 
   private getTenantId(req: any): string {
     const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
@@ -36,10 +40,15 @@ export class BulkPlotImportController {
 
   @Post('preview')
   @ApiOperation({ summary: 'Validate bulk plot import rows without writing data' })
-  preview(@Req() req: any, @Body() body: { rows?: BulkPlotImportInputRow[] }) {
+  preview(
+    @Req() req: any,
+    @Body() body: { rows?: BulkPlotImportInputRow[]; summaryOnly?: boolean },
+  ) {
     this.assertBulkPlotImportAccess(req);
     const tenantId = this.getTenantId(req);
-    return this.bulkPlotImportService.preview(tenantId, body?.rows ?? []);
+    return this.bulkPlotImportService.preview(tenantId, body?.rows ?? [], {
+      summaryOnly: body?.summaryOnly === true,
+    });
   }
 
   @Post()
@@ -65,5 +74,38 @@ export class BulkPlotImportController {
       actorEmail: email,
       actorFullName: fullName,
     });
+  }
+
+  @Post('jobs')
+  @ApiOperation({ summary: 'Queue async bulk plot import job for large payloads' })
+  async createJob(@Req() req: any, @Body() body: { rows?: BulkPlotImportInputRow[] }) {
+    this.assertBulkPlotImportAccess(req);
+    const tenantId = this.getTenantId(req);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    const email = typeof req.user?.email === 'string' ? req.user.email : undefined;
+    const fullName =
+      typeof req.user?.user_metadata?.full_name === 'string'
+        ? req.user.user_metadata.full_name
+        : typeof req.user?.user_metadata?.fullName === 'string'
+          ? req.user.user_metadata.fullName
+          : undefined;
+    return this.bulkPlotImportJobService.createJob({
+      tenantId,
+      userId,
+      rows: body?.rows ?? [],
+      actorEmail: email,
+      actorFullName: fullName,
+    });
+  }
+
+  @Get('jobs/:id')
+  @ApiOperation({ summary: 'Get async bulk plot import job progress' })
+  getJob(@Req() req: any, @Param('id') jobId: string) {
+    this.assertBulkPlotImportAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.bulkPlotImportJobService.getJob(tenantId, jobId);
   }
 }

@@ -132,6 +132,21 @@ describe('BulkPlotImportService.preview', () => {
     expect(result.readyCount).toBe(1);
     expect(result.rows[0]?.geometryKind).toBe('polygon');
   });
+  it('returns summary-only preview for large payloads', () => {
+    const service = makeService();
+    const rows = Array.from({ length: 600 }, (_, index) => ({
+      clientPlotId: `PLOT-${index + 1}`,
+      producerFullName: 'Maria Lopez',
+      latitude: 14.6349,
+      longitude: -87.8494,
+      declaredAreaHa: 2.5,
+    }));
+    const result = service.preview('tenant_1', rows, { summaryOnly: true });
+    expect(result.summaryOnly).toBe(true);
+    expect(result.totalRows).toBe(600);
+    expect(result.readyCount).toBe(600);
+    expect(result.rows.length).toBeLessThanOrEqual(25);
+  });
 });
 
 describe('BulkPlotImportService.execute', () => {
