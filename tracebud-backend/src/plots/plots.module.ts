@@ -4,6 +4,7 @@ import { ConsentModule } from '../consent/consent.module';
 import { DbModule } from '../db/db.module';
 import { LaunchModule } from '../launch/launch.module';
 import { BulkPlotImportController } from './bulk-plot-import.controller';
+import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.service';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
 import { CadastralParcelController } from './cadastral-parcel.controller';
@@ -31,6 +32,7 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     PlotsService,
     BulkPlotImportService,
     BulkPlotImportJobService,
+    BulkPlotImportEvidenceService,
     CadastralParcelLookupService,
     TenureParseService,
     EvidenceDocumentsService,

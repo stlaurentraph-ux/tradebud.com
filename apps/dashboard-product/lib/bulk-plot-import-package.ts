@@ -37,7 +37,9 @@ export type TracebudImportV1Plot = {
 
 export type TracebudImportV1EvidenceReference = {
   document_ref: string;
+  client_plot_id: string;
   document_type?: string | null;
+  file_name?: string | null;
   file_hash_sha256?: string | null;
 };
 
@@ -114,6 +116,7 @@ export const BULK_PLOT_IMPORT_PACKAGE_SAMPLE = JSON.stringify(
     evidence_references: [
       {
         document_ref: 'DOC-001',
+        client_plot_id: 'PLOT-001',
         document_type: 'land_title',
         file_hash_sha256: 'abc123',
       },

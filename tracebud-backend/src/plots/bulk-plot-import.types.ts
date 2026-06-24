@@ -94,3 +94,38 @@ export const BULK_PLOT_IMPORT_ASYNC_MAX_ROWS = 50_000;
 export const BULK_PLOT_IMPORT_MAX_ROWS = BULK_PLOT_IMPORT_SYNC_MAX_ROWS;
 
 export const BULK_PLOT_POINT_MAX_AREA_HA = 4;
+
+export type BulkPlotImportEvidenceKind =
+  | 'fpic_repository'
+  | 'protected_area_permit'
+  | 'labor_evidence'
+  | 'tenure_evidence';
+
+export type BulkPlotImportEvidenceItemInput = {
+  clientPlotId: string;
+  documentRef: string;
+  evidenceKind: BulkPlotImportEvidenceKind;
+  mimeType: string;
+  fileName: string;
+  contentBase64: string;
+  expectedSha256?: string | null;
+};
+
+export type BulkPlotImportEvidenceRowResult = {
+  clientPlotId: string;
+  documentRef: string;
+  status: 'IMPORTED' | 'VALIDATION_FAILED' | 'FAILED';
+  plotId?: string;
+  message?: string;
+};
+
+export type BulkPlotImportEvidenceResponse = {
+  totalItems: number;
+  importedCount: number;
+  failedCount: number;
+  rows: BulkPlotImportEvidenceRowResult[];
+};
+
+export const BULK_PLOT_IMPORT_EVIDENCE_MAX_ITEMS = 100;
+
+export const BULK_PLOT_IMPORT_EVIDENCE_MAX_BYTES = 10 * 1024 * 1024;

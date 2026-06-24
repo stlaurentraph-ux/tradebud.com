@@ -1,4 +1,4 @@
-# FEAT-013: Bulk plot import (Phase A–D)
+# FEAT-013: Bulk plot import (Phase A–F)
 
 ## Goal
 
@@ -41,11 +41,24 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV, G
 - Dashboard summary-only preview for large payloads (`summaryOnly: true`)
 - Job progress UI with polling on `/plots/bulk-upload`
 
+## Scope (Phase E — shipped)
+
+- KML upload tab on `/plots/bulk-upload`
+- Parses `Placemark` elements with `ExtendedData` / `SimpleData` property aliases
+- Converts KML `Point` and `Polygon` geometries into the existing GeoJSON import pipeline
+- Supports `MultiGeometry` wrappers with a single Point or Polygon child
+
+## Scope (Phase F — shipped)
+
+- Optional evidence ZIP upload on the import package tab
+- `evidence_references[]` require `client_plot_id` and match ZIP entries by `document_ref` or `file_name`
+- Optional `file_hash_sha256` verification before upload
+- `POST /v1/imports/plots/evidence` uploads files to plot-evidence storage and registers documents via existing sync path
+- Evidence import runs after plot import completes (sync and async job paths)
+
 ## Non-goals (later phases)
 
-- KML file upload
-- Evidence file ZIP import from package references
-- Ed2559/RSA package signature verification
+- Ed25519/RSA package signature verification
 - External worker queue / object storage for job payloads
 
 ## Permissions
@@ -83,10 +96,25 @@ Imported plots enter normal compliance pipeline (`pending_check`).
 - [x] Dashboard shows progress bar and polls until terminal state
 - [x] Sync path still capped at 500 rows with actionable error message
 
+### Phase E
+
+- [x] KML sample with Point + Polygon placemarks maps to import rows
+- [x] ExtendedData `client_plot_id` and producer fields mapped like GeoJSON properties
+- [x] Invalid KML XML rejected client-side before preview
+
+### Phase F
+
+- [x] Evidence ZIP entries matched to `evidence_references` by `document_ref`
+- [x] Evidence files uploaded and linked to plots by `client_plot_id` after plot import
+- [x] Hash mismatch and missing plot/reference failures surfaced per file
+
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
 - `tracebud-backend/src/plots/bulk-plot-import-job.service.spec.ts`
+- `tracebud-backend/src/plots/bulk-plot-import-evidence.service.spec.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`
+- `apps/dashboard-product/lib/bulk-plot-import-kml.test.ts`
+- `apps/dashboard-product/lib/bulk-plot-import-evidence.test.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-package.test.ts`

@@ -78,7 +78,7 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
     id: 'bulk_plot_import',
     file: 'plots/bulk-plot-import.controller.ts',
     roles: ['cooperative', 'exporter', 'admin', 'compliance_manager'],
-    note: 'POST preview + execute + async jobs for bulk plot import',
+    note: 'POST preview + execute + async jobs + evidence ZIP import for bulk plot import',
   },
   {
     id: 'cadastral_parcel_lookup',
