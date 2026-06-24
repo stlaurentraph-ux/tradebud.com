@@ -43,7 +43,8 @@ Expected: all targeted tests green.
 | Step | Action | Pass criteria |
 |------|--------|---------------|
 | 2.1 | Sign in as cooperative → `/harvests` | **Receive delivery** panel visible; **Add batch input** hidden or outline-only |
-| 2.2 | Paste / scan member voucher QR | Voucher stages; plot-linked weight shown |
+| 2.2 | Paste / scan member voucher QR | Voucher stages; plot-linked weight shown; smart link `tracebud.com/d/V-…` also works |
+| 2.2b | Open directed inbox (no scan) | Vouchers directed to cooperative appear under **Directed to you** |
 | 2.3 | Search by plot / member name | Eligible vouchers list filters correctly |
 | 2.4 | Stage 2+ vouchers → **Assemble batch** | Navigates to `/packages/new?voucherIds=...` with vouchers pre-selected |
 | 2.5 | Create package | Package ties to staged voucher plot lineage |

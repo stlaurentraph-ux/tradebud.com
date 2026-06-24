@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LocaleContext } from '@/lib/locale-context';
 import { getAuthCopy } from '@/lib/workflow-terminology-labels';
+import { buildCreateAccountHrefFromSearchParams } from '@/lib/supplier-campaign-redirect';
 import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 export default function LoginPage() {
@@ -180,7 +181,7 @@ function LoginPageContent() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 {getAuthCopy('new_to_tracebud', t)}{' '}
-                <Link href="/create-account" className="font-medium text-primary hover:underline">
+                <Link href={buildCreateAccountHrefFromSearchParams(searchParams)} className="font-medium text-primary hover:underline">
                   {getAuthCopy('create_workspace', t)}
                 </Link>
               </p>

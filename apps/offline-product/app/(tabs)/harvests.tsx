@@ -39,6 +39,11 @@ import {
   resolveLocalPlotForHarvestSubmit,
 } from '@/features/harvest/mergeHarvestPlotOptions';
 import { resolveServerPlotIdForLocal } from '@/features/plots/plotServerLink';
+import {
+  assessDeliveryBuyerIntakeEligibility,
+  resolveBackendPlotStatusForLocalPlot,
+} from '@/features/harvest/assessDeliveryBuyerIntakeEligibility';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { DeliveryReceiptsBrowser } from '@/components/harvest/DeliveryReceiptsBrowser';
 import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
@@ -377,6 +382,22 @@ export default function HarvestsScreen() {
       isDeliveryRecipientComplete(deliveryRecipient),
   );
 
+  const deliveryIntakeAdvisory = useMemo(() => {
+    if (!selectedPlotId || !isSignedIn) return null;
+    const serverPlotId = resolveServerPlotIdForLocal(selectedPlotId, plotServerLinks);
+    const plotStatus = resolveBackendPlotStatusForLocalPlot(backendPlots, serverPlotId);
+    if (plotStatus == null) return null;
+    const eligibility = assessDeliveryBuyerIntakeEligibility(plotStatus);
+    return eligibility.ready ? null : eligibility;
+  }, [backendPlots, isSignedIn, plotServerLinks, selectedPlotId]);
+
+  useEffect(() => {
+    if (!deliveryIntakeAdvisory) return;
+    trackEvent(ANALYTICS_EVENTS.DELIVERY_INTAKE_ADVISORY_SHOWN, {
+      plotStatus: deliveryIntakeAdvisory.plotStatus,
+    });
+  }, [deliveryIntakeAdvisory]);
+
   const startNewHarvestFlow = () => {
     if (!isSignedIn) {
       openSignIn({ variant: 'sync' });
@@ -576,6 +597,14 @@ export default function HarvestsScreen() {
                 </Pressable>
               </View>
             </Card>
+
+            {deliveryIntakeAdvisory ? (
+              <Card style={styles.intakeAdvisoryCard}>
+                <ThemedText type="caption" style={styles.intakeAdvisoryText}>
+                  {t(deliveryIntakeAdvisory.advisoryKey)}
+                </ThemedText>
+              </Card>
+            ) : null}
 
             <DeliveryRecipientFields
               t={t}

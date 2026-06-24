@@ -27,6 +27,11 @@ import {
 import type { PlotServerLinks } from '@/features/plots/plotServerLink';
 import type { Plot } from '@/features/state/AppStateContext';
 import type { TranslateFn } from '@/features/i18n/translate';
+import {
+  buildDeliveryQrUrl,
+  buildDeliveryTripQrUrl,
+} from '@/features/harvest/buildDeliveryQrUrl';
+import { ShowBuyerQrSheet } from '@/components/harvest/ShowBuyerQrSheet';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createMultiPlotDeliveryWizardStyles } from '@/features/harvest/multiPlotDeliveryWizardStyles';
 
@@ -85,6 +90,8 @@ export function MultiPlotDeliveryWizard({
   const [message, setMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [results, setResults] = useState<MultiPlotDeliveryLineResult[]>([]);
+  const [showBuyerTripQr, setShowBuyerTripQr] = useState(false);
+  const [showBuyerLineQr, setShowBuyerLineQr] = useState<MultiPlotDeliveryLineResult | null>(null);
   const [deliveryRecipient, setDeliveryRecipient] = useState<DeliveryRecipientSelection | null>(
     null,
   );
@@ -247,7 +254,14 @@ export function MultiPlotDeliveryWizard({
 
   if (step === 'complete') {
     const synced = results.filter((row) => row.status === 'synced' && row.qrCodeRef);
-    const shareAll = synced.map((row) => `${row.plotName}: ${row.kg} kg — ${row.qrCodeRef}`).join('\n');
+    const tripRef = results.find((row) => row.deliveryTripRef)?.deliveryTripRef ?? null;
+    const tripQrPayload = tripRef ? buildDeliveryTripQrUrl(tripRef) : '';
+    const shareAll = synced
+      .map((row) => {
+        const url = buildDeliveryQrUrl(row.qrCodeRef ?? '');
+        return `${row.plotName}: ${row.kg} kg — ${url}`;
+      })
+      .join('\n');
     return (
       <View style={styles.gap}>
         <ThemedText type="title" style={styles.completeTitle}>
@@ -256,6 +270,27 @@ export function MultiPlotDeliveryWizard({
         <ThemedText type="default" style={styles.completeBody}>
           {t('multi_plot_delivery_complete_body', { count: String(results.length) })}
         </ThemedText>
+
+        {tripRef ? (
+          <Card variant="outlined" style={styles.tripCard}>
+            <ThemedText type="defaultSemiBold" style={styles.tripTitle}>
+              {t('multi_plot_trip_qr_title')}
+            </ThemedText>
+            <ThemedText type="caption" style={styles.tripBody}>
+              {t('multi_plot_trip_qr_body')}
+            </ThemedText>
+            <View style={styles.qrWrap}>
+              <QRCode value={tripQrPayload} size={180} color="#111111" backgroundColor="#FFFFFF" ecl="H" />
+            </View>
+            <ThemedText type="defaultSemiBold" style={styles.voucherCode}>
+              {tripRef}
+            </ThemedText>
+            <Button variant="secondary" onPress={() => setShowBuyerTripQr(true)}>
+              {t('show_buyer_qr')}
+            </Button>
+          </Card>
+        ) : null}
+
         <View style={styles.gapSm}>
           {results.map((row) => (
             <Card key={`${row.plotId}-${row.kg}`} variant="outlined" style={styles.resultCard}>
@@ -264,12 +299,21 @@ export function MultiPlotDeliveryWizard({
               </ThemedText>
               {row.status === 'synced' && row.qrCodeRef ? (
                 <View style={styles.qrWrap}>
-                  <QRCode value={row.qrCodeRef} size={140} color="#111111" backgroundColor="#FFFFFF" ecl="M" />
-                  <Pressable onPress={() => void Share.share({ message: row.qrCodeRef ?? '' })}>
+                  <QRCode
+                    value={buildDeliveryQrUrl(row.qrCodeRef)}
+                    size={140}
+                    color="#111111"
+                    backgroundColor="#FFFFFF"
+                    ecl="H"
+                  />
+                  <Pressable onPress={() => setShowBuyerLineQr(row)}>
                     <ThemedText type="defaultSemiBold" style={styles.voucherCode}>
                       {row.qrCodeRef}
                     </ThemedText>
                   </Pressable>
+                  <Button variant="secondary" onPress={() => setShowBuyerLineQr(row)}>
+                    {t('show_buyer_qr')}
+                  </Button>
                 </View>
               ) : null}
               {row.status === 'synced' && !row.qrCodeRef ? (
@@ -302,6 +346,34 @@ export function MultiPlotDeliveryWizard({
         >
           {t('back_to_home')}
         </Button>
+
+        {tripRef ? (
+          <ShowBuyerQrSheet
+            visible={showBuyerTripQr}
+            onClose={() => setShowBuyerTripQr(false)}
+            t={t}
+            qrPayload={tripQrPayload}
+            humanCode={tripRef}
+            title={t('multi_plot_trip_qr_title')}
+            subtitle={t('multi_plot_trip_qr_body')}
+            metaLines={[
+              `${results.length} plots`,
+              `${results.reduce((sum, row) => sum + row.kg, 0).toLocaleString()} kg`,
+            ]}
+          />
+        ) : null}
+
+        {showBuyerLineQr?.qrCodeRef ? (
+          <ShowBuyerQrSheet
+            visible={showBuyerLineQr != null}
+            onClose={() => setShowBuyerLineQr(null)}
+            t={t}
+            qrPayload={buildDeliveryQrUrl(showBuyerLineQr.qrCodeRef)}
+            humanCode={showBuyerLineQr.qrCodeRef}
+            title={showBuyerLineQr.plotName}
+            metaLines={[`${showBuyerLineQr.kg.toLocaleString()} kg`]}
+          />
+        ) : null}
       </View>
     );
   }

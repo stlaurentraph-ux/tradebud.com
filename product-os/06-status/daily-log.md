@@ -1,3 +1,23 @@
+### 2026-06-24 (delivery intake QR — Phase B complete)
+
+- **Handoff** — desk confirms received kg + optional note before staging; `POST /v1/harvest/vouchers/handoff-confirm`; audit `delivery_handoff_confirmed`.
+- **Signup auto-claim** — marketing `/d/` and `/t/` link to `/create-account?claim=` and `/login?next=/harvests?claim=`; onboarding step 3 redirects to claim.
+- **Bulk scan** — continuous camera mode on delivery desk; `@zxing/browser` fallback when native `BarcodeDetector` missing.
+
+### 2026-06-24 (delivery intake QR — Phase B partial)
+
+- **Trip QR** — `T-…` refs on multi-plot delivery; `tracebud.com/t/{ref}` marketing preview; desk claims all vouchers in one scan.
+- **Show buyer** — full-screen QR sheet on single + multi-plot receipts; ECC level H on QR encode.
+- **Migration** — `voucher.delivery_trip_ref` (`tb_v16_060`).
+
+### 2026-06-24 (delivery intake QR — ADR-009 Phase A)
+
+- **ADR-009 + FEAT-011** — smart-link QR (`tracebud.com/d/V-…`), public preview API, desk inbox/scan/auto-claim, field intake advisory.
+- **Backend** — `GET /v1/public/harvest/delivery-preview/:qrRef`; `directed_to_tenant` on tenant voucher list.
+- **Dashboard** — `/d/[ref]` preview, camera scan dialog, directed inbox, `?claim=` auto-stage.
+- **Field** — QR encodes smart URL; pre-submit buyer-intake advisory on unverified plots.
+- **Marketing** — `/d/[ref]` public receipt page with register CTA.
+
 ### 2026-06-19 (backend — structural automation phase 2)
 
 - **Audit registry v2** — 117 `audit_log` events categorized; strict `--ci` src scan for unregistered emits.

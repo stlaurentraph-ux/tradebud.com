@@ -57,5 +57,13 @@ export class CreateHarvestDto {
   @IsOptional()
   @IsEmail()
   deliverToEmail?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Shared trip reference when multiple plot lines are submitted in one visit (T-…)',
+  })
+  @IsOptional()
+  @IsString()
+  deliveryTripRef?: string;
 }
 

@@ -12,12 +12,20 @@ import {
   resolveVoucherDeliveryRecipient,
   tenantCanBrowseVoucherSql,
 } from './voucher-delivery-routing';
+import { parseDeliveryQrRef, parseDeliveryTripRef } from './delivery-qr-ref';
 import { CreateDdsPackageDto } from './dto/create-dds-package.dto';
 import {
   DdsPackageEvidenceDocumentDto,
   DdsPackageEvidenceDocumentReviewStatus,
   DdsPackageEvidenceDocumentType,
 } from './dto/dds-package-evidence-document.dto';
+import {
+  DEFAULT_TENANT_GEOMETRY_POLICY,
+  parseGeometryCaptureTier,
+  parseTenantGeometryPolicyRow,
+  plotGeometryNeedsShipmentAck,
+  type TenantGeometryPolicy,
+} from '../plots/plot-capture-quality-policy';
 
 const DEFAULT_YIELD_CAP_KG_PER_HA = 1500;
 const DEFAULT_YIELD_BENCHMARK_GEOGRAPHY = 'GLOBAL';
@@ -151,7 +159,41 @@ export interface TenantHarvestVoucherRow {
   dds_package_id: string | null;
   dds_package_status: string | null;
   eligible_for_package: boolean;
+  directed_to_tenant: boolean;
 }
+
+export interface DeliveryPublicPreview {
+  qrRef: string;
+  kg: number | null;
+  harvestDate: string | null;
+  plotName: string | null;
+  plotComplianceStatus: string | null;
+  eligibleForBuyerIntake: boolean;
+  intakeBlockReason: 'plot_not_ready' | 'already_packaged' | null;
+  directedToBuyer: boolean;
+  createdAt: string;
+}
+
+export interface DeliveryTripPublicPreview {
+  tripRef: string;
+  lineCount: number;
+  totalKg: number;
+  directedToBuyer: boolean;
+  createdAt: string;
+  lines: DeliveryPublicPreview[];
+}
+
+export interface DeliveryHandoffConfirmationResult {
+  intakeRef: string;
+  kind: 'voucher' | 'trip';
+  receivedKg: number;
+  expectedKg: number;
+  varianceKg: number;
+  voucherCount: number;
+  weightVarianceWarning: boolean;
+}
+
+const BUYER_INTAKE_PLOT_STATUSES = new Set(['verified', 'deforestation_clear', 'compliant']);
 
 @Injectable()
 export class HarvestService {
@@ -171,6 +213,7 @@ export class HarvestService {
       clientEventId,
       deliverToTenantId,
       deliverToEmail,
+      deliveryTripRef,
     } = dto;
 
     if (kg <= 0) {
@@ -325,6 +368,7 @@ export class HarvestService {
     });
 
     const voucherId = randomUUID();
+    const normalizedTripRef = (deliveryTripRef ?? '').trim().toUpperCase() || null;
     const voucherRes = await this.pool.query(
       `
         INSERT INTO voucher (
@@ -333,9 +377,10 @@ export class HarvestService {
           transaction_id,
           qr_code_ref,
           intended_recipient_tenant_id,
-          intended_recipient_email
+          intended_recipient_email,
+          delivery_trip_ref
         )
-        VALUES ($1, $2, $3, $4, $5, $6)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
         RETURNING *
       `,
       [
@@ -345,6 +390,7 @@ export class HarvestService {
         qrRef,
         deliveryRecipient.intendedRecipientTenantId,
         deliveryRecipient.intendedRecipientEmail,
+        normalizedTripRef,
       ],
     );
 
@@ -555,7 +601,8 @@ export class HarvestService {
             dpv.dds_package_id IS NULL
             AND tx.plot_id IS NOT NULL
             AND COALESCE(p.status, '') IN ('verified', 'deforestation_clear', 'compliant')
-          ) AS eligible_for_package
+          ) AS eligible_for_package,
+          (v.intended_recipient_tenant_id = $2) AS directed_to_tenant
         FROM voucher v
         JOIN harvest_transaction tx ON tx.id = v.transaction_id
         LEFT JOIN plot p ON p.id = tx.plot_id
@@ -656,7 +703,8 @@ export class HarvestService {
             dpv.dds_package_id IS NULL
             AND tx.plot_id IS NOT NULL
             AND COALESCE(p.status, '') IN ('verified', 'deforestation_clear', 'compliant')
-          ) AS eligible_for_package
+          ) AS eligible_for_package,
+          (v.intended_recipient_tenant_id = $2) AS directed_to_tenant
         FROM voucher v
         JOIN harvest_transaction tx ON tx.id = v.transaction_id
         LEFT JOIN plot p ON p.id = tx.plot_id
@@ -745,6 +793,268 @@ export class HarvestService {
             tracesReference: row.traces_reference ?? null,
           }
         : null,
+    };
+  }
+
+  async getDeliveryPublicPreview(qrRef: string): Promise<DeliveryPublicPreview> {
+    const trimmed = (qrRef ?? '').trim().toUpperCase();
+    if (!trimmed) {
+      throw new BadRequestException('qrRef is required');
+    }
+
+    const res = await this.pool.query<{
+      qr_code_ref: string;
+      kg: number | null;
+      harvest_date: string | null;
+      plot_name: string | null;
+      plot_status: string | null;
+      dds_package_id: string | null;
+      plot_id: string | null;
+      intended_recipient_tenant_id: string | null;
+      created_at: string;
+    }>(
+      `
+        SELECT
+          v.qr_code_ref,
+          tx.kg,
+          tx.harvest_date,
+          p.name AS plot_name,
+          p.status AS plot_status,
+          dpv.dds_package_id,
+          tx.plot_id,
+          v.intended_recipient_tenant_id,
+          v.created_at
+        FROM voucher v
+        JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        LEFT JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+        WHERE v.qr_code_ref = $1
+        LIMIT 1
+      `,
+      [trimmed],
+    );
+
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Voucher not found for given qrRef');
+    }
+
+    return this.mapDeliveryPreviewRow(res.rows[0]);
+  }
+
+  private mapDeliveryPreviewRow(row: {
+    qr_code_ref: string;
+    kg: number | null;
+    harvest_date: string | null;
+    plot_name: string | null;
+    plot_status: string | null;
+    dds_package_id: string | null;
+    plot_id: string | null;
+    intended_recipient_tenant_id: string | null;
+    created_at: string;
+  }): DeliveryPublicPreview {
+    const plotStatus = String(row.plot_status ?? '').trim();
+    const plotReady =
+      row.plot_id != null && BUYER_INTAKE_PLOT_STATUSES.has(plotStatus);
+    const alreadyPackaged = row.dds_package_id != null;
+    let intakeBlockReason: DeliveryPublicPreview['intakeBlockReason'] = null;
+    if (alreadyPackaged) {
+      intakeBlockReason = 'already_packaged';
+    } else if (!plotReady) {
+      intakeBlockReason = 'plot_not_ready';
+    }
+    return {
+      qrRef: row.qr_code_ref,
+      kg: row.kg,
+      harvestDate: row.harvest_date,
+      plotName: row.plot_name,
+      plotComplianceStatus: plotStatus || null,
+      eligibleForBuyerIntake: !alreadyPackaged && plotReady,
+      intakeBlockReason,
+      directedToBuyer: row.intended_recipient_tenant_id != null,
+      createdAt: row.created_at,
+    };
+  }
+
+  async getDeliveryTripPublicPreview(tripRef: string): Promise<DeliveryTripPublicPreview> {
+    const trimmed = (tripRef ?? '').trim().toUpperCase();
+    if (!trimmed) {
+      throw new BadRequestException('tripRef is required');
+    }
+
+    const res = await this.pool.query<{
+      qr_code_ref: string;
+      kg: number | null;
+      harvest_date: string | null;
+      plot_name: string | null;
+      plot_status: string | null;
+      dds_package_id: string | null;
+      plot_id: string | null;
+      intended_recipient_tenant_id: string | null;
+      created_at: string;
+    }>(
+      `
+        SELECT
+          v.qr_code_ref,
+          tx.kg,
+          tx.harvest_date,
+          p.name AS plot_name,
+          p.status AS plot_status,
+          dpv.dds_package_id,
+          tx.plot_id,
+          v.intended_recipient_tenant_id,
+          v.created_at
+        FROM voucher v
+        JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        LEFT JOIN dds_package_voucher dpv ON dpv.voucher_id = v.id
+        WHERE v.delivery_trip_ref = $1
+        ORDER BY v.created_at ASC
+      `,
+      [trimmed],
+    );
+
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Delivery trip not found for given tripRef');
+    }
+
+    const lines = res.rows.map((row) => this.mapDeliveryPreviewRow(row));
+    const totalKg = lines.reduce((sum, line) => sum + (line.kg ?? 0), 0);
+    const first = res.rows[0];
+
+    return {
+      tripRef: trimmed,
+      lineCount: lines.length,
+      totalKg,
+      directedToBuyer: first.intended_recipient_tenant_id != null,
+      createdAt: first.created_at,
+      lines,
+    };
+  }
+
+  async claimTripForTenant(
+    tenantId: string,
+    tripRef: string,
+    claimedByUserId?: string | null,
+  ): Promise<TenantHarvestVoucherRow[]> {
+    const trimmed = (tripRef ?? '').trim().toUpperCase();
+    if (!trimmed) {
+      throw new BadRequestException('tripRef is required');
+    }
+
+    const lookup = await this.pool.query<{ qr_code_ref: string }>(
+      `
+        SELECT qr_code_ref
+        FROM voucher
+        WHERE delivery_trip_ref = $1
+        ORDER BY created_at ASC
+      `,
+      [trimmed],
+    );
+    if (lookup.rowCount === 0) {
+      throw new BadRequestException('Delivery trip not found for given tripRef');
+    }
+
+    const claimed: TenantHarvestVoucherRow[] = [];
+    for (const row of lookup.rows) {
+      const voucher = await this.claimVoucherForTenant(
+        tenantId,
+        row.qr_code_ref,
+        claimedByUserId,
+      );
+      claimed.push(voucher);
+    }
+    return claimed;
+  }
+
+  async confirmDeliveryHandoff(
+    tenantId: string,
+    userId: string | undefined,
+    input: { intakeRef: string; receivedKg: number; note?: string | null },
+  ): Promise<DeliveryHandoffConfirmationResult> {
+    const receivedKg = Number(input.receivedKg);
+    if (!Number.isFinite(receivedKg) || receivedKg <= 0) {
+      throw new BadRequestException('receivedKg must be positive');
+    }
+
+    const tripRef = parseDeliveryTripRef(input.intakeRef);
+    if (tripRef) {
+      const preview = await this.getDeliveryTripPublicPreview(tripRef);
+      const expectedKg = preview.totalKg;
+      const varianceKg = receivedKg - expectedKg;
+      const tolerance = Math.max(expectedKg * 0.05, 1);
+      const weightVarianceWarning = Math.abs(varianceKg) > tolerance;
+
+      await this.pool.query(
+        `
+          INSERT INTO audit_log (user_id, event_type, payload)
+          VALUES ($1, $2, $3::jsonb)
+        `,
+        [
+          userId ?? null,
+          'delivery_handoff_confirmed',
+          JSON.stringify({
+            tenantId,
+            tripRef,
+            receivedKg,
+            expectedKg,
+            varianceKg,
+            weightVarianceWarning,
+            voucherQrRefs: preview.lines.map((line) => line.qrRef),
+            note: input.note?.trim() || null,
+          }),
+        ],
+      );
+
+      return {
+        intakeRef: tripRef,
+        kind: 'trip',
+        receivedKg,
+        expectedKg,
+        varianceKg,
+        voucherCount: preview.lineCount,
+        weightVarianceWarning,
+      };
+    }
+
+    const qrRef = parseDeliveryQrRef(input.intakeRef);
+    if (!qrRef) {
+      throw new BadRequestException('intakeRef is required');
+    }
+
+    const preview = await this.getDeliveryPublicPreview(qrRef);
+    const expectedKg = preview.kg ?? 0;
+    const varianceKg = receivedKg - expectedKg;
+    const tolerance = Math.max(expectedKg * 0.05, 1);
+    const weightVarianceWarning = Math.abs(varianceKg) > tolerance;
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId ?? null,
+        'delivery_handoff_confirmed',
+        JSON.stringify({
+          tenantId,
+          qrRef,
+          receivedKg,
+          expectedKg,
+          varianceKg,
+          weightVarianceWarning,
+          note: input.note?.trim() || null,
+        }),
+      ],
+    );
+
+    return {
+      intakeRef: qrRef,
+      kind: 'voucher',
+      receivedKg,
+      expectedKg,
+      varianceKg,
+      voucherCount: 1,
+      weightVarianceWarning,
     };
   }
 
@@ -1362,7 +1672,10 @@ export class HarvestService {
     return result;
   }
 
-  async evaluateDdsPackageReadiness(id: string): Promise<DdsPackageReadinessResult> {
+  async evaluateDdsPackageReadiness(
+    id: string,
+    tenantId?: string | null,
+  ): Promise<DdsPackageReadinessResult> {
     await this.appendReadinessAuditEvent(id, 'requested');
     const detail = await this.getDdsPackageDetail(id);
     const pkg = detail.package as any;
@@ -1431,6 +1744,14 @@ export class HarvestService {
       ),
     ];
     for (const reason of await this.evaluatePlotTenurePackageReasons(plotIds)) {
+      if (reason.severity === 'blocker') {
+        blockers.push(reason);
+      } else {
+        warnings.push(reason);
+      }
+    }
+
+    for (const reason of await this.evaluatePlotGeometryPackageReasons(plotIds, tenantId ?? null)) {
       if (reason.severity === 'blocker') {
         blockers.push(reason);
       } else {
@@ -1562,6 +1883,100 @@ export class HarvestService {
     } catch (error) {
       const code = (error as { code?: string } | null)?.code;
       if (code === '42P01') {
+        return [];
+      }
+      throw error;
+    }
+  }
+
+  private async getTenantGeometryPolicy(tenantId: string): Promise<TenantGeometryPolicy> {
+    try {
+      const res = await this.pool.query<{
+        geometry_sync_min_tier: string;
+        shipment_geometry_ack_mode: string;
+      }>(
+        `
+          SELECT geometry_sync_min_tier, shipment_geometry_ack_mode
+          FROM tenant_geometry_policy
+          WHERE tenant_id = $1
+        `,
+        [tenantId],
+      );
+      if ((res.rowCount ?? 0) === 0) {
+        return DEFAULT_TENANT_GEOMETRY_POLICY;
+      }
+      return parseTenantGeometryPolicyRow(res.rows[0]);
+    } catch {
+      return DEFAULT_TENANT_GEOMETRY_POLICY;
+    }
+  }
+
+  private async evaluatePlotGeometryPackageReasons(
+    plotIds: string[],
+    tenantId: string | null,
+  ): Promise<ReadinessIssue[]> {
+    if (plotIds.length === 0) {
+      return [];
+    }
+
+    const policy = tenantId
+      ? await this.getTenantGeometryPolicy(tenantId)
+      : DEFAULT_TENANT_GEOMETRY_POLICY;
+
+    try {
+      const res = await this.pool.query<{
+        plot_id: string;
+        plot_name: string | null;
+        geometry_approved_at: string | null;
+        geometry_capture: unknown;
+      }>(
+        `
+          SELECT
+            p.id::text AS plot_id,
+            p.name AS plot_name,
+            p.geometry_approved_at,
+            p.geometry_capture
+          FROM plot p
+          WHERE p.id = ANY($1::uuid[])
+        `,
+        [plotIds],
+      );
+
+      const reasons: ReadinessIssue[] = [];
+      for (const row of res.rows) {
+        const label = row.plot_name?.trim() || `Plot ${row.plot_id.slice(0, 8)}`;
+        const ack = plotGeometryNeedsShipmentAck({
+          geometryApprovedAt: row.geometry_approved_at,
+          captureTier: parseGeometryCaptureTier(row.geometry_capture),
+          policy,
+        });
+        if (!ack) continue;
+
+        const code =
+          ack.severity === 'blocker' ? 'GEOMETRY_APPROVAL_REQUIRED' : 'GEOMETRY_APPROVAL_RECOMMENDED';
+        const message =
+          ack.severity === 'blocker'
+            ? `${label}: geometry must be approved by a reviewer before this package can proceed.`
+            : `${label}: geometry confidence is fair/low — approve geometry on the plot dossier or trace the boundary in the field app.`;
+
+        reasons.push({
+          code,
+          severity: ack.severity,
+          message,
+        });
+      }
+
+      const dedup = new Map<string, ReadinessIssue>();
+      for (const reason of reasons) {
+        const existing = dedup.get(reason.code);
+        if (!existing || reason.severity === 'blocker') {
+          dedup.set(reason.code, reason);
+        }
+      }
+      return [...dedup.values()];
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01' || code === '42703') {
         return [];
       }
       throw error;

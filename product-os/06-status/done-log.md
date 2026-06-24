@@ -2,6 +2,8 @@
 
 Track completed milestones/features/docs updates.
 
+- **Delivery intake Phase B (FEAT-011)** (2026-06-24): trip QR, show-buyer sheet, desk handoff confirmation, signup auto-claim from marketing preview, bulk scan + ZXing fallback.
+- **Delivery intake smart links (ADR-009 Phase A)** (2026-06-24): public preview API, marketing + dashboard `/d/[ref]`, desk scan/inbox/auto-claim, field smart QR + intake advisory.
 - Offline **Phase 1b cloud delivery receipt restore** (2026-06-19): server harvest vouchers → local SQLite on Sync now / post-sign-in; scope-aware merged fetch; My Plots delivery counts + Harvests browser hydrate on iPad.
 - Offline **Phase 1 cloud plot restore** (2026-06-19): server → local plot hydration on Sync now; backend list includes geometry; plot server link reconciliation.
 - Offline automation **4.O.2** (2026-06-22): golden field tenant smoke manifest + blocking Expo CI probe; `FIELD_TENANT_SMOKE_*` secrets documented.
