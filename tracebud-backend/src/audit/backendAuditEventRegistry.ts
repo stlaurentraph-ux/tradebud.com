@@ -150,6 +150,7 @@ export const BACKEND_INBOX_AUDIT_EVENT_TYPES = [
   'campaign_recipient_invite_claimed',
   'campaign_recipient_invite_claim_skipped',
   'campaign_recipient_invites_queue_failed',
+  'campaign_recipient_invite_resent',
 ] as const;
 
 export const BACKEND_YIELD_BENCHMARK_AUDIT_EVENT_TYPES = [
