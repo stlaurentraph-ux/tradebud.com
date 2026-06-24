@@ -52,7 +52,10 @@ describe('AuditController integration: gated-entry telemetry listing', () => {
       )
     `);
 
-    controller = new AuditController(pool as any);
+    controller = new AuditController(pool as any, {
+      appendEvent: () => Promise.resolve({ ok: true as const }),
+      appendBatch: () => Promise.resolve([]),
+    } as any);
   }, 20_000);
 
   afterAll(async () => {

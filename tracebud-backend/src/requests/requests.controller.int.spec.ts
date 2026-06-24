@@ -27,7 +27,8 @@ describe('RequestsController integration: decision timeline', () => {
       CREATE TABLE IF NOT EXISTS request_campaigns (
         id TEXT PRIMARY KEY,
         tenant_id TEXT NOT NULL,
-        target_contact_emails TEXT[] NOT NULL DEFAULT '{}'
+        target_contact_emails TEXT[] NOT NULL DEFAULT '{}',
+        target_contact_ids TEXT[] NOT NULL DEFAULT '{}'
       )
     `);
     await pool.query(`
