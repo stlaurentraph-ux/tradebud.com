@@ -181,7 +181,10 @@ describe('RequestsService', () => {
       },
       recipients: [
         {
+          contact_id: null,
           recipient_email: 'accept-1@example.com',
+          recipient_label: 'accept-1@example.com',
+          delivery_channel: 'email',
           onboarding_status: 'accepted',
           invite_status: null,
           decision: 'accept',
@@ -190,7 +193,10 @@ describe('RequestsService', () => {
           updated_at: '2026-04-22T12:05:00.000Z',
         },
         {
+          contact_id: null,
           recipient_email: 'accept-2@example.com',
+          recipient_label: 'accept-2@example.com',
+          delivery_channel: 'email',
           onboarding_status: 'accepted',
           invite_status: null,
           decision: 'accept',
@@ -199,7 +205,10 @@ describe('RequestsService', () => {
           updated_at: '2026-04-22T11:00:00.000Z',
         },
         {
+          contact_id: null,
           recipient_email: 'refuse-1@example.com',
+          recipient_label: 'refuse-1@example.com',
+          delivery_channel: 'email',
           onboarding_status: 'refused',
           invite_status: null,
           decision: 'refuse',
