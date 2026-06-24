@@ -1,3 +1,7 @@
+export type BulkPlotImportGeoJsonGeometry =
+  | { type: 'Point'; coordinates: [number, number] }
+  | { type: 'Polygon'; coordinates: [number, number][][] };
+
 export type BulkPlotImportInputRow = {
   rowIndex?: number;
   producerFullName?: string;
@@ -12,6 +16,7 @@ export type BulkPlotImportInputRow = {
   declaredAreaHa?: number | string | null;
   cadastralKey?: string | null;
   countryCode?: string | null;
+  geometry?: BulkPlotImportGeoJsonGeometry | null;
 };
 
 export type BulkPlotImportPreviewStatus = 'READY' | 'VALIDATION_FAILED';

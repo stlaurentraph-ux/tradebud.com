@@ -1,8 +1,8 @@
-# FEAT-013: Bulk plot import (Phase A)
+# FEAT-013: Bulk plot import (Phase A + B)
 
 ## Goal
 
-Let cooperatives and exporters onboard existing producer + plot data from CSV without field re-capture.
+Let cooperatives and exporters onboard existing producer + plot data from CSV or GeoJSON without field re-capture.
 
 ## Scope (Phase A — shipped)
 
@@ -15,9 +15,17 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV wi
 - RBAC: `plots:bulk_upload` (cooperative, exporter, admin, compliance_manager)
 - Analytics: `dashboard_bulk_plot_import_preview|success|failure`
 
+## Scope (Phase B — shipped)
+
+- GeoJSON `FeatureCollection` upload tab on `/plots/bulk-upload`
+- Inline `geometry` on import rows: GeoJSON `Point` or `Polygon`
+- Feature `properties` mapped with same aliases as CSV (`client_plot_id`, `producer_full_name`, etc.)
+- Polygon rows accept optional `declared_area_ha` (defaults to 0.01 ha when omitted)
+- Point geometry rows still require `declared_area_ha` and remain capped at &lt;4 ha
+
 ## Non-goals (later phases)
 
-- GeoJSON/KML file upload
+- KML file upload
 - Async `bulk_import_jobs` (&gt;500 rows)
 - `tracebud_import_v1` signed portability package
 - Evidence file ZIP import
@@ -35,11 +43,13 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV wi
 
 ## State transitions
 
-- CSV row `VALIDATION_FAILED` → blocked in preview
+- Row `VALIDATION_FAILED` → blocked in preview
 - Valid row → `IMPORTED` or `DUPLICATE_SKIPPED` (existing `clientPlotId`)
 - Imported plots enter normal compliance pipeline (`pending_check`)
 
 ## Acceptance criteria
+
+### Phase A
 
 - [x] Cooperative user uploads template CSV with 2 rows → preview shows READY/FAILED per row
 - [x] Import creates CRM farmer contacts when email absent but name present
@@ -48,7 +58,15 @@ Let cooperatives and exporters onboard existing producer + plot data from CSV wi
 - [x] Cadastral row hydrates polygon when fixture exists
 - [x] Backend API access registry row `bulk_plot_import`
 
+### Phase B
+
+- [x] GeoJSON FeatureCollection with Point + Polygon features maps to import rows
+- [x] Polygon feature imports with declared area from properties
+- [x] Point feature with GeoJSON geometry respects &lt;4 ha cap
+- [x] Invalid GeoJSON root rejected client-side before preview
+
 ## Tests
 
 - `tracebud-backend/src/plots/bulk-plot-import.service.spec.ts`
 - `apps/dashboard-product/lib/bulk-plot-import-csv.test.ts`
+- `apps/dashboard-product/lib/bulk-plot-import-geojson.test.ts`

@@ -30,7 +30,7 @@ type ResolvedGeometry =
       kind: 'polygon';
       geometry: { type: 'Polygon'; coordinates: [number, number][][] };
       declaredAreaHa: number;
-      captureMethod: 'CADASTRAL_IMPORT';
+      captureMethod: 'CADASTRAL_IMPORT' | 'BULK_IMPORT';
       cadastralKey?: string;
     };
 
@@ -296,6 +296,10 @@ export class BulkPlotImportService {
   }
 
   private resolveRowGeometry(row: BulkPlotImportInputRow): ResolvedGeometry {
+    if (row.geometry) {
+      return this.resolveInlineGeometry(row);
+    }
+
     const cadastralKey = row.cadastralKey?.trim();
     const countryCode = row.countryCode?.trim().toUpperCase();
     if (cadastralKey) {
@@ -335,6 +339,78 @@ export class BulkPlotImportService {
     };
   }
 
+  private resolveInlineGeometry(row: BulkPlotImportInputRow): ResolvedGeometry {
+    const geometry = row.geometry;
+    if (!geometry || typeof geometry !== 'object') {
+      throw new BadRequestException('geometry must be a GeoJSON Point or Polygon.');
+    }
+
+    if (geometry.type === 'Polygon') {
+      const ring = geometry.coordinates?.[0];
+      if (!Array.isArray(ring) || ring.length < 4) {
+        throw new BadRequestException('Polygon ring must have at least 4 vertices.');
+      }
+      for (const coordinate of ring) {
+        if (!Array.isArray(coordinate) || coordinate.length < 2) {
+          throw new BadRequestException('Polygon coordinates must be [longitude, latitude] pairs.');
+        }
+        const [longitude, latitude] = coordinate;
+        if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+          throw new BadRequestException('Polygon coordinates must be valid numbers.');
+        }
+        if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+          throw new BadRequestException('Polygon coordinates must be within WGS84 bounds.');
+        }
+      }
+
+      const declaredAreaHa =
+        this.parseOptionalPositiveNumber(row.declaredAreaHa, 'declared_area_ha') ?? 0.01;
+
+      return {
+        kind: 'polygon',
+        geometry: {
+          type: 'Polygon',
+          coordinates: geometry.coordinates,
+        },
+        declaredAreaHa,
+        captureMethod: 'BULK_IMPORT',
+      };
+    }
+
+    if (geometry.type === 'Point') {
+      const coordinates = geometry.coordinates;
+      if (!Array.isArray(coordinates) || coordinates.length < 2) {
+        throw new BadRequestException('Point coordinates must be [longitude, latitude].');
+      }
+      const [longitude, latitude] = coordinates;
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        throw new BadRequestException('Point coordinates must be valid numbers.');
+      }
+      if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+        throw new BadRequestException('Point coordinates must be within WGS84 bounds.');
+      }
+
+      const declaredAreaHa = this.parsePositiveNumber(row.declaredAreaHa, 'declared_area_ha');
+      if (declaredAreaHa >= BULK_PLOT_POINT_MAX_AREA_HA) {
+        throw new BadRequestException(
+          `Point-only bulk import supports plots below ${BULK_PLOT_POINT_MAX_AREA_HA} ha. Import a Polygon geometry for larger plots.`,
+        );
+      }
+
+      return {
+        kind: 'point',
+        geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude],
+        },
+        declaredAreaHa,
+        captureMethod: 'BULK_IMPORT',
+      };
+    }
+
+    throw new BadRequestException('geometry must be a GeoJSON Point or Polygon.');
+  }
+
   private parseCoordinate(value: number | string | null | undefined, label: string): number {
     if (value == null || String(value).trim() === '') {
       throw new BadRequestException(`${label} is required when cadastral_key is absent.`);
@@ -359,6 +435,20 @@ export class BulkPlotImportService {
     const parsed = Number(String(value).replace(',', '.'));
     if (!Number.isFinite(parsed) || parsed <= 0) {
       throw new BadRequestException(`${label} must be a positive number.`);
+    }
+    return parsed;
+  }
+
+  private parseOptionalPositiveNumber(
+    value: number | string | null | undefined,
+    label: string,
+  ): number | null {
+    if (value == null || String(value).trim() === '') {
+      return null;
+    }
+    const parsed = Number(String(value).replace(',', '.'));
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      throw new BadRequestException(`${label} must be a positive number when provided.`);
     }
     return parsed;
   }

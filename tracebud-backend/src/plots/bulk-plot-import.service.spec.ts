@@ -51,6 +51,49 @@ describe('BulkPlotImportService.preview', () => {
     expect(result.rows[0]?.message).toContain('4 ha');
   });
 
+  it('accepts inline GeoJSON polygon rows', () => {
+    const service = makeService();
+    const result = service.preview('tenant_1', [
+      {
+        clientPlotId: 'PLOT-POLY-1',
+        producerFullName: 'Ana Ruiz',
+        declaredAreaHa: 12.5,
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            [
+              [-87.1, 14.1],
+              [-87.2, 14.1],
+              [-87.2, 14.2],
+              [-87.1, 14.2],
+              [-87.1, 14.1],
+            ],
+          ],
+        },
+      },
+    ]);
+    expect(result.readyCount).toBe(1);
+    expect(result.rows[0]?.geometryKind).toBe('polygon');
+    expect(result.rows[0]?.declaredAreaHa).toBe(12.5);
+  });
+
+  it('accepts inline GeoJSON point rows with declared area', () => {
+    const service = makeService();
+    const result = service.preview('tenant_1', [
+      {
+        clientPlotId: 'PLOT-PT-1',
+        producerFullName: 'Ana Ruiz',
+        declaredAreaHa: 1.2,
+        geometry: {
+          type: 'Point',
+          coordinates: [-87.8494, 14.6349],
+        },
+      },
+    ]);
+    expect(result.readyCount).toBe(1);
+    expect(result.rows[0]?.geometryKind).toBe('point');
+  });
+
   it('hydrates cadastral rows as polygon READY', () => {
     const service = makeService({
       cadastralLookup: {

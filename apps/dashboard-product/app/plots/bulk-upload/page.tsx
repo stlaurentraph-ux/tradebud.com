@@ -17,11 +17,13 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
   Download,
+  FileJson,
   FileSpreadsheet,
   Upload,
   XCircle,
@@ -30,24 +32,35 @@ import { toast } from 'sonner';
 import {
   BULK_PLOT_IMPORT_TEMPLATE_CSV,
   parseAndMapBulkPlotImportCsv,
-  type BulkPlotImportMappedRow,
 } from '@/lib/bulk-plot-import-csv';
+import {
+  BULK_PLOT_IMPORT_GEOJSON_SAMPLE,
+  parseAndMapBulkPlotImportGeoJson,
+} from '@/lib/bulk-plot-import-geojson';
 import {
   executeBulkPlotImport,
   previewBulkPlotImport,
   type BulkPlotImportExecuteResponse,
+  type BulkPlotImportInputRow,
   type BulkPlotImportPreviewResponse,
 } from '@/lib/bulk-plot-import';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 
 type Step = 'upload' | 'preview' | 'result';
+type ImportSource = 'csv' | 'geojson';
 
-function downloadTemplate() {
-  const blob = new Blob([BULK_PLOT_IMPORT_TEMPLATE_CSV], { type: 'text/csv;charset=utf-8' });
+function downloadTemplate(source: ImportSource) {
+  const isCsv = source === 'csv';
+  const blob = new Blob(
+    [isCsv ? BULK_PLOT_IMPORT_TEMPLATE_CSV : BULK_PLOT_IMPORT_GEOJSON_SAMPLE],
+    { type: isCsv ? 'text/csv;charset=utf-8' : 'application/geo+json;charset=utf-8' },
+  );
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');
   anchor.href = url;
-  anchor.download = 'tracebud-plot-import-template.csv';
+  anchor.download = isCsv
+    ? 'tracebud-plot-import-template.csv'
+    : 'tracebud-plot-import-sample.geojson';
   anchor.click();
   URL.revokeObjectURL(url);
 }
@@ -72,32 +85,59 @@ function statusBadge(status: string) {
   );
 }
 
+function parseImportRows(source: ImportSource, text: string): BulkPlotImportInputRow[] {
+  return source === 'csv'
+    ? parseAndMapBulkPlotImportCsv(text)
+    : parseAndMapBulkPlotImportGeoJson(text);
+}
+
 export default function PlotBulkUploadPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('upload');
-  const [csvText, setCsvText] = useState('');
-  const [mappedRows, setMappedRows] = useState<BulkPlotImportMappedRow[]>([]);
+  const [source, setSource] = useState<ImportSource>('csv');
+  const [fileText, setFileText] = useState('');
+  const [mappedRows, setMappedRows] = useState<BulkPlotImportInputRow[]>([]);
   const [preview, setPreview] = useState<BulkPlotImportPreviewResponse | null>(null);
   const [result, setResult] = useState<BulkPlotImportExecuteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
 
+  const handleSourceChange = (nextSource: ImportSource) => {
+    setSource(nextSource);
+    setFileText('');
+    setError(null);
+    setPreview(null);
+    setResult(null);
+    setMappedRows([]);
+    setStep('upload');
+  };
+
   const handleFile = async (file: File | null) => {
     if (!file) return;
     try {
       const text = await file.text();
-      setCsvText(text);
+      setFileText(text);
       setError(null);
     } catch {
-      setError('Could not read the CSV file.');
+      setError(`Could not read the ${source === 'csv' ? 'CSV' : 'GeoJSON'} file.`);
     }
   };
 
   const handlePreview = async () => {
     setError(null);
-    const rows = parseAndMapBulkPlotImportCsv(csvText);
+    let rows: BulkPlotImportInputRow[] = [];
+    try {
+      rows = parseImportRows(source, fileText);
+    } catch (parseError) {
+      setError(parseError instanceof Error ? parseError.message : 'Could not parse file.');
+      return;
+    }
     if (rows.length === 0) {
-      setError('No valid rows found. Download the template and add at least one plot row.');
+      setError(
+        source === 'csv'
+          ? 'No valid rows found. Download the template and add at least one plot row.'
+          : 'No valid features found. Each feature needs client_plot_id in properties and a Point or Polygon geometry.',
+      );
       return;
     }
     setMappedRows(rows);
@@ -132,12 +172,21 @@ export default function PlotBulkUploadPage() {
     }
   };
 
+  const parsedRowCount = (() => {
+    if (!fileText.trim()) return 0;
+    try {
+      return parseImportRows(source, fileText).length;
+    } catch {
+      return 0;
+    }
+  })();
+
   return (
     <PermissionGate permission="plots:bulk_upload">
       <div className="flex flex-col">
         <AppHeader
           title="Bulk plot import"
-          description="Import producer-linked point plots or cadastral polygons from CSV."
+          description="Import producer-linked plots from CSV or GeoJSON FeatureCollection."
           actions={
             <Button variant="outline" size="sm" asChild>
               <Link href="/plots">
@@ -152,50 +201,97 @@ export default function PlotBulkUploadPage() {
           {step === 'upload' && (
             <Card>
               <CardHeader>
-                <CardTitle>Upload CSV</CardTitle>
+                <CardTitle>Upload file</CardTitle>
                 <CardDescription>
-                  One row per plot. Use latitude/longitude for point plots under 4 ha, or provide
-                  cadastral_key + country_code to hydrate a registry polygon.
+                  CSV supports point plots under 4 ha or cadastral keys. GeoJSON supports inline
+                  Point or Polygon geometry with producer properties on each feature.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" onClick={downloadTemplate}>
-                    <Download className="mr-2 h-4 w-4" />
-                    Download template
-                  </Button>
-                </div>
+                <Tabs value={source} onValueChange={(value) => handleSourceChange(value as ImportSource)}>
+                  <TabsList>
+                    <TabsTrigger value="csv">CSV</TabsTrigger>
+                    <TabsTrigger value="geojson">GeoJSON</TabsTrigger>
+                  </TabsList>
 
-                <div className="rounded-lg border border-dashed p-8 text-center">
-                  <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-                  <Label htmlFor="plot-import-file" className="cursor-pointer">
-                    <span className="text-sm font-medium">Choose CSV file</span>
-                    <input
-                      id="plot-import-file"
-                      type="file"
-                      accept=".csv,text/csv"
-                      className="hidden"
-                      onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
-                    />
-                  </Label>
-                  {csvText ? (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Loaded {parseAndMapBulkPlotImportCsv(csvText).length} row(s).
-                    </p>
-                  ) : null}
-                </div>
+                  <TabsContent value="csv" className="mt-4 space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" onClick={() => downloadTemplate('csv')}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download CSV template
+                      </Button>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="plot-import-text">Or paste CSV</Label>
-                  <textarea
-                    id="plot-import-text"
-                    value={csvText}
-                    onChange={(event) => setCsvText(event.target.value)}
-                    rows={8}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
-                    placeholder={BULK_PLOT_IMPORT_TEMPLATE_CSV}
-                  />
-                </div>
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                      <Label htmlFor="plot-import-csv-file" className="cursor-pointer">
+                        <span className="text-sm font-medium">Choose CSV file</span>
+                        <input
+                          id="plot-import-csv-file"
+                          type="file"
+                          accept=".csv,text/csv"
+                          className="hidden"
+                          onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
+                        />
+                      </Label>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="plot-import-csv-text">Or paste CSV</Label>
+                      <textarea
+                        id="plot-import-csv-text"
+                        value={source === 'csv' ? fileText : ''}
+                        onChange={(event) => setFileText(event.target.value)}
+                        rows={8}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                        placeholder={BULK_PLOT_IMPORT_TEMPLATE_CSV}
+                      />
+                    </div>
+                  </TabsContent>
+
+                  <TabsContent value="geojson" className="mt-4 space-y-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => downloadTemplate('geojson')}
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Download GeoJSON sample
+                      </Button>
+                    </div>
+
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <FileJson className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                      <Label htmlFor="plot-import-geojson-file" className="cursor-pointer">
+                        <span className="text-sm font-medium">Choose GeoJSON file</span>
+                        <input
+                          id="plot-import-geojson-file"
+                          type="file"
+                          accept=".geojson,.json,application/geo+json,application/json"
+                          className="hidden"
+                          onChange={(event) => void handleFile(event.target.files?.[0] ?? null)}
+                        />
+                      </Label>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="plot-import-geojson-text">Or paste GeoJSON</Label>
+                      <textarea
+                        id="plot-import-geojson-text"
+                        value={source === 'geojson' ? fileText : ''}
+                        onChange={(event) => setFileText(event.target.value)}
+                        rows={12}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+                        placeholder={BULK_PLOT_IMPORT_GEOJSON_SAMPLE}
+                      />
+                    </div>
+                  </TabsContent>
+                </Tabs>
+
+                {fileText ? (
+                  <p className="text-xs text-muted-foreground">Loaded {parsedRowCount} row(s).</p>
+                ) : null}
 
                 {error ? (
                   <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
@@ -204,7 +300,7 @@ export default function PlotBulkUploadPage() {
                   </div>
                 ) : null}
 
-                <Button onClick={() => void handlePreview()} disabled={!csvText.trim() || isWorking}>
+                <Button onClick={() => void handlePreview()} disabled={!fileText.trim() || isWorking}>
                   {isWorking ? 'Validating…' : 'Preview import'}
                 </Button>
               </CardContent>
@@ -311,7 +407,7 @@ export default function PlotBulkUploadPage() {
                   <Button
                     onClick={() => {
                       setStep('upload');
-                      setCsvText('');
+                      setFileText('');
                       setPreview(null);
                       setResult(null);
                       setMappedRows([]);
