@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { AuditController } from './audit.controller';
+import { AuditWriteService } from './audit-write.service';
 import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
 const testDbUrl = requireTestDatabaseUrl();
@@ -52,7 +53,7 @@ describe('AuditController integration: gated-entry telemetry listing', () => {
       )
     `);
 
-    controller = new AuditController(pool as any);
+    controller = new AuditController(pool as any, {} as AuditWriteService);
   }, 20_000);
 
   afterAll(async () => {
