@@ -39,6 +39,7 @@ export const ANALYTICS_EVENTS = {
   SHOW_BUYER_QR_OPENED: 'show_buyer_qr_opened',
   SYNC_QUEUE_DRAINED: 'sync_queue_drained',
   SYNC_RUN_COMPLETED: 'sync_run_completed',
+  FIELD_SYNC_DELTA_SKIPPED: 'field_sync_delta_skipped',
   SYNC_ACTION_FAILED: 'sync_action_failed',
   UI_ACTION_FAILED: 'ui_action_failed',
   REACT_RENDER_ERROR: 'react_render_error',

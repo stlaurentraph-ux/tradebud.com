@@ -1,3 +1,52 @@
+### 2026-06-24 (field — field-sync-delta cursor wiring)
+
+- **Delta probe** — `GET /v1/me/field-sync-delta` now drives sync mode: persisted cursor (`field_sync_cursor_v1`) stores plot/audit/voucher watermarks; skip full restore when inbound unchanged.
+- **Surfaces** — Settings Sync now, conservative auto-backup, and focus pull (`restoreCloudStateOnFocus`) probe before heavy restore; cursor advanced after successful pipeline.
+- **Analytics** — `field_sync_delta_skipped` when focus pull skips restore; cursor cleared on sign-out.
+- **Guards** — `field-sync-mode-guard.mjs` extended; `fieldSyncDeltaEvaluate.test.ts` + mode/focus tests.
+
+### 2026-06-24 (delivery intake QR — Phase B complete)
+
+- **Handoff** — desk confirms received kg + optional note before staging; `POST /v1/harvest/vouchers/handoff-confirm`; audit `delivery_handoff_confirmed`.
+- **Signup auto-claim** — marketing `/d/` and `/t/` link to `/create-account?claim=` and `/login?next=/harvests?claim=`; onboarding step 3 redirects to claim.
+- **Bulk scan** — continuous camera mode on delivery desk; `@zxing/browser` fallback when native `BarcodeDetector` missing.
+
+### 2026-06-24 (delivery intake QR — Phase B partial)
+
+- **Trip QR** — `T-…` refs on multi-plot delivery; `tracebud.com/t/{ref}` marketing preview; desk claims all vouchers in one scan.
+- **Show buyer** — full-screen QR sheet on single + multi-plot receipts; ECC level H on QR encode.
+- **Migration** — `voucher.delivery_trip_ref` (`tb_v16_060`).
+
+### 2026-06-24 (delivery intake QR — ADR-009 Phase A)
+
+- **ADR-009 + FEAT-011** — smart-link QR (`tracebud.com/d/V-…`), public preview API, desk inbox/scan/auto-claim, field intake advisory.
+- **Backend** — `GET /v1/public/harvest/delivery-preview/:qrRef`; `directed_to_tenant` on tenant voucher list.
+- **Dashboard** — `/d/[ref]` preview, camera scan dialog, directed inbox, `?claim=` auto-stage.
+- **Field** — QR encodes smart URL; pre-submit buyer-intake advisory on unverified plots.
+- **Marketing** — `/d/[ref]` public receipt page with register CTA.
+
+### 2026-06-24 (capture quality S6.4 — geometry approval for shipment)
+
+- **Backend** — `geometry_approved_at` on plot; `tenant_geometry_policy`; `POST /v1/plots/:id/approve-geometry`; package readiness `GEOMETRY_APPROVAL_*` codes; approval cleared on geometry supersession.
+- **Dashboard** — `PlotGeometryApprovalCard` on plot detail; exporter package warnings for unapproved low-confidence plots.
+- **Migrations** — `tb_v16_052`, `tb_v16_053`, Supabase `20260624120000`.
+
+### 2026-06-24 (field — OAuth reliability: iOS fallback, telemetry, guards)
+
+- **iOS Google fallback** — installable iOS (EAS preview/production) falls back to browser OAuth when native Google fails; Metro physical dev unchanged (no double prompt).
+- **Step telemetry** — `oauth_step`, `oauth_browser_fallback` analytics events; `OAuthFlowError` with pipeline step on failures (`native_prompt` → `session_persist`).
+- **Guards** — `ios-oauth-guard.mjs`, `oauth:verify:ios`, `oauth:sso-health-check.mjs`, `oauth-orchestrator-guard.mjs`, `oauth-maestro-guard.mjs`; FR-014 regression ledger row.
+- **Maestro** — `oauth-sign-in-sheet-smoke.yaml` + `oauth-callback-missing-url-smoke.yaml` (§4 subset; Google account picker still manual on device).
+- **Orchestrator** — `oauthOrchestrator.ts` centralizes native/browser sign-in, callback waiters, deep-link completion, and cold-start callback.
+- **OTA gates** — `ota:preview:preflight` (tests + oauth:verify + SSO health + sign-off); production preflight also runs OAuth verify + SSO health.
+
+### 2026-06-24 (field — capture quality S6 + preview OTA)
+
+- **Set password errors** — password-save failures no longer map to generic “Could not sign in”; session/reauth/network-specific copy in Settings.
+- **Pre-upload review card** — low/moderate confidence prompts before plot save with one-tap “Trace on map” + save anyway; analytics `geometry_pre_upload_review_*`.
+- **Product OS** — ADR-008 capture quality tiers; `field-capture-quality-registry.md`; FEAT-003 §S6 roadmap (Bluetooth GNSS last-resort stub).
+- **Preview OTA** — `update:preview:ios` with password + capture-quality bundle (`DEVICE_SMOKE_SIGNOFF_SKIP=1` — signoff commit stale).
+
 ### 2026-06-23 (field + backend — structural safeguards for invite + cloud audit defer)
 
 - **Buyer invite guards** — expanded `networkRoutingRegistry` field surfaces; `backend-network-routing-guard` checks signup claim + invite UX modules; DEVICE smoke §5 buyer invite; FR-012 regression ledger row.

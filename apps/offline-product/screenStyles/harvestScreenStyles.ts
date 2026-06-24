@@ -287,5 +287,13 @@ export function createHarvestScreenStyles(c: AppColors) {
     receiptsPlotBackText: {
       color: c.link,
     },
+    intakeAdvisoryCard: {
+      padding: 12,
+      borderColor: '#FDBA74',
+      backgroundColor: '#FFF7ED',
+    },
+    intakeAdvisoryText: {
+      color: '#9A3412',
+    },
   });
 }

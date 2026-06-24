@@ -1,5 +1,6 @@
 import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
+import { generateDeliveryTripRef } from '@/features/harvest/buildDeliveryQrUrl';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import type { Plot } from '@/features/state/AppStateContext';
@@ -18,6 +19,7 @@ export type MultiPlotDeliveryLineResult = {
   kg: number;
   status: 'synced' | 'queued' | 'error';
   qrCodeRef?: string | null;
+  deliveryTripRef?: string | null;
   message?: string;
   messageKey?:
     | 'harvest_queued_offline'
@@ -118,10 +120,12 @@ export async function submitMultiPlotDeliverySession(params: {
   t?: TranslateFn;
 }): Promise<MultiPlotDeliveryLineResult[]> {
   const sessionId = params.sessionId ?? `multi-${Date.now()}`;
+  const deliveryTripRef = params.lines.length > 1 ? generateDeliveryTripRef() : null;
   trackEvent(ANALYTICS_EVENTS.MULTI_PLOT_DELIVERY_STARTED, {
     sessionId,
     lineCount: params.lines.length,
     totalKg: sessionTotalKg(params.lines),
+    deliveryTripRef: deliveryTripRef ?? undefined,
   });
 
   const results: MultiPlotDeliveryLineResult[] = [];
@@ -135,6 +139,7 @@ export async function submitMultiPlotDeliverySession(params: {
         backendPlots: params.backendPlots,
         plotServerLinks: params.plotServerLinks,
         deliveryRecipient: recipient,
+        deliveryTripRef,
       });
 
     let result = await submitLine(params.deliveryRecipient ?? null);
@@ -156,6 +161,7 @@ export async function submitMultiPlotDeliverySession(params: {
         kg: line.kg,
         status: 'synced',
         qrCodeRef: result.qrCodeRef,
+        deliveryTripRef,
         buyerInvitePending: result.buyerInvite?.pending === true,
       });
       continue;
@@ -166,6 +172,7 @@ export async function submitMultiPlotDeliverySession(params: {
         plotName: line.plotName,
         kg: line.kg,
         status: 'queued',
+        deliveryTripRef,
         messageKey: result.messageKey,
       });
       continue;

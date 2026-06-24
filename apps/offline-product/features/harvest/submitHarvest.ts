@@ -51,6 +51,7 @@ export async function submitHarvestRecord(params: {
   deliveryRecipient?: DeliveryRecipientSelection | null;
   plotName?: string;
   buyerLabel?: string;
+  deliveryTripRef?: string | null;
 }): Promise<SubmitHarvestResult> {
   const localPlot = resolveLocalPlotForHarvestSubmit({
     selectedPlotId: params.selectedPlotId,
@@ -102,6 +103,7 @@ export async function submitHarvestRecord(params: {
         harvestDate: harvestDateIsoFromMs(createdAt),
         clientEventId,
         ...deliveryPayload,
+        deliveryTripRef: params.deliveryTripRef?.trim() || undefined,
       });
       const qrCodeRef = readHarvestSubmitQrCodeRef(response);
       const buyerInvite = readHarvestSubmitBuyerInvite(response);

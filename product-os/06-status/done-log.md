@@ -2,6 +2,10 @@
 
 Track completed milestones/features/docs updates.
 
+- **Delivery intake Phase B (FEAT-011)** (2026-06-24): trip QR, show-buyer sheet, desk handoff confirmation, signup auto-claim from marketing preview, bulk scan + ZXing fallback.
+- **Delivery intake smart links (ADR-009 Phase A)** (2026-06-24): public preview API, marketing + dashboard `/d/[ref]`, desk scan/inbox/auto-claim, field smart QR + intake advisory.
+- Dashboard + backend **geometry approval for shipment (S6.4)** (2026-06-24): plot approval columns, tenant geometry policy, package readiness warnings/blockers, dashboard approval card.
+- Field **OAuth reliability** (2026-06-24): iOS browser fallback, step telemetry (`oauth_step`), `oauthOrchestrator.ts` single entry point, Maestro §4 smoke flows (`oauth-sign-in-sheet-smoke`, `oauth-callback-missing-url-smoke`), `ios-oauth-guard`, `oauth-orchestrator-guard`, `oauth-maestro-guard`, `oauth:verify:ios`, SSO health check, FR-014, `ota:preview:preflight`.
 - Offline + backend **buyer invite + cloud audit defer structural safeguards** (2026-06-23): registries, `cloud-audit-sync-guard`, network routing guard extensions, regression ledger FR-012/FR-013, DEVICE smoke §5.
 - Backend **farmer-initiated delivery consent** (2026-06-19): directed email/tenant delivery auto-grants `SHIPMENT_PREPARATION`; pending→active on deliver; revoked/denied blocked.
 - Backend **cross-surface network routing** (2026-06-19): shared `email-to-tenant-resolution.ts` (delivery + inbox fan-out); consent farmers in `resolveFarmerIdsForTenant`; registry + guard + integration test.

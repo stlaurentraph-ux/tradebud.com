@@ -13,6 +13,7 @@ export type TenantHarvestVoucher = {
   dds_package_id: string | null;
   dds_package_status: string | null;
   eligible_for_package: boolean;
+  directed_to_tenant?: boolean;
 };
 
 export type CreatedHarvestPackage = {
@@ -65,7 +66,9 @@ export function findTenantVoucherByQrRef(
   );
 }
 
-export async function claimTenantVoucherByQrRef(qrRef: string): Promise<TenantHarvestVoucher | null> {
+export async function claimTenantVoucherByQrRef(
+  qrRef: string,
+): Promise<TenantHarvestVoucher | TenantHarvestVoucher[] | null> {
   const response = await fetch('/api/harvest/vouchers/claim', {
     method: 'POST',
     headers: {
@@ -78,7 +81,13 @@ export async function claimTenantVoucherByQrRef(qrRef: string): Promise<TenantHa
   if (!response.ok) {
     return null;
   }
-  const body = (await response.json()) as { voucher?: TenantHarvestVoucher };
+  const body = (await response.json()) as {
+    voucher?: TenantHarvestVoucher;
+    vouchers?: TenantHarvestVoucher[];
+  };
+  if (Array.isArray(body.vouchers) && body.vouchers.length > 0) {
+    return body.vouchers;
+  }
   return body.voucher ?? null;
 }
 
@@ -88,9 +97,31 @@ export async function lookupTenantVoucherByQrRef(qrRef: string): Promise<TenantH
   if (direct) return direct;
 
   const claimed = await claimTenantVoucherByQrRef(qrRef);
-  if (claimed) return claimed;
+  if (Array.isArray(claimed)) {
+    return claimed[0] ?? null;
+  }
+  return claimed;
+}
 
-  return null;
+export async function lookupTenantIntakeByRef(
+  input: string,
+): Promise<TenantHarvestVoucher[]> {
+  const vouchers = await listTenantHarvestVouchers();
+  const { parseDeliveryIntakeRef } = await import('@/lib/delivery-intake-qr');
+  const parsed = parseDeliveryIntakeRef(input);
+  if (!parsed) return [];
+
+  if (parsed.kind === 'voucher') {
+    const direct = findTenantVoucherByQrRef(vouchers, parsed.ref);
+    if (direct) return [direct];
+    const claimed = await claimTenantVoucherByQrRef(parsed.ref);
+    if (Array.isArray(claimed)) return claimed;
+    return claimed ? [claimed] : [];
+  }
+
+  const claimed = await claimTenantVoucherByQrRef(parsed.ref);
+  if (Array.isArray(claimed)) return claimed;
+  return claimed ? [claimed] : [];
 }
 
 export async function createHarvestPackage(input: {

@@ -2948,6 +2948,69 @@ const SETTINGS_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
     fallback:
       'Enable MapTiler satellite imagery for plot maps when your workspace API key is configured. Falls back to Esri when unavailable.',
   },
+  geometry_policy_title: {
+    key: 'workflow.settings.geometry_policy.title',
+    fallback: 'Plot geometry policy',
+  },
+  geometry_policy_description: {
+    key: 'workflow.settings.geometry_policy.description',
+    fallback:
+      'Set how strictly field captures must meet confidence tiers before sync, and whether unapproved geometry blocks shipment packages.',
+  },
+  geometry_policy_min_tier_label: {
+    key: 'workflow.settings.geometry_policy.min_tier_label',
+    fallback: 'Minimum capture tier for field sync',
+  },
+  geometry_policy_min_tier_help: {
+    key: 'workflow.settings.geometry_policy.min_tier_help',
+    fallback:
+      'Low allows all captures. Moderate blocks sync for low-confidence boundaries until farmers re-walk or trace on map.',
+  },
+  geometry_policy_ack_mode_label: {
+    key: 'workflow.settings.geometry_policy.ack_mode_label',
+    fallback: 'Shipment geometry acknowledgement',
+  },
+  geometry_policy_ack_mode_help: {
+    key: 'workflow.settings.geometry_policy.ack_mode_help',
+    fallback:
+      'Warn surfaces package readiness warnings. Block prevents sealing until a reviewer approves plot geometry.',
+  },
+  geometry_policy_tier_low: {
+    key: 'workflow.settings.geometry_policy.tier_low',
+    fallback: 'Low — warn only',
+  },
+  geometry_policy_tier_moderate: {
+    key: 'workflow.settings.geometry_policy.tier_moderate',
+    fallback: 'Moderate — block low-confidence sync',
+  },
+  geometry_policy_tier_high: {
+    key: 'workflow.settings.geometry_policy.tier_high',
+    fallback: 'High — block below high confidence',
+  },
+  geometry_policy_ack_mode_warn: {
+    key: 'workflow.settings.geometry_policy.ack_mode_warn',
+    fallback: 'Warn on packages',
+  },
+  geometry_policy_ack_mode_block: {
+    key: 'workflow.settings.geometry_policy.ack_mode_block',
+    fallback: 'Block packages until approved',
+  },
+  geometry_policy_save: {
+    key: 'workflow.settings.geometry_policy.save',
+    fallback: 'Save geometry policy',
+  },
+  geometry_policy_toast_success: {
+    key: 'workflow.settings.geometry_policy.toast_success',
+    fallback: 'Geometry policy updated.',
+  },
+  geometry_policy_error_save: {
+    key: 'workflow.settings.geometry_policy.error_save',
+    fallback: 'Failed to save geometry policy.',
+  },
+  geometry_policy_current: {
+    key: 'workflow.settings.geometry_policy.current',
+    fallback: 'Saved policy: {{minTier}} minimum tier, {{ackMode}} on shipments.',
+  },
 };
 
 const SETTINGS_LICENSE_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
@@ -3539,12 +3602,72 @@ const PLOT_GEOMETRY_REVIEWER_COPY: Record<string, { key: string; fallback: strin
   },
 };
 
+const PLOT_GEOMETRY_APPROVAL_COPY: Record<string, { key: string; fallback: string }> = {
+  title: {
+    key: 'workflow.plots.detail.geometry_approval.title',
+    fallback: 'Geometry approved for shipment',
+  },
+  body: {
+    key: 'workflow.plots.detail.geometry_approval.body',
+    fallback:
+      'Confirm the current boundary is acceptable for exporter shipment coverage. Approval is audited and cleared if geometry is revised.',
+  },
+  recommended_body: {
+    key: 'workflow.plots.detail.geometry_approval.recommended_body',
+    fallback:
+      'Field capture confidence is fair or low. Approve after map review, or ask the farmer to trace the boundary on satellite imagery.',
+  },
+  approved_body: {
+    key: 'workflow.plots.detail.geometry_approval.approved_body',
+    fallback: 'Approved for shipment coverage on {date}.',
+  },
+  needs_review_badge: {
+    key: 'workflow.plots.detail.geometry_approval.needs_review_badge',
+    fallback: 'Review recommended',
+  },
+  approved_badge: {
+    key: 'workflow.plots.detail.geometry_approval.approved_badge',
+    fallback: 'Approved',
+  },
+  approve_action: {
+    key: 'workflow.plots.detail.geometry_approval.approve_action',
+    fallback: 'Approve geometry for shipment',
+  },
+  approving: {
+    key: 'workflow.plots.detail.geometry_approval.approving',
+    fallback: 'Approving…',
+  },
+  loading: {
+    key: 'workflow.plots.detail.geometry_approval.loading',
+    fallback: 'Loading plot geometry…',
+  },
+  success: {
+    key: 'workflow.plots.detail.geometry_approval.success',
+    fallback: 'Geometry approved for shipment coverage.',
+  },
+};
+
 export function getPlotGeometryReviewerCopy(
   key: keyof typeof PLOT_GEOMETRY_REVIEWER_COPY,
   t?: TranslateFn,
   vars?: Record<string, string | number>,
 ): string {
   const entry = PLOT_GEOMETRY_REVIEWER_COPY[key];
+  let text = wf(entry.key, entry.fallback, t);
+  if (vars) {
+    for (const [name, value] of Object.entries(vars)) {
+      text = text.replace(`{${name}}`, String(value));
+    }
+  }
+  return text;
+}
+
+export function getPlotGeometryApprovalCopy(
+  key: keyof typeof PLOT_GEOMETRY_APPROVAL_COPY,
+  t?: TranslateFn,
+  vars?: Record<string, string | number>,
+): string {
+  const entry = PLOT_GEOMETRY_APPROVAL_COPY[key];
   let text = wf(entry.key, entry.fallback, t);
   if (vars) {
     for (const [name, value] of Object.entries(vars)) {
@@ -5377,6 +5500,62 @@ const HARVEST_RECEIVE_DELIVERY_COPY: Record<string, { key: string; fallback: str
     fallback: 'Voucher not found. Ask the producer to sync from the field app and confirm network consent.',
   },
   qr_added: { key: 'workflow.harvest.receive.qr_added', fallback: 'Voucher added' },
+  inbox_title: {
+    key: 'workflow.harvest.receive.inbox_title',
+    fallback: 'Directed to you',
+  },
+  inbox_empty: {
+    key: 'workflow.harvest.receive.inbox_empty',
+    fallback: 'No new deliveries directed to your organisation yet.',
+  },
+  scan_cta: { key: 'workflow.harvest.receive.scan_cta', fallback: 'Scan QR' },
+  trip_added: {
+    key: 'workflow.harvest.receive.trip_added',
+    fallback: '{{count}} voucher(s) from trip added',
+  },
+  bulk_scan_cta: {
+    key: 'workflow.harvest.receive.bulk_scan_cta',
+    fallback: 'Bulk scan',
+  },
+  handoff_title: {
+    key: 'workflow.harvest.receive.handoff_title',
+    fallback: 'Confirm physical handoff',
+  },
+  handoff_description: {
+    key: 'workflow.harvest.receive.handoff_description',
+    fallback: 'Record the weight received at the desk before staging vouchers for batch assembly.',
+  },
+  handoff_expected: {
+    key: 'workflow.harvest.receive.handoff_expected',
+    fallback: 'Expected from receipt: {{kg}} kg',
+  },
+  handoff_plot_count: {
+    key: 'workflow.harvest.receive.handoff_plot_count',
+    fallback: '{{count}} plots',
+  },
+  handoff_received_label: {
+    key: 'workflow.harvest.receive.handoff_received_label',
+    fallback: 'Weight received (kg)',
+  },
+  handoff_note_label: {
+    key: 'workflow.harvest.receive.handoff_note_label',
+    fallback: 'Desk note (optional)',
+  },
+  handoff_note_placeholder: {
+    key: 'workflow.harvest.receive.handoff_note_placeholder',
+    fallback: 'Truck plate, scale variance, etc.',
+  },
+  handoff_invalid_weight: {
+    key: 'workflow.harvest.receive.handoff_invalid_weight',
+    fallback: 'Enter a valid received weight in kilograms.',
+  },
+  handoff_failed: {
+    key: 'workflow.harvest.receive.handoff_failed',
+    fallback: 'Could not record handoff. Try again or contact support.',
+  },
+  handoff_cancel: { key: 'workflow.harvest.receive.handoff_cancel', fallback: 'Cancel' },
+  handoff_confirm: { key: 'workflow.harvest.receive.handoff_confirm', fallback: 'Confirm & stage' },
+  handoff_confirming: { key: 'workflow.harvest.receive.handoff_confirming', fallback: 'Confirming…' },
   footnote: {
     key: 'workflow.harvest.receive.footnote',
     fallback:

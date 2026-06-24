@@ -67,6 +67,7 @@ export const BACKEND_HARVEST_AUDIT_EVENT_TYPES = [
   'delivery_buyer_invite_send_failed',
   'delivery_buyer_invite_claimed',
   'delivery_buyer_invite_claim_skipped',
+  'delivery_handoff_confirmed',
 ] as const;
 
 export const BACKEND_TENURE_AUDIT_EVENT_TYPES = [
