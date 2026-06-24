@@ -50,7 +50,7 @@ import {
   getRegisterDeliveryHeaderCtaLabel,
 } from '@/lib/workflow-terminology-labels';
 
-interface Harvest extends ExporterBatchRecord {}
+type Harvest = ExporterBatchRecord;
 
 const devMockHarvests: Harvest[] =
   process.env.NODE_ENV !== 'production' ? mockBatches : [];
@@ -65,25 +65,19 @@ export default function HarvestsPage() {
   const voucherFirstIntake = usesVoucherFirstHarvestIntake(role);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<'all' | 'pass' | 'warning' | 'blocked'>('all');
-  const [harvests, setHarvests] = useState<Harvest[]>(devMockHarvests);
+  const [fetchedHarvests, setFetchedHarvests] = useState<Harvest[]>([]);
 
   useEffect(() => {
-    if (demoDataEnabled) {
-      setHarvests(mockBatches);
-      return;
-    }
-
-    if (!user?.tenant_id) {
-      setHarvests(devMockHarvests);
+    if (demoDataEnabled || !user?.tenant_id) {
       return;
     }
 
     void listBatchIntakes(user.tenant_id).then((storedBatches) => {
       if (storedBatches.length === 0) {
-        setHarvests(devMockHarvests);
+        setFetchedHarvests([]);
         return;
       }
-      setHarvests((previous) => {
+      setFetchedHarvests((previous) => {
         const merged = [...storedBatches, ...previous];
         const seen = new Set<string>();
         return merged.filter((batch) => {
@@ -94,6 +88,13 @@ export default function HarvestsPage() {
       });
     });
   }, [user?.tenant_id, demoDataEnabled]);
+
+  const harvests: Harvest[] = useMemo(() => {
+    if (demoDataEnabled) return mockBatches;
+    if (fetchedHarvests.length > 0) return fetchedHarvests;
+    return devMockHarvests;
+  }, [demoDataEnabled, fetchedHarvests]);
+
   const [exceptionDialogOpen, setExceptionDialogOpen] = useState(false);
   const [selectedHarvest, setSelectedHarvest] = useState<Harvest | null>(null);
   const [exceptionNotes, setExceptionNotes] = useState('');
@@ -115,7 +116,7 @@ export default function HarvestsPage() {
   const handleRequestException = () => {
     if (!selectedHarvest) return;
 
-    setHarvests(
+    setFetchedHarvests(
       harvests.map((h) =>
         h.id === selectedHarvest.id
           ? { ...h, exception_status: 'pending' }
