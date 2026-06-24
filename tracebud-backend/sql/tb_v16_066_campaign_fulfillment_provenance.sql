@@ -3,10 +3,10 @@
 
 BEGIN;
 
-ALTER TABLE request_campaigns
+ALTER TABLE ops.request_campaigns
   ADD COLUMN IF NOT EXISTS require_farmer_app_confirmation BOOLEAN NOT NULL DEFAULT false;
 
-ALTER TABLE request_campaign_recipient_decisions
+ALTER TABLE ops.request_campaign_recipient_decisions
   ADD COLUMN IF NOT EXISTS fulfillment_source TEXT NULL,
   ADD COLUMN IF NOT EXISTS contact_id TEXT NULL;
 
@@ -17,7 +17,7 @@ BEGIN
     FROM pg_constraint
     WHERE conname = 'request_campaign_recipient_decisions_fulfillment_source_check'
   ) THEN
-    ALTER TABLE request_campaign_recipient_decisions
+    ALTER TABLE ops.request_campaign_recipient_decisions
       ADD CONSTRAINT request_campaign_recipient_decisions_fulfillment_source_check
       CHECK (
         fulfillment_source IS NULL
@@ -31,7 +31,7 @@ BEGIN
 END $$;
 
 CREATE INDEX IF NOT EXISTS idx_request_campaign_recipient_decisions_contact
-  ON request_campaign_recipient_decisions (campaign_id, contact_id)
+  ON ops.request_campaign_recipient_decisions (campaign_id, contact_id)
   WHERE contact_id IS NOT NULL;
 
 COMMIT;

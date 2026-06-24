@@ -5547,6 +5547,10 @@ export function getCampaignRecipientFulfillmentSourceLabel(
   return wf(keyMap[source] ?? 'workflow.outreach.recipient.fulfillment.cooperative_on_behalf', fallbackMap[source] ?? source, t);
 }
 
+export function getCampaignRecipientDeskQrPrintLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.recipient.desk_qr.print_short', 'Print desk QR', t);
+}
+
 export function getCampaignRecipientProgressStepLabel(
   stepId: import('@/lib/campaign-recipient-timeline').CampaignRecipientProgressStepId,
   t?: TranslateFn,

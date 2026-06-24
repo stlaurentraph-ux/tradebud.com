@@ -7,6 +7,13 @@
 - **Guards** — network routing guard asserts `link-pending-network-invites-on-signup` orchestrator.
 - **Docs** — `FEAT-014-supplier-campaign-onboarding.md`; ops commands in `supplier-onboarding.md`; Railway git-push rule in deploy docs.
 
+### 2026-06-24 (ADR-012 P6 — SMS fallback, desk QR print, delivery attempts)
+
+- **Schema** — TB-V16-067: `campaign_delivery_attempts` audit table for email/WhatsApp/SMS/desk sends.
+- **Backend** — Twilio SMS fallback when WhatsApp is skipped; desk invites get claim tokens + `issueCampaignDeskClaimLink`; token claim supports `desk_only` QR path.
+- **Dashboard** — desk-only recipient rows expose print-ready QR sheet from campaign timeline dialog.
+- **Migrations** — `apply-adr012-outreach-migrations.mjs` applies TB-V16-063/065/066/067 idempotently.
+
 ### 2026-06-24 (delivery intake QR — Phase E observability & QA closure)
 
 - **Marketing** — `delivery_qr_preview_viewed` + `marketing_cta_clicked` on `/d/` and `/t/`; client preview via `/api/delivery-preview` proxies.

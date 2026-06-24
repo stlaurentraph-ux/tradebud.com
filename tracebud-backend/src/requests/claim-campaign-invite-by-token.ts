@@ -58,9 +58,8 @@ export async function claimCampaignInviteByToken(
   const campaignId = input.campaignId.trim();
   const token = input.token.trim();
   const farmerProfileId = input.farmerProfileId.trim();
-  const verifiedPhone = normalizeFarmerPhoneE164(input.verifiedPhoneE164);
 
-  if (!campaignId || !token || !farmerProfileId || !verifiedPhone) {
+  if (!campaignId || !token || !farmerProfileId) {
     return { claimed: false, reason: 'not_found' };
   }
 
@@ -109,13 +108,14 @@ export async function claimCampaignInviteByToken(
     return { claimed: false, reason: 'expired' };
   }
 
-  if (invite.delivery_channel !== 'whatsapp' && invite.delivery_channel !== 'sms') {
+  if (invite.delivery_channel === 'whatsapp' || invite.delivery_channel === 'sms') {
+    const verifiedPhone = normalizeFarmerPhoneE164(input.verifiedPhoneE164);
+    const invitePhone = normalizeFarmerPhoneE164(invite.delivery_address);
+    if (!verifiedPhone || !invitePhone || invitePhone !== verifiedPhone) {
+      return { claimed: false, reason: 'phone_mismatch' };
+    }
+  } else if (invite.delivery_channel !== 'desk_only') {
     return { claimed: false, reason: 'invalid_channel' };
-  }
-
-  const invitePhone = normalizeFarmerPhoneE164(invite.delivery_address);
-  if (!invitePhone || invitePhone !== verifiedPhone) {
-    return { claimed: false, reason: 'phone_mismatch' };
   }
 
   const claimUpdate = await pool.query<{ id: string }>(
@@ -169,7 +169,8 @@ export async function claimCampaignInviteByToken(
     delivery_address: invite.delivery_address,
     farmer_profile_id: farmerProfileId,
     actor_user_id: input.actorUserId ?? null,
-    claim_path: 'token_phone',
+    claim_path:
+      invite.delivery_channel === 'desk_only' ? 'token_desk_qr' : 'token_phone',
   });
 
   await emitAudit(pool, 'campaign_invite_claimed_by_token', {
