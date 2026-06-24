@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T08:51:13.496Z",
+  "generatedAt": "2026-06-24T15:55:04.715Z",
   "canonicalEventCount": 44,
   "canonicalEvents": [
     "dashboard_campaign_archive_failure",
@@ -78,6 +78,7 @@
     "PACKAGE_CREATE_SUCCESS",
     "PACKAGE_SEAL_FAILURE",
     "PACKAGE_SEAL_SUCCESS",
+    "PLOT_GEOMETRY_APPROVED",
     "PLOT_GEOMETRY_REVISION_APPLIED",
     "REACT_RENDER_ERROR",
     "SESSION_START",
@@ -122,6 +123,7 @@
     "delivery_desk_scan_success",
     "delivery_desk_trip_claim_success",
     "delivery_qr_preview_viewed",
+    "plot_geometry_approved",
     "plot_geometry_revision_applied"
   ]
 }
