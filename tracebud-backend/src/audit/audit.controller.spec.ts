@@ -42,13 +42,9 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('allows create for linked field-app farmer without tenant claim', async () => {
     const pool = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'farmer_1' }] })
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [{ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' }],
-        }),
+      query: jest.fn().mockResolvedValue({
+        rows: [{ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' }],
+      }),
     };
     const { controller } = makeController(pool as any);
 
@@ -71,7 +67,7 @@ describe('AuditController tenant-claim and role checks', () => {
           },
         },
       ),
-    ).resolves.toEqual({ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' });
+    ).resolves.toEqual({ ok: true, id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' });
 
     expect(pool.query).toHaveBeenLastCalledWith(
       expect.stringContaining('INSERT INTO audit_log'),
