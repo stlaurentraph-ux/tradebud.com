@@ -19,10 +19,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   CAMPAIGN_RECIPIENT_FILTERS,
+  campaignFulfillmentSourceBadgeClass,
   campaignRecipientOnboardingBadgeClass,
   countCampaignRecipientsForFilter,
   filterCampaignRecipients,
   getCampaignRecipientDisplayLabel,
+  getCampaignRecipientChannelIcon,
   getRecipientProgressSteps,
   type CampaignRecipientFilter,
   type CampaignRecipientTimelineEntry,
@@ -36,6 +38,7 @@ import {
 } from '@/lib/use-campaign-decisions';
 import {
   getCampaignRecipientOnboardingStatusLabel,
+  getCampaignRecipientFulfillmentSourceLabel,
   getCampaignRecipientTimelineCopyEmailLabel,
   getCampaignRecipientTimelineDescription,
   getCampaignRecipientTimelineEmptyActivity,
@@ -82,6 +85,7 @@ function RecipientRow({
   t?: (key: string) => string;
 }) {
   const displayLabel = getCampaignRecipientDisplayLabel(recipient);
+  const channelIcon = getCampaignRecipientChannelIcon(recipient.delivery_channel);
   const [copied, setCopied] = useState(false);
   const relativeTime = formatRelativeTimestamp(recipient.updated_at);
   const steps = getRecipientProgressSteps(recipient.onboarding_status);
@@ -103,6 +107,11 @@ function RecipientRow({
     <div className="flex flex-col gap-3 rounded-lg border px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2">
+          {channelIcon ? (
+            <span className="shrink-0 text-base" aria-hidden="true" title={recipient.delivery_channel ?? undefined}>
+              {channelIcon}
+            </span>
+          ) : null}
           <p className="truncate font-medium text-foreground" title={displayLabel}>
             {displayLabel}
           </p>
@@ -124,6 +133,11 @@ function RecipientRow({
           <Badge className={campaignRecipientOnboardingBadgeClass(recipient.onboarding_status)}>
             {getCampaignRecipientOnboardingStatusLabel(recipient.onboarding_status, t)}
           </Badge>
+          {recipient.fulfillment_source ? (
+            <Badge className={campaignFulfillmentSourceBadgeClass(recipient.fulfillment_source)}>
+              {getCampaignRecipientFulfillmentSourceLabel(recipient.fulfillment_source, t)}
+            </Badge>
+          ) : null}
           {recipient.decision_source ? (
             <span className="text-xs text-muted-foreground">
               {formatCampaignDecisionSource(recipient.decision_source)}

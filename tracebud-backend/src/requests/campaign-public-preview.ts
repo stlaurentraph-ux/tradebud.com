@@ -5,3 +5,8 @@ export type CampaignPublicPreview = {
   dueAt: string | null;
   senderTenantId: string;
 };
+
+export type CampaignInvitePublicPreview = CampaignPublicPreview & {
+  deliveryChannel: 'email' | 'whatsapp' | 'desk_only';
+  recipientLabel: string;
+};

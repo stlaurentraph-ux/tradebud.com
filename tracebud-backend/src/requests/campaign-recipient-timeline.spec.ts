@@ -18,6 +18,46 @@ describe('campaign-recipient-timeline', () => {
     ).toBe('fulfilled');
   });
 
+  it('keeps cooperative inbox fulfillment as accepted when strict confirmation is required', () => {
+    expect(
+      deriveCampaignRecipientOnboardingStatus(
+        {
+          recipient_email: 'a@example.com',
+          status: 'sent',
+          claimed_tenant_id: null,
+          sent_at: null,
+        },
+        {
+          recipient_email: 'a@example.com',
+          decision: 'accept',
+          source: 'inbox_fulfillment',
+          decided_at: '2026-04-22T12:00:00.000Z',
+        },
+        { requireFarmerAppConfirmation: true },
+      ),
+    ).toBe('accepted');
+  });
+
+  it('derives fulfilled for farmer consent grant fulfillment', () => {
+    expect(
+      deriveCampaignRecipientOnboardingStatus(
+        {
+          recipient_email: 'a@example.com',
+          status: 'claimed',
+          claimed_farmer_profile_id: 'farmer_1',
+          sent_at: null,
+        },
+        {
+          recipient_email: 'a@example.com',
+          decision: 'accept',
+          source: 'consent_grant_fulfillment',
+          fulfillment_source: 'farmer_app_email',
+          decided_at: '2026-04-22T12:00:00.000Z',
+        },
+      ),
+    ).toBe('fulfilled');
+  });
+
   it('derives signed_up when invite is claimed without a decision', () => {
     expect(
       deriveCampaignRecipientOnboardingStatus(
@@ -85,6 +125,9 @@ describe('campaign-recipient-timeline', () => {
       ['refused@example.com', 'refused'],
       ['signed@example.com', 'signed_up'],
     ]);
+    expect(result.recipients.find((row) => row.recipient_email === 'done@example.com')?.fulfillment_source).toBe(
+      'cooperative_on_behalf',
+    );
     expect(result.status_counts).toEqual({
       fulfilled: 1,
       accepted: 0,

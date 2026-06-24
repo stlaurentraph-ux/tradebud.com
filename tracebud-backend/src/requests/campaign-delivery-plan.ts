@@ -1,6 +1,6 @@
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export type CampaignDeliveryChannel = 'email' | 'desk_only';
+export type CampaignDeliveryChannel = 'email' | 'whatsapp' | 'desk_only';
 
 export type CampaignDeliveryRecipient = {
   contact_id: string;
@@ -31,7 +31,7 @@ export function planCampaignDeliveries(
       full_name: contact.full_name.trim() || contact.id,
       email: hasEmail ? email : null,
       phone,
-      delivery_channel: hasEmail ? 'email' : 'desk_only',
+      delivery_channel: hasEmail ? 'email' : phone ? 'whatsapp' : 'desk_only',
       delivery_address: hasEmail ? email : phone,
     };
   });
@@ -59,9 +59,11 @@ export function legacyEmailDeliveryRecipients(
 export function countDeliverableRecipients(deliveries: readonly CampaignDeliveryRecipient[]): {
   total: number;
   email: number;
+  whatsapp: number;
   desk_only: number;
 } {
   const email = deliveries.filter((delivery) => delivery.delivery_channel === 'email').length;
+  const whatsapp = deliveries.filter((delivery) => delivery.delivery_channel === 'whatsapp').length;
   const desk_only = deliveries.filter((delivery) => delivery.delivery_channel === 'desk_only').length;
-  return { total: deliveries.length, email, desk_only };
+  return { total: deliveries.length, email, whatsapp, desk_only };
 }

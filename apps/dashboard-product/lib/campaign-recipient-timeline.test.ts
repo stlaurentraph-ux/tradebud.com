@@ -1,9 +1,12 @@
 import {
   campaignRecipientOnboardingBadgeClass,
+  campaignFulfillmentSourceBadgeClass,
   computeCampaignFunnelMetrics,
   filterCampaignRecipients,
+  formatCampaignFulfillmentSource,
   formatCampaignRecipientOnboardingStatus,
   getCampaignRecipientDisplayLabel,
+  getCampaignRecipientChannelIcon,
   getRecipientProgressSteps,
   summarizeCampaignRecipientStatusCounts,
   type CampaignRecipientStatusCounts,
@@ -42,6 +45,19 @@ describe('campaign-recipient-timeline', () => {
     ).toBe('+233555000');
   });
 
+  it('maps delivery channels to outreach icons', () => {
+    expect(getCampaignRecipientChannelIcon('email')).toBe('📧');
+    expect(getCampaignRecipientChannelIcon('whatsapp')).toBe('📱');
+    expect(getCampaignRecipientChannelIcon('desk_only')).toBeNull();
+  });
+
+  it('formats fulfillment source labels for buyer timeline', () => {
+    expect(formatCampaignFulfillmentSource('farmer_app_phone')).toBe('Responded in Tracebud (phone)');
+    expect(formatCampaignFulfillmentSource('cooperative_on_behalf')).toBe('Submitted on behalf of farmer');
+    expect(campaignFulfillmentSourceBadgeClass('farmer_app_email')).toContain('emerald');
+    expect(campaignFulfillmentSourceBadgeClass('cooperative_on_behalf')).toContain('amber');
+  });
+
   it('provides badge classes per onboarding status', () => {
     const entry: CampaignRecipientTimelineEntry = {
       recipient_email: 'a@example.com',
@@ -49,6 +65,7 @@ describe('campaign-recipient-timeline', () => {
       invite_status: 'claimed',
       decision: null,
       decision_source: null,
+      fulfillment_source: null,
       decided_at: null,
       updated_at: '2026-04-22T10:00:00.000Z',
     };
@@ -98,6 +115,7 @@ describe('campaign-recipient-timeline', () => {
         invite_status: 'sent',
         decision: null,
         decision_source: null,
+        fulfillment_source: null,
         decided_at: null,
         updated_at: null,
       },
@@ -107,6 +125,7 @@ describe('campaign-recipient-timeline', () => {
         invite_status: null,
         decision: 'accept',
         decision_source: 'inbox_fulfillment',
+        fulfillment_source: 'cooperative_on_behalf',
         decided_at: '2026-04-22T12:00:00.000Z',
         updated_at: '2026-04-22T12:00:00.000Z',
       },

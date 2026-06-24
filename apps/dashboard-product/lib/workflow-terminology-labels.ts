@@ -5487,6 +5487,23 @@ export function getCampaignRecipientOnboardingStatusLabel(
   return wf(keyMap[status] ?? 'workflow.outreach.recipient.status.invite_sent', fallbackMap[status] ?? status, t);
 }
 
+export function getCampaignRecipientFulfillmentSourceLabel(
+  source: import('@/lib/campaign-recipient-timeline').CampaignFulfillmentSource,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    farmer_app_email: 'workflow.outreach.recipient.fulfillment.farmer_app_email',
+    farmer_app_phone: 'workflow.outreach.recipient.fulfillment.farmer_app_phone',
+    cooperative_on_behalf: 'workflow.outreach.recipient.fulfillment.cooperative_on_behalf',
+  };
+  const fallbackMap: Record<string, string> = {
+    farmer_app_email: 'Responded in Tracebud (email)',
+    farmer_app_phone: 'Responded in Tracebud (phone)',
+    cooperative_on_behalf: 'Submitted on behalf of farmer',
+  };
+  return wf(keyMap[source] ?? 'workflow.outreach.recipient.fulfillment.cooperative_on_behalf', fallbackMap[source] ?? source, t);
+}
+
 export function getCampaignRecipientProgressStepLabel(
   stepId: import('@/lib/campaign-recipient-timeline').CampaignRecipientProgressStepId,
   t?: TranslateFn,

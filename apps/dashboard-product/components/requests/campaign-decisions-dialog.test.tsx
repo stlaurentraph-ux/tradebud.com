@@ -31,6 +31,7 @@ const basePayload = {
       invite_status: null,
       decision: 'accept' as const,
       decision_source: 'inbox_fulfillment',
+      fulfillment_source: 'cooperative_on_behalf' as const,
       decided_at: '2026-04-22T12:00:00.000Z',
       updated_at: '2026-04-22T12:00:00.000Z',
     },
@@ -40,6 +41,7 @@ const basePayload = {
       invite_status: null,
       decision: 'refuse' as const,
       decision_source: 'email_cta',
+      fulfillment_source: null,
       decided_at: '2026-04-22T11:00:00.000Z',
       updated_at: '2026-04-22T11:00:00.000Z',
     },
@@ -97,6 +99,7 @@ describe('CampaignDecisionsDialog', () => {
     });
     expect(screen.getByText('accept@example.com')).toBeInTheDocument();
     expect(screen.getByText('Evidence attached')).toBeInTheDocument();
+    expect(screen.getByText('Submitted on behalf of farmer')).toBeInTheDocument();
     expect(screen.getAllByText('Refused').length).toBeGreaterThan(0);
   });
 

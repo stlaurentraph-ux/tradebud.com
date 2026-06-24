@@ -5,6 +5,35 @@
 - **QA** — `cooperative-voucher-intake-qa.md` extended for trip QR, handoff, auto-claim, bulk scan.
 - **Dashboard** — Sentry breadcrumbs on delivery preview proxy 404/429.
 
+### 2026-06-24 (ADR-012 P5 — buyer fulfillment provenance)
+
+- **Schema** — TB-V16-066: `fulfillment_source` + `contact_id` on `request_campaign_recipient_decisions`; `require_farmer_app_confirmation` on `request_campaigns`.
+- **Backend** — `campaign-fulfillment-source.ts` derives `farmer_app_email` / `farmer_app_phone` / `cooperative_on_behalf`; inbox + consent grant paths record decisions via `record-campaign-fulfillment-decision.ts`.
+- **Timeline** — recipient onboarding respects strict coop policy (coop fulfillment stays `accepted` until farmer claims when flag set).
+- **Dashboard** — campaign decisions dialog shows green farmer-direct vs amber cooperative fulfillment badges.
+- **Analytics** — `fulfillment_source_recorded` audit events on decision insert.
+
+### 2026-06-24 (ADR-012 P1 — CRM farmer phone reachability)
+
+- **Schema** — TB-V16-063: farmer CRM contacts allow null email when phone present.
+- **Backend** — `crm-contact-reachability.ts`; create/update paths accept `phone_only`; duplicate phone guard per tenant.
+- **Dashboard** — add/edit farmer wizards + CSV import support phone-only producers.
+- **Verification** — backend + dashboard reachability unit tests green.
+
+### 2026-06-24 (ADR-012 P4 — field phone OTP + token claim)
+
+- **Backend** — `claim-campaign-invite-by-token.ts` validates WhatsApp invite tokens against verified phone on bootstrap.
+- **Field app** — phone OTP sign-in for `campaign_phone` variant; persists claim token from deep links; bootstrap sends `claimToken`.
+- **Analytics** — `farmer_auth_phone_otp_*`, `campaign_invite_claimed_by_token`.
+
+### 2026-06-24 (ADR-012 P3 — WhatsApp campaign delivery + claim landing)
+
+- **Schema** — TB-V16-065: `claim_token_hash` / `claim_expires_at` on `campaign_recipient_invites`.
+- **Send path** — phone-only CRM contacts plan `whatsapp` channel; Meta Graph template when `WHATSAPP_*` env set; claim URL via field-auth.
+- **Public API** — `GET /v1/public/requests/campaigns/:id/invite?token=` validates token before field-app deep link.
+- **Dashboard** — recipient timeline shows 📧 / 📱 channel icons.
+- **Verification** — claim token, WhatsApp delivery, delivery-plan, timeline specs (17 backend); dashboard timeline tests (8).
+
 ### 2026-06-24 (ADR-012 P2 — contact-centric campaigns)
 
 - **Backend** — `target_contact_ids` on `request_campaigns`; invite rows keyed by `contact_id` with `delivery_channel` (`email` | `desk_only`); TB-V16-064 migration.

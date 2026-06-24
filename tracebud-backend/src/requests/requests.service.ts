@@ -29,7 +29,15 @@ import {
   type CampaignRecipientStatusCounts,
   type CampaignRecipientTimelineEntry,
 } from './campaign-recipient-timeline';
-import type { CampaignPublicPreview } from './campaign-public-preview';
+import {
+  buildCampaignClaimUrl,
+  defaultCampaignClaimExpiresAt,
+  generateCampaignClaimToken,
+  hashCampaignClaimToken,
+  verifyCampaignClaimToken,
+} from './campaign-claim-token';
+import { sendCampaignWhatsAppInvite } from './campaign-whatsapp-delivery';
+import type { CampaignInvitePublicPreview, CampaignPublicPreview } from './campaign-public-preview';
 
 export type RequestType =
   | 'MISSING_PRODUCER_PROFILE'
@@ -495,6 +503,74 @@ export class RequestsService {
     return { sentCount, failedCount, failureMessages, sentEmails, sentDeliveries };
   }
 
+  private async dispatchCampaignWhatsApp(
+    campaign: RequestCampaignRecord,
+    whatsappDeliveries: readonly CampaignDeliveryRecipient[],
+  ): Promise<{
+    sentCount: number;
+    skippedCount: number;
+    inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'whatsapp';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+      claim_token: string;
+    }>;
+  }> {
+    if (whatsappDeliveries.length === 0) {
+      return { sentCount: 0, skippedCount: 0, inviteDeliveries: [] };
+    }
+
+    const fromOrg = await this.getRequestingOrganizationLabel(campaign);
+    const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
+    const inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'whatsapp';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+      claim_token: string;
+    }> = [];
+    let sentCount = 0;
+    let skippedCount = 0;
+
+    for (const delivery of whatsappDeliveries) {
+      const phone = delivery.delivery_address ?? delivery.phone;
+      if (!phone) {
+        skippedCount += 1;
+        continue;
+      }
+      const { token, tokenHash } = generateCampaignClaimToken();
+      const claimExpiresAt = defaultCampaignClaimExpiresAt();
+      const claimUrl = buildCampaignClaimUrl(fieldAuthBaseUrl, campaign.id, token);
+      const result = await sendCampaignWhatsAppInvite({
+        toPhoneE164: phone,
+        campaignTitle: campaign.title,
+        fromOrg,
+        claimUrl,
+      });
+      if (result.sent) {
+        sentCount += 1;
+      } else {
+        skippedCount += 1;
+      }
+      inviteDeliveries.push({
+        contact_id: delivery.contact_id,
+        delivery_channel: 'whatsapp',
+        delivery_address: phone,
+        recipient_email: null,
+        claim_token_hash: tokenHash,
+        claim_expires_at: claimExpiresAt,
+        claim_token: token,
+      });
+    }
+
+    return { sentCount, skippedCount, inviteDeliveries };
+  }
+
   private async syncTargetsToContacts(
     tenantId: string,
     targets: Array<CampaignTargetInput>,
@@ -631,6 +707,66 @@ export class RequestsService {
     }
   }
 
+  async getCampaignInvitePublicPreview(
+    campaignId: string,
+    token: string,
+  ): Promise<CampaignInvitePublicPreview> {
+    const normalizedId = campaignId?.trim();
+    const normalizedToken = token?.trim();
+    if (!normalizedId || !normalizedToken) {
+      throw new NotFoundException('Campaign invite not found');
+    }
+
+    const tokenHash = hashCampaignClaimToken(normalizedToken);
+    try {
+      const inviteResult = await this.pool.query<{
+        campaign_id: string;
+        delivery_channel: string;
+        delivery_address: string | null;
+        claim_token_hash: string | null;
+        claim_expires_at: string | null;
+      }>(
+        `
+          SELECT
+            campaign_id,
+            delivery_channel,
+            delivery_address,
+            claim_token_hash,
+            claim_expires_at
+          FROM campaign_recipient_invites
+          WHERE campaign_id = $1
+            AND claim_token_hash = $2
+          LIMIT 1
+        `,
+        [normalizedId, tokenHash],
+      );
+      const invite = inviteResult.rows[0];
+      if (!invite?.claim_token_hash || !verifyCampaignClaimToken(normalizedToken, invite.claim_token_hash)) {
+        throw new NotFoundException('Campaign invite not found');
+      }
+      if (invite.claim_expires_at && new Date(invite.claim_expires_at).getTime() < Date.now()) {
+        throw new NotFoundException('Campaign invite has expired');
+      }
+
+      const preview = await this.getCampaignPublicPreview(normalizedId);
+      return {
+        ...preview,
+        deliveryChannel:
+          invite.delivery_channel === 'whatsapp' ||
+          invite.delivery_channel === 'desk_only' ||
+          invite.delivery_channel === 'email'
+            ? invite.delivery_channel
+            : 'whatsapp',
+        recipientLabel: invite.delivery_address?.trim() || 'Recipient',
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
+  }
+
   async listDecisions(
     tenantId: string,
     campaignId: string,
@@ -669,9 +805,10 @@ export class RequestsService {
         tenant_id: string;
         target_contact_emails: string[] | null;
         target_contact_ids: string[] | null;
+        require_farmer_app_confirmation: boolean;
       }>(
         `
-          SELECT id, tenant_id, target_contact_emails, target_contact_ids
+          SELECT id, tenant_id, target_contact_emails, target_contact_ids, require_farmer_app_confirmation
           FROM request_campaigns
           WHERE tenant_id = $1
             AND id = $2
@@ -684,6 +821,8 @@ export class RequestsService {
       }
       const targetContactEmails = campaignResult.rows[0].target_contact_emails ?? [];
       const targetContactIds = campaignResult.rows[0].target_contact_ids ?? [];
+      const requireFarmerAppConfirmation =
+        campaignResult.rows[0].require_farmer_app_confirmation ?? false;
       let targetContacts: Array<{
         contact_id: string;
         full_name: string;
@@ -744,13 +883,18 @@ export class RequestsService {
         refuse: Number(countResult.rows[0]?.refuse_count ?? 0),
       };
 
-      const timelineDecisionsResult = await this.pool.query<RequestCampaignDecisionRecord>(
+      const timelineDecisionsResult = await this.pool.query<RequestCampaignDecisionRecord & {
+        fulfillment_source: string | null;
+        contact_id: string | null;
+      }>(
         `
           SELECT
             decision.recipient_email,
             decision.decision,
             decision.decided_at,
-            decision.source
+            decision.source,
+            decision.fulfillment_source,
+            decision.contact_id
           FROM request_campaign_recipient_decisions decision
           INNER JOIN request_campaigns campaign
             ON campaign.id = decision.campaign_id
@@ -847,8 +991,11 @@ export class RequestsService {
           recipient_email: row.recipient_email,
           decision: row.decision,
           source: row.source,
+          fulfillment_source: row.fulfillment_source,
+          contact_id: row.contact_id,
           decided_at: new Date(row.decided_at).toISOString(),
         })),
+        requireFarmerAppConfirmation: requireFarmerAppConfirmation,
       });
 
       const hasDecisionFilter = decisionFilter !== 'all';
@@ -1121,11 +1268,19 @@ export class RequestsService {
       const emailDeliveries = plannedDeliveries.filter(
         (delivery) => delivery.delivery_channel === 'email',
       );
+      const whatsappDeliveries = plannedDeliveries.filter(
+        (delivery) => delivery.delivery_channel === 'whatsapp',
+      );
       const deskDeliveries = plannedDeliveries.filter(
         (delivery) => delivery.delivery_channel === 'desk_only',
       );
       const delivery = await this.dispatchCampaignEmails(current, emailDeliveries);
-      if (delivery.sentCount === 0 && deskDeliveries.length === 0) {
+      const whatsappDelivery = await this.dispatchCampaignWhatsApp(current, whatsappDeliveries);
+      if (
+        delivery.sentCount === 0 &&
+        whatsappDelivery.sentCount === 0 &&
+        deskDeliveries.length === 0
+      ) {
         const reason = delivery.failureMessages[0];
         throw new BadRequestException(
           reason
@@ -1133,7 +1288,8 @@ export class RequestsService {
             : 'No campaign outreach was delivered. Check recipient addresses and Resend setup.',
         );
       }
-      const nextPendingCount = delivery.sentCount + deskDeliveries.length;
+      const nextPendingCount =
+        delivery.sentCount + whatsappDelivery.inviteDeliveries.length + deskDeliveries.length;
       const result = await this.pool.query<RequestCampaignRecord>(
         `
           UPDATE request_campaigns
@@ -1183,6 +1339,14 @@ export class RequestsService {
             delivery_channel: 'email' as const,
             delivery_address: row.email,
             recipient_email: row.email,
+          })),
+          ...whatsappDelivery.inviteDeliveries.map((row) => ({
+            contact_id: row.contact_id,
+            delivery_channel: 'whatsapp' as const,
+            delivery_address: row.delivery_address,
+            recipient_email: row.recipient_email,
+            claim_token_hash: row.claim_token_hash,
+            claim_expires_at: row.claim_expires_at,
           })),
           ...deskDeliveries.map((row) => ({
             contact_id: row.contact_id,

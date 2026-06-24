@@ -6,6 +6,11 @@ export type CampaignRecipientOnboardingStatus =
   | 'invite_sent'
   | 'on_platform';
 
+export type CampaignFulfillmentSource =
+  | 'farmer_app_email'
+  | 'farmer_app_phone'
+  | 'cooperative_on_behalf';
+
 export type CampaignRecipientTimelineEntry = {
   contact_id?: string | null;
   recipient_email: string | null;
@@ -15,6 +20,7 @@ export type CampaignRecipientTimelineEntry = {
   invite_status: string | null;
   decision: 'accept' | 'refuse' | null;
   decision_source: string | null;
+  fulfillment_source: CampaignFulfillmentSource | null;
   decided_at: string | null;
   updated_at: string | null;
 };
@@ -63,6 +69,18 @@ export function getCampaignRecipientDisplayLabel(
   recipient: Pick<CampaignRecipientTimelineEntry, 'recipient_label' | 'recipient_email'>,
 ): string {
   return recipient.recipient_label?.trim() || recipient.recipient_email?.trim() || 'Unknown recipient';
+}
+
+export function getCampaignRecipientChannelIcon(
+  channel: string | null | undefined,
+): string | null {
+  if (channel === 'email') {
+    return '📧';
+  }
+  if (channel === 'whatsapp') {
+    return '📱';
+  }
+  return null;
 }
 
 export function getRecipientProgressSteps(
@@ -222,6 +240,33 @@ export function campaignRecipientOnboardingBadgeClass(status: CampaignRecipientO
       return 'bg-muted text-muted-foreground';
     default:
       return 'bg-muted text-muted-foreground';
+  }
+}
+
+export function campaignFulfillmentSourceBadgeClass(
+  source: CampaignFulfillmentSource | null | undefined,
+): string {
+  switch (source) {
+    case 'farmer_app_email':
+    case 'farmer_app_phone':
+      return 'bg-emerald-600/15 text-emerald-800';
+    case 'cooperative_on_behalf':
+      return 'bg-amber-500/15 text-amber-900';
+    default:
+      return 'bg-muted text-muted-foreground';
+  }
+}
+
+export function formatCampaignFulfillmentSource(source: CampaignFulfillmentSource): string {
+  switch (source) {
+    case 'farmer_app_email':
+      return 'Responded in Tracebud (email)';
+    case 'farmer_app_phone':
+      return 'Responded in Tracebud (phone)';
+    case 'cooperative_on_behalf':
+      return 'Submitted on behalf of farmer';
+    default:
+      return source;
   }
 }
 

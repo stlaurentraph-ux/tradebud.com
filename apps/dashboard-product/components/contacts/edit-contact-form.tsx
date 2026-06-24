@@ -2,6 +2,7 @@
 
 import { useContext, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -16,6 +17,7 @@ import type { ContactActivityType, ProcessingFacilitySubtype } from '@/lib/conta
 import type { ContactDirectoryRole } from '@/lib/contact-activity-types';
 import { listContactActivityTypesForRole, listProcessingFacilitySubtypes } from '@/lib/contact-activity-types';
 import type { ContactRecord } from '@/lib/contact-service';
+import { validateFarmerContactDraft } from '@/lib/crm-contact-reachability';
 import {
   getContactConsentLabel,
   getContactTypeLabel,
@@ -31,6 +33,7 @@ export interface ContactEditDraft {
   full_name: string;
   email: string;
   phone: string;
+  phoneOnlyNoEmail: boolean;
   organization: string;
   contact_type: ContactActivityType;
   processing_subtype: ProcessingFacilitySubtype | null;
@@ -48,10 +51,13 @@ interface EditContactFormProps {
 }
 
 function draftFromContact(contact: ContactRecord): ContactEditDraft {
+  const isPhoneOnlyFarmer =
+    contact.contact_type === 'farmer' && !contact.email?.trim() && Boolean(contact.phone?.trim());
   return {
     full_name: contact.full_name,
-    email: contact.email,
+    email: contact.email ?? '',
     phone: contact.phone ?? '',
+    phoneOnlyNoEmail: isPhoneOnlyFarmer,
     organization: contact.organization ?? '',
     contact_type: contact.contact_type,
     processing_subtype: contact.processing_subtype,
@@ -82,7 +88,21 @@ export function EditContactForm({
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!draft.full_name.trim() || !draft.email.trim()) {
+    if (!draft.full_name.trim()) {
+      setError('Name is required.');
+      return;
+    }
+    if (draft.contact_type === 'farmer') {
+      const reachability = validateFarmerContactDraft({
+        email: draft.email,
+        phone: draft.phone,
+        phoneOnlyNoEmail: draft.phoneOnlyNoEmail,
+      });
+      if (reachability.error) {
+        setError(reachability.error);
+        return;
+      }
+    } else if (!draft.email.trim()) {
       setError('Name and email are required.');
       return;
     }
@@ -110,20 +130,33 @@ export function EditContactForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit_email">{getContactsWizardFieldLabel('email', t)}</Label>
+          <Label htmlFor="edit_email">
+            {getContactsWizardFieldLabel('email', t)}
+            {draft.contact_type === 'farmer' && draft.phoneOnlyNoEmail ? null : (
+              <span className="text-destructive"> *</span>
+            )}
+          </Label>
           <Input
             id="edit_email"
             type="email"
             value={draft.email}
             onChange={(event) => updateDraft('email', event.target.value)}
+            disabled={draft.contact_type === 'farmer' && draft.phoneOnlyNoEmail}
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="edit_phone">{getContactsWizardFieldLabel('phone', t)}</Label>
+          <Label htmlFor="edit_phone">
+            {getContactsWizardFieldLabel('phone', t)}
+            {draft.contact_type === 'farmer' && draft.phoneOnlyNoEmail ? (
+              <span className="text-destructive"> *</span>
+            ) : null}
+          </Label>
           <Input
             id="edit_phone"
+            type="tel"
             value={draft.phone}
             onChange={(event) => updateDraft('phone', event.target.value)}
+            placeholder={draft.phoneOnlyNoEmail ? '+233241234567' : undefined}
           />
         </div>
         <div className="space-y-2">
@@ -220,6 +253,25 @@ export function EditContactForm({
           <p className="text-xs text-muted-foreground">{getContactsWizardTagsHint(t)}</p>
         </div>
       </div>
+      {draft.contact_type === 'farmer' ? (
+        <div className="rounded-md border border-dashed p-3">
+          <div className="flex items-start gap-2">
+            <Checkbox
+              id="edit_phone_only_no_email"
+              checked={draft.phoneOnlyNoEmail}
+              onCheckedChange={(checked) => updateDraft('phoneOnlyNoEmail', checked === true)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="edit_phone_only_no_email" className="font-normal">
+                No email — use phone only
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                Use when the producer has no email. Outreach will use WhatsApp when available.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? getContactDetailActionLabel('saving', t) : getContactDetailActionLabel('save', t)}

@@ -11,6 +11,7 @@ const SECURE_SYNC_AUTH_PASSWORD_KEY = 'tracebud.syncAuth.password';
 const SECURE_SYNC_AUTH_REFRESH_KEY = 'tracebud.syncAuth.refreshToken';
 const SECURE_SYNC_AUTH_ACCESS_KEY = 'tracebud.syncAuth.accessToken';
 const SECURE_SYNC_AUTH_EXPIRES_AT_KEY = 'tracebud.syncAuth.expiresAt';
+const SECURE_SYNC_AUTH_PHONE_KEY = 'tracebud.syncAuth.phone';
 const SECURE_SYNC_AUTH_METHOD_KEY = 'tracebud.syncAuth.method';
 const SYNC_AUTH_SIGNED_OUT_KEY = 'tracebud.syncAuth.signedOut';
 
@@ -28,7 +29,18 @@ export type OAuthSyncAuthCredentials = {
   expiresAt?: number | null;
 };
 
-export type SyncAuthCredentials = PasswordSyncAuthCredentials | OAuthSyncAuthCredentials;
+export type PhoneOtpSyncAuthCredentials = {
+  method: 'phone_otp';
+  phone: string;
+  refreshToken: string;
+  accessToken?: string;
+  expiresAt?: number | null;
+};
+
+export type SyncAuthCredentials =
+  | PasswordSyncAuthCredentials
+  | OAuthSyncAuthCredentials
+  | PhoneOtpSyncAuthCredentials;
 
 async function supportsSecureStore(): Promise<boolean> {
   if (Platform.OS === 'web') return false;
@@ -112,6 +124,21 @@ export async function loadSyncAuthCredentials(): Promise<SyncAuthCredentials | n
           refreshToken,
           accessToken: accessToken.trim() || undefined,
           expiresAt: Number.isFinite(expiresAt) ? expiresAt : null,
+        };
+      }
+    } else if (method === 'phone_otp') {
+      const refreshToken = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY))?.trim() ?? '';
+      const phone = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_PHONE_KEY))?.trim() ?? '';
+      if (phone && refreshToken) {
+        const accessToken = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY))?.trim();
+        const expiresRaw = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY))?.trim();
+        const expiresAt = expiresRaw ? Number(expiresRaw) : null;
+        return {
+          method: 'phone_otp',
+          phone,
+          refreshToken,
+          ...(accessToken ? { accessToken } : {}),
+          ...(expiresAt != null && Number.isFinite(expiresAt) ? { expiresAt } : {}),
         };
       }
     } else {
@@ -202,6 +229,39 @@ export async function saveOAuthSyncAuthCredentials(
   throw new Error('OAuth sync credentials require secure storage on this device.');
 }
 
+export async function savePhoneOtpSyncAuthCredentials(
+  phone: string,
+  refreshToken: string,
+  accessToken?: string,
+  expiresAt?: number | null,
+): Promise<void> {
+  const normalizedPhone = phone.trim();
+  if (!normalizedPhone || !refreshToken) {
+    throw new Error('Phone and refresh token are required.');
+  }
+  if (await isSyncAuthDismissedOnDevice()) {
+    return;
+  }
+
+  if (await supportsSecureStore()) {
+    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'phone_otp');
+    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_PHONE_KEY, normalizedPhone);
+    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY, refreshToken);
+    await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY).catch(() => undefined);
+    await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
+    if (accessToken?.trim()) {
+      await SecureStore.setItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY, accessToken.trim());
+      if (expiresAt != null && Number.isFinite(expiresAt)) {
+        await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY, String(Math.floor(expiresAt)));
+      }
+    }
+    await clearLegacyCredentials();
+    return;
+  }
+
+  throw new Error('Phone OTP sync credentials require secure storage on this device.');
+}
+
 export async function saveOAuthAccessTokenCache(
   accessToken: string,
   expiresAt?: number | null,
@@ -222,6 +282,7 @@ export async function clearSyncAuthCredentials(): Promise<void> {
   if (await supportsSecureStore()) {
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_METHOD_KEY).catch(() => undefined);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY).catch(() => undefined);
+    await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_PHONE_KEY).catch(() => undefined);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_REFRESH_KEY).catch(() => undefined);
     await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_ACCESS_KEY).catch(() => undefined);

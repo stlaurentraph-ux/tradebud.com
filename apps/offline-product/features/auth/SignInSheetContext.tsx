@@ -59,6 +59,8 @@ import {
 import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { signInAndSyncPlots, signInWithOAuthAndSyncPlots } from '@/features/auth/signInSync';
+import { signInWithPhoneOtpAndSyncPlots } from '@/features/auth/completePhoneOtpFarmerSession';
+import { PhoneOtpSignInPanel } from '@/components/auth/PhoneOtpSignInPanel';
 import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingConsent';
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
 import { runAutoBackup, type RunAutoBackupResult } from '@/features/sync/runAutoBackup';
@@ -163,11 +165,13 @@ function buildBackupOutcomeMessage(backup: RunAutoBackupResult | null, t: (key: 
   return parts.length > 0 ? parts.join('\n\n') : t('backup_up_to_date');
 }
 
-export type SignInVariant = 'general' | 'after_plot' | 'sync';
+export type SignInVariant = 'general' | 'after_plot' | 'sync' | 'campaign_phone';
 
 type OpenSignInOptions = {
   variant?: SignInVariant;
   onSuccess?: () => void | Promise<void>;
+  /** Pre-fill phone for WhatsApp campaign invites (E.164). */
+  expectedPhone?: string;
 };
 
 type SignInSheetContextValue = {
@@ -201,6 +205,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
   const [emailMode, setEmailMode] = useState(false);
+  const [campaignPhone, setCampaignPhone] = useState('');
   const [isSignedIn, setIsSignedIn] = useState(false);
   const [fieldAppRole, setFieldAppRole] = useState<FieldAppRole | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -632,11 +637,13 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openSignIn = useCallback((options?: OpenSignInOptions) => {
-    setVariant(options?.variant ?? 'general');
+    const nextVariant = options?.variant ?? 'general';
+    setVariant(nextVariant);
     onSuccessRef.current = options?.onSuccess;
     setHint(null);
     setPassword('');
     setEmailMode(false);
+    setCampaignPhone(options?.expectedPhone?.trim() ?? '');
     setVisible(true);
   }, []);
 
@@ -654,14 +661,18 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       ? 'plot_saved_sign_in_title'
       : variant === 'sync'
         ? 'sign_in_to_sync_title'
-        : 'sign_in_to_tracebud_title';
+        : variant === 'campaign_phone'
+          ? 'phone_otp_sign_in_title'
+          : 'sign_in_to_tracebud_title';
 
   const bodyKey =
     variant === 'after_plot'
       ? 'plot_saved_sign_in_body'
       : variant === 'sync'
         ? 'sign_in_to_sync_body'
-        : 'sign_in_oauth_sub';
+        : variant === 'campaign_phone'
+          ? 'phone_otp_campaign_body'
+          : 'sign_in_oauth_sub';
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
     oauthSignInInFlightRef.current = true;
@@ -759,6 +770,45 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     } finally {
       oauthSignInInFlightRef.current = false;
       setOauthLoading(null);
+    }
+  };
+
+  const handlePhoneOtpVerified = async (phone: string, code: string) => {
+    setLoading(true);
+    setHint(null);
+    try {
+      const result = await signInWithPhoneOtpAndSyncPlots({
+        phone,
+        code,
+        farmerId: farmer?.id,
+        localPlots: plots,
+      });
+      if (!result.ok) {
+        const message =
+          result.message === 'phone_otp_invalid_code'
+            ? t('phone_otp_invalid_code')
+            : result.message === 'phone_otp_invalid_number'
+              ? t('phone_otp_invalid_number')
+              : formatSignInErrorMessage(t, result.message);
+        setHint(message);
+        trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+          method: 'phone_otp',
+          reason: result.message,
+        });
+        return;
+      }
+      trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'phone_otp' });
+      await finishSuccessfulSignIn({ farmerSyncAlreadyDone: true });
+    } catch (e) {
+      const message = formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e));
+      setHint(message);
+      trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+        method: 'phone_otp',
+        reason: 'exception',
+        message,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -896,12 +946,22 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                   <Ionicons name="close" size={20} color={colors.iconMuted} />
                 </Pressable>
               </View>
-              {!emailMode ? (
+              {!emailMode && variant !== 'campaign_phone' ? (
                 <ThemedText type="caption" style={authSheetStyles.subtitle}>
                   {t(bodyKey)}
                 </ThemedText>
               ) : null}
-              {!emailMode ? (
+              {variant === 'campaign_phone' ? (
+                <PhoneOtpSignInPanel
+                  initialPhone={campaignPhone}
+                  busy={loading}
+                  hint={hint}
+                  t={t}
+                  onHint={setHint}
+                  onBusy={setLoading}
+                  onVerified={handlePhoneOtpVerified}
+                />
+              ) : !emailMode ? (
                 <>
                   <OAuthProviderButtons
                     disabled={loading}
@@ -964,7 +1024,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                   )}
                 </>
               )}
-              {!emailMode ? (
+              {!emailMode && variant !== 'campaign_phone' ? (
                 <View style={authSheetStyles.footerRow}>
                   <Pressable
                     onPress={() => {
