@@ -129,7 +129,7 @@ export async function verifyBulkPlotImportPackage(
         ? DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_FAILED
         : DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PACKAGE_UNSIGNED,
     {
-      kid: result.kid ?? null,
+      kid: result.kid ?? undefined,
       source_system: importPackage.source_system,
     },
   );
