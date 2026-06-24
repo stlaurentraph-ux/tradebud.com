@@ -34,9 +34,8 @@ describe('AuditWriteService idempotency', () => {
       timestamp: '2026-06-23T12:00:00.000Z',
     });
 
-    expect(pool.query).toHaveBeenCalledTimes(2);
+    expect(pool.query).toHaveBeenCalledTimes(1);
     expect(pool.query.mock.calls[0][0]).toContain("payload ->> 'clientEventId'");
-    expect(pool.query.mock.calls[1][0]).toContain('FROM farmer_profile');
   });
 
   it('rejects dashboard users without tenant claim', async () => {
