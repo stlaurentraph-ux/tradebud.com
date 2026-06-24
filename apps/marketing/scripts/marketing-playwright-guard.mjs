@@ -38,12 +38,17 @@ function assertManifestShape(manifest) {
   if (manifest.locale !== 'en') {
     throw new Error('manifest locale must be en');
   }
-  if (!Array.isArray(manifest.paths) || manifest.paths.length !== 3) {
-    throw new Error('manifest must define exactly three golden paths');
+  if (!Array.isArray(manifest.paths) || manifest.paths.length < 4) {
+    throw new Error('manifest must define at least four golden paths');
   }
   const ids = manifest.paths.map((item) => item.id);
-  if (!ids.includes('home') || !ids.includes('pricing') || !ids.includes('waitlist')) {
-    throw new Error('manifest paths must include home, pricing, and waitlist');
+  if (
+    !ids.includes('home') ||
+    !ids.includes('pricing') ||
+    !ids.includes('waitlist') ||
+    !ids.includes('delivery-intake')
+  ) {
+    throw new Error('manifest paths must include home, pricing, waitlist, and delivery-intake');
   }
 }
 
@@ -69,6 +74,14 @@ function assertSpecAlignment(manifest) {
   const waitlistPath = manifest.paths.find((item) => item.id === 'waitlist');
   if (!primarySpec.includes('page.route(') || !primarySpec.includes(waitlistPath.mockedApi)) {
     throw new Error('waitlist spec must mock POST /api/waitlist');
+  }
+
+  const deliveryPath = manifest.paths.find((item) => item.id === 'delivery-intake');
+  if (!primarySpec.includes(deliveryPath.mockedApi)) {
+    throw new Error('delivery-intake spec must mock /api/delivery-preview');
+  }
+  if (!primarySpec.includes('/d/')) {
+    throw new Error('delivery-intake spec must navigate to /d/[ref]');
   }
 }
 

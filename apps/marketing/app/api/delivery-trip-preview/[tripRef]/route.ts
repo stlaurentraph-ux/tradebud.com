@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import { backendApiUrl } from '@/lib/backend-api-url';
-import { reportDeliveryPreviewProxyOutcome } from '@/lib/observability/delivery-preview-proxy';
 
 type RouteContext = { params: Promise<{ tripRef: string }> };
 
@@ -19,15 +17,9 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const response = await fetch(
-    backendApiUrl(backendBase, `/v1/public/harvest/delivery-trip-preview/${encodeURIComponent(tripRef)}`),
+    `${backendBase}/v1/public/harvest/delivery-trip-preview/${encodeURIComponent(tripRef)}`,
     { cache: 'no-store' },
   );
-
-  reportDeliveryPreviewProxyOutcome({
-    route: 'delivery-trip-preview',
-    ref: tripRef,
-    status: response.status,
-  });
 
   const payload = await response.json().catch(() => ({}));
   return NextResponse.json(payload, { status: response.status });

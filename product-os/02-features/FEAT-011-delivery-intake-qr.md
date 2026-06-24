@@ -68,15 +68,15 @@ Unchanged voucher lifecycle. New side effect: `voucher_buyer_claims` on desk cla
 
 ## Acceptance criteria — Phase A
 
-- [ ] Farmer receipt QR encodes `https://tracebud.com/d/V-…` (or env override); plain code still shown
-- [ ] Opening `/d/{ref}` without auth shows kg, plot name, eligibility badge, CTA to dashboard sign-in
-- [ ] Signed-in cooperative pastes full URL or raw code → voucher stages
-- [ ] Camera scan on supported browser decodes smart link and stages voucher
-- [ ] Directed deliveries appear in inbox section without scan
-- [ ] `/harvests?claim=V-…` auto-stages when eligible
-- [ ] Farmer sees advisory when plot status is not buyer-intake-ready
-- [ ] Unit tests: QR parser, preview service, panel inbox/claim
-- [ ] `cooperative-voucher-intake-qa.md` critical path still passes
+- [x] Farmer receipt QR encodes `https://tracebud.com/d/V-…` (or env override); plain code still shown
+- [x] Opening `/d/{ref}` without auth shows kg, plot name, eligibility badge, CTA to dashboard sign-in
+- [x] Signed-in cooperative pastes full URL or raw code → voucher stages
+- [x] Camera scan on supported browser decodes smart link and stages voucher
+- [x] Directed deliveries appear in inbox section without scan
+- [x] `/harvests?claim=V-…` auto-stages when eligible
+- [x] Farmer sees advisory when plot status is not buyer-intake-ready
+- [x] Unit tests: QR parser, preview service, panel inbox/claim
+- [ ] `cooperative-voucher-intake-qa.md` critical path still passes (staging sign-off)
 
 ## Phase B
 
@@ -104,6 +104,14 @@ Unchanged voucher lifecycle. New side effect: `voucher_buyer_claims` on desk cla
 - Public delivery preview rate limit (45 req/min/IP) — **shipped 2026-06-24**
 - Backend `plot-capture-quality-policy` module (package readiness) — **shipped 2026-06-24**
 
+## Phase E (observability & QA closure)
+
+- Marketing `delivery_qr_preview_viewed` + `marketing_cta_clicked` on `/d/` and `/t/` — **shipped 2026-06-24**
+- Marketing API proxies (`/api/delivery-preview`, `/api/delivery-trip-preview`) for client preview + Playwright — **shipped 2026-06-24**
+- Playwright golden path: delivery receipt preview with mocked API — **shipped 2026-06-24**
+- `cooperative-voucher-intake-qa.md` updated for trip QR, handoff, auto-claim, bulk scan — **shipped 2026-06-24**
+- Dashboard preview proxy Sentry breadcrumbs on 404/429 — **shipped 2026-06-24**
+
 ## Dependencies
 
 - `TRACEBUD_BACKEND_URL` on marketing + dashboard
@@ -116,3 +124,4 @@ Unchanged voucher lifecycle. New side effect: `voucher_buyer_claims` on desk cla
 - `harvest-receive-delivery-panel.test.tsx` (inbox + claim param)
 - `delivery-intake-redirect.test.ts` (signup auto-claim redirect)
 - `assessDeliveryBuyerIntakeEligibility.test.ts` (field)
+- `e2e/golden-paths.spec.ts` — delivery receipt preview (marketing, mocked API)

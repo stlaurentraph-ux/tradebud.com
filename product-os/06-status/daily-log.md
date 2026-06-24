@@ -1,3 +1,10 @@
+### 2026-06-24 (delivery intake QR — Phase E observability & QA closure)
+
+- **Marketing** — `delivery_qr_preview_viewed` + `marketing_cta_clicked` on `/d/` and `/t/`; client preview via `/api/delivery-preview` proxies.
+- **Playwright** — golden path for delivery receipt preview (mocked API).
+- **QA** — `cooperative-voucher-intake-qa.md` extended for trip QR, handoff, auto-claim, bulk scan.
+- **Dashboard** — Sentry breadcrumbs on delivery preview proxy 404/429.
+
 ### 2026-06-24 (ADR-012 P2 — contact-centric campaigns)
 
 - **Backend** — `target_contact_ids` on `request_campaigns`; invite rows keyed by `contact_id` with `delivery_channel` (`email` | `desk_only`); TB-V16-064 migration.

@@ -7,7 +7,8 @@ export type MarketingAnalyticsEvent =
   | 'marketing_waitlist_submitted'
   | 'marketing_thank_you_viewed'
   | 'marketing_lead_submitted'
-  | 'marketing_cta_clicked';
+  | 'marketing_cta_clicked'
+  | 'delivery_qr_preview_viewed';
 
 export type MarketingEventProps = Record<string, string | number | boolean>;
 

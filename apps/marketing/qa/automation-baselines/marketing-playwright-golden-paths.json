@@ -21,6 +21,13 @@
       "specFile": "e2e/golden-paths.spec.ts",
       "testName": "waitlist flow submits with mocked API",
       "mockedApi": "/api/waitlist"
+    },
+    {
+      "id": "delivery-intake",
+      "route": "/d/V-PLAYWRIGHT-TEST",
+      "specFile": "e2e/golden-paths.spec.ts",
+      "testName": "delivery receipt preview shows register CTA with mocked API",
+      "mockedApi": "/api/delivery-preview"
     }
   ]
 }
