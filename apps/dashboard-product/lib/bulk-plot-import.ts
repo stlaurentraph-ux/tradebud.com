@@ -167,3 +167,51 @@ export async function getBulkPlotImportJob(jobId: string): Promise<BulkPlotImpor
 export function isBulkPlotImportJobTerminal(status: BulkPlotImportJobStatus): boolean {
   return status === 'COMPLETED' || status === 'FAILED' || status === 'PARTIAL';
 }
+
+export type BulkPlotImportEvidenceExecuteRow = {
+  clientPlotId: string;
+  documentRef: string;
+  status: 'IMPORTED' | 'VALIDATION_FAILED' | 'FAILED';
+  plotId?: string;
+  message?: string;
+};
+
+export type BulkPlotImportEvidenceExecuteResponse = {
+  totalItems: number;
+  importedCount: number;
+  failedCount: number;
+  rows: BulkPlotImportEvidenceExecuteRow[];
+};
+
+export type BulkPlotImportEvidenceItemPayload = {
+  clientPlotId: string;
+  documentRef: string;
+  evidenceKind: 'fpic_repository' | 'protected_area_permit' | 'labor_evidence' | 'tenure_evidence';
+  mimeType: string;
+  fileName: string;
+  contentBase64: string;
+  expectedSha256?: string | null;
+};
+
+export async function executeBulkPlotImportEvidence(
+  items: BulkPlotImportEvidenceItemPayload[],
+): Promise<BulkPlotImportEvidenceExecuteResponse> {
+  try {
+    const result = await requestJson<BulkPlotImportEvidenceExecuteResponse>('/api/imports/plots/evidence', {
+      method: 'POST',
+      body: JSON.stringify({ items }),
+    });
+    trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_EVIDENCE_SUCCESS, {
+      item_count: result.totalItems,
+      imported_count: result.importedCount,
+      failed_count: result.failedCount,
+    });
+    return result;
+  } catch (error) {
+    trackDashboardEvent(DASHBOARD_EVENTS.BULK_PLOT_IMPORT_EVIDENCE_FAILURE, {
+      item_count: items.length,
+      message: error instanceof Error ? error.message : 'unknown',
+    });
+    throw error;
+  }
+}

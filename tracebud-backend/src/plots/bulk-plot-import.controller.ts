@@ -2,9 +2,17 @@ import { Body, Controller, ForbiddenException, Get, Param, Post, Req, UseGuards 
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { BulkPlotImportEvidenceService } from './bulk-plot-import-evidence.service';
 import { BulkPlotImportJobService } from './bulk-plot-import-job.service';
 import { BulkPlotImportService } from './bulk-plot-import.service';
-import type { BulkPlotImportInputRow } from './bulk-plot-import.types';
+import type {
+  BulkPlotImportEvidenceItemInput,
+  BulkPlotImportInputRow,
+} from './bulk-plot-import.types';
+import {
+  BULK_PLOT_IMPORT_EVIDENCE_MAX_BYTES,
+  BULK_PLOT_IMPORT_EVIDENCE_MAX_ITEMS,
+} from './bulk-plot-import.types';
 
 const BULK_PLOT_IMPORT_ROLES = [
   'cooperative',
@@ -21,6 +29,7 @@ export class BulkPlotImportController {
   constructor(
     private readonly bulkPlotImportService: BulkPlotImportService,
     private readonly bulkPlotImportJobService: BulkPlotImportJobService,
+    private readonly bulkPlotImportEvidenceService: BulkPlotImportEvidenceService,
   ) {}
 
   private getTenantId(req: any): string {
@@ -107,5 +116,41 @@ export class BulkPlotImportController {
     this.assertBulkPlotImportAccess(req);
     const tenantId = this.getTenantId(req);
     return this.bulkPlotImportJobService.getJob(tenantId, jobId);
+  }
+
+  @Post('evidence')
+  @ApiOperation({ summary: 'Attach evidence files from tracebud_import_v1 package references' })
+  async importEvidence(
+    @Req() req: any,
+    @Body() body: { items?: BulkPlotImportEvidenceItemInput[] },
+  ) {
+    this.assertBulkPlotImportAccess(req);
+    const tenantId = this.getTenantId(req);
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+
+    const items = body?.items ?? [];
+    if (items.length > BULK_PLOT_IMPORT_EVIDENCE_MAX_ITEMS) {
+      throw new ForbiddenException(
+        `Bulk evidence import supports up to ${BULK_PLOT_IMPORT_EVIDENCE_MAX_ITEMS} files per request.`,
+      );
+    }
+
+    for (const item of items) {
+      const byteLength = Buffer.byteLength(item.contentBase64 ?? '', 'base64');
+      if (byteLength > BULK_PLOT_IMPORT_EVIDENCE_MAX_BYTES) {
+        throw new ForbiddenException(
+          `Evidence file ${item.documentRef} exceeds the ${BULK_PLOT_IMPORT_EVIDENCE_MAX_BYTES} byte limit.`,
+        );
+      }
+    }
+
+    return this.bulkPlotImportEvidenceService.importEvidence({
+      tenantId,
+      userId,
+      items,
+    });
   }
 }

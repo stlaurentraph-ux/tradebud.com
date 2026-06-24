@@ -51,15 +51,19 @@ import {
 import {
   BULK_PLOT_IMPORT_SYNC_MAX_ROWS,
   executeBulkPlotImport,
+  executeBulkPlotImportEvidence,
   getBulkPlotImportJob,
   isBulkPlotImportJobTerminal,
   previewBulkPlotImport,
   queueBulkPlotImportJob,
+  type BulkPlotImportEvidenceExecuteResponse,
   type BulkPlotImportExecuteResponse,
   type BulkPlotImportInputRow,
   type BulkPlotImportJobResponse,
   type BulkPlotImportPreviewResponse,
 } from '@/lib/bulk-plot-import';
+import { buildEvidenceImportItemsFromZip } from '@/lib/bulk-plot-import-evidence';
+import type { TracebudImportV1EvidenceReference } from '@/lib/bulk-plot-import-package';
 import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 
@@ -147,6 +151,10 @@ export default function PlotBulkUploadPage() {
   const [result, setResult] = useState<BulkPlotImportExecuteResponse | null>(null);
   const [activeJob, setActiveJob] = useState<BulkPlotImportJobResponse | null>(null);
   const [packageNotice, setPackageNotice] = useState<string | null>(null);
+  const [evidenceZipBytes, setEvidenceZipBytes] = useState<Uint8Array | null>(null);
+  const [evidenceReferences, setEvidenceReferences] = useState<TracebudImportV1EvidenceReference[]>([]);
+  const [evidenceImportResult, setEvidenceImportResult] =
+    useState<BulkPlotImportEvidenceExecuteResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isWorking, setIsWorking] = useState(false);
 
@@ -155,6 +163,9 @@ export default function PlotBulkUploadPage() {
     setFileText('');
     setError(null);
     setPackageNotice(null);
+    setEvidenceZipBytes(null);
+    setEvidenceReferences([]);
+    setEvidenceImportResult(null);
     setPreview(null);
     setResult(null);
     setActiveJob(null);
@@ -173,6 +184,41 @@ export default function PlotBulkUploadPage() {
     }
   };
 
+  const handleEvidenceZip = async (file: File | null) => {
+    if (!file) return;
+    try {
+      const buffer = await file.arrayBuffer();
+      setEvidenceZipBytes(new Uint8Array(buffer));
+      setError(null);
+    } catch {
+      setError('Could not read the evidence ZIP file.');
+    }
+  };
+
+  const importPackageEvidence = async () => {
+    if (!evidenceZipBytes || evidenceReferences.length === 0) {
+      return null;
+    }
+    const prepared = await buildEvidenceImportItemsFromZip({
+      references: evidenceReferences,
+      zipBytes: evidenceZipBytes,
+    });
+    if (prepared.items.length === 0) {
+      throw new Error(
+        prepared.missingDocumentRefs.length > 0
+          ? `No evidence files matched the ZIP for: ${prepared.missingDocumentRefs.join(', ')}`
+          : 'No evidence files matched the ZIP.',
+      );
+    }
+    const evidenceResult = await executeBulkPlotImportEvidence(prepared.items);
+    if (prepared.missingDocumentRefs.length > 0) {
+      setPackageNotice(
+        `${evidenceResult.importedCount} evidence file(s) imported. Missing ZIP entries for: ${prepared.missingDocumentRefs.join(', ')}`,
+      );
+    }
+    return evidenceResult;
+  };
+
   const handlePreview = async () => {
     setError(null);
     setPackageNotice(null);
@@ -181,15 +227,19 @@ export default function PlotBulkUploadPage() {
       if (source === 'package') {
         const parsed = await parseAndVerifyTracebudImportV1Package(fileText);
         rows = parsed.rows;
-        if (parsed.evidenceReferenceCount > 0) {
+        setEvidenceReferences(parsed.package.evidence_references ?? []);
+        const evidenceCount = parsed.evidenceReferenceCount;
+        if (evidenceCount > 0 && !evidenceZipBytes) {
           setPackageNotice(
-            `${parsed.evidenceReferenceCount} evidence reference(s) in the package will not be imported in this release.`,
+            `${evidenceCount} evidence reference(s) found. Add an evidence ZIP before import to attach files.`,
           );
+        } else if (evidenceCount > 0 && evidenceZipBytes) {
+          setPackageNotice(`${evidenceCount} evidence reference(s) will be imported from the ZIP after plots.`);
         }
         if (parsed.skippedPlotCount > 0) {
           setPackageNotice(
             (parsed.evidenceReferenceCount > 0
-              ? `${parsed.evidenceReferenceCount} evidence reference(s) skipped. `
+              ? `${parsed.evidenceReferenceCount} evidence reference(s) listed. `
               : '') + `${parsed.skippedPlotCount} plot(s) skipped: ${parsed.skipMessages.join(' ')}`,
           );
         }
@@ -259,6 +309,19 @@ export default function PlotBulkUploadPage() {
         if (finished.successCount > 0) {
           markOnboardingAction('first_plot_captured');
         }
+        if (source === 'package' && evidenceZipBytes && evidenceReferences.length > 0) {
+          try {
+            const evidenceResult = await importPackageEvidence();
+            setEvidenceImportResult(evidenceResult);
+            toast.success(
+              `Evidence import: ${evidenceResult?.importedCount ?? 0} file(s) attached after plot job.`,
+            );
+          } catch (evidenceError) {
+            setError(
+              evidenceError instanceof Error ? evidenceError.message : 'Evidence import failed.',
+            );
+          }
+        }
         toast.success(
           `Import job ${finished.status.toLowerCase()}: ${finished.successCount} imported, ${finished.failureCount} failed.`,
         );
@@ -271,6 +334,19 @@ export default function PlotBulkUploadPage() {
       if (response.importedCount > 0) {
         markOnboardingAction('first_plot_captured');
         toast.success(`Imported ${response.importedCount} plot${response.importedCount === 1 ? '' : 's'}.`);
+      }
+      if (source === 'package' && evidenceZipBytes && evidenceReferences.length > 0) {
+        try {
+          const evidenceResult = await importPackageEvidence();
+          setEvidenceImportResult(evidenceResult);
+          if ((evidenceResult?.importedCount ?? 0) > 0) {
+            toast.success(
+              `Attached ${evidenceResult?.importedCount} evidence file${evidenceResult?.importedCount === 1 ? '' : 's'}.`,
+            );
+          }
+        } catch (evidenceError) {
+          setError(evidenceError instanceof Error ? evidenceError.message : 'Evidence import failed.');
+        }
       }
     } catch (importError) {
       setError(importError instanceof Error ? importError.message : 'Import failed.');
@@ -310,7 +386,7 @@ export default function PlotBulkUploadPage() {
                 <CardDescription>
                   CSV supports point plots under 4 ha or cadastral keys. GeoJSON and KML support
                   Point or Polygon placemarks/features. Import packages use tracebud_import_v1 with
-                  optional content_hash_sha256 integrity checks.
+                  optional content_hash_sha256 integrity checks and an optional evidence ZIP.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -442,6 +518,23 @@ export default function PlotBulkUploadPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Download tracebud_import_v1 sample
                       </Button>
+                    </div>
+
+                    <div className="rounded-lg border border-dashed p-8 text-center">
+                      <Package className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
+                      <Label htmlFor="plot-import-evidence-zip-file" className="cursor-pointer">
+                        <span className="text-sm font-medium">Choose evidence ZIP (optional)</span>
+                        <input
+                          id="plot-import-evidence-zip-file"
+                          type="file"
+                          accept=".zip,application/zip"
+                          className="hidden"
+                          onChange={(event) => void handleEvidenceZip(event.target.files?.[0] ?? null)}
+                        />
+                      </Label>
+                      {evidenceZipBytes ? (
+                        <p className="mt-2 text-xs text-muted-foreground">Evidence ZIP loaded.</p>
+                      ) : null}
                     </div>
 
                     <div className="rounded-lg border border-dashed p-8 text-center">
@@ -653,6 +746,13 @@ export default function PlotBulkUploadPage() {
                   </TableBody>
                 </Table>
 
+                {evidenceImportResult ? (
+                  <p className="text-sm text-muted-foreground">
+                    Evidence: {evidenceImportResult.importedCount} imported ·{' '}
+                    {evidenceImportResult.failedCount} failed
+                  </p>
+                ) : null}
+
                 <div className="flex flex-wrap gap-2">
                   <Button variant="outline" onClick={() => router.push('/plots')}>
                     View plots
@@ -663,6 +763,9 @@ export default function PlotBulkUploadPage() {
                       setFileText('');
                       setPreview(null);
                       setResult(null);
+                      setEvidenceZipBytes(null);
+                      setEvidenceReferences([]);
+                      setEvidenceImportResult(null);
                       setMappedRows([]);
                     }}
                   >
