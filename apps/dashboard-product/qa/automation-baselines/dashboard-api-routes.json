@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-21T13:52:45.589Z",
+  "generatedAt": "2026-06-24T11:22:53.444Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -359,6 +359,22 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/harvest/vouchers/claim"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/preview",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/preview"
       ],
       "failClosed": true
     },

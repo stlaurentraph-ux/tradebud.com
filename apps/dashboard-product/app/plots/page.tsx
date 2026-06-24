@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Filter, ChevronRight, MapPin, Send } from 'lucide-react';
+import { Plus, Filter, ChevronRight, MapPin, Send, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -39,6 +39,7 @@ import { readApiErrorMessage } from '@/lib/api-error-message';
 import { listContacts, type ContactRecord } from '@/lib/contact-service';
 import { validatePlotCreateInput } from '@/lib/plot-create-validation';
 import { useTenantPlots } from '@/lib/use-tenant-plots';
+import { PermissionGate } from '@/components/common/permission-gate';
 import {
   getPlotInventoryFieldCaptureDetail,
   getPlotInventoryFieldCaptureShortLabel,
@@ -122,7 +123,6 @@ export default function PlotsPage() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const { user } = useAuth();
-  const isCooperative = user?.active_role === 'cooperative';
   const role = user?.active_role;
   const { plots, isLoading: isPlotsLoading, error: plotsLoadError, reload: reloadPlots } = useTenantPlots(
     user?.tenant_id ?? null,
@@ -231,6 +231,14 @@ export default function PlotsPage() {
                 {getPlotsRequestCtaLabel(t)}
               </Link>
             </Button>
+            <PermissionGate permission="plots:bulk_upload">
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/plots/bulk-upload">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Bulk import
+                </Link>
+              </Button>
+            </PermissionGate>
             <Button
               size="sm"
               variant="secondary"
