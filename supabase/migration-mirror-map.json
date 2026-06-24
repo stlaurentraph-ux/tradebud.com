@@ -146,6 +146,21 @@
       "supabase": "20260624200000_campaign_contact_targets.sql",
       "backend": "tb_v16_064_campaign_contact_targets.sql",
       "purpose": "campaign_contact_targets"
+    },
+    {
+      "supabase": "20260624210000_campaign_invite_claim_tokens.sql",
+      "backend": "tb_v16_065_campaign_invite_claim_tokens.sql",
+      "purpose": "campaign_invite_claim_tokens"
+    },
+    {
+      "supabase": "20260624220000_campaign_fulfillment_provenance.sql",
+      "backend": "tb_v16_066_campaign_fulfillment_provenance.sql",
+      "purpose": "campaign_fulfillment_provenance"
+    },
+    {
+      "supabase": "20260624230000_campaign_delivery_attempts.sql",
+      "backend": "tb_v16_067_campaign_delivery_attempts.sql",
+      "purpose": "campaign_delivery_attempts"
     }
   ],
   "supabaseOnly": [
