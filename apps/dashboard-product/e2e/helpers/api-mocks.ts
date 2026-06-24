@@ -351,37 +351,40 @@ export async function mockPlotGeometryApprovalApis(
   page: Page,
   options?: { approved?: boolean },
 ): Promise<void> {
-  let approved = options?.approved ?? false;
-  const plotId = GOLDEN_EXPORTER_SMOKE.packageId;
+  let approvedAt = options?.approved ? new Date().toISOString() : null;
 
   await page.route('**/api/plots/*/map-preview', async (route) => {
     if (route.request().method() !== 'GET') {
       await route.continue();
       return;
     }
+    const url = route.request().url();
+    const plotId = decodeURIComponent(url.split('/api/plots/')[1]?.split('/')[0] ?? 'plot_smoke');
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
         id: plotId,
-        name: 'Plot PW-1',
+        name: 'Playwright plot',
         kind: 'polygon',
-        area_ha: 2.5,
+        area_ha: 1.2,
         status: 'under_review',
         geometry: {
           type: 'Polygon',
           coordinates: [
             [
-              [30.0612, -1.9441],
-              [30.0624, -1.9441],
-              [30.0624, -1.9432],
-              [30.0612, -1.9432],
-              [30.0612, -1.9441],
+              [30.06, -1.94],
+              [30.061, -1.94],
+              [30.061, -1.939],
+              [30.06, -1.94],
             ],
           ],
         },
-        geometry_capture: { geometryConfidenceTier: 'low' },
-        geometry_approved_at: approved ? new Date().toISOString() : null,
+        geometry_capture: {
+          geometryConfidenceTier: 'low',
+          captureMethod: 'walk_perimeter',
+        },
+        geometry_approved_at: approvedAt,
       }),
     });
   });
@@ -391,11 +394,13 @@ export async function mockPlotGeometryApprovalApis(
       await route.continue();
       return;
     }
-    approved = true;
+    approvedAt = new Date().toISOString();
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ geometry_approved_at: new Date().toISOString() }),
+      body: JSON.stringify({
+        geometry_approved_at: approvedAt,
+      }),
     });
   });
 }

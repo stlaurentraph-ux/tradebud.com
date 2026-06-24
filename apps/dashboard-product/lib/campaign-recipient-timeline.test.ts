@@ -48,7 +48,7 @@ describe('campaign-recipient-timeline', () => {
   it('maps delivery channels to outreach icons', () => {
     expect(getCampaignRecipientChannelIcon('email')).toBe('📧');
     expect(getCampaignRecipientChannelIcon('whatsapp')).toBe('📱');
-    expect(getCampaignRecipientChannelIcon('desk_only')).toBeNull();
+    expect(getCampaignRecipientChannelIcon('desk_only')).toBe('🏢');
   });
 
   it('formats fulfillment source labels for buyer timeline', () => {

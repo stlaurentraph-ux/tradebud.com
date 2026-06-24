@@ -9,6 +9,7 @@ export type PlotGeometryApprovalState = {
   capture: PlotGeometryCaptureRecord | null;
 };
 
+/** Backend JWT roles allowed to POST approve-geometry (see backendApiAccessRegistry plots_approve_geometry). */
 const APPROVAL_ROLES = new Set<string>([
   'exporter',
   'country_reviewer',
