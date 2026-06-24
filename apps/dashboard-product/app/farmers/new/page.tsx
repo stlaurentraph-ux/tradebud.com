@@ -82,7 +82,7 @@ export default function NewProducerPage() {
               await createContact({
                 full_name: data.full_name,
                 email: farmerReachability ? farmerReachability.email : data.email,
-                phone: farmerReachability?.phone ?? data.phone || null,
+                phone: farmerReachability?.phone ?? data.phone ?? null,
                 phone_only: data.phoneOnlyNoEmail,
                 organization: data.organization || null,
                 contact_type: 'farmer',
