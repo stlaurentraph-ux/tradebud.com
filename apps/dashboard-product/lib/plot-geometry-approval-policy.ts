@@ -9,16 +9,16 @@ export type PlotGeometryApprovalState = {
   capture: PlotGeometryCaptureRecord | null;
 };
 
-const APPROVAL_ROLES: TenantRole[] = [
+const APPROVAL_ROLES = new Set<string>([
   'exporter',
-  'compliance_manager',
   'country_reviewer',
+  'compliance_manager',
   'admin',
-];
+]);
 
-export function canApprovePlotGeometry(role: TenantRole | null | undefined): boolean {
+export function canApprovePlotGeometry(role: TenantRole | string | null | undefined): boolean {
   if (!role) return false;
-  return APPROVAL_ROLES.includes(role);
+  return APPROVAL_ROLES.has(role);
 }
 
 export function plotGeometryApprovalRecommended(capture: PlotGeometryCaptureRecord | null): boolean {
