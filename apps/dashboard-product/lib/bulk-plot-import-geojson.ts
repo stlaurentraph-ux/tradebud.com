@@ -175,7 +175,7 @@ export function parseAndMapBulkPlotImportGeoJson(text: string): BulkPlotImportIn
         clientPlotId,
         ...mapped,
         geometry,
-      } satisfies BulkPlotImportInputRow;
+      } as BulkPlotImportInputRow;
     })
     .filter((row): row is BulkPlotImportInputRow => row != null);
 }
