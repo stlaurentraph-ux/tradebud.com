@@ -1,3 +1,18 @@
+### 2026-06-24 (ADR-012 P1 — CRM farmer phone reachability)
+
+- **Schema** — TB-V16-063: farmer CRM contacts allow null email when phone present.
+- **Backend** — `crm-contact-reachability.ts`; create/update paths accept `phone_only`; duplicate phone guard per tenant.
+- **Dashboard** — add/edit farmer wizards + CSV import support phone-only producers.
+- **Verification** — backend + dashboard reachability unit tests green.
+
+### 2026-06-24 (ADR-012 P3 — WhatsApp campaign delivery + claim landing)
+
+- **Schema** — TB-V16-065: `claim_token_hash` / `claim_expires_at` on `campaign_recipient_invites`.
+- **Send path** — phone-only CRM contacts plan `whatsapp` channel; Meta Graph template when `WHATSAPP_*` env set; claim URL via field-auth.
+- **Public API** — `GET /v1/public/requests/campaigns/:id/invite?token=` validates token before field-app deep link.
+- **Dashboard** — recipient timeline shows 📧 / 📱 channel icons.
+- **Verification** — claim token, WhatsApp delivery, delivery-plan, timeline specs (17 backend); dashboard timeline tests (8).
+
 ### 2026-06-24 (ADR-012 P2 — contact-centric campaigns)
 
 - **Backend** — `target_contact_ids` on `request_campaigns`; invite rows keyed by `contact_id` with `delivery_channel` (`email` | `desk_only`); TB-V16-064 migration.

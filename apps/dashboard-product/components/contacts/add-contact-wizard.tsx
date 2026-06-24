@@ -33,6 +33,8 @@ import { Check, ArrowLeft, ArrowRight, User, Building2, MapPin, FileText } from 
 import type { ContactType } from '@/lib/contact-service';
 import type { ContactActivityType, ProcessingFacilitySubtype } from '@/lib/contact-activity-types';
 import { listProcessingFacilitySubtypes } from '@/lib/contact-activity-types';
+import { validateFarmerContactDraft } from '@/lib/crm-contact-reachability';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const DEFAULT_CONTACT_TYPE_VALUES: ContactActivityType[] = ['farmer', 'cooperative', 'exporter', 'other'];
 const CONSENT_VALUES = ['unknown', 'granted', 'revoked'] as const;
@@ -41,6 +43,7 @@ interface ContactDraft {
   full_name: string;
   email: string;
   phone: string;
+  phoneOnlyNoEmail: boolean;
   contact_type: ContactType;
   processing_subtype: ProcessingFacilitySubtype | null;
   organization: string;
@@ -100,6 +103,7 @@ export function AddContactWizard({
     full_name: '',
     email: '',
     phone: '',
+    phoneOnlyNoEmail: false,
     contact_type: prefill?.contact_type ?? defaultContactType,
     processing_subtype: prefill?.processing_subtype ?? null,
     organization: prefill?.organization ?? '',
@@ -118,7 +122,18 @@ export function AddContactWizard({
 
   const canProceed = () => {
     if (step === 1) {
-      return draft.full_name.trim() !== '' && draft.email.trim() !== '';
+      if (!draft.full_name.trim()) {
+        return false;
+      }
+      if (draft.contact_type === 'farmer') {
+        const validation = validateFarmerContactDraft({
+          email: draft.email,
+          phone: draft.phone,
+          phoneOnlyNoEmail: draft.phoneOnlyNoEmail,
+        });
+        return validation.error === null;
+      }
+      return draft.email.trim() !== '';
     }
     return true;
   };
@@ -185,7 +200,10 @@ export function AddContactWizard({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">
-                  {getContactsWizardFieldLabel('email', t)} <span className="text-destructive">*</span>
+                  {getContactsWizardFieldLabel('email', t)}{' '}
+                  {draft.contact_type === 'farmer' && draft.phoneOnlyNoEmail ? null : (
+                    <span className="text-destructive">*</span>
+                  )}
                 </Label>
                 <Input
                   id="email"
@@ -193,19 +211,45 @@ export function AddContactWizard({
                   value={draft.email}
                   onChange={(e) => updateDraft('email', e.target.value)}
                   placeholder="john@example.com"
+                  disabled={draft.contact_type === 'farmer' && draft.phoneOnlyNoEmail}
                 />
               </div>
             </div>
 
+            {draft.contact_type === 'farmer' ? (
+              <div className="rounded-md border border-dashed p-3">
+                <div className="flex items-start gap-2">
+                  <Checkbox
+                    id="phone_only_no_email"
+                    checked={draft.phoneOnlyNoEmail}
+                    onCheckedChange={(checked) => updateDraft('phoneOnlyNoEmail', checked === true)}
+                  />
+                  <div className="space-y-1">
+                    <Label htmlFor="phone_only_no_email" className="font-normal">
+                      No email — use phone only
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Use when the producer has no email. Outreach will use WhatsApp when available.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="phone">{getContactsWizardFieldLabel('phone', t)}</Label>
+                <Label htmlFor="phone">
+                  {getContactsWizardFieldLabel('phone', t)}
+                  {draft.contact_type === 'farmer' && draft.phoneOnlyNoEmail ? (
+                    <span className="text-destructive"> *</span>
+                  ) : null}
+                </Label>
                 <Input
                   id="phone"
                   type="tel"
                   value={draft.phone}
                   onChange={(e) => updateDraft('phone', e.target.value)}
-                  placeholder="+55 11 99999-9999"
+                  placeholder={draft.phoneOnlyNoEmail ? '+233241234567' : '+55 11 99999-9999'}
                 />
               </div>
               <div className="space-y-2">

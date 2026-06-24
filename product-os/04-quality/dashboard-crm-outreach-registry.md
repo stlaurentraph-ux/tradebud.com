@@ -25,6 +25,17 @@ Runtime: `app/contacts/*`, `app/farmers/*`, `app/outreach/page.tsx`, `app/inbox/
 
 Mirrors `CONTACT_ACTIVITY_TYPES` in `lib/contact-activity-types.ts` (aligned with backend `ContactType`).
 
+## Farmer reachability (ADR-012 P1)
+
+| Field | Rule |
+|-------|------|
+| Farmer `email` | Optional when `phone_only` is set and E.164 `phone` is present |
+| Non-farmer `email` | Required |
+| Duplicate guard | One farmer phone per tenant |
+| UI | Add/edit wizard checkbox “No email — use phone only”; CSV import sets `phone_only` when farmer row has phone but no email |
+
+Backend mirror: `tracebud-backend/src/contacts/crm-contact-reachability.ts` · migration TB-V16-063.
+
 ## Campaign statuses (backend-aligned)
 
 `DRAFT`, `QUEUED`, `RUNNING`, `COMPLETED`, `PARTIAL`, `EXPIRED`, `CANCELLED`

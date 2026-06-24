@@ -24,6 +24,7 @@ import {
   type ContactRecord,
   type ContactStatus,
 } from '@/lib/contact-service';
+import { validateFarmerContactDraft } from '@/lib/crm-contact-reachability';
 import { DASHBOARD_CONTACT_STATUSES } from '@/lib/dashboardCrmOutreachRegistry';
 import { resolveProducerFarmerId } from '@/lib/consent-grants-service';
 import { useAuth } from '@/lib/auth-context';
@@ -160,10 +161,19 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
 
   const handleSaveEdit = async (draft: ContactEditDraft) => {
     if (!contact) return;
+    const reachability =
+      draft.contact_type === 'farmer'
+        ? validateFarmerContactDraft({
+            email: draft.email,
+            phone: draft.phone,
+            phoneOnlyNoEmail: draft.phoneOnlyNoEmail,
+          })
+        : null;
     const updated = await updateContact(contact.id, {
       full_name: draft.full_name,
-      email: draft.email,
-      phone: draft.phone || null,
+      email: reachability ? reachability.email : draft.email,
+      phone: reachability ? reachability.phone : draft.phone || null,
+      phone_only: draft.contact_type === 'farmer' ? draft.phoneOnlyNoEmail : undefined,
       organization: draft.organization || null,
       contact_type: draft.contact_type,
       processing_subtype: draft.processing_subtype,
@@ -197,7 +207,7 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
     <div className="flex flex-col">
       <AppHeader
         title={contact?.full_name ?? getProducerDetailFallbackTitle(role, t)}
-        subtitle={contact ? contact.email : `ID: ${id}`}
+        subtitle={contact ? contact.email ?? contact.phone ?? 'Phone-only contact' : `ID: ${id}`}
         breadcrumbs={[
           { label: getDashboardBreadcrumbLabel(t), href: '/' },
           { label: getContactsPageTitle(audience, t), href: contactsHref },
