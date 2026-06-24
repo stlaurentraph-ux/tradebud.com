@@ -47,6 +47,12 @@ import {
   verifyCampaignClaimToken,
 } from './campaign-claim-token';
 import { sendCampaignWhatsAppInvite } from './campaign-whatsapp-delivery';
+import { sendCampaignSmsInvite } from './campaign-sms-delivery';
+import {
+  issueCampaignDeskClaimLink as issueCampaignDeskClaimLinkHelper,
+  type IssueCampaignDeskClaimLinkResult,
+} from './issue-campaign-desk-claim-link';
+import { recordCampaignDeliveryAttempt } from './record-campaign-delivery-attempt';
 import type { CampaignInvitePublicPreview, CampaignPublicPreview } from './campaign-public-preview';
 
 export type RequestType =
@@ -521,7 +527,7 @@ export class RequestsService {
     skippedCount: number;
     inviteDeliveries: Array<{
       contact_id: string;
-      delivery_channel: 'whatsapp';
+      delivery_channel: 'whatsapp' | 'sms';
       delivery_address: string | null;
       recipient_email: string | null;
       claim_token_hash: string;
@@ -537,7 +543,7 @@ export class RequestsService {
     const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
     const inviteDeliveries: Array<{
       contact_id: string;
-      delivery_channel: 'whatsapp';
+      delivery_channel: 'whatsapp' | 'sms';
       delivery_address: string | null;
       recipient_email: string | null;
       claim_token_hash: string;
@@ -562,14 +568,81 @@ export class RequestsService {
         fromOrg,
         claimUrl,
       });
+      let deliveryChannel: 'whatsapp' | 'sms' = 'whatsapp';
       if (result.sent) {
         sentCount += 1;
+        await recordCampaignDeliveryAttempt(this.pool, {
+          campaignId: campaign.id,
+          senderTenantId: campaign.tenant_id,
+          contactId: delivery.contact_id,
+          deliveryChannel: 'whatsapp',
+          deliveryAddress: phone,
+          status: 'sent',
+          provider: 'whatsapp',
+          providerMessageId: result.messageId,
+          claimTokenHash: tokenHash,
+        });
       } else {
-        skippedCount += 1;
+        const smsResult = await sendCampaignSmsInvite({
+          toPhoneE164: phone,
+          campaignTitle: campaign.title,
+          fromOrg,
+          claimUrl,
+        });
+        if (smsResult.sent) {
+          deliveryChannel = 'sms';
+          sentCount += 1;
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'whatsapp',
+            deliveryAddress: phone,
+            status: 'skipped',
+            provider: 'whatsapp',
+            skipReason: result.skippedReason,
+            claimTokenHash: tokenHash,
+          });
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'sms',
+            deliveryAddress: phone,
+            status: 'sent',
+            provider: 'twilio',
+            providerMessageId: smsResult.messageId,
+            claimTokenHash: tokenHash,
+          });
+        } else {
+          skippedCount += 1;
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'whatsapp',
+            deliveryAddress: phone,
+            status: 'failed',
+            provider: 'whatsapp',
+            skipReason: result.skippedReason,
+            claimTokenHash: tokenHash,
+          });
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'sms',
+            deliveryAddress: phone,
+            status: 'skipped',
+            provider: 'twilio',
+            skipReason: smsResult.skippedReason,
+            claimTokenHash: tokenHash,
+          });
+        }
       }
       inviteDeliveries.push({
         contact_id: delivery.contact_id,
-        delivery_channel: 'whatsapp',
+        delivery_channel: deliveryChannel,
         delivery_address: phone,
         recipient_email: null,
         claim_token_hash: tokenHash,
@@ -579,6 +652,78 @@ export class RequestsService {
     }
 
     return { sentCount, skippedCount, inviteDeliveries };
+  }
+
+  private async dispatchCampaignDesk(
+    campaign: RequestCampaignRecord,
+    deskDeliveries: readonly CampaignDeliveryRecipient[],
+  ): Promise<{
+    inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'desk_only';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+    }>;
+  }> {
+    if (deskDeliveries.length === 0) {
+      return { inviteDeliveries: [] };
+    }
+
+    const inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'desk_only';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+    }> = [];
+
+    for (const delivery of deskDeliveries) {
+      const { tokenHash } = generateCampaignClaimToken();
+      const claimExpiresAt = defaultCampaignClaimExpiresAt();
+      inviteDeliveries.push({
+        contact_id: delivery.contact_id,
+        delivery_channel: 'desk_only',
+        delivery_address: delivery.delivery_address ?? delivery.phone ?? delivery.full_name,
+        recipient_email: delivery.email,
+        claim_token_hash: tokenHash,
+        claim_expires_at: claimExpiresAt,
+      });
+      await recordCampaignDeliveryAttempt(this.pool, {
+        campaignId: campaign.id,
+        senderTenantId: campaign.tenant_id,
+        contactId: delivery.contact_id,
+        deliveryChannel: 'desk_only',
+        deliveryAddress: delivery.delivery_address ?? delivery.phone ?? delivery.full_name,
+        status: 'queued',
+        provider: 'desk_qr',
+        claimTokenHash: tokenHash,
+      });
+    }
+
+    return { inviteDeliveries };
+  }
+
+  async issueCampaignDeskClaimLink(
+    tenantId: string,
+    campaignId: string,
+    contactId: string,
+  ): Promise<IssueCampaignDeskClaimLinkResult> {
+    try {
+      return await issueCampaignDeskClaimLinkHelper(this.pool, {
+        tenantId,
+        campaignId,
+        contactId,
+        fieldAuthBaseUrl: this.getFieldAuthPublicUrl(),
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
   }
 
   private async syncTargetsToContacts(
@@ -1696,6 +1841,7 @@ export class RequestsService {
       );
       const delivery = await this.dispatchCampaignEmails(current, emailDeliveries);
       const whatsappDelivery = await this.dispatchCampaignWhatsApp(current, whatsappDeliveries);
+      const deskDelivery = await this.dispatchCampaignDesk(current, deskDeliveries);
       if (
         delivery.sentCount === 0 &&
         whatsappDelivery.sentCount === 0 &&
@@ -1768,11 +1914,13 @@ export class RequestsService {
             claim_token_hash: row.claim_token_hash,
             claim_expires_at: row.claim_expires_at,
           })),
-          ...deskDeliveries.map((row) => ({
+          ...deskDelivery.inviteDeliveries.map((row) => ({
             contact_id: row.contact_id,
             delivery_channel: 'desk_only' as const,
             delivery_address: row.delivery_address,
-            recipient_email: row.email,
+            recipient_email: row.recipient_email,
+            claim_token_hash: row.claim_token_hash,
+            claim_expires_at: row.claim_expires_at,
           })),
         ];
         await queueCampaignRecipientInvites(this.pool, {

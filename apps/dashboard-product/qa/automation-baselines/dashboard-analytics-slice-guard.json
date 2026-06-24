@@ -1,7 +1,5 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T08:51:13.496Z",
-  "canonicalEventCount": 48,
   "canonicalEvents": [
     "dashboard_campaign_archive_failure",
     "dashboard_campaign_archive_success",
@@ -137,5 +135,7 @@
     "delivery_qr_preview_viewed",
     "plot_geometry_approved",
     "plot_geometry_revision_applied"
-  ]
+  ],
+  "canonicalEventCount": 48,
+  "generatedAt": "2026-06-24T16:35:00.000Z"
 }

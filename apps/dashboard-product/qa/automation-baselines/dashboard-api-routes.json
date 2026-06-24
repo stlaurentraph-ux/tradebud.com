@@ -745,6 +745,14 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/requests/campaigns/[id]/recipients/[contactId]/desk-claim-link",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/recipients/{contactId}/desk-claim-link"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/requests/campaigns/[id]/send",
       "category": "backend-proxy",
       "backendPaths": [

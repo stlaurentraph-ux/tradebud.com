@@ -117,7 +117,13 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
         return;
       }
 
-      const resolved = match.email ? await resolveProducerFarmerId(match.email) : null;
+      if (!match.email) {
+        setFarmerProfileId(null);
+        setResolveError(getProducerDetailCopy('resolve_error_no_account', role, t));
+        return;
+      }
+
+      const resolved = await resolveProducerFarmerId(match.email);
       if (resolved) {
         setFarmerProfileId(resolved);
         setResolveError(null);
@@ -497,7 +503,7 @@ export default function ContactDetailPage({ params }: ContactDetailPageProps) {
                     ) : (
                       <p className="text-muted-foreground">
                         {getProducerDetailCopy('field_app_not_linked', role, t, {
-                          email: contact.email ?? '',
+                          email: contact.email ?? contact.phone ?? 'Phone-only contact',
                         })}
                       </p>
                     )}
