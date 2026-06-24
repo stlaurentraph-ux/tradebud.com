@@ -41,12 +41,13 @@ describe('AuditController tenant-claim and role checks', () => {
   });
 
   it('allows create for linked field-app farmer without tenant claim', async () => {
+    // deriveRoleFromSupabaseUser defaults to 'farmer' for users without a role claim,
+    // so assertTenantClaimOrFieldActor passes without a DB round-trip.
+    // No clientEventId in the DTO, so only the INSERT is issued.
     const pool = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({
-          rows: [{ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' }],
-        }),
+      query: jest.fn().mockResolvedValueOnce({
+        rows: [{ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' }],
+      }),
     };
     const { controller } = makeController(pool as any);
 

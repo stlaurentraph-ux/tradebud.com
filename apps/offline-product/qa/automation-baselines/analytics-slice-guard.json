@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T11:51:40.443Z",
+  "generatedAt": "2026-06-24T11:55:00.091Z",
   "canonicalEventCount": 60,
   "canonicalEvents": [
     "backup_confirmed",
