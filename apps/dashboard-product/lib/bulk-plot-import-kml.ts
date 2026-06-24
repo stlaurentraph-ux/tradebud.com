@@ -4,7 +4,7 @@ type KmlGeoJsonGeometry =
   | { type: 'Point'; coordinates: [number, number] }
   | { type: 'Polygon'; coordinates: [number, number][][] };
 
-function elementsByLocalName(root: ParentNode, localName: string): Element[] {
+function elementsByLocalName(root: Element | Document, localName: string): Element[] {
   return [...root.getElementsByTagName('*')].filter((element) => element.localName === localName);
 }
 
