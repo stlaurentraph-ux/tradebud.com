@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { WelcomeCard } from '@/components/onboarding/welcome-card';
@@ -85,25 +85,19 @@ export function DashboardHomeClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [trialState, setTrialState] = useState<LaunchState | null>(initialLaunchState);
-  const [welcomeAcknowledged, setWelcomeAcknowledged] = useState(false);
+  const [welcomeAcknowledgedOverride, setWelcomeAcknowledgedOverride] = useState<boolean | null>(null);
 
   const userRole = user?.active_role;
   const userTenantId = user?.tenant_id;
   const userId = user?.id;
+  const welcomeAcknowledged =
+    welcomeAcknowledgedOverride ?? (userId ? isWelcomeAcknowledged(userId) : false);
   const isWelcomeEntry = searchParams.get('welcome') === '1' && !welcomeAcknowledged;
-
-  useEffect(() => {
-    if (!userId) {
-      setWelcomeAcknowledged(false);
-      return;
-    }
-    setWelcomeAcknowledged(isWelcomeAcknowledged(userId));
-  }, [userId]);
 
   const markWelcomeAcknowledged = () => {
     if (!userId) return;
     acknowledgeWelcome(userId);
-    setWelcomeAcknowledged(true);
+    setWelcomeAcknowledgedOverride(true);
   };
   const packageScope = resolveHarvestPackageScope(user?.active_role);
   const summaryEnabled = Boolean(userTenantId) && !demoDataEnabled;
