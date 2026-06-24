@@ -138,9 +138,14 @@
       "purpose": "crm_farmer_phone_reachability"
     },
     {
-      "supabase": "20260624190000_enumeration_mapping_region.sql",
+      "supabase": "20260624190001_enumeration_mapping_region.sql",
       "backend": "tb_v16_062_enumeration_mapping_region.sql",
       "purpose": "enumeration_mapping_region"
+    },
+    {
+      "supabase": "20260624200000_campaign_contact_targets.sql",
+      "backend": "tb_v16_064_campaign_contact_targets.sql",
+      "purpose": "campaign_contact_targets"
     }
   ],
   "supabaseOnly": [
