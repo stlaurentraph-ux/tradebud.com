@@ -277,6 +277,42 @@ paths:
                       due_at: { type: string, format: date-time }
         "404":
           $ref: "#/components/responses/BadRequest"
+  /v1/public/requests/campaigns/{id}/invite:
+    get:
+      tags: [Requests Public]
+      operationId: getCampaignInvitePublicPreview
+      summary: Validate campaign invite token for field-auth landing
+      description: Returns campaign preview plus delivery channel and recipient label for a valid claim token. Used by the field app to validate a token-based invite link before sign-in.
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+          description: Claim token from the invite SMS / WhatsApp link
+      responses:
+        "200":
+          description: Campaign invite preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  preview:
+                    type: object
+                    properties:
+                      campaign_id: { type: string }
+                      title: { type: string }
+                      from_org: { type: string }
+                      due_at: { type: string, format: date-time }
+                      deliveryChannel:
+                        type: string
+                        enum: [whatsapp, desk_only, email]
+                      recipientLabel: { type: string }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
   /v1/plots:
     post:
       tags: [Plots]

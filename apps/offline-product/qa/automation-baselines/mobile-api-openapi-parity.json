@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T11:51:40.367Z",
-  "mobilePathCount": 31,
-  "openApiPathCount": 121,
+  "generatedAt": "2026-06-24T12:44:00.000Z",
+  "mobilePathCount": 32,
+  "openApiPathCount": 122,
   "mobilePaths": [
     "/v1/audit",
     "/v1/audit/batch",
@@ -34,6 +34,7 @@
     "/v1/plots/{id}/photos-sync",
     "/v1/plots/{id}/synced-evidence",
     "/v1/plots/{id}/tenure-verification",
+    "/v1/public/requests/campaigns/{id}/invite",
     "/v1/public/requests/campaigns/{id}/preview"
   ],
   "missingInOpenApi": [
