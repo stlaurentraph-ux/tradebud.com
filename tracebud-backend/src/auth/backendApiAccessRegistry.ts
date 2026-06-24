@@ -19,7 +19,12 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
   {
     id: 'requests_campaigns',
     file: 'requests/requests.controller.ts',
-    roles: ['admin', 'exporter', 'compliance_manager'],
+    roles: ['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer'],
+  },
+  {
+    id: 'requests_operational_issues',
+    file: 'requests/requests.controller.ts',
+    roles: ['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer', 'sponsor'],
   },
   {
     id: 'requests_evidence',
@@ -29,12 +34,12 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
   {
     id: 'contacts_crm',
     file: 'contacts/contacts.controller.ts',
-    roles: ['admin', 'exporter', 'importer', 'cooperative'],
+    roles: ['admin', 'exporter', 'importer', 'cooperative', 'compliance_manager', 'country_reviewer'],
   },
   {
     id: 'inbox_requests',
     file: 'inbox/inbox.controller.ts',
-    roles: ['exporter', 'admin', 'compliance_manager', 'agent'],
+    roles: ['exporter', 'admin', 'compliance_manager', 'agent', 'cooperative', 'importer', 'country_reviewer'],
   },
   {
     id: 'billing_subscription_band',

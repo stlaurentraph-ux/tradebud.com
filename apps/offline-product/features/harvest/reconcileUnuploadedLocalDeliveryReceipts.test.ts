@@ -18,6 +18,10 @@ vi.mock('@/features/state/persistence', () => ({
   loadAllLocalDeliveryReceipts: mocks.loadAllLocalDeliveryReceipts,
   enqueuePendingSync: mocks.enqueuePendingSync,
   updateLocalDeliveryReceipt: mocks.updateLocalDeliveryReceipt,
+  isLocalDeliveryReceiptPendingUpload: (receipt: {
+    pendingSync: boolean;
+    qrCodeRef?: string | null;
+  }) => receipt.pendingSync && !receipt.qrCodeRef?.trim(),
 }));
 
 import { reconcileUnuploadedLocalDeliveryReceipts } from './reconcileUnuploadedLocalDeliveryReceipts';
@@ -38,8 +42,8 @@ describe('reconcileUnuploadedLocalDeliveryReceipts', () => {
         serverPlotId: 'server-a',
         kg: 80,
         recordedAt: 1,
-        qrCodeRef: 'V-OLD',
-        pendingSync: false,
+        qrCodeRef: null,
+        pendingSync: true,
         buyerLabel: 'Buyer',
         plotName: 'Plot A',
       },

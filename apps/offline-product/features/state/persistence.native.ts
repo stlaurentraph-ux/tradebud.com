@@ -18,6 +18,7 @@ export type PlotPhoto = {
   latitude?: number | null;
   longitude?: number | null;
   direction?: 'north' | 'east' | 'south' | 'west' | null;
+  storagePath?: string | null;
 };
 
 export type PlotTitlePhoto = {
@@ -279,6 +280,9 @@ async function ensurePlotPhotosSchemaExtras(db: SQLite.SQLiteDatabase) {
   const has = (col: string) => rows.some((r) => r.name === col);
   if (!has('direction')) {
     await db.execAsync('ALTER TABLE plot_photos ADD COLUMN direction TEXT;');
+  }
+  if (!has('storagePath')) {
+    await db.execAsync('ALTER TABLE plot_photos ADD COLUMN storagePath TEXT;');
   }
 }
 
@@ -560,7 +564,7 @@ export async function loadLocalAuditEvents(params?: { limit?: number }): Promise
 export async function persistPlotPhoto(photo: Omit<PlotPhoto, 'id'>) {
   const db = await getDb();
   await db.runAsync(
-    `INSERT INTO plot_photos (plotId, uri, takenAt, latitude, longitude, direction) VALUES (?, ?, ?, ?, ?, ?);`,
+    `INSERT INTO plot_photos (plotId, uri, takenAt, latitude, longitude, direction, storagePath) VALUES (?, ?, ?, ?, ?, ?, ?);`,
     [
       photo.plotId,
       photo.uri,
@@ -568,6 +572,7 @@ export async function persistPlotPhoto(photo: Omit<PlotPhoto, 'id'>) {
       photo.latitude ?? null,
       photo.longitude ?? null,
       photo.direction ?? null,
+      photo.storagePath ?? null,
     ],
   );
 }
@@ -604,6 +609,7 @@ export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {
       row.direction === 'west'
         ? row.direction
         : null,
+    storagePath: row.storagePath ?? null,
   }));
 }
 
@@ -625,6 +631,18 @@ export async function updatePlotTitlePhotoAfterUpload(
     'UPDATE plot_title_photos SET uri = ?, storagePath = ? WHERE id = ?;',
     [params.uri, params.storagePath, photoId],
   );
+}
+
+export async function updatePlotGroundPhotoAfterUpload(
+  photoId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('UPDATE plot_photos SET uri = ?, storagePath = ? WHERE id = ?;', [
+    params.uri,
+    params.storagePath,
+    photoId,
+  ]);
 }
 
 export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitlePhoto[]> {
@@ -649,6 +667,33 @@ export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
 
 export function isPlotTitlePhotoPendingUpload(photo: Pick<PlotTitlePhoto, 'storagePath'>): boolean {
   return !photo.storagePath?.trim();
+}
+
+export function isPlotGroundPhotoPendingUpload(
+  photo: Pick<PlotPhoto, 'uri' | 'storagePath'>,
+): boolean {
+  if (photo.storagePath?.trim()) return false;
+  const uri = photo.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isPlotEvidencePendingUpload(
+  item: Pick<PlotEvidenceItem, 'uri' | 'storagePath'>,
+): boolean {
+  if (item.storagePath?.trim()) return false;
+  const uri = item.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isLocalDeliveryReceiptPendingUpload(
+  receipt: Pick<LocalDeliveryReceiptRow, 'pendingSync' | 'qrCodeRef'>,
+): boolean {
+  if (!receipt.pendingSync) return false;
+  return !receipt.qrCodeRef?.trim();
 }
 
 export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
@@ -1142,6 +1187,13 @@ export async function setSetting(key: string, value: string): Promise<void> {
 export async function deleteSetting(key: string): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM settings WHERE key = ?;', [key]);
+}
+
+export async function deleteSettingsByPrefix(prefix: string): Promise<void> {
+  const trimmed = prefix.trim();
+  if (!trimmed) return;
+  const db = await getDb();
+  await db.runAsync('DELETE FROM settings WHERE key LIKE ?;', [`${trimmed}%`]);
 }
 
 export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<void> {

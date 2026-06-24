@@ -29,6 +29,11 @@ vi.mock('@/features/state/persistence', () => ({
   loadPlotServerLinks: mocks.loadPlotServerLinks,
   loadAllLocalDeliveryReceipts: mocks.loadAllLocalDeliveryReceipts,
   persistLocalDeliveryReceipt: mocks.persistLocalDeliveryReceipt,
+  updateLocalDeliveryReceipt: vi.fn(async () => undefined),
+  isLocalDeliveryReceiptPendingUpload: (receipt: {
+    pendingSync: boolean;
+    qrCodeRef?: string | null;
+  }) => receipt.pendingSync && !receipt.qrCodeRef?.trim(),
 }));
 
 import { restoreLocalDeliveryReceiptsFromServer } from './restoreLocalDeliveryReceiptsFromServer';

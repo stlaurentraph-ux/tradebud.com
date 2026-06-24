@@ -12,6 +12,7 @@ import { Resend } from 'resend';
 import { ConsentService } from '../consent/consent.service';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
+import { queueCampaignRecipientInvites } from './campaign-recipient-invite';
 
 export type RequestType =
   | 'MISSING_PRODUCER_PROFILE'
@@ -229,6 +230,7 @@ export class RequestsService {
     sentCount: number;
     failedCount: number;
     failureMessages: string[];
+    sentEmails: string[];
   }> {
     const recipients = campaign.target_contact_emails ?? [];
     if (recipients.length === 0) {
@@ -315,12 +317,17 @@ export class RequestsService {
       }),
     );
 
-    const sentCount = deliveries.filter((entry) => entry.status === 'fulfilled').length;
+    const sentEmails = deliveries
+      .map((entry, index) =>
+        entry.status === 'fulfilled' ? recipients[index]?.trim().toLowerCase() : null,
+      )
+      .filter((email): email is string => Boolean(email));
+    const sentCount = sentEmails.length;
     const failedCount = deliveries.length - sentCount;
     const failureMessages = deliveries
       .filter((entry): entry is PromiseRejectedResult => entry.status === 'rejected')
       .map((entry) => (entry.reason instanceof Error ? entry.reason.message : String(entry.reason)));
-    return { sentCount, failedCount, failureMessages };
+    return { sentCount, failedCount, failureMessages, sentEmails };
   }
 
   private async syncTargetsToContacts(
@@ -739,6 +746,7 @@ export class RequestsService {
   async sendDraft(
     tenantId: string,
     campaignId: string,
+    actorUserId?: string | null,
   ): Promise<{ campaign_id: string; campaign: RequestCampaignRecord }> {
     try {
       const currentResult = await this.pool.query<RequestCampaignRecord>(
@@ -807,6 +815,36 @@ export class RequestsService {
                 senderTenantId: tenantId,
                 message:
                   fanoutError instanceof Error ? fanoutError.message : 'Inbox fan-out failed after campaign send.',
+              }),
+            ],
+          );
+        } catch {
+          // Campaign send already succeeded; do not fail the API response.
+        }
+      }
+      try {
+        await queueCampaignRecipientInvites(this.pool, {
+          campaignId: campaign.id,
+          senderTenantId: tenantId,
+          recipientEmails: delivery.sentEmails,
+          actorUserId: actorUserId ?? null,
+        });
+      } catch (inviteError) {
+        try {
+          await this.pool.query(
+            `
+              INSERT INTO audit_log (event_type, payload)
+              VALUES ($1, $2::jsonb)
+            `,
+            [
+              'campaign_recipient_invites_queue_failed',
+              JSON.stringify({
+                campaignId: campaign.id,
+                senderTenantId: tenantId,
+                message:
+                  inviteError instanceof Error
+                    ? inviteError.message
+                    : 'Campaign recipient invite queue failed after campaign send.',
               }),
             ],
           );

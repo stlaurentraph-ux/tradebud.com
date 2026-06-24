@@ -43,6 +43,10 @@ describe('plotSyncPending', () => {
     expect(isLocalPlotConfirmedOnServer(plot1, backend, { 'farmer-1': 'server-1' })).toBe(true);
   });
 
+  it('trusts persisted device links when the server list is unavailable', () => {
+    expect(isLocalPlotConfirmedOnServer(plot1, [], { 'farmer-1': 'server-1' })).toBe(true);
+  });
+
   it('does not list synced plots in pending upload names', () => {
     const backend = [
       { id: 'server-1', client_plot_id: 'farmer-1', name: 'Plot 1', kind: 'polygon' },
@@ -67,6 +71,19 @@ describe('plotSyncPending', () => {
     const summary = summarizePlotSyncPending(rows);
     expect(summary.unsyncedPlotNames).toEqual(['Plot 2']);
     expect(summary.blockedPlots).toHaveLength(0);
+  });
+
+  it('trusts persisted links before the server list is available', () => {
+    const rows = classifyLocalPlotSyncPending({
+      localPlots: [plot1, plot2],
+      backendPlots: [],
+      plotServerLinks: { 'farmer-1': 'server-1', 'farmer-2': 'server-2' },
+      t,
+      trustPersistedLinksWithoutServer: true,
+    });
+    const summary = summarizePlotSyncPending(rows);
+    expect(summary.needsUploadPlots).toHaveLength(0);
+    expect(summary.unsyncedPlotNames).toEqual([]);
   });
 
   it('classifies overlap-blocked plots separately from upload-needed plots', () => {

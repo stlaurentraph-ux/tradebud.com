@@ -145,6 +145,11 @@ export const BACKEND_INBOX_AUDIT_EVENT_TYPES = [
   'inbox_requests_campaign_fanout_failed',
   'inbox_requests_signup_backfill',
   'inbox_requests_email_cta_inbox_ensured',
+  'campaign_recipient_invite_queued',
+  'campaign_recipient_invites_queued',
+  'campaign_recipient_invite_claimed',
+  'campaign_recipient_invite_claim_skipped',
+  'campaign_recipient_invites_queue_failed',
 ] as const;
 
 export const BACKEND_YIELD_BENCHMARK_AUDIT_EVENT_TYPES = [

@@ -112,6 +112,9 @@ export function resolveConfirmedServerPlotIdForLocal(
 ): string | null {
   const localPlotIds = options?.localPlotIds ?? new Set([localPlot.id]);
   const persisted = links?.[localPlot.id]?.trim();
+  if (persisted && backendRows.length === 0) {
+    return persisted;
+  }
   if (persisted && backendRows.length > 0) {
     const row = (backendRows as {
       id?: unknown;

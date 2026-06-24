@@ -1,6 +1,7 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { createLaunchServiceMock } from '../testing/launch-service.mock';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
 let PartnerDataController: any;
 try {
@@ -10,8 +11,8 @@ try {
   PartnerDataController = null;
 }
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl && PartnerDataController ? describe : describe.skip;
+const testDbUrl = PartnerDataController ? requireTestDatabaseUrl() : '';
+const describeIfDb = PartnerDataController ? describe : describe.skip;
 const schema = 'tb_partner_data_controller_test';
 
 function withSearchPath(connectionString: string, _targetSchema: string) {

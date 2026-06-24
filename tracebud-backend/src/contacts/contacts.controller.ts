@@ -38,7 +38,7 @@ export class ContactsController {
 
   private requireContactAccess(req: any): void {
     const role = deriveRoleFromSupabaseUser(req?.user);
-    if (!['admin', 'exporter', 'importer', 'cooperative'].includes(role)) {
+    if (!['admin', 'exporter', 'importer', 'cooperative', 'compliance_manager', 'country_reviewer'].includes(role)) {
       throw new ForbiddenException('This role cannot access contacts.');
     }
   }

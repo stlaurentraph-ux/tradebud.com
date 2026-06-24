@@ -1,8 +1,9 @@
 import { Pool } from 'pg';
 import { AssessmentRequestsController } from './assessment-requests.controller';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = 'tb_assessment_requests_controller_test';
 
 function withSearchPath(connectionString: string, targetSchema: string) {
@@ -11,7 +12,7 @@ function withSearchPath(connectionString: string, targetSchema: string) {
   return url.toString();
 }
 
-describeIfDb('AssessmentRequestsController integration', () => {
+describe('AssessmentRequestsController integration', () => {
   let pool: Pool;
   let controller: AssessmentRequestsController;
 

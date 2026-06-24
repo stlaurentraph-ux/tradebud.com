@@ -8,6 +8,9 @@ vi.mock('@/features/security/syncAuthStorage', () => ({
   }),
   isSyncAuthDismissedOnDevice: vi.fn(async () => dismissedOnDevice),
   loadSyncAuthCredentials: vi.fn(async () => null),
+  persistSyncAuthSignOutLatch: vi.fn(async () => {
+    dismissedOnDevice = true;
+  }),
   saveOAuthSyncAuthCredentials: vi.fn(async () => {
     if (dismissedOnDevice) return;
   }),
@@ -20,6 +23,7 @@ vi.mock('@/features/security/syncAuthStorage', () => ({
 }));
 
 import {
+  abortSyncAuthForSignOut,
   clearPersistedSyncAuth,
   getSyncAuthMethod,
   hasSyncAuthSession,
@@ -65,6 +69,20 @@ describe('syncAuthSession', () => {
     setAuthCredentials('farmer@example.com', 'secret');
     const { loadSyncAuthCredentials } = await import('@/features/security/syncAuthStorage');
     vi.mocked(loadSyncAuthCredentials).mockResolvedValueOnce(null);
+    await hydrateSyncAuthFromSettings();
+    expect(hasSyncAuthSession()).toBe(false);
+  });
+
+  it('hydrate does not reload credentials while in-memory sign-out is active', async () => {
+    await saveAndApplyOAuthSyncAuth('farmer@example.com', 'refresh-token-abc');
+    abortSyncAuthForSignOut();
+    dismissedOnDevice = false;
+    const { loadSyncAuthCredentials } = await import('@/features/security/syncAuthStorage');
+    vi.mocked(loadSyncAuthCredentials).mockResolvedValueOnce({
+      method: 'oauth',
+      email: 'farmer@example.com',
+      refreshToken: 'refresh-token-abc',
+    });
     await hydrateSyncAuthFromSettings();
     expect(hasSyncAuthSession()).toBe(false);
   });

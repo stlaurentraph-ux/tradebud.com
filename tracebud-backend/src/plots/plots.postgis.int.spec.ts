@@ -1,9 +1,10 @@
 import { Pool } from 'pg';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
 
-describeIfDb('PostGIS integration: v1.6 spatial checks', () => {
+
+describe('PostGIS integration: v1.6 spatial checks', () => {
   let pool: Pool;
 
   beforeAll(async () => {

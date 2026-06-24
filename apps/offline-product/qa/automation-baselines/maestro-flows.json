@@ -8,7 +8,11 @@
     "cross-device-restore-smoke.yaml",
     "land-title-photo.yaml",
     "mark-three-corners.yaml",
+    "oauth-callback-missing-url-smoke.yaml",
+    "oauth-sign-in-sheet-smoke.yaml",
     "settings-sync-smoke.yaml",
+    "sign-out-persistence-smoke.yaml",
+    "signed-out-backup-status-smoke.yaml",
     "tenure-evidence.yaml"
   ]
 }

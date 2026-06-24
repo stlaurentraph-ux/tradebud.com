@@ -8,17 +8,18 @@ import { InboxService } from '../inbox/inbox.service';
 import { RequestsController } from './requests.controller';
 import { RequestsService } from './requests.service';
 import { PG_POOL } from '../db/db.module';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
 jest.mock('@supabase/supabase-js', () => ({
   createClient: jest.fn(),
 }));
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_requests_decisions_api_int_${process.pid}_${Date.now().toString(36)}`;
 jest.setTimeout(60_000);
 
-describeIfDb('Requests decisions API integration', () => {
+describe('Requests decisions API integration', () => {
   let pool: Pool;
   let app: INestApplication;
   const createClientMock = createClient as jest.MockedFunction<typeof createClient>;

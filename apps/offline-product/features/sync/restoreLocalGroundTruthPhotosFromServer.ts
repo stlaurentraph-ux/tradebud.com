@@ -4,6 +4,10 @@ import type { Plot } from '@/features/state/AppStateContext';
 import { fetchMergedAuditEventsForFarmer } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import {
+  isPlotInRestoreScope,
+  type FieldSyncRestoreScope,
+} from '@/features/sync/fieldSyncRestoreScope';
+import {
   loadPhotosForPlot,
   loadPlotServerLinks,
   loadTitlePhotosForPlot,
@@ -136,6 +140,7 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
   apiFarmerId: string;
   ownedFarmerIds: string[];
   localPlots: Plot[];
+  restoreScope?: FieldSyncRestoreScope;
 }): Promise<RestoreLocalPlotPhotosFromAuditResult> {
   const apiFarmerId = params.apiFarmerId.trim();
   if (!apiFarmerId || params.localPlots.length === 0) {
@@ -203,6 +208,7 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
     onRestored: () => void,
   ) {
     for (const [serverPlotId, photos] of latestByServerPlot) {
+      if (!isPlotInRestoreScope(serverPlotId, params.restoreScope)) continue;
       const localPlotId = resolveLocalPlotIdForServerPlot({
         serverPlotId,
         localPlots: params.localPlots,
@@ -242,6 +248,7 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
             latitude: typeof photo.latitude === 'number' ? photo.latitude : null,
             longitude: typeof photo.longitude === 'number' ? photo.longitude : null,
             direction: normalizeDirection(photo.direction),
+            storagePath: downloaded.storagePath,
           });
           onRestored();
           continue;

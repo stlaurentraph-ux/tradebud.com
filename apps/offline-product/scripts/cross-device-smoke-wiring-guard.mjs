@@ -26,6 +26,9 @@ function main() {
       'Field photos',
       'profile photo',
       'Walk my plot',
+      'upload before declaration',
+      'audit_sync rate limit',
+      'upload queue only',
     ];
     for (const phrase of requiredPhrases) {
       if (!smoke.toLowerCase().includes(phrase.toLowerCase())) {
@@ -56,6 +59,27 @@ function main() {
     }
   }
 
+  const signedOutBackupFlow = path.join(root, '.maestro/flows/signed-out-backup-status-smoke.yaml');
+  if (!fs.existsSync(signedOutBackupFlow)) {
+    issues.push('missing .maestro/flows/signed-out-backup-status-smoke.yaml');
+  } else {
+    const flow = fs.readFileSync(signedOutBackupFlow, 'utf8');
+    if (!flow.includes('home-backup-status-caption')) {
+      issues.push('signed-out-backup-status-smoke.yaml must assert home-backup-status-caption testID');
+    }
+    if (!flow.includes('backed_up_offline')) {
+      issues.push('signed-out-backup-status-smoke.yaml must document backed_up_offline seed profile');
+    }
+  }
+
+  const seedScript = path.join(root, 'scripts/seed-maestro-simulator.mjs');
+  if (fs.existsSync(seedScript)) {
+    const seed = fs.readFileSync(seedScript, 'utf8');
+    if (!seed.includes('backed_up_offline')) {
+      issues.push('seed-maestro-simulator.mjs must support backed_up_offline profile');
+    }
+  }
+
   const ciPath = path.join(repoRoot, '.github/workflows/ci.yml');
   if (fs.existsSync(ciPath)) {
     const ci = fs.readFileSync(ciPath, 'utf8');
@@ -71,6 +95,9 @@ function main() {
     }
     if (!readme.includes('cross-device-restore-smoke.yaml')) {
       issues.push('.maestro/README.md must document cross-device-restore-smoke.yaml');
+    }
+    if (!readme.includes('signed-out-backup-status-smoke.yaml')) {
+      issues.push('.maestro/README.md must document signed-out-backup-status-smoke.yaml');
     }
   } catch {
     issues.push('missing apps/offline-product/.maestro/README.md');

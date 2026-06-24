@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
+import { claimPendingDeliveryBuyerInvitesOnSignup } from '../harvest/claim-delivery-buyer-invites-on-signup';
 import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
 export type TrialLifecycleStatus = 'trial_active' | 'trial_expired' | 'paid_active' | 'suspended';
@@ -62,6 +63,20 @@ export class LaunchService {
 
   buildDefaultTenantIdFromEmail(email: string): string {
     return `tenant_${email.trim().toLowerCase().replace(/[^a-z0-9]/gi, '_')}`;
+  }
+
+  private async linkPendingDeliveryInvitesForSignup(input: {
+    tenantId: string;
+    email: string;
+    actorUserId?: string | null;
+    granteeOrgName?: string | null;
+  }): Promise<void> {
+    await claimPendingDeliveryBuyerInvitesOnSignup(this.pool, {
+      recipientEmail: input.email,
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId ?? null,
+      granteeOrgName: input.granteeOrgName ?? null,
+    }).catch(() => undefined);
   }
 
   resolveTenantIdFromUserRecord(user: {
@@ -669,6 +684,11 @@ export class LaunchService {
             fullName: input.fullName.trim(),
           })
           .catch(() => undefined);
+        await this.linkPendingDeliveryInvitesForSignup({
+          tenantId,
+          email: normalizedEmail,
+          actorUserId: signinPayload.user.id,
+        });
         await this.inboxService
           .backfillInboxForSignupContact({
             email: normalizedEmail,
@@ -720,6 +740,11 @@ export class LaunchService {
         fullName: input.fullName.trim(),
       })
       .catch(() => undefined);
+    await this.linkPendingDeliveryInvitesForSignup({
+      tenantId,
+      email: normalizedEmail,
+      actorUserId: signupPayload.user.id,
+    });
     await this.inboxService
       .backfillInboxForSignupContact({
         email: normalizedEmail,
@@ -786,6 +811,12 @@ export class LaunchService {
           fullName: input.actorFullName,
         })
         .catch(() => undefined);
+      await this.linkPendingDeliveryInvitesForSignup({
+        tenantId: input.tenantId,
+        email: input.actorEmail,
+        actorUserId: input.actorUserId,
+        granteeOrgName: input.organizationName,
+      });
     }
     if (input.actorEmail?.trim()) {
       void this.onboardingEmailService

@@ -12,6 +12,10 @@ import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocal
 import type { Plot } from '@/features/state/AppStateContext';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import {
+  isPlotInRestoreScope,
+  type FieldSyncRestoreScope,
+} from '@/features/sync/fieldSyncRestoreScope';
+import {
   loadEvidenceForPlot,
   loadPlotServerLinks,
   loadTitlePhotosForPlot,
@@ -130,6 +134,7 @@ export async function restoreLocalEvidenceFromServer(params: {
   apiFarmerId: string;
   ownedFarmerIds: string[];
   localPlots: Plot[];
+  restoreScope?: FieldSyncRestoreScope;
 }): Promise<RestoreLocalEvidenceResult> {
   const apiFarmerId = params.apiFarmerId.trim();
   if (!apiFarmerId) {
@@ -150,10 +155,6 @@ export async function restoreLocalEvidenceFromServer(params: {
     const serverPlotId = plotServerLinks[plot.id]?.trim();
     if (serverPlotId) linkedServerPlotIds.add(serverPlotId);
   }
-  for (const row of backendPlots) {
-    const serverPlotId = String((row as { id?: string }).id ?? '').trim();
-    if (serverPlotId) linkedServerPlotIds.add(serverPlotId);
-  }
 
   if (linkedServerPlotIds.size === 0) {
     return { restoredCount: 0, fetchFailed: false, skippedUnlinked: 0, downloadFailed: 0 };
@@ -168,6 +169,7 @@ export async function restoreLocalEvidenceFromServer(params: {
   const candidates: ServerEvidenceCandidate[] = [];
 
   for (const serverPlotId of linkedServerPlotIds) {
+    if (!isPlotInRestoreScope(serverPlotId, params.restoreScope)) continue;
     try {
       const [syncedRows, tenureRows] = await Promise.all([
         fetchPlotSyncedEvidence(serverPlotId),

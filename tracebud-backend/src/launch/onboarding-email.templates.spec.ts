@@ -1,5 +1,6 @@
 import {
   applyTemplatePlaceholders,
+  buildDeliveryBuyerInviteTemplateVars,
   escapeHtml,
   getResumeNudgeTemplateId,
   renderOnboardingEmailHtml,
@@ -50,6 +51,21 @@ describe('onboarding-email.templates', () => {
     const text = renderOnboardingEmailText('farmer-welcome', vars);
     expect(text).toContain('Welcome to Tracebud');
     expect(text).not.toContain('{{appUrl}}');
+  });
+
+  it('renders delivery buyer invite template adapted from welcome layout', () => {
+    const vars = buildDeliveryBuyerInviteTemplateVars({
+      recipientEmail: 'buyer@coop.example',
+      producerLabel: 'Maria N.',
+      dashboardBaseUrl: 'https://dashboard.tracebud.com',
+    });
+    const html = renderOnboardingEmailHtml('delivery-buyer-invite', vars);
+    expect(html).toContain('DELIVERY WAITING');
+    expect(html).toContain('buyer@coop.example');
+    expect(html).toContain('Create your Tracebud account');
+    expect(html).toContain('Maria N.');
+    const text = renderOnboardingEmailText('delivery-buyer-invite', vars);
+    expect(text).toContain('buyer@coop.example');
   });
 
   it('renders resume nudge variants', () => {

@@ -20,6 +20,8 @@ export type RestoreFarmerProfilePhotoResult = {
 export async function queueFarmerProfilePhotoSync(params: {
   farmerId: string;
   localUri: string | null;
+  deferPost?: boolean;
+  skipIfSynced?: boolean;
 }): Promise<'synced' | 'queued' | 'skipped'> {
   const farmerId = params.farmerId.trim();
   if (!farmerId) return 'skipped';
@@ -34,6 +36,8 @@ export async function queueFarmerProfilePhotoSync(params: {
         cleared: true,
         updatedAt: Date.now(),
       },
+      deferPost: params.deferPost,
+      skipIfSynced: params.skipIfSynced,
     });
   }
 
@@ -58,6 +62,8 @@ export async function queueFarmerProfilePhotoSync(params: {
       storagePath: upload.storagePath,
       updatedAt: Date.now(),
     },
+    deferPost: params.deferPost,
+    skipIfSynced: params.skipIfSynced,
   });
 }
 

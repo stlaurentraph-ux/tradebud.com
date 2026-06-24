@@ -49,13 +49,19 @@ export function GeometryConfidenceBanner({
     assessment.recommendedAction === 'use_manual_trace' && onManualTrace != null;
   const showRetry = assessment.recommendedAction === 'retry_capture' && onRetry != null;
 
+  const bodyKey = assessment.reasons.includes('self_intersection')
+    ? 'walk_geo_confidence_body_self_intersect'
+    : assessment.reasons.includes('gps_poor') || assessment.reasons.includes('gps_unknown')
+      ? 'walk_geo_confidence_body_gps_poor'
+      : 'walk_geo_confidence_body';
+
   return (
     <View style={[styles.banner, { backgroundColor: palette.bg, borderColor: palette.border }]}>
       <ThemedText type="defaultSemiBold" style={[styles.title, { color: palette.text }]}>
         {t('walk_geo_confidence_title', { tier: tierLabel(t, assessment.tier) })}
       </ThemedText>
       <ThemedText type="caption" style={styles.body}>
-        {t('walk_geo_confidence_body')}
+        {t(bodyKey)}
         {assessment.horizontalUncertaintyM != null
           ? ` ${t('walk_geo_confidence_precision', {
               meters: Math.round(assessment.horizontalUncertaintyM),

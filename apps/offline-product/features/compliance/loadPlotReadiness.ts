@@ -3,6 +3,7 @@ import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { computePlotReadinessChecklist, type PlotReadinessChecklist } from '@/features/compliance/plotChecklist';
 import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
 import type { Plot, FarmerProfile } from '@/features/state/AppStateContext';
 import {
   loadEvidenceForPlot,
@@ -34,6 +35,7 @@ export async function loadPlotReadinessForLocalPlot(
 ): Promise<PlotReadinessLoadResult> {
   const backendMatch = findBackendPlotForLocal(plot, backendPlots) as BackendPlotMatchMeta | null;
   const backendPlotId = backendMatch?.id != null ? String(backendMatch.id) : null;
+  const skipTenureFetch = getSyncQueueLockSnapshot().locked;
 
   const [photos, titleRows, evidenceRows, producerEvidenceRows, tenureVerifications] = await Promise.all([
     loadPhotosForPlot(plot.id).catch(() => []),
@@ -42,7 +44,7 @@ export async function loadPlotReadinessForLocalPlot(
     farmer?.id
       ? loadEvidenceForPlot(producerEvidenceScopeId(farmer.id)).catch(() => [])
       : Promise.resolve([]),
-    backendPlotId
+    backendPlotId && !skipTenureFetch
       ? fetchPlotTenureVerification(backendPlotId).catch(() => [])
       : Promise.resolve([]),
   ]);

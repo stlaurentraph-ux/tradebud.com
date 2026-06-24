@@ -132,6 +132,9 @@ export function DeliveryRecipientFields({ t, value, onChange }: DeliveryRecipien
           keyboardType="email-address"
           style={[styles.emailInput, isEmailMode ? styles.emailInputActive : null]}
         />
+        <ThemedText type="caption" style={styles.hint}>
+          {t('delivery_recipient_email_helper')}
+        </ThemedText>
       </View>
 
       <Pressable onPress={() => onChange({ mode: 'qr_only' })}>

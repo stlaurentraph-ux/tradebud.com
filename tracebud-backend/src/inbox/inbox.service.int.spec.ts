@@ -2,16 +2,17 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { createInboxTablesForIntTest } from '../testing/inbox-tables.fixture';
 import { InboxService } from './inbox.service';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_inbox_service_int_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
   return connectionString;
 }
 
-describeIfDb('InboxService integration: tenant/state boundaries', () => {
+describe('InboxService integration: tenant/state boundaries', () => {
   jest.setTimeout(30_000);
   let pool: Pool;
   let service: InboxService;

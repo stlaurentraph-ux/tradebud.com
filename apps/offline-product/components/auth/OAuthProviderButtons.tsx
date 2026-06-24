@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/button';
 import { Spacing } from '@/constants/theme';
-import type { OAuthProvider } from '@/features/auth/oauthSignIn';
+import type { OAuthProvider } from '@/features/auth/oauthOrchestrator';
 
 type OAuthProviderButtonsProps = {
   disabled?: boolean;
@@ -34,6 +34,7 @@ export function OAuthProviderButtons({
         style={styles.btn}
         disabled={busy}
         loading={loadingProvider === 'google'}
+        testID="sign-in-oauth-google"
         icon={<Ionicons name="logo-google" size={17} color="#4285F4" />}
         onPress={onGoogle}
       >
@@ -45,6 +46,7 @@ export function OAuthProviderButtons({
         style={styles.btn}
         disabled={busy}
         loading={loadingProvider === 'apple'}
+        testID="sign-in-oauth-apple"
         icon={<Ionicons name="logo-apple" size={17} color="#111827" />}
         onPress={onApple}
       >

@@ -5,8 +5,14 @@ import { getFieldAppEmailConfirmUrl } from '@/features/auth/fieldAppAuthUrls';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
 import { mapSignUpError } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
+import { getOAuthErrorContext } from '@/features/auth/oauthFlowError';
+import { trackOAuthFailure } from '@/features/auth/oauthTelemetry';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
-import { clearPersistedSyncAuth, signInAndSyncPlots, type SignInSyncResult } from '@/features/auth/signInSync';
+import {
+  hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
+} from '@/features/api/syncAuthSession';
+import { signInAndSyncPlots, type SignInSyncResult } from '@/features/auth/signInSync';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
 export async function signUpWithEmailAndSyncPlots(params: {
@@ -68,6 +74,7 @@ export async function signUpWithOAuthAndSyncPlots(params: {
   farmerId?: string;
   localPlots?: Plot[];
 }): Promise<SignInSyncResult> {
+  const signupFlowStartedAtMs = Date.now();
   try {
     const session = await signInWithOAuthProvider(params.provider);
     return completeOAuthFarmerSession({
@@ -75,9 +82,20 @@ export async function signUpWithOAuthAndSyncPlots(params: {
       fullName: params.fullName,
       farmerId: params.farmerId,
       localPlots: params.localPlots,
+      signupFlowStartedAtMs,
     });
   } catch (e) {
-    await clearPersistedSyncAuth();
-    return { ok: false, message: mapOAuthErrorToCode(e) };
+    await hydrateSyncAuthFromSettings();
+    if (hasSyncAuthSession()) {
+      return { ok: true, existingAccount: true };
+    }
+    trackOAuthFailure(params.provider, e);
+    const ctx = getOAuthErrorContext(e);
+    return {
+      ok: false,
+      message: mapOAuthErrorToCode(e),
+      ...(ctx.step ? { oauthStep: ctx.step } : {}),
+      ...(ctx.path ? { oauthPath: ctx.path } : {}),
+    };
   }
 }

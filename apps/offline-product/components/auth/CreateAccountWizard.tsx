@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -20,6 +20,10 @@ import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile } from '@/features/auth/oauthSession';
 import {
+  hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
+} from '@/features/api/syncAuthSession';
+import {
   signUpWithEmailAndSyncPlots,
   signUpWithOAuthAndSyncPlots,
 } from '@/features/auth/farmerSignUp';
@@ -27,7 +31,6 @@ import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import type { Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
-import type { UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
 
 type WizardStep = 'method' | 'email' | 'name';
 
@@ -36,7 +39,7 @@ type CreateAccountWizardProps = {
   farmerId?: string;
   localPlots?: Plot[];
   onClose: () => void;
-  onSuccess: (sync: UploadUnsyncedPlotsResult | null) => void;
+  onSuccess: (options?: { existingAccount?: boolean }) => void;
   onSignInInstead: () => void;
 };
 
@@ -59,6 +62,8 @@ export function CreateAccountWizard({
   const [hint, setHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
+  const [pendingExistingAccount, setPendingExistingAccount] = useState(false);
+  const oauthInFlightRef = useRef(false);
 
   const reset = useCallback(() => {
     setStep('method');
@@ -68,10 +73,11 @@ export function CreateAccountWizard({
     setHint(null);
     setBusy(false);
     setOauthBusy(null);
+    setPendingExistingAccount(false);
   }, []);
 
   useEffect(() => {
-    if (!visible) {
+    if (!visible && !oauthInFlightRef.current) {
       reset();
     }
   }, [visible, reset]);
@@ -87,9 +93,9 @@ export function CreateAccountWizard({
     return formatSignInErrorMessage(t, code);
   };
 
-  const finishSuccess = (sync: UploadUnsyncedPlotsResult | null) => {
+  const finishSuccess = (options?: { existingAccount?: boolean }) => {
     onClose();
-    onSuccess(sync);
+    onSuccess(options);
   };
 
   const handleEmailSignUp = async () => {
@@ -108,7 +114,7 @@ export function CreateAccountWizard({
         setHint(resolveMessage(result.message));
         return;
       }
-      finishSuccess(null);
+      finishSuccess();
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
@@ -117,6 +123,7 @@ export function CreateAccountWizard({
   };
 
   const handleOAuthSignUp = async (provider: OAuthProvider) => {
+    oauthInFlightRef.current = true;
     setOauthBusy(provider);
     setHint(null);
     try {
@@ -127,19 +134,34 @@ export function CreateAccountWizard({
         localPlots,
       });
       if (!result.ok) {
+        await hydrateSyncAuthFromSettings().catch(() => undefined);
+        if (hasSyncAuthSession()) {
+          finishSuccess({ existingAccount: true });
+          return;
+        }
         setHint(resolveMessage(result.message));
         return;
       }
       if (result.missingName) {
+        if (result.existingAccount) {
+          finishSuccess({ existingAccount: true });
+          return;
+        }
         setOauthBusy(null);
+        setPendingExistingAccount(false);
         setStep('name');
         return;
       }
-      setOauthBusy(null);
-      finishSuccess(null);
+      finishSuccess({ existingAccount: result.existingAccount });
     } catch (e) {
+      await hydrateSyncAuthFromSettings().catch(() => undefined);
+      if (hasSyncAuthSession()) {
+        finishSuccess({ existingAccount: true });
+        return;
+      }
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
+      oauthInFlightRef.current = false;
       setOauthBusy(null);
     }
   };
@@ -153,7 +175,7 @@ export function CreateAccountWizard({
     setHint(null);
     try {
       await ensureFarmerOAuthProfile(fullName.trim());
-      finishSuccess(null);
+      finishSuccess({ existingAccount: pendingExistingAccount });
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
@@ -268,6 +290,9 @@ export function CreateAccountWizard({
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  showPasswordToggle
+                  showPasswordAccessibilityLabel={t('show_password')}
+                  hidePasswordAccessibilityLabel={t('hide_password')}
                   placeholder="••••••••"
                   dense
                 />

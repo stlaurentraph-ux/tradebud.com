@@ -1,4 +1,5 @@
 import type { Plot } from '@/features/state/AppStateContext';
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import { ensureFieldProducerBootstrapped } from '@/features/api/fieldAppBootstrap';
 import {
   buildGeometryFromLocalPlot,
@@ -28,7 +29,7 @@ import { backendRowMatchesLocalClientId, findServerPlotForSyncConfirmation } fro
 import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
 
-export { listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
+export { estimatePlotSyncAttention, listUnsyncedLocalPlots } from '@/features/sync/plotSyncPending';
 export { isLocalPlotConfirmedOnServer } from '@/features/sync/plotSyncPending';
 
 const PLOT_UPLOAD_GAP_MS = 400;
@@ -297,6 +298,17 @@ export async function uploadUnsyncedPlotsForFarmer(params: {
 
   if (localPlots.length === 0) {
     return { uploaded: 0, unsyncedBefore: 0, failed: 0, fetchFailed: false, stoppedForAuth: false };
+  }
+
+  if (!hasSyncAuthSession()) {
+    return {
+      uploaded: 0,
+      unsyncedBefore: 0,
+      failed: 0,
+      fetchFailed: false,
+      stoppedForAuth: true,
+      firstError: t('sync_no_access_token_plot'),
+    };
   }
 
   await ensureFieldProducerBootstrapped(farmerId, {

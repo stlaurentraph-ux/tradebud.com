@@ -6,6 +6,7 @@ import {
 } from '@/features/compliance/farmerDeclarations';
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
 import { fetchMergedAuditEventsForFarmer } from '@/features/sync/fetchMergedAuditEventsForFarmer';
+import { markDeclarationAuditSynced } from '@/features/sync/queueDeclarationAuditSync';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import {
   loadAppState,
@@ -91,8 +92,31 @@ export async function restoreLocalDeclarationsFromServer(params: {
     );
     if (hasProducerAttestationsComplete(nextFarmer)) {
       await persistFarmer(nextFarmer);
+      await markDeclarationAuditSynced({
+        eventType: 'producer_attestations_updated',
+        payload: {
+          farmerId: nextFarmer.id,
+          fpicConsent: nextFarmer.fpicConsent === true,
+          laborNoChildLabor: nextFarmer.laborNoChildLabor === true,
+          laborNoForcedLabor: nextFarmer.laborNoForcedLabor === true,
+          selfDeclared: true,
+          selfDeclaredAt: nextFarmer.selfDeclaredAt ?? at,
+        },
+      }).catch(() => undefined);
       producerRestored = true;
     }
+  } else if (hasProducerAttestationsComplete(localFarmer) && latestProducer?.payload) {
+    await markDeclarationAuditSynced({
+      eventType: 'producer_attestations_updated',
+      payload: {
+        farmerId: localFarmer.id,
+        fpicConsent: localFarmer.fpicConsent === true,
+        laborNoChildLabor: localFarmer.laborNoChildLabor === true,
+        laborNoForcedLabor: localFarmer.laborNoForcedLabor === true,
+        selfDeclared: true,
+        selfDeclaredAt: localFarmer.selfDeclaredAt ?? parseTimestampMs(latestProducer.payload.selfDeclaredAt),
+      },
+    }).catch(() => undefined);
   }
 
   const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<
@@ -144,7 +168,45 @@ export async function restoreLocalDeclarationsFromServer(params: {
     if (index >= 0) {
       updatedPlots[index] = nextPlot;
       plotsRestored += 1;
+      await markDeclarationAuditSynced({
+        eventType: 'plot_compliance_declared',
+        payload: {
+          plotId: localPlotId,
+          farmerId: localFarmer.id,
+          landTenureDeclared: true,
+          noDeforestationDeclared: true,
+          source: 'restore',
+        },
+      }).catch(() => undefined);
     }
+  }
+
+  for (const plot of updatedPlots) {
+    if (!(plot.landTenureDeclared && plot.noDeforestationDeclared)) continue;
+    const hasAudit = auditRows.some((row) => {
+      if (row.event_type !== 'plot_compliance_declared' || !row.payload) return false;
+      const payloadPlotId = String(row.payload.plotId ?? '').trim();
+      if (!payloadPlotId) return false;
+      if (payloadPlotId === plot.id) return true;
+      const resolvedLocalPlotId = resolveLocalPlotIdForServerPlot({
+        serverPlotId: payloadPlotId,
+        localPlots: updatedPlots,
+        plotServerLinks,
+        backendPlots,
+      });
+      return resolvedLocalPlotId === plot.id;
+    });
+    if (!hasAudit) continue;
+    await markDeclarationAuditSynced({
+      eventType: 'plot_compliance_declared',
+      payload: {
+        plotId: plot.id,
+        farmerId: localFarmer.id,
+        landTenureDeclared: true,
+        noDeforestationDeclared: true,
+        source: 'restore',
+      },
+    }).catch(() => undefined);
   }
 
   for (const row of auditRows) {

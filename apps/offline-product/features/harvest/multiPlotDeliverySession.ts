@@ -1,10 +1,11 @@
+import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 import { generateDeliveryTripRef } from '@/features/harvest/buildDeliveryQrUrl';
 import { validateHarvestKg } from '@/features/validation/validators';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import type { Plot } from '@/features/state/AppStateContext';
 import type { PlotServerLinks } from '@/features/plots/plotServerLink';
-import type { DeliveryRecipientSelection } from '@/features/harvest/DeliveryRecipientFields';
+import type { TranslateFn } from '@/features/i18n/translate';
 
 export type MultiPlotDeliveryLine = {
   plotId: string;
@@ -20,7 +21,11 @@ export type MultiPlotDeliveryLineResult = {
   qrCodeRef?: string | null;
   deliveryTripRef?: string | null;
   message?: string;
-  messageKey?: 'harvest_queued_offline' | 'harvest_queued_plot_not_synced';
+  messageKey?:
+    | 'harvest_queued_offline'
+    | 'harvest_queued_plot_not_synced'
+    | 'delivery_unknown_buyer_email';
+  buyerInvitePending?: boolean;
 };
 
 export type HarvestPlotOption = {
@@ -112,6 +117,7 @@ export async function submitMultiPlotDeliverySession(params: {
   plotServerLinks?: PlotServerLinks | null;
   sessionId?: string;
   deliveryRecipient?: DeliveryRecipientSelection | null;
+  t?: TranslateFn;
 }): Promise<MultiPlotDeliveryLineResult[]> {
   const sessionId = params.sessionId ?? `multi-${Date.now()}`;
   const deliveryTripRef = params.lines.length > 1 ? generateDeliveryTripRef() : null;
@@ -124,16 +130,29 @@ export async function submitMultiPlotDeliverySession(params: {
 
   const results: MultiPlotDeliveryLineResult[] = [];
   for (const line of params.lines) {
-    const result = await submitHarvestRecord({
-      farmerId: params.farmerId,
-      selectedPlotId: line.plotId,
-      kg: line.kg,
-      localPlots: params.localPlots,
-      backendPlots: params.backendPlots,
-      plotServerLinks: params.plotServerLinks,
-      deliveryRecipient: params.deliveryRecipient,
-      deliveryTripRef,
-    });
+    const submitLine = (recipient: DeliveryRecipientSelection | null) =>
+      submitHarvestRecord({
+        farmerId: params.farmerId,
+        selectedPlotId: line.plotId,
+        kg: line.kg,
+        localPlots: params.localPlots,
+        backendPlots: params.backendPlots,
+        plotServerLinks: params.plotServerLinks,
+        deliveryRecipient: recipient,
+        deliveryTripRef,
+      });
+
+    let result = await submitLine(params.deliveryRecipient ?? null);
+    if (params.t) {
+      const { resolveHarvestSubmitWithUnknownBuyerFallback } = await import(
+        '@/features/harvest/completeHarvestSubmitFlow'
+      );
+      result = await resolveHarvestSubmitWithUnknownBuyerFallback({
+        result,
+        t: params.t,
+        retryWithRecipient: submitLine,
+      });
+    }
 
     if (result.status === 'synced') {
       results.push({
@@ -143,6 +162,7 @@ export async function submitMultiPlotDeliverySession(params: {
         status: 'synced',
         qrCodeRef: result.qrCodeRef,
         deliveryTripRef,
+        buyerInvitePending: result.buyerInvite?.pending === true,
       });
       continue;
     }
@@ -163,7 +183,14 @@ export async function submitMultiPlotDeliverySession(params: {
       kg: line.kg,
       status: 'error',
       message: result.message,
+      messageKey:
+        result.status === 'error' && result.messageKey === 'delivery_unknown_buyer_email'
+          ? 'delivery_unknown_buyer_email'
+          : undefined,
     });
+    if (result.status === 'error' && result.messageKey === 'delivery_unknown_buyer_email') {
+      break;
+    }
   }
 
   trackEvent(ANALYTICS_EVENTS.MULTI_PLOT_DELIVERY_SUBMITTED, {

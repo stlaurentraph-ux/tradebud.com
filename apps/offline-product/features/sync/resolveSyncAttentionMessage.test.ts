@@ -58,4 +58,60 @@ describe('resolveSyncAttentionMessage', () => {
       }),
     ).toEqual({ message: 'Photos still uploading.', kind: 'error' });
   });
+
+  it('surfaces land docs still pending when audit sync hits rate limit', () => {
+    expect(
+      resolveSyncAttentionMessage({
+        pending: {
+          total: 4,
+          unsyncedPlotCount: 0,
+          queuePendingCount: 4,
+          unsyncedPlotNames: [],
+        },
+        t,
+        syncOutcome: {
+          remainingPending: 4,
+          queueCompleted: 1,
+          syncFailure: {
+            cause: 'rate_limit',
+            actionType: 'audit_sync',
+            step: 'declaration',
+            message: '429',
+          },
+        },
+        queueMediaPendingCount: 2,
+      }),
+    ).toEqual({
+      message: 'sync_land_docs_still_pending_after_audit_limit',
+      kind: 'error',
+    });
+  });
+
+  it('surfaces declarations pending after land upload phase completes', () => {
+    expect(
+      resolveSyncAttentionMessage({
+        pending: {
+          total: 3,
+          unsyncedPlotCount: 0,
+          queuePendingCount: 3,
+          unsyncedPlotNames: [],
+        },
+        t,
+        syncOutcome: {
+          remainingPending: 3,
+          queueCompleted: 2,
+          syncFailure: {
+            cause: 'rate_limit',
+            actionType: 'audit_sync',
+            step: 'declaration',
+            message: '429',
+          },
+        },
+        queueMediaPendingCount: 0,
+      }),
+    ).toEqual({
+      message: 'sync_declarations_pending_after_land_upload',
+      kind: 'error',
+    });
+  });
 });

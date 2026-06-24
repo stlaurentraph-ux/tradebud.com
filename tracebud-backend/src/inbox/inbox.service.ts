@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { PG_POOL } from '../db/db.module';
+import { resolveTenantIdsByEmails } from '../network/email-to-tenant-resolution';
 import { GOLDEN_STAGING_TENANT } from '../testing/golden-staging-tenant.constants';
 
 type InboxRequestStatus = 'PENDING' | 'RESPONDED';
@@ -796,60 +797,7 @@ export class InboxService {
   }
 
   private async resolveRecipientTenantsByEmail(emails: string[]): Promise<Map<string, string>> {
-    const resolved = new Map<string, string>();
-    if (emails.length === 0) {
-      return resolved;
-    }
-
-    try {
-      const signupRes = await this.pool.query<{ email: string; tenant_id: string }>(
-        `
-          SELECT LOWER(email) AS email, tenant_id
-          FROM tenant_signup_contacts
-          WHERE LOWER(email) = ANY($1::text[])
-        `,
-        [emails],
-      );
-      for (const row of signupRes.rows) {
-        resolved.set(row.email, row.tenant_id);
-      }
-    } catch (error) {
-      const code = (error as { code?: string } | null)?.code;
-      if (code !== '42P01') {
-        throw error;
-      }
-    }
-
-    const unresolved = emails.filter((email) => !resolved.has(email));
-    if (unresolved.length === 0) {
-      return resolved;
-    }
-
-    try {
-      const adminRes = await this.pool.query<{ email: string; tenant_id: string }>(
-        `
-          SELECT DISTINCT ON (LOWER(email))
-            LOWER(email) AS email,
-            tenant_id
-          FROM admin_users
-          WHERE LOWER(email) = ANY($1::text[])
-          ORDER BY LOWER(email), invited_at DESC
-        `,
-        [unresolved],
-      );
-      for (const row of adminRes.rows) {
-        if (!resolved.has(row.email)) {
-          resolved.set(row.email, row.tenant_id);
-        }
-      }
-    } catch (error) {
-      const code = (error as { code?: string } | null)?.code;
-      if (code !== '42P01') {
-        throw error;
-      }
-    }
-
-    return resolved;
+    return resolveTenantIdsByEmails(this.pool, emails);
   }
 
   async fanOutFromCampaignSend(input: {
@@ -1076,6 +1024,111 @@ export class InboxService {
     }
 
     return { created, skippedUnresolved: 0, skippedSelfTenant: 0 };
+  }
+
+
+  async ensureInboxForCampaignRecipient(input: {
+    campaignId: string;
+    recipientTenantId: string;
+  }): Promise<{ created: boolean }> {
+    const campaignId = input.campaignId.trim();
+    const recipientTenantId = input.recipientTenantId.trim();
+    if (!campaignId || !recipientTenantId) {
+      return { created: false };
+    }
+
+    let campaign: CampaignInboxFanOutInput | null = null;
+    try {
+      const campaignRes = await this.pool.query<CampaignInboxFanOutInput>(
+        `
+          SELECT
+            id,
+            tenant_id,
+            title,
+            request_type,
+            due_at,
+            target_contact_emails
+          FROM request_campaigns
+          WHERE id = $1
+            AND status IN ('RUNNING', 'PARTIAL', 'COMPLETED')
+          LIMIT 1
+        `,
+        [campaignId],
+      );
+      campaign = campaignRes.rows[0] ?? null;
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return { created: false };
+      }
+      throw error;
+    }
+
+    if (!campaign || campaign.tenant_id === recipientTenantId) {
+      return { created: false };
+    }
+
+    const fromOrg = await this.resolveSenderOrgName(campaign.tenant_id);
+    const inboxRequestType = this.mapCampaignTypeToInboxType(campaign.request_type);
+    const title = campaign.title?.trim() || 'Compliance evidence request';
+    const requestId = `req_${campaign.id}_${recipientTenantId}`;
+    const nowIso = new Date().toISOString();
+
+    const insertResult = await this.pool.query<{ id: string }>(
+      `
+        INSERT INTO inbox_requests (
+          id,
+          campaign_id,
+          title,
+          request_type,
+          due_at,
+          from_org,
+          sender_tenant_id,
+          recipient_tenant_id,
+          status,
+          created_at,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5::timestamptz, $6, $7, $8, 'PENDING', $9::timestamptz, $10::timestamptz)
+        ON CONFLICT (id) DO NOTHING
+        RETURNING id
+      `,
+      [
+        requestId,
+        campaign.id,
+        title,
+        inboxRequestType,
+        campaign.due_at,
+        fromOrg,
+        campaign.tenant_id,
+        recipientTenantId,
+        nowIso,
+        nowIso,
+      ],
+    );
+
+    if (!insertResult.rows[0]?.id) {
+      return { created: false };
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO inbox_request_events (request_id, event_type, actor_tenant_id, payload)
+        VALUES ($1, $2, $3, $4::jsonb)
+      `,
+      [
+        requestId,
+        'REQUEST_CREATED_FROM_CAMPAIGN_INVITE_CLAIM',
+        campaign.tenant_id,
+        JSON.stringify({
+          campaignId: campaign.id,
+          recipientTenantId,
+          requestType: inboxRequestType,
+        }),
+      ],
+    );
+
+    return { created: true };
   }
 
   async ensureInboxFromEmailCtaAccept(input: {

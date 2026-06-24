@@ -39,6 +39,8 @@ export type TotalSyncPendingSnapshot = {
   backendPlots?: unknown[];
   /** Reconciled local↔server links after the measurement pass. */
   plotServerLinks?: Record<string, string>;
+  /** photos_sync + evidence_sync rows still in the SQLite queue. */
+  queueMediaPendingCount?: number;
 };
 
 function uniqueIds(candidates: string[]): string[] {
@@ -164,9 +166,13 @@ export async function measureTotalSyncPending(params: {
   }
 
   const queuePendingCount = rows.length;
+  const queueMediaPendingCount = rows.filter(
+    (row) => row.actionType === 'photos_sync' || row.actionType === 'evidence_sync',
+  ).length;
   const plotAttention = unsyncedPlotCount + blockedPlotCount;
   return {
     queuePendingCount,
+    queueMediaPendingCount,
     unsyncedPlotCount,
     blockedPlotCount,
     total: queuePendingCount + plotAttention,

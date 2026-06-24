@@ -48,6 +48,7 @@ import { getIssueRemediationHref } from '@/lib/compliance-issue-remediation';
 import { issueKindBadgeClass } from '@/lib/compliance-issue-ownership';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
 import { LocaleContext } from '@/lib/locale-context';
 import { getDashboardBreadcrumbLabel } from '@/lib/terminology-labels';
 import {
@@ -94,6 +95,13 @@ type LinkedEntityType = 'plot' | 'batch' | 'package' | 'farmer' | 'campaign' | '
 type IssuesViewMode = 'kanban' | 'list';
 type IssueKindFilter = ComplianceIssue['issueKind'] | 'all';
 
+const OWNERSHIP_KIND_FILTERS = ['upstream_blocker', 'canonical', 'campaign', 'request'] as const;
+
+function parseOwnershipKindFilter(raw: string | null): IssueKindFilter | null {
+  if (!raw) return null;
+  return (OWNERSHIP_KIND_FILTERS as readonly string[]).includes(raw) ? (raw as IssueKindFilter) : null;
+}
+
 export default function ComplianceIssuesPage() {
   return (
     <SearchParamsPageBoundary>
@@ -134,25 +142,15 @@ function ComplianceIssuesPageContent() {
     linkedEntityId: '',
   });
 
+  const ownershipKindFromUrl = parseOwnershipKindFilter(searchParams.get('ownership'));
+  const activeKindFilter: IssueKindFilter = ownershipKindFromUrl ?? kindFilter;
+
   const localBlockingCount = issues.filter((i) => i.severity === 'BLOCKING' && i.status === 'open').length;
   const upstreamBlockerCount = issues.filter((i) => i.issueKind === 'upstream_blocker' && i.status === 'open').length;
   const blockingIssuesCount = role === 'cooperative' ? (backendBlockingCount ?? localBlockingCount) : localBlockingCount;
 
   useEffect(() => {
-    const ownership = searchParams.get('ownership');
-    if (
-      ownership === 'upstream_blocker' ||
-      ownership === 'canonical' ||
-      ownership === 'campaign' ||
-      ownership === 'request'
-    ) {
-      setKindFilter(ownership);
-    }
-  }, [searchParams]);
-
-  useEffect(() => {
     if (role !== 'cooperative') {
-      setBackendBlockingCount(null);
       return;
     }
     const token = window.sessionStorage.getItem('tracebud_token');
@@ -171,11 +169,14 @@ function ComplianceIssuesPageContent() {
     if (!user) {
       return;
     }
+    let cancelled = false;
     const token = window.sessionStorage.getItem('tracebud_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
-    setIsLoadingIssues(true);
-    void fetch('/api/requests/issues', { headers, cache: 'no-store' })
-      .then(async (response) => {
+
+    void (async () => {
+      setIsLoadingIssues(true);
+      try {
+        const response = await fetch('/api/requests/issues', { headers, cache: 'no-store' });
         const payload = (await response.json().catch(() => [])) as Array<{
           id: string;
           title: string;
@@ -195,7 +196,7 @@ function ComplianceIssuesPageContent() {
           source_issue_id?: string | null;
           can_update_status?: boolean;
         }>;
-        if (!response.ok || !Array.isArray(payload)) {
+        if (cancelled || !response.ok || !Array.isArray(payload)) {
           return;
         }
         setIssues(
@@ -221,9 +222,18 @@ function ComplianceIssuesPageContent() {
             canUpdateStatus: item.can_update_status,
           })),
         );
-      })
-      .catch(() => undefined)
-      .finally(() => setIsLoadingIssues(false));
+      } catch {
+        // Keep last loaded issues when refresh fails.
+      } finally {
+        if (!cancelled) {
+          setIsLoadingIssues(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user]);
 
   const filteredIssues = issues.filter((issue) => {
@@ -233,7 +243,7 @@ function ComplianceIssuesPageContent() {
       issue.linkedEntity.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSeverity = severityFilter === 'all' || issue.severity === severityFilter;
     const matchesStatus = statusFilter === 'all' || issue.status === statusFilter;
-    const matchesKind = kindFilter === 'all' || issue.issueKind === kindFilter;
+    const matchesKind = activeKindFilter === 'all' || issue.issueKind === activeKindFilter;
     return matchesSearch && matchesSeverity && matchesStatus && matchesKind;
   });
 
@@ -259,6 +269,10 @@ function ComplianceIssuesPageContent() {
     };
 
     setIssues([issue, ...issues]);
+    trackDashboardEvent(DASHBOARD_EVENTS.ISSUE_CREATE_SUCCESS, {
+      issue_id: issue.id,
+      severity: issue.severity,
+    });
     setNewIssue({
       title: '',
       description: '',
@@ -290,6 +304,10 @@ function ComplianceIssuesPageContent() {
 
     if (!response.ok) {
       setIssues(previousIssues);
+      trackDashboardEvent(DASHBOARD_EVENTS.ISSUE_STATUS_CHANGE_FAILURE, {
+        issue_id: issueId,
+        status: newStatus,
+      });
       return;
     }
 
@@ -305,6 +323,11 @@ function ComplianceIssuesPageContent() {
         ),
       );
     }
+
+    trackDashboardEvent(DASHBOARD_EVENTS.ISSUE_STATUS_CHANGED, {
+      issue_id: issueId,
+      status: newStatus,
+    });
 
     if (newStatus === 'resolved' || newStatus === 'closed') {
       markOnboardingAction('submission_reviewed');
@@ -520,7 +543,7 @@ function ComplianceIssuesPageContent() {
               <SelectItem value="closed">{getIssuesKanbanStatusLabel('closed', t)}</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={kindFilter} onValueChange={(v) => setKindFilter(v as IssueKindFilter)}>
+          <Select value={activeKindFilter} onValueChange={(v) => setKindFilter(v as IssueKindFilter)}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder={getIssuesFilterPlaceholder('ownership', t)} />
             </SelectTrigger>
@@ -644,25 +667,27 @@ function ComplianceIssuesPageContent() {
                   <div>
                     <Label className="text-muted-foreground">{getIssuesDetailLabel('status', t)}</Label>
                     {canPersistIssueStatus(selectedIssue.id, selectedIssue.canUpdateStatus) ? (
-                      <Select
-                        value={selectedIssue.status}
-                        onValueChange={(newStatus) => {
-                          void handleUpdateStatus(selectedIssue.id, newStatus as IssueStatus);
-                          setSelectedIssue({ ...selectedIssue, status: newStatus as IssueStatus });
-                        }}
-                      >
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="open">{getIssuesKanbanStatusLabel('open', t)}</SelectItem>
-                          <SelectItem value="in_progress">
-                            {getIssuesKanbanStatusLabel('in_progress', t)}
-                          </SelectItem>
-                          <SelectItem value="resolved">{getIssuesKanbanStatusLabel('resolved', t)}</SelectItem>
-                          <SelectItem value="closed">{getIssuesKanbanStatusLabel('closed', t)}</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <PermissionGate permission="compliance:resolve_issue">
+                        <Select
+                          value={selectedIssue.status}
+                          onValueChange={(newStatus) => {
+                            void handleUpdateStatus(selectedIssue.id, newStatus as IssueStatus);
+                            setSelectedIssue({ ...selectedIssue, status: newStatus as IssueStatus });
+                          }}
+                        >
+                          <SelectTrigger className="mt-1" data-testid="issue-detail-status-select">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="open">{getIssuesKanbanStatusLabel('open', t)}</SelectItem>
+                            <SelectItem value="in_progress">
+                              {getIssuesKanbanStatusLabel('in_progress', t)}
+                            </SelectItem>
+                            <SelectItem value="resolved">{getIssuesKanbanStatusLabel('resolved', t)}</SelectItem>
+                            <SelectItem value="closed">{getIssuesKanbanStatusLabel('closed', t)}</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </PermissionGate>
                     ) : (
                       <p className="mt-1 text-sm">{getIssuesKanbanStatusLabel(selectedIssue.status, t)}</p>
                     )}

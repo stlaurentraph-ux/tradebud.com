@@ -5,9 +5,10 @@ import { Pool } from 'pg';
 import { AuditController } from './audit.controller';
 import { PG_POOL } from '../db/db.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_audit_assignment_exports_api_int_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
@@ -34,7 +35,7 @@ class TestAuthGuard implements CanActivate {
   }
 }
 
-describeIfDb('Audit assignment-export API integration: phase/status filters', () => {
+describe('Audit assignment-export API integration: phase/status filters', () => {
   let pool: Pool;
   let app: INestApplication;
 

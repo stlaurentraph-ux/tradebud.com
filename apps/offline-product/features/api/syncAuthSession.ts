@@ -7,14 +7,15 @@ import {
   activateSyncAuthOnSignIn,
   clearSyncAuthCredentials,
   isSyncAuthDismissedOnDevice,
+  persistSyncAuthSignOutLatch,
   loadSyncAuthCredentials,
   saveOAuthSyncAuthCredentials,
   saveSyncAuthCredentials,
   saveOAuthAccessTokenCache,
   type SyncAuthCredentials,
 } from '@/features/security/syncAuthStorage';
-import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
-import { clearOAuthCallbackDedupState } from '@/features/auth/oauthCallbackUrl';
+import { mapPasswordSignInError, mapSetPasswordError } from '@/features/auth/mapAuthError';
+import { clearOAuthOrchestratorState } from '@/features/auth/oauthOrchestrator';
 import { getFieldAppEmailFromSession } from '@/features/auth/oauthSession';
 import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import {
@@ -111,7 +112,7 @@ function isLocalhostApi(url: string): boolean {
 
 export function getSupabaseAuthClient(): SupabaseClient {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Supabase URL or ANON key not configured');
+    throw new Error('sign_in_auth_not_configured');
   }
   if (!supabaseClient) {
     supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -419,14 +420,19 @@ export function abortSyncAuthForSignOut(): void {
   authUiGeneration += 1;
   syncAuthDismissedByUser = true;
   clearInMemorySyncAuth();
+  void persistSyncAuthSignOutLatch().catch(() => undefined);
 }
 
 export async function hydrateSyncAuthFromSettings(): Promise<void> {
   return runAuthStateMutation(async () => {
     try {
+      if (syncAuthDismissedByUser) {
+        clearInMemorySyncAuth();
+        return;
+      }
       const dismissed = await isSyncAuthDismissedOnDevice();
-      syncAuthDismissedByUser = dismissed;
       if (dismissed) {
+        syncAuthDismissedByUser = true;
         clearInMemorySyncAuth();
         return;
       }
@@ -499,7 +505,7 @@ export async function clearPersistedSyncAuth(): Promise<void> {
     } finally {
       supabaseClient = null;
     }
-    clearOAuthCallbackDedupState();
+    clearOAuthOrchestratorState();
   });
 }
 
@@ -560,8 +566,8 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
     let accessToken: string | null;
     try {
       accessToken = await getAccessTokenFromSupabase();
-    } catch {
-      return null;
+    } catch (error) {
+      throw error;
     }
     if (!accessToken) {
       return null;
@@ -571,7 +577,7 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
       refresh_token: currentRefreshToken,
     });
     if (error) {
-      return null;
+      throw new Error(mapSetPasswordError(error));
     }
     return supabase;
   }

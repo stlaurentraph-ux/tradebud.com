@@ -10,6 +10,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { validateHarvestKg } from '@/features/validation/validators';
 import {
+  showBuyerInviteAlert,
+} from '@/features/harvest/completeHarvestSubmitFlow';
+import {
   buildMultiPlotLinesFromWeights,
   canAddLineToSession,
   inlineMultiPlotWeightsComplete,
@@ -220,14 +223,30 @@ export function MultiPlotDeliveryWizard({
         backendPlots,
         plotServerLinks,
         deliveryRecipient,
+        t,
       });
       setResults(nextResults);
-      try {
-        await onComplete();
-      } catch {
-        // Deliveries may have synced even when voucher refresh fails (e.g. schema lag).
+      const invitePending = nextResults.some((row) => row.buyerInvitePending);
+      if (invitePending && deliveryRecipient?.mode === 'email') {
+        showBuyerInviteAlert({
+          t,
+          invite: {
+            email: deliveryRecipient.email,
+            pending: true,
+            inviteSent: false,
+          },
+          onContinue: () => {
+            void onComplete().finally(() => setStep('complete'));
+          },
+        });
+      } else {
+        try {
+          await onComplete();
+        } catch {
+          // Deliveries may have synced even when voucher refresh fails (e.g. schema lag).
+        }
+        setStep('complete');
       }
-      setStep('complete');
     } catch (e) {
       setMessage(e instanceof Error ? e.message : String(e));
     } finally {

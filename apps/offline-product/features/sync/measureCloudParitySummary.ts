@@ -1,7 +1,7 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
-import { loadLocalDeliveryReceiptsForFarmer } from '@/features/harvest/localDeliveryReceipts';
+import { loadLocalDeliveryReceiptsForFarmer } from '@/features/state/persistence';
 import {
-  countServerPlotsForPostAuthRestore,
+  countServerPlotsMissingOnDeviceForRestore,
   countServerVouchersForPostAuthRestore,
 } from '@/features/sync/postAuthSyncOffer';
 import {
@@ -40,6 +40,7 @@ export async function measureCloudParitySummary(params: {
         localPlots: params.localPlots,
         localReceiptCount: 0,
         serverPlotCount: null,
+        serverPlotsMissingOnDevice: null,
         serverVoucherCount: null,
         localMedia: { groundTruth: 0, landTitle: 0, evidence: 0 },
         serverEvidenceDocs: null,
@@ -49,10 +50,10 @@ export async function measureCloudParitySummary(params: {
     );
   }
 
-  const [localReceiptRows, serverPlotCount, serverVoucherCount, localMedia, auditRows, localDraft] =
+  const [localReceiptRows, serverPlotsMissingOnDevice, serverVoucherCount, localMedia, auditRows, localDraft] =
     await Promise.all([
       loadLocalDeliveryReceiptsForFarmer(profileFarmerId).catch(() => []),
-      countServerPlotsForPostAuthRestore({
+      countServerPlotsMissingOnDeviceForRestore({
         profileFarmerId,
         localPlots: params.localPlots,
       }),
@@ -96,7 +97,7 @@ export async function measureCloudParitySummary(params: {
       auditRows,
       localPlots: params.localPlots,
       localReceiptCount: localReceiptRows.length,
-      serverPlotCount,
+      serverPlotsMissingOnDevice,
       serverVoucherCount,
       localMedia,
       serverEvidenceDocs,

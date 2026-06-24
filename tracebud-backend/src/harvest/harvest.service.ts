@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException, Inject, Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
+import { queueDeliveryBuyerInvite, type DeliveryBuyerInviteResult } from './delivery-buyer-invite';
 import { Pool } from 'pg';
 import { BillingService } from '../billing/billing.service';
 import { isPlotDeforestationFreeVerified } from '../compliance/plot-compliance-status';
@@ -365,6 +366,7 @@ export class HarvestService {
       farmerId: effectiveFarmerId,
       deliverToTenantId,
       deliverToEmail,
+      actorUserId: userId,
     });
 
     const voucherId = randomUUID();
@@ -394,10 +396,27 @@ export class HarvestService {
       ],
     );
 
-    const result = {
+    const result: {
+      transaction: typeof tx;
+      voucher: (typeof voucherRes.rows)[0];
+      buyerInvite?: DeliveryBuyerInviteResult;
+    } = {
       transaction: tx,
       voucher: voucherRes.rows[0],
     };
+
+    if (
+      deliveryRecipient.pendingBuyerInvite &&
+      deliveryRecipient.intendedRecipientEmail &&
+      voucherRes.rows[0]?.id
+    ) {
+      result.buyerInvite = await queueDeliveryBuyerInvite(this.pool, {
+        voucherId: String(voucherRes.rows[0].id),
+        farmerId: effectiveFarmerId,
+        recipientEmail: deliveryRecipient.intendedRecipientEmail,
+        actorUserId: userId,
+      });
+    }
 
     // Audit: harvest recorded
     await this.pool.query(
@@ -419,6 +438,7 @@ export class HarvestService {
           clientEventId: clientEventId ?? null,
           intendedRecipientTenantId: deliveryRecipient.intendedRecipientTenantId,
           intendedRecipientEmail: deliveryRecipient.intendedRecipientEmail,
+          pendingBuyerInvite: deliveryRecipient.pendingBuyerInvite === true,
         }),
       ],
     );

@@ -5,13 +5,15 @@ export type OnboardingEmailTemplateId =
   | 'welcome'
   | 'farmer-welcome'
   | 'resume-nudge-first'
-  | 'resume-nudge-final';
+  | 'resume-nudge-final'
+  | 'delivery-buyer-invite';
 
 export const ONBOARDING_EMAIL_SUBJECTS: Record<OnboardingEmailTemplateId, string> = {
   welcome: 'Welcome to Tracebud — your workspace is ready',
   'farmer-welcome': 'Welcome to Tracebud — your farmer account is ready',
   'resume-nudge-first': 'Finish setting up your Tracebud workspace',
   'resume-nudge-final': 'Reminder: your Tracebud workspace is almost ready',
+  'delivery-buyer-invite': 'A producer logged a delivery for you on Tracebud',
 };
 
 export interface OnboardingEmailTemplateVars {
@@ -20,9 +22,12 @@ export interface OnboardingEmailTemplateVars {
   country?: string;
   roleLabel?: string;
   loginUrl?: string;
+  signupUrl?: string;
   resumeUrl?: string;
   appUrl?: string;
   unsubscribeUrl?: string;
+  recipientEmail?: string;
+  producerLabel?: string;
   year: string;
 }
 
@@ -106,9 +111,12 @@ export function applyTemplatePlaceholders(
     country: vars.country ?? '',
     roleLabel: vars.roleLabel ?? '',
     loginUrl: vars.loginUrl ?? '',
+    signupUrl: vars.signupUrl ?? '',
     resumeUrl: vars.resumeUrl ?? '',
     appUrl: vars.appUrl ?? '',
     unsubscribeUrl: vars.unsubscribeUrl ?? '',
+    recipientEmail: vars.recipientEmail ?? '',
+    producerLabel: vars.producerLabel ?? '',
     year: vars.year,
   };
 
@@ -176,6 +184,28 @@ export function buildFarmerWelcomeTemplateVars(input: {
     appUrl,
     unsubscribeUrl:
       process.env.TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL?.trim() || `${appUrl}/privacy`,
+    year: String(new Date().getFullYear()),
+  };
+}
+
+export function buildDeliveryBuyerInviteTemplateVars(input: {
+  recipientEmail: string;
+  producerLabel?: string | null;
+  dashboardBaseUrl?: string;
+}): OnboardingEmailTemplateVars {
+  const dashboardBase = (input.dashboardBaseUrl ?? 'https://dashboard.tracebud.com').replace(/\/$/, '');
+  const recipientEmail = input.recipientEmail.trim().toLowerCase();
+  const local = recipientEmail.split('@')[0] ?? '';
+  const token = local.split(/[._+-]/)[0] ?? local;
+  const firstName = token.length > 0 ? token.charAt(0).toUpperCase() + token.slice(1) : 'there';
+  return {
+    firstName,
+    recipientEmail,
+    producerLabel: input.producerLabel?.trim() || 'A Tracebud producer',
+    signupUrl: `${dashboardBase}/signup`,
+    loginUrl: `${dashboardBase}/login`,
+    unsubscribeUrl:
+      process.env.TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL?.trim() || `${dashboardBase}/settings`,
     year: String(new Date().getFullYear()),
   };
 }

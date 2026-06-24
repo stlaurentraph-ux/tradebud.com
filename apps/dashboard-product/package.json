@@ -25,8 +25,10 @@
     "e2e:golden-paths": "playwright test",
     "e2e:golden-paths:assert": "node scripts/dashboard-playwright-guard.mjs",
     "e2e:golden-paths:install": "playwright install chromium",
+    "analytics:slice:assert": "node ./scripts/dashboard-analytics-slice-guard.mjs --strict",
+    "analytics:slice:write-baseline": "node ./scripts/dashboard-analytics-slice-guard.mjs --write-baseline",
     "qa:structural": "node ./scripts/run-structural-guards.mjs",
-    "qa:structural:ci": "node ./scripts/run-structural-guards.mjs"
+    "qa:structural:ci": "node ./scripts/run-structural-guards.mjs --ci"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

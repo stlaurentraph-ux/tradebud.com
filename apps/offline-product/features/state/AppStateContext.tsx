@@ -229,7 +229,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         declarationGeoCapturedAt: nextFarmer.declarationGeoCapturedAt ?? null,
       },
     }).catch(() => undefined);
-    void queueFieldDevicePreferencesSync(nextFarmer).catch(() => undefined);
+    void queueFieldDevicePreferencesSync(nextFarmer, { deferPost: true }).catch(() => undefined);
   }, [persistMergedFarmer]);
 
   const saveFarmer = useCallback(async (nextFarmer: FarmerProfile) => {
@@ -263,7 +263,11 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       if (!prev) return prev;
       const next = { ...prev, profilePhotoUri: uri ?? undefined };
       saveFarmerProfilePhotoUri(uri).catch(() => undefined);
-      void queueFarmerProfilePhotoSync({ farmerId: prev.id, localUri: uri }).catch(() => undefined);
+      void queueFarmerProfilePhotoSync({
+        farmerId: prev.id,
+        localUri: uri,
+        deferPost: true,
+      }).catch(() => undefined);
       return next;
     });
   }, []);

@@ -64,6 +64,11 @@ async function markSyncAuthDismissedOnDevice(): Promise<void> {
   await setSetting(SYNC_AUTH_SIGNED_OUT_KEY, '1');
 }
 
+/** Persist the device sign-out latch before async credential wipe (blocks silent re-hydrate). */
+export async function persistSyncAuthSignOutLatch(): Promise<void> {
+  await markSyncAuthDismissedOnDevice();
+}
+
 async function clearSyncAuthDismissedOnDevice(): Promise<void> {
   if (await supportsSecureStore()) {
     await SecureStore.deleteItemAsync(SYNC_AUTH_SIGNED_OUT_KEY).catch(() => undefined);

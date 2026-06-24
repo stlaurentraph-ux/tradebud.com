@@ -9,14 +9,16 @@ import {
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
 import type { Plot } from '@/features/state/AppStateContext';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
+import { getOAuthErrorContext } from '@/features/auth/oauthFlowError';
 import { mapPasswordSignInError, normalizeSignInErrorCode } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
+import { trackOAuthFailure } from '@/features/auth/oauthTelemetry';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
 import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 export type SignInSyncResult =
-  | { ok: true; missingName?: boolean; apiUnreachable?: boolean }
-  | { ok: false; message: string };
+  | { ok: true; missingName?: boolean; apiUnreachable?: boolean; existingAccount?: boolean }
+  | { ok: false; message: string; oauthStep?: string; oauthPath?: string };
 
 export { clearPersistedSyncAuth };
 
@@ -35,50 +37,55 @@ export async function signInAndSyncPlots(params: {
     return { ok: false, message: 'enter_email_password' };
   }
 
-  const supabase = getSupabaseAuthClient();
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password: params.password,
-  });
-  if (error) {
-    return { ok: false, message: mapPasswordSignInError(error) };
-  }
-  if (!data.session) {
-    return { ok: false, message: 'sign_in_failed' };
-  }
-
-  await saveAndApplyPasswordSession(email, params.password, data.session);
-
-  if (params.farmerId) {
-    const bootstrap = await bootstrapFieldAppProducer({
-      farmerId: params.farmerId,
+  try {
+    const supabase = getSupabaseAuthClient();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password: params.password,
     });
-    if (!bootstrap.ok) {
+    if (error) {
+      return { ok: false, message: mapPasswordSignInError(error) };
+    }
+    if (!data.session) {
+      return { ok: false, message: 'sign_in_failed' };
+    }
+
+    await saveAndApplyPasswordSession(email, params.password, data.session);
+
+    if (params.farmerId) {
+      const bootstrap = await bootstrapFieldAppProducer({
+        farmerId: params.farmerId,
+      });
+      if (!bootstrap.ok) {
+        await clearPersistedSyncAuth();
+        return { ok: false, message: bootstrap.message };
+      }
+    }
+    const res = await testBackendLogin();
+    if (!res.ok) {
+      const unreachable =
+        res.message.toLowerCase().includes('network') ||
+        res.message.toLowerCase().includes('localhost') ||
+        res.message.toLowerCase().includes('failed to fetch') ||
+        res.message.toLowerCase().includes('tracebud api returned');
+      if (unreachable) {
+        return { ok: true, apiUnreachable: true };
+      }
       await clearPersistedSyncAuth();
-      return { ok: false, message: bootstrap.message };
+      const code = normalizeSignInErrorCode(res.message);
+      return { ok: false, message: code === res.message ? res.message : code };
     }
-  }
-  const res = await testBackendLogin();
-  if (!res.ok) {
-    const unreachable =
-      res.message.toLowerCase().includes('network') ||
-      res.message.toLowerCase().includes('localhost') ||
-      res.message.toLowerCase().includes('failed to fetch') ||
-      res.message.toLowerCase().includes('tracebud api returned');
-    if (unreachable) {
-      return { ok: true, apiUnreachable: true };
+    if (params.farmerId && params.localPlots) {
+      await runAutoBackup({
+        farmerId: params.farmerId,
+        localPlots: params.localPlots,
+      });
     }
-    await clearPersistedSyncAuth();
-    const code = normalizeSignInErrorCode(res.message);
-    return { ok: false, message: code === res.message ? res.message : code };
+    return { ok: true };
+  } catch (e) {
+    const raw = e instanceof Error ? e.message : String(e);
+    return { ok: false, message: normalizeSignInErrorCode(raw) };
   }
-  if (params.farmerId && params.localPlots) {
-    await runAutoBackup({
-      farmerId: params.farmerId,
-      localPlots: params.localPlots,
-    });
-  }
-  return { ok: true };
 }
 
 export async function signInWithOAuthAndSyncPlots(params: {
@@ -98,6 +105,13 @@ export async function signInWithOAuthAndSyncPlots(params: {
     if (hasSyncAuthSession()) {
       return { ok: true };
     }
-    return { ok: false, message: mapOAuthErrorToCode(e) };
+    trackOAuthFailure(params.provider, e);
+    const ctx = getOAuthErrorContext(e);
+    return {
+      ok: false,
+      message: mapOAuthErrorToCode(e),
+      ...(ctx.step ? { oauthStep: ctx.step } : {}),
+      ...(ctx.path ? { oauthPath: ctx.path } : {}),
+    };
   }
 }
