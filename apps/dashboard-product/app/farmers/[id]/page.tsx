@@ -75,7 +75,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
           return;
         }
 
-        const resolved = await resolveProducerFarmerId(match.email);
+        const resolved = await resolveProducerFarmerId(match.email ?? '');
         if (cancelled) return;
         if (resolved) {
           setFarmerProfileId(resolved);
@@ -106,7 +106,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
     <div className="flex flex-col">
       <AppHeader
         title={contact?.full_name ?? getProducerDetailFallbackTitle(role, t)}
-        subtitle={contact ? contact.email : `ID: ${id}`}
+        subtitle={contact ? (contact.email ?? undefined) : `ID: ${id}`}
         breadcrumbs={[
           { label: getDashboardBreadcrumbLabel(t), href: '/' },
           { label: getProducersNavLabel(role, t), href: producersHref },
@@ -225,7 +225,7 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
                     </p>
                   ) : (
                     <p className="text-muted-foreground">
-                      {getProducerDetailCopy('field_app_not_linked', role, t, { email: contact.email })}
+                      {getProducerDetailCopy('field_app_not_linked', role, t, { email: contact.email ?? '' })}
                     </p>
                   )}
                 </CardContent>

@@ -346,3 +346,49 @@ export async function mockExporterPackageReadinessApis(
     await route.continue();
   });
 }
+
+export async function mockPlotGeometryApprovalApis(
+  page: Page,
+  options?: { approved?: boolean },
+): Promise<void> {
+  const approved = options?.approved ?? false;
+  const approvedAt = approved ? new Date().toISOString() : null;
+
+  await page.route('**/api/plots/*/map-preview', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        plot_id: GOLDEN_EXPORTER_SMOKE.packageId,
+        geometry_approved_at: approvedAt,
+        geometry_capture: {
+          geometry_confidence_tier: 'low',
+          geometry_confidence_score: 0.35,
+          horizontal_uncertainty_m: 12,
+          capture_method: 'MOBILE_GPS',
+          imagery_source: null,
+          offline_tiles_pack_id: null,
+          recorded_at: Date.now(),
+        },
+      }),
+    });
+  });
+
+  await page.route('**/api/plots/*/approve-geometry', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        geometry_approved_at: new Date().toISOString(),
+      }),
+    });
+  });
+}
