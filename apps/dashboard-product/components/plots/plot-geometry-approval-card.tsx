@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,7 @@ export function PlotGeometryApprovalCard({ plotId }: PlotGeometryApprovalCardPro
   const { preview, isLoading, error: previewError, reload } = usePlotMapPreview(plotId);
   const { approve, isApproving, error: approveError } = usePlotGeometryApproval(plotId);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [optimisticApprovedAt, setOptimisticApprovedAt] = useState<string | null>(null);
 
   const state = useMemo(
     () =>
@@ -40,7 +41,17 @@ export function PlotGeometryApprovalCard({ plotId }: PlotGeometryApprovalCardPro
 
   const canApprove = canApprovePlotGeometry(user?.active_role);
   const recommended = plotGeometryApprovalRecommended(state.capture);
-  const isApproved = Boolean(state.geometryApprovedAt);
+  const effectiveApprovedAt = optimisticApprovedAt ?? state.geometryApprovedAt;
+  const isApproved = Boolean(effectiveApprovedAt);
+
+  const handleApprove = useCallback(async () => {
+    const approvedAt = await approve();
+    if (approvedAt) {
+      setOptimisticApprovedAt(approvedAt);
+      setSuccessMessage(getPlotGeometryApprovalCopy('success', t));
+      reload();
+    }
+  }, [approve, reload, t]);
 
   if (isLoading) {
     return (
@@ -59,7 +70,7 @@ export function PlotGeometryApprovalCard({ plotId }: PlotGeometryApprovalCardPro
 
   const bodyCopy = isApproved
     ? getPlotGeometryApprovalCopy('approved_body', t, {
-        date: new Date(state.geometryApprovedAt as string).toLocaleDateString(),
+        date: new Date(effectiveApprovedAt as string).toLocaleDateString(),
       })
     : recommended
       ? getPlotGeometryApprovalCopy('recommended_body', t)
@@ -88,13 +99,7 @@ export function PlotGeometryApprovalCard({ plotId }: PlotGeometryApprovalCardPro
           <Button
             data-testid="plot-geometry-approval-action"
             disabled={isApproving}
-            onClick={async () => {
-              const approvedAt = await approve();
-              if (approvedAt) {
-                setSuccessMessage(getPlotGeometryApprovalCopy('success', t));
-                reload();
-              }
-            }}
+            onClick={handleApprove}
           >
             {isApproving
               ? getPlotGeometryApprovalCopy('approving', t)
