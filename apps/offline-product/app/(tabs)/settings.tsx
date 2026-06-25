@@ -1093,7 +1093,7 @@ export default function SettingsScreen() {
               await signOutOnDevice();
               setSyncMessage(null);
               void refreshSyncMetrics();
-              Alert.alert(t('sign_out_device'), t('signed_out_device'));
+              Alert.alert(t('signed_out_device'));
             } catch (e) {
               const message = e instanceof Error ? e.message : String(e);
               Alert.alert(t('sign_out_device'), message);

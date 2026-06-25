@@ -40,6 +40,7 @@ import { getAuthCredentials } from '@/features/api/postPlot';
 import { BackupConsentModal } from '@/components/auth/BackupConsentModal';
 import { CreateAccountWizard } from '@/components/auth/CreateAccountWizard';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
+import { AuthMethodOrDivider } from '@/components/auth/AuthMethodOrDivider';
 import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
@@ -80,6 +81,7 @@ import { useLanguage } from '@/features/state/LanguageContext';
 import { getSetting, loadAppState, loadLocalDeliveryReceiptsForFarmer, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
 import { resolveFieldAppSessionRole } from '@/features/enumeration/fieldAppSessionRole';
 import type { FieldAppRole } from '@/features/auth/fieldRolePermissionRegistry';
+import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
 
 const ACCOUNT_WELCOME_DISMISSED_KEY = 'account_welcome_dismissed';
 
@@ -333,7 +335,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const handleBackupConfirm = useCallback(async () => {
     if (backupBusy) return;
 
+    setBackupModalVisible(false);
     setBackupBusy(true);
+    const cb = backupConfirmedCallbackRef.current;
+    backupConfirmedCallbackRef.current = undefined;
+
     try {
       const { farmer: alignedFarmer, rekeyed } = await alignFarmerWithAuthUser(farmer, {
         localPlots: plots,
@@ -351,14 +357,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       const backup = await runBackupWithConsent({ farmerId, localPlots: plots });
       await reloadFromDisk();
       showBackupOutcomeAlert(backup);
-      const cb = backupConfirmedCallbackRef.current;
-      backupConfirmedCallbackRef.current = undefined;
       if (cb) await cb();
     } catch (e) {
       const message = e instanceof Error ? e.message : String(e);
       Alert.alert(t('backup_consent_title'), message || t('backend_unreachable'));
     } finally {
-      setBackupModalVisible(false);
       setBackupBusy(false);
     }
   }, [backupBusy, farmer, plots, reloadFromDisk, setFarmer, showBackupOutcomeAlert, t]);
@@ -972,19 +975,21 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                     onGoogle={() => void handleOAuthSignIn('google')}
                     onApple={() => void handleOAuthSignIn('apple')}
                   />
-                  <Pressable
+                  <AuthMethodOrDivider label={t('auth_method_or')} />
+                  <Button
+                    variant="outline"
+                    size="md"
+                    fullWidth
                     testID="sign-in-use-email"
+                    disabled={loading || oauthLoading !== null}
+                    icon={<Ionicons name="mail-outline" size={18} color={colors.tint} />}
                     onPress={() => {
                       setHint(null);
                       setEmailMode(true);
                     }}
-                    style={authSheetStyles.textLink}
-                    disabled={loading || oauthLoading !== null}
                   >
-                    <ThemedText type="defaultSemiBold" style={authSheetStyles.textLinkLabel}>
-                      {t('sign_in_use_email')}
-                    </ThemedText>
-                  </Pressable>
+                    {t('sign_in_use_email')}
+                  </Button>
                 </>
               ) : (
                 <>

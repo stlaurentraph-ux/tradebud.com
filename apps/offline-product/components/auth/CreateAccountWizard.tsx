@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
+import { AuthMethodOrDivider } from '@/components/auth/AuthMethodOrDivider';
 import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { Brand, Spacing } from '@/constants/theme';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
@@ -253,23 +254,26 @@ export function CreateAccountWizard({
                   disabled={busy}
                   loadingProvider={oauthBusy}
                   busyLabel={t('sign_in_oauth_busy')}
-                  googleLabel={t('oauth_google_short')}
-                  appleLabel={t('oauth_apple_short')}
+                  googleLabel={t('sign_in_with_google')}
+                  appleLabel={t('sign_in_with_apple')}
                   onGoogle={() => void handleOAuthSignUp('google')}
                   onApple={() => void handleOAuthSignUp('apple')}
                 />
-                <Pressable
+                <AuthMethodOrDivider label={t('auth_method_or')} />
+                <Button
+                  variant="outline"
+                  size="md"
+                  fullWidth
+                  testID="create-account-use-email"
+                  disabled={busy || oauthBusy !== null}
+                  icon={<Ionicons name="mail-outline" size={18} color={colors.tint} />}
                   onPress={() => {
                     setHint(null);
                     setStep('email');
                   }}
-                  style={authSheetStyles.textLink}
-                  disabled={busy || oauthBusy !== null}
                 >
-                  <ThemedText type="defaultSemiBold" style={authSheetStyles.textLinkLabel}>
-                    {t('farmer_signup_use_email')}
-                  </ThemedText>
-                </Pressable>
+                  {t('farmer_signup_use_email')}
+                </Button>
               </>
             ) : null}
 
