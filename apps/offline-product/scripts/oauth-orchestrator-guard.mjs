@@ -74,8 +74,14 @@ function main() {
     issues.push('missing features/auth/oauthCallbackWaiter.ts');
   }
 
+  if (!signInSheet.includes('isOAuthProviderSignInInFlight')) {
+    issues.push('SignInSheetContext must defer deep links while isOAuthProviderSignInInFlight');
+  }
   if (!signInSheet.includes('completeOAuthFromDeepLink')) {
     issues.push('SignInSheetContext must use completeOAuthFromDeepLink for warm deep links');
+  }
+  if (!orchestrator.includes('isOAuthProviderSignInInFlight')) {
+    issues.push('oauthOrchestrator.ts must export isOAuthProviderSignInInFlight');
   }
   if (!signInSheet.includes('isGoogleNativeOAuthRedirectUrl')) {
     issues.push('SignInSheetContext must dismiss browser on Google native oauth2redirect deep links');
@@ -96,6 +102,21 @@ function main() {
   if (!callback.includes('resolveOAuthColdStartUrl')) {
     issues.push('auth/callback.tsx must poll for cold-start OAuth URL via resolveOAuthColdStartUrl');
   }
+  if (!callback.includes('hasActiveOAuthCallbackWaiter')) {
+    issues.push('auth/callback.tsx must defer to in-flight browser OAuth via hasActiveOAuthCallbackWaiter');
+  }
+  if (!callback.includes('probeOAuthColdStartLaunchKind')) {
+    issues.push('auth/callback.tsx must probe stale /auth/callback routes via probeOAuthColdStartLaunchKind');
+  }
+  if (!fs.existsSync(path.join(root, 'features/auth/oauthLaunchExpectation.ts'))) {
+    issues.push('missing features/auth/oauthLaunchExpectation.ts');
+  }
+  if (!fs.existsSync(path.join(root, 'components/layout/LauncherRouteReset.tsx'))) {
+    issues.push('missing components/layout/LauncherRouteReset.tsx');
+  }
+  if (!read('app/_layout.tsx').includes('LauncherRouteReset')) {
+    issues.push('app/_layout.tsx must mount LauncherRouteReset for stale Android route restore');
+  }
   if (!fs.existsSync(path.join(root, 'features/auth/resolveOAuthColdStartUrl.ts'))) {
     issues.push('missing features/auth/resolveOAuthColdStartUrl.ts');
   }
@@ -113,6 +134,16 @@ function main() {
   }
   if (!fs.existsSync(path.join(root, 'features/auth/googleNativeOAuthRedirect.ts'))) {
     issues.push('missing features/auth/googleNativeOAuthRedirect.ts');
+  }
+  if (!fs.existsSync(path.join(root, 'features/auth/androidGoogleOAuthCapability.ts'))) {
+    issues.push('missing features/auth/androidGoogleOAuthCapability.ts');
+  }
+  if (!orchestrator.includes('resolveAndroidGoogleOAuthRedirectHandlerInstalled')) {
+    issues.push('oauthOrchestrator.ts must probe installed APK for Google oauth2redirect handler');
+  }
+  const orchestratorPolicy = read('features/auth/oauthOrchestratorPolicy.ts');
+  if (!orchestratorPolicy.includes('androidNativeRedirectInstalled')) {
+    issues.push('oauthOrchestratorPolicy must allow Android browser fallback when oauth2redirect is missing from APK');
   }
 
   if (!syncAuth.includes('clearOAuthOrchestratorState')) {

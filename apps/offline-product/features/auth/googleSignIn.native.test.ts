@@ -60,6 +60,14 @@ vi.mock('@/features/auth/oauthTelemetry', () => ({
   trackOAuthStep: vi.fn(),
 }));
 
+vi.mock('@/features/auth/oauthDiagnosticsStore', () => ({
+  recordOAuthDiagnosticEvent: vi.fn(),
+}));
+
+vi.mock('@/features/auth/oauthRuntimeDiagnostics', () => ({
+  logOAuthRuntimeDiagnostics: vi.fn(),
+}));
+
 vi.mock('@/features/api/syncAuthSession', () => ({
   getSupabaseAuthClient: () => ({
     auth: { signInWithIdToken: mocks.signInWithIdToken },

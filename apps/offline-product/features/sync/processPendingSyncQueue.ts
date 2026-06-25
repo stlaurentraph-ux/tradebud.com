@@ -281,11 +281,17 @@ export async function processPendingSyncQueue(params: {
           clientEventId,
         } as Parameters<typeof postHarvestToBackend>[0]);
         const qrCodeRef = readHarvestSubmitQrCodeRef(harvestResponse);
+        // The server has now recorded the harvest. Persist the local receipt BEFORE the queue
+        // row is deleted (delete happens at the shared success path below). If this throws we
+        // must NOT swallow it: keep the queue row so the action retries instead of leaving the
+        // receipt stuck `pendingSync: true` with no QR forever. The backend is idempotent on
+        // (farmerId, clientEventId), so the retried POST returns the same voucher rather than
+        // creating a duplicate harvest.
         await updateLocalDeliveryReceipt(clientEventId, {
           qrCodeRef,
           pendingSync: false,
           serverPlotId: sid,
-        }).catch(() => undefined);
+        });
         trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_SUCCESS, {
           plotId: localId,
           serverPlotId: sid,

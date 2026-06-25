@@ -215,6 +215,27 @@ Railway variables:
 
 **Local only** (not on Railway): set `TEST_DATABASE_URL` to the Supabase **Test** project pooler (`atisrfxsjjvjekwqcbjk`) for `npm run test:integration`. All `db:apply:*` / `db:verify:*` scripts use `DATABASE_URL` (prod) only. Copy from repo root with `npm run db:sync:test-env` — see `.env.local.example`.
 
+**Compute savings:** The Test project costs ~**$7/mo** Micro compute while it runs 24/7 in your **Pro** org (Pro includes $10 credit that already covers Tracebud prod). Supabase **does not allow pausing projects that live in a Pro organization** via API or dashboard — pause only works after the project is on a **Free** org.
+
+Recommended setup (~$7/mo savings):
+
+1. Create or use a **Free** Supabase organization (separate from Tracebud Pro).
+2. **Transfer** project `Test` (`atisrfxsjjvjekwqcbjk`) → Dashboard → Project Settings → General → Transfer project.
+3. Add GitHub secret `SUPABASE_ACCESS_TOKEN` (needs `project_admin_read` + `project_admin_write`).
+4. CI will **wake Test before** integration tests and **pause after** (`db:test:ensure-active` / `db:test:pause`).
+
+Local workflow (after transfer):
+
+```bash
+export SUPABASE_ACCESS_TOKEN=...   # dashboard → Account → Access Tokens
+cd tracebud-backend
+npm run db:test:ensure-active      # ~2–5 min after pause
+npm run test:integration
+npm run db:test:pause              # stops compute billing
+```
+
+Until step 2–3 are done, Test stays always-on and CI prints a notice (integration tests still pass).
+
 ```bash
 curl -sS https://api.tracebud.com/api/health | jq '.database'
 ```

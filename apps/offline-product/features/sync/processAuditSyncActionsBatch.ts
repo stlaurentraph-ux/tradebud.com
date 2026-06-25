@@ -161,10 +161,15 @@ export async function processAuditSyncActionsBatch(params: {
     for (let i = 0; i < chunk.length; i += 1) {
       const item = chunk[i]!;
       const rowResult = batchResult.results[i] as PostAuditEventResult | undefined;
-      if (rowResult && !rowResult.ok) {
+      // A 200 with a short/empty/malformed `results` array must NOT be treated as success — that
+      // would delete the queue row while the server may never have stored the audit event
+      // (silent data loss for declarations / field cloud audit). Retry instead.
+      if (!rowResult || !rowResult.ok) {
         result.failedActions += 1;
         const failure = classifyQueueSyncFailure({
-          error: rowResult.message ?? rowResult.reason,
+          error: rowResult
+            ? rowResult.message ?? rowResult.reason
+            : 'Audit batch response missing per-event result.',
           actionType: 'audit_sync',
         });
         result.firstError = result.firstError ?? failure.message;

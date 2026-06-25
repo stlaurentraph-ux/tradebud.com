@@ -108,6 +108,28 @@ vi.mock('@/features/state/persistence', () => ({
   loadPendingSyncActions: restoreMocks.loadPendingSyncActions,
   loadPlotServerLinks: restoreMocks.loadPlotServerLinks,
   loadAppState: restoreMocks.loadAppState,
+  getSetting: vi.fn(async () => null),
+  setSetting: vi.fn(async () => undefined),
+}));
+
+const cursorMocks = vi.hoisted(() => ({
+  persistFieldSyncCursorFromDelta: vi.fn(async () => undefined),
+  persistFieldSyncCursorAfterPipeline: vi.fn(async () => undefined),
+}));
+
+vi.mock('@/features/sync/fieldSyncCursor', () => ({
+  persistFieldSyncCursorFromDelta: cursorMocks.persistFieldSyncCursorFromDelta,
+  persistFieldSyncCursorAfterPipeline: cursorMocks.persistFieldSyncCursorAfterPipeline,
+}));
+
+const markerMocks = vi.hoisted(() => ({
+  resolveLinkedPlotMediaHydrationForSync: vi.fn(async () => false),
+  areLinkedPlotMediaScopesHydrated: vi.fn(async () => false),
+}));
+
+vi.mock('@/features/sync/pushOnlyInboundMarkerState', () => ({
+  areLinkedPlotMediaScopesHydrated: markerMocks.areLinkedPlotMediaScopesHydrated,
+  resolveLinkedPlotMediaHydrationForSync: markerMocks.resolveLinkedPlotMediaHydrationForSync,
 }));
 
 vi.mock('@/features/sync/processPendingConsentQueue', () => ({
@@ -137,6 +159,25 @@ vi.mock('@/features/observability/analytics', () => ({
 
 const t = (key: string) => key;
 
+const completeFarmer = {
+  id: 'farmer-local',
+  name: 'Test Farmer',
+  selfDeclared: true,
+  selfDeclaredAt: 1,
+  fpicConsent: true,
+  laborNoChildLabor: true,
+  laborNoForcedLabor: true,
+};
+
+const completePlot = {
+  id: 'plot-1',
+  name: 'Plot 1',
+  areaHectares: 1,
+  kind: 'permanent_crop' as const,
+  landTenureDeclared: true,
+  noDeforestationDeclared: true,
+};
+
 const baseParams = {
   accessToken: 'token',
   apiFarmerId: 'farmer-api',
@@ -154,6 +195,8 @@ const baseParams = {
 describe('runFieldSyncPipeline push_only observability guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    markerMocks.resolveLinkedPlotMediaHydrationForSync.mockResolvedValue(false);
+    markerMocks.areLinkedPlotMediaScopesHydrated.mockResolvedValue(false);
     restoreMocks.loadPlotServerLinks.mockResolvedValue({ 'plot-1': 'server-plot-1' });
     restoreMocks.pruneRedundantPendingUploadActions.mockResolvedValue(0);
     restoreMocks.hydrateLocalSyncMarkersFromServer.mockResolvedValue({
@@ -207,7 +250,7 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
     });
   });
 
-  it('pulls declarations but skips full cloud restore when syncMode is push_only', async () => {
+  it('pulls declarations but skips full cloud restore when push_only is not idle', async () => {
     const { runFieldSyncPipeline } = await import('./runFieldSyncPipeline');
 
     await runFieldSyncPipeline({
@@ -222,10 +265,28 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
     expect(restoreMocks.uploadUnsyncedPlotsForFarmer).not.toHaveBeenCalled();
     expect(restoreMocks.backfillServerHarvestDatesFromLocal).not.toHaveBeenCalled();
     expect(restoreMocks.enqueueFarmerCloudSyncActions).not.toHaveBeenCalled();
-    expect(restoreMocks.drainPendingSyncQueueForManualSync).toHaveBeenCalled();
+    expect(restoreMocks.drainPendingSyncQueueForManualSync).not.toHaveBeenCalled();
     expect(restoreMocks.restoreLinkedLocalPlotMediaFromServer).toHaveBeenCalledWith(
       expect.objectContaining({ includeAuditPhotos: false }),
     );
+  });
+
+  it('skips heavy push_only work when idle (queue empty, markers satisfied)', async () => {
+    markerMocks.resolveLinkedPlotMediaHydrationForSync.mockResolvedValue(true);
+    const { runFieldSyncPipeline } = await import('./runFieldSyncPipeline');
+
+    await runFieldSyncPipeline({
+      ...baseParams,
+      syncFarmer: completeFarmer,
+      syncPlots: [completePlot],
+      syncMode: 'push_only',
+    });
+
+    expect(restoreMocks.restoreLocalDeclarationsFromServer).not.toHaveBeenCalled();
+    expect(restoreMocks.hydrateLocalSyncMarkersFromServer).not.toHaveBeenCalled();
+    expect(restoreMocks.enqueuePlotDependentSyncForLinkedPlots).not.toHaveBeenCalled();
+    expect(restoreMocks.drainPendingSyncQueueForManualSync).not.toHaveBeenCalled();
+    expect(restoreMocks.restoreLinkedLocalPlotMediaFromServer).not.toHaveBeenCalled();
   });
 
   it('runs cloud restore helpers when syncMode is full', async () => {
@@ -271,5 +332,136 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
     expect(restoreMocks.restoreFarmerCloudState).toHaveBeenCalled();
     expect(restoreMocks.enqueueFarmerCloudSyncActions).toHaveBeenCalled();
     expect(restoreMocks.restoreLinkedLocalPlotMediaFromServer).not.toHaveBeenCalled();
+  });
+});
+
+describe('runFieldSyncPipeline cursor advance gating', () => {
+  const setupFullRestoreMocks = () => {
+    restoreMocks.restoreLocalPlotsFromServer.mockResolvedValue({
+      restoredCount: 0,
+      mergedPlots: baseParams.syncPlots,
+      fetchFailed: false,
+    });
+    restoreMocks.restoreLocalDeliveryReceiptsFromServer.mockResolvedValue({
+      restoredCount: 0,
+      fetchFailed: false,
+      vouchers: [],
+    });
+    restoreMocks.restoreFarmerCloudState.mockResolvedValue({
+      declarationsRestored: 0,
+      groundTruthRestored: 0,
+      evidenceRestored: 0,
+      fetchFailed: false,
+      downloadFailed: 0,
+    });
+    restoreMocks.fetchBackendPlotsForSyncScope.mockResolvedValue([]);
+    restoreMocks.backfillServerHarvestDatesFromLocal.mockResolvedValue({
+      updatedCount: 0,
+      vouchers: [],
+    });
+    restoreMocks.uploadUnsyncedPlotsForFarmer.mockResolvedValue({
+      fetchFailed: false,
+      unsyncedBefore: 0,
+      uploaded: 0,
+      failed: 0,
+      stoppedForAuth: false,
+    });
+  };
+
+  const cursorAdvanceCount = () =>
+    cursorMocks.persistFieldSyncCursorFromDelta.mock.calls.length +
+    cursorMocks.persistFieldSyncCursorAfterPipeline.mock.calls.length;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    markerMocks.resolveLinkedPlotMediaHydrationForSync.mockResolvedValue(false);
+    markerMocks.areLinkedPlotMediaScopesHydrated.mockResolvedValue(false);
+    restoreMocks.loadPlotServerLinks.mockResolvedValue({ 'plot-1': 'server-plot-1' });
+    restoreMocks.pruneRedundantPendingUploadActions.mockResolvedValue(0);
+    restoreMocks.hydrateLocalSyncMarkersFromServer.mockResolvedValue({
+      declarationProducerMarked: false,
+      declarationPlotsMarked: 0,
+      fieldCloudMarked: 0,
+      mediaMarked: 0,
+      receiptsReconciled: 0,
+      inboundScopesMarked: 0,
+      fetchFailed: false,
+    });
+    restoreMocks.warmPlotServerLinksForSync.mockResolvedValue(undefined);
+    restoreMocks.enqueuePlotDependentSyncForLinkedPlots.mockResolvedValue(undefined);
+    restoreMocks.enqueueFarmerCloudSyncActions.mockResolvedValue({
+      devicePreferences: false,
+      profilePhoto: false,
+      mappingDraft: false,
+    });
+    restoreMocks.measureTotalSyncPending.mockResolvedValue({
+      total: 0,
+      unsyncedPlotCount: 0,
+      blockedPlotCount: 0,
+      unsyncedPlotNames: [],
+      blockedPlots: [],
+      queuePendingCount: 0,
+      plotsFetchFailed: false,
+    });
+    restoreMocks.restoreLinkedLocalPlotMediaFromServer.mockResolvedValue({
+      evidenceRestored: 0,
+      groundTruthRestored: 0,
+      landTitleRestored: 0,
+      fetchFailed: false,
+      downloadFailed: 0,
+    });
+    restoreMocks.restoreLocalDeclarationsFromServer.mockResolvedValue({
+      producerRestored: false,
+      plotsRestored: 0,
+      legalRestored: 0,
+      fetchFailed: false,
+    });
+    restoreMocks.loadAppState.mockResolvedValue({
+      farmer: baseParams.syncFarmer,
+      plots: baseParams.syncPlots,
+    });
+    setupFullRestoreMocks();
+  });
+
+  it('advances the field sync cursor after a clean run with no queue failures', async () => {
+    restoreMocks.loadPendingSyncActions.mockResolvedValue([]);
+    restoreMocks.drainPendingSyncQueueForManualSync.mockResolvedValue({
+      completed: 0,
+      failedActions: 0,
+      droppedInvalid: 0,
+      fetchFailed: false,
+    });
+
+    const { runFieldSyncPipeline } = await import('./runFieldSyncPipeline');
+    await runFieldSyncPipeline({ ...baseParams, syncMode: 'full' });
+
+    expect(cursorAdvanceCount()).toBe(1);
+  });
+
+  it('does NOT advance the cursor when queue actions failed', async () => {
+    // One audit_sync row is pending so the drain actually runs...
+    restoreMocks.loadPendingSyncActions.mockResolvedValue([
+      {
+        id: 1,
+        actionType: 'audit_sync',
+        payloadJson: '{}',
+        hlcTimestamp: '1:1',
+        createdAt: 1,
+        attempts: 0,
+      },
+    ] as never);
+    // ...and it reports a failed action, which must hold the inbound cursor back.
+    restoreMocks.drainPendingSyncQueueForManualSync.mockResolvedValue({
+      completed: 0,
+      failedActions: 1,
+      droppedInvalid: 0,
+      fetchFailed: false,
+    });
+
+    const { runFieldSyncPipeline } = await import('./runFieldSyncPipeline');
+    const result = await runFieldSyncPipeline({ ...baseParams, syncMode: 'full' });
+
+    expect(result.outcome.queueFailed).toBeGreaterThan(0);
+    expect(cursorAdvanceCount()).toBe(0);
   });
 });

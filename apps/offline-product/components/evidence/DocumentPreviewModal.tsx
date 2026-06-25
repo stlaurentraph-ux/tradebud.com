@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { Image, Linking, Modal, ScrollView, View } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +11,7 @@ import {
   canOpenExternally,
   decodeFpicSignatureUri,
   isImageDocumentUri,
+  resolveDocumentOpenStrategy,
   type DocumentPreviewItem,
 } from '@/features/evidence/documentPreview';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -36,8 +38,21 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
   const isImage = item ? isImageDocumentUri(item.uri, item.mimeType) : false;
 
   const openExternally = async () => {
-    if (!item || !canOpenExternally(item.uri)) return;
+    if (!item) return;
+    const strategy = resolveDocumentOpenStrategy(item.uri);
+    if (!strategy) return;
     try {
+      if (strategy === 'browser') {
+        await Linking.openURL(item.uri);
+        return;
+      }
+      // Local file/content URIs: never hand a `file://` URI to `Linking.openURL` — Android 7+
+      // throws FileUriExposedException. `Sharing.shareAsync` resolves via FileProvider on Android
+      // and opens the share sheet / Quick Look on iOS.
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(item.uri, item.mimeType ? { mimeType: item.mimeType } : undefined);
+        return;
+      }
       await Linking.openURL(item.uri);
     } catch {
       // Farmer can retry from the device files app if needed.

@@ -1,18 +1,30 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, View } from 'react-native';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Colors, Spacing } from '@/constants/theme';
+import {
+  hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
+} from '@/features/api/syncAuthSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import {
   OAUTH_CALLBACK_INTERMEDIARY_TIMEOUT_MS,
+  type OAuthColdStartLaunchKind,
   planOAuthColdStartLaunch,
+  probeOAuthColdStartLaunchKind,
   shouldExitOAuthIntermediaryScreen,
 } from '@/features/auth/oauthColdStartLaunch';
-import { runOAuthColdStartCallback } from '@/features/auth/oauthOrchestrator';
-import { resolveOAuthColdStartUrl } from '@/features/auth/resolveOAuthColdStartUrl';
+import { runOAuthColdStartCallback, isOAuthProviderSignInInFlight } from '@/features/auth/oauthOrchestrator';
+import { isOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
+import {
+  deliverOAuthDeepLink,
+  hasActiveOAuthCallbackWaiter,
+} from '@/features/auth/oauthCallbackWaiter';
+import { resolveOAuthColdStartUrlForLaunch } from '@/features/auth/resolveOAuthColdStartUrl';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -26,6 +38,7 @@ type CallbackPhase = 'loading' | 'error' | 'success';
 export default function AuthCallbackScreen() {
   const { t } = useLanguage();
   const { farmer, plots, isAppReady } = useAppState();
+  const [launchKind, setLaunchKind] = useState<OAuthColdStartLaunchKind>('probing');
   const [phase, setPhase] = useState<CallbackPhase>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const runIdRef = useRef(0);
@@ -41,6 +54,20 @@ export default function AuthCallbackScreen() {
     trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_SUCCESS, { source: 'cold_start', reason });
     router.replace('/(tabs)');
   }, []);
+
+  useLayoutEffect(() => {
+    let cancelled = false;
+    void probeOAuthColdStartLaunchKind().then((kind) => {
+      if (cancelled) return;
+      setLaunchKind(kind);
+      if (kind === 'stale_restored_route') {
+        exitToHome('stale_callback_route_immediate');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [exitToHome]);
 
   const finishSuccess = useCallback(() => {
     setPhase('success');
@@ -59,8 +86,47 @@ export default function AuthCallbackScreen() {
     trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_STARTED, { source: 'cold_start' });
 
     try {
-      const url = await resolveOAuthColdStartUrl();
+      await hydrateSyncAuthFromSettings();
+      if (hasSyncAuthSession()) {
+        exitToHome('already_signed_in');
+        return;
+      }
+
+      const initialPeek = await Linking.getInitialURL();
+
+      if (hasActiveOAuthCallbackWaiter() || isOAuthProviderSignInInFlight()) {
+        if (initialPeek && isOAuthCallbackUrl(initialPeek)) {
+          deliverOAuthDeepLink(initialPeek);
+        }
+        exitToHome('browser_waiter_active');
+        return;
+      }
+
+      if (isOAuthCallbackUrl(initialPeek)) {
+        for (const delayMs of [200, 400, 800, 1600, 3200]) {
+          await new Promise((resolve) => setTimeout(resolve, delayMs));
+          await hydrateSyncAuthFromSettings();
+          if (hasSyncAuthSession()) {
+            exitToHome('browser_flow_completed');
+            return;
+          }
+          if (hasActiveOAuthCallbackWaiter() || isOAuthProviderSignInInFlight()) {
+            if (initialPeek) {
+              deliverOAuthDeepLink(initialPeek);
+            }
+            exitToHome('browser_waiter_active');
+            return;
+          }
+        }
+      }
+
+      const url = await resolveOAuthColdStartUrlForLaunch(initialPeek);
       if (runId !== runIdRef.current) return;
+
+      if (!url && !isOAuthCallbackUrl(initialPeek)) {
+        exitToHome('stale_callback_route');
+        return;
+      }
 
       const outcome = await runOAuthColdStartCallback({
         url,
@@ -117,6 +183,7 @@ export default function AuthCallbackScreen() {
   }, [exitToHome, finishSuccess, t]);
 
   useEffect(() => {
+    if (launchKind !== 'oauth_return') return;
     if (planOAuthColdStartLaunch({ isAppReady }).action === 'wait_for_bootstrap') {
       return;
     }
@@ -124,10 +191,10 @@ export default function AuthCallbackScreen() {
     return () => {
       runIdRef.current += 1;
     };
-  }, [isAppReady, runCallback]);
+  }, [isAppReady, launchKind, runCallback]);
 
   useEffect(() => {
-    if (!isAppReady || phase !== 'loading') return;
+    if (launchKind !== 'oauth_return' || !isAppReady || phase !== 'loading') return;
 
     const timer = setTimeout(() => {
       if (phaseRef.current !== 'loading') return;
@@ -139,7 +206,11 @@ export default function AuthCallbackScreen() {
     }, OAUTH_CALLBACK_INTERMEDIARY_TIMEOUT_MS);
 
     return () => clearTimeout(timer);
-  }, [exitToHome, isAppReady, phase]);
+  }, [exitToHome, isAppReady, launchKind, phase]);
+
+  if (launchKind === 'probing' || launchKind === 'stale_restored_route') {
+    return null;
+  }
 
   if (phase === 'error') {
     return (

@@ -744,6 +744,7 @@ jobs:
     env:
       TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
       BENCHMARK_ADMIN_ROLE_CLAIMS: ${{ secrets.BENCHMARK_ADMIN_ROLE_CLAIMS }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -793,12 +794,15 @@ jobs:
             exit 1
           fi
 
-      - name: Ensure benchmark-admin claims config exists
+      - name: Supabase Test compute savings (optional)
+        if: env.SUPABASE_ACCESS_TOKEN == ''
         run: |
-          if [ -z "$BENCHMARK_ADMIN_ROLE_CLAIMS" ]; then
-            echo "BENCHMARK_ADMIN_ROLE_CLAIMS is required for benchmark-admin claim enforcement preflight."
-            exit 1
-          fi
+          echo "::notice title=Supabase Test compute::Test project stays always-on (~\$7/mo) until SUPABASE_ACCESS_TOKEN is set and Test is transferred to a Free org. See tracebud-backend/DEPLOY_PRODUCTION.md"
+
+      - name: Wake Supabase Test project (integration DB)
+        if: env.SUPABASE_ACCESS_TOKEN != ''
+        working-directory: tracebud-backend
+        run: npm run db:test:ensure-active
 
       - name: Integration tests (PostGIS)
         working-directory: tracebud-backend
@@ -834,6 +838,11 @@ jobs:
         with:
           name: backend-ownership-integration-log
           path: tracebud-backend/ownership-integration-output.txt
+
+      - name: Pause Supabase Test project (compute savings)
+        if: always() && env.SUPABASE_ACCESS_TOKEN != ''
+        working-directory: tracebud-backend
+        run: npm run db:test:pause
 
   dashboard-product:
     name: Dashboard product lint, typecheck, tests, and build

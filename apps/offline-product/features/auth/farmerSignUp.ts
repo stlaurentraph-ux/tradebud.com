@@ -12,6 +12,7 @@ import {
   hasSyncAuthSession,
   hydrateSyncAuthFromSettings,
 } from '@/features/api/syncAuthSession';
+import { recordOAuthDiagnosticEvent } from '@/features/auth/oauthDiagnosticsStore';
 import { signInAndSyncPlots, type SignInSyncResult } from '@/features/auth/signInSync';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
@@ -68,6 +69,21 @@ export async function signUpWithEmailAndSyncPlots(params: {
   });
 }
 
+/** Browser OAuth can finish persisting slightly after the callback URL returns (Android resume). */
+export async function recoverOAuthSignupSessionAfterBrowserReturn(): Promise<boolean> {
+  for (const delayMs of [0, 250, 750, 1500, 3000]) {
+    if (delayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+    await hydrateSyncAuthFromSettings().catch(() => undefined);
+    if (hasSyncAuthSession()) {
+      recordOAuthDiagnosticEvent('browser_session_result', `session_recovered delay=${delayMs}ms`);
+      return true;
+    }
+  }
+  return false;
+}
+
 export async function signUpWithOAuthAndSyncPlots(params: {
   provider: OAuthProvider;
   fullName: string;
@@ -85,8 +101,7 @@ export async function signUpWithOAuthAndSyncPlots(params: {
       signupFlowStartedAtMs,
     });
   } catch (e) {
-    await hydrateSyncAuthFromSettings();
-    if (hasSyncAuthSession()) {
+    if (await recoverOAuthSignupSessionAfterBrowserReturn()) {
       return { ok: true, existingAccount: true };
     }
     trackOAuthFailure(params.provider, e);

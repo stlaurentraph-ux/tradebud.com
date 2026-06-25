@@ -1,8 +1,9 @@
-import MapView, { Circle, type Region } from 'react-native-maps';
+import { Circle, type Region } from 'react-native-maps';
 import { View } from 'react-native';
 
 import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
+import { FieldMapView } from '@/components/plot-map/FieldMapView';
 import { FieldPositionMarker } from '@/components/plot-map/FieldPositionMarker';
 import { PlotBoundaryOverlays } from '@/components/plot-map/PlotBoundaryOverlays';
 import type { MapCoordinate } from '@/features/compliance/groundTruthPhotoGeo';
@@ -27,7 +28,7 @@ export function PhotoVaultMap(props: {
 
   return (
     <View style={{ height: mapHeight, borderRadius: 14, overflow: 'hidden' }}>
-      <MapView
+      <FieldMapView
         style={{ flex: 1 }}
         initialRegion={props.region}
         {...FIELD_MAP_CAPTURE_UI_PROPS}
@@ -57,7 +58,7 @@ export function PhotoVaultMap(props: {
         {props.userPosition ? (
           <FieldPositionMarker coordinate={props.userPosition} variant="you" />
         ) : null}
-      </MapView>
+      </FieldMapView>
       <FieldMapAttribution
         lowDataMap={props.lowDataMap}
         offlineTilesEnabled={props.offlineTilesEnabled}

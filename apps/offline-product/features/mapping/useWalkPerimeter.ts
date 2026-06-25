@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Location from 'expo-location';
+import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 import { roundWgs84Coordinate } from '@/features/geo/coordinates';
+import { evaluateLocationReadiness } from '@/features/mapping/locationReadiness';
+
+const WALK_KEEP_AWAKE_TAG = 'walk-perimeter-capture';
 
 export type Point = {
   latitude: number;
@@ -102,7 +106,11 @@ function computeAreaFromPoints(points: Point[]): AreaInfo {
   return { squareMeters: area, hectares };
 }
 
-export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
+export function useWalkPerimeter(options?: {
+  onLocationDenied?: () => void;
+  /** Android: location permission granted but the device Location master switch is off. */
+  onLocationServicesOff?: () => void;
+}) {
   const [points, setPoints] = useState<Point[]>([]);
   const [samples, setSamples] = useState<SamplePoint[]>([]);
   const [isRecording, setIsRecording] = useState(false);
@@ -191,9 +199,24 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
     try {
       setLastError(null);
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
+      const servicesEnabled =
+        status === 'granted'
+          ? await Location.hasServicesEnabledAsync().catch(() => true)
+          : false;
+      const readiness = evaluateLocationReadiness({
+        permissionGranted: status === 'granted',
+        servicesEnabled,
+      });
+      if (readiness === 'permission_denied') {
         options?.onLocationDenied?.();
         setLastError('location_denied');
+        return;
+      }
+      if (readiness === 'services_off') {
+        // Android: permission granted but device Location is off — watchPositionAsync would hang
+        // forever with no OS prompt. Surface it instead of showing a blank, frozen map.
+        options?.onLocationServicesOff?.();
+        setLastError('location_services_off');
         return;
       }
 
@@ -201,6 +224,9 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
         clearWalkEmitState();
       }
 
+      // Guard against orphaning a live subscription if startRecording is called twice (e.g.
+      // restart-walk race) — only one watcher should ever be active.
+      safeStopWatch();
       setIsRecording(true);
       watchRef.current = await Location.watchPositionAsync(
         {
@@ -283,6 +309,11 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
   };
 
   const reset = () => {
+    // Stop any active GPS subscription. Without this, "Reset" / clear-boundary / mode-switch
+    // paths leave watchPositionAsync running: it keeps draining battery and silently
+    // re-accumulates vertices into a board the user believes is cleared.
+    safeStopWatch();
+    setIsRecording(false);
     setPoints([]);
     setSamples([]);
     setLastError(null);
@@ -379,6 +410,17 @@ export function useWalkPerimeter(options?: { onLocationDenied?: () => void }) {
       safeStopWatch();
     };
   }, []);
+
+  // Walking a field boundary can take several minutes with the user not touching the screen. Without
+  // this the device auto-locks, which on both iOS and Android suspends the JS timers / GPS watch and
+  // drops the in-progress trace. Keep the screen awake only while actively recording.
+  useEffect(() => {
+    if (!isRecording) return;
+    void activateKeepAwakeAsync(WALK_KEEP_AWAKE_TAG).catch(() => undefined);
+    return () => {
+      void Promise.resolve(deactivateKeepAwake(WALK_KEEP_AWAKE_TAG)).catch(() => undefined);
+    };
+  }, [isRecording]);
 
   return {
     points,

@@ -58,10 +58,11 @@ import type { FieldSyncDeltaResponse } from '@/features/api/fieldSyncDelta';
 import {
   allLocalPlotsLinked,
   countQueueActionsForTypes,
+  isPushOnlyIdleSync,
   localDeclarationsComplete,
   shouldSkipPushOnlyInboundHydration,
 } from '@/features/sync/pushOnlyIdleSyncPolicy';
-import { areLinkedPlotMediaScopesHydrated } from '@/features/sync/pushOnlyInboundMarkerState';
+import { resolveLinkedPlotMediaHydrationForSync } from '@/features/sync/pushOnlyInboundMarkerState';
 
 export type FieldSyncPipelineParams = {
   accessToken: string;
@@ -193,6 +194,7 @@ async function runFieldSyncPipelineBody(
   const outcome: SyncNowUserOutcome = { syncMode };
   let plotUploadFirstError: string | undefined;
   let skipQueueDrain = false;
+  let pushOnlyIdle = false;
   let activeFarmer = syncFarmer;
 
   let activePlots = syncPlots;
@@ -300,14 +302,24 @@ async function runFieldSyncPipelineBody(
       );
     const queuePendingCount = countQueueActionsForTypes(pendingRows, queueDrainTypesPreview);
     const declarationsComplete = localDeclarationsComplete(activeFarmer, activePlots);
-    const plotMediaHydrated = await areLinkedPlotMediaScopesHydrated(activePlots, plotServerLinks);
+    const plotMediaHydrated = await resolveLinkedPlotMediaHydrationForSync(activePlots, plotServerLinks);
+    pushOnlyIdle = isPushOnlyIdleSync({
+      queuePendingCount,
+      declarationsComplete,
+      plotMediaHydrated,
+      allPlotsLinked: allLocalPlotsLinked(activePlots, plotServerLinks),
+    });
     const skipInboundHydration = shouldSkipPushOnlyInboundHydration({
       queuePendingCount,
       declarationsComplete,
       plotMediaHydrated,
     });
 
-    if (!skipInboundHydration || !allLocalPlotsLinked(activePlots, plotServerLinks)) {
+    if (pushOnlyIdle) {
+      trackEvent(ANALYTICS_EVENTS.FIELD_SYNC_PUSH_ONLY_IDLE, {
+        plotCount: activePlots.length,
+      });
+    } else if (!skipInboundHydration || !allLocalPlotsLinked(activePlots, plotServerLinks)) {
       await warmPlotServerLinksForSync({
         farmerId: apiFarmerId,
         ownedFarmerIds: farmerScopeIds,
@@ -459,7 +471,7 @@ async function runFieldSyncPipelineBody(
     lastPlotUploadResult = syncRes;
   }
 
-  if (activePlots.length > 0) {
+  if (!pushOnlyIdle && activePlots.length > 0) {
     const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
     await enqueuePlotDependentSyncForLinkedPlots({
       farmerId: apiFarmerId,
@@ -535,8 +547,8 @@ async function runFieldSyncPipelineBody(
     await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
   }
 
-  if (syncMode === 'push_only' && activePlots.length > 0) {
-    const linkedMediaHydrated = await areLinkedPlotMediaScopesHydrated(activePlots, plotServerLinks);
+  if (syncMode === 'push_only' && activePlots.length > 0 && !pushOnlyIdle) {
+    const linkedMediaHydrated = await resolveLinkedPlotMediaHydrationForSync(activePlots, plotServerLinks);
     if (!linkedMediaHydrated) {
     setPhase('restoring_plots');
     reportSyncStepStart('plot_list', {
@@ -671,7 +683,12 @@ async function runFieldSyncPipelineBody(
     incrementalRestore: restoreScope != null,
   });
 
-  if (!outcome.plotsFetchFailed && !outcome.queueFetchFailed) {
+  // Only advance the inbound delta cursor when the run was fully clean. If outbound queue
+  // actions failed (`queueFailed > 0`), advancing the cursor could let the next delta-gated
+  // sync skip a reconcile while local state still diverges from cloud truth. Holding the cursor
+  // errs toward re-pulling (idempotent restore) rather than silently skipping inbound changes.
+  const hasQueueActionFailures = (outcome.queueFailed ?? 0) > 0;
+  if (!outcome.plotsFetchFailed && !outcome.queueFetchFailed && !hasQueueActionFailures) {
     if (fieldSyncDelta) {
       await persistFieldSyncCursorFromDelta(fieldSyncDelta).catch(() => undefined);
     } else {

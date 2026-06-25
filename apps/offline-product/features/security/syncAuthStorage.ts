@@ -180,6 +180,14 @@ export async function saveSyncAuthCredentials(email: string, password: string): 
     return;
   }
 
+  // Native devices must use SecureStore (Keychain/Keystore). Never fall back to plaintext
+  // SQLite, which is recoverable via device backup / rooted access. SecureStore is effectively
+  // always available on native, so this guard simply removes the insecure fallback path and
+  // matches the OAuth/phone OTP credential helpers below.
+  if (Platform.OS !== 'web') {
+    throw new Error('Password sync credentials require secure storage on this device.');
+  }
+
   await saveLegacyCredentials(normalizedEmail, password);
 }
 

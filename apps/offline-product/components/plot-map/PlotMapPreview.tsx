@@ -1,9 +1,10 @@
-import MapView, { Circle, Polyline, type Region } from 'react-native-maps';
+import { Circle, Polyline, type Region } from 'react-native-maps';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from '@/components/themed-text';
 import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
+import { FieldMapView } from '@/components/plot-map/FieldMapView';
 import type { Plot } from '@/features/state/AppStateContext';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
 import {
@@ -67,7 +68,7 @@ export function PlotMapPreview({
         style,
       ]}
     >
-      <MapView
+      <FieldMapView
         style={StyleSheet.absoluteFill}
         initialRegion={region}
         scrollEnabled={false}
@@ -100,7 +101,7 @@ export function PlotMapPreview({
             strokeWidth={2}
           />
         ) : null}
-      </MapView>
+      </FieldMapView>
       {showAttribution ? (
         <FieldMapAttribution lowDataMap={false} offlineTilesEnabled={offlineTilesEnabled} />
       ) : null}

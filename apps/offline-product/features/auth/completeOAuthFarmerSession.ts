@@ -61,7 +61,7 @@ async function runPostOAuthConnectTasks(params: {
       return;
     }
 
-    void registerFarmerPushToken();
+    void registerFarmerPushToken().catch(() => undefined);
   } catch {
     // Post-connect work is best-effort and must never undo a successful OAuth sign-in.
   }

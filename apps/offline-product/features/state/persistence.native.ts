@@ -96,10 +96,29 @@ function withFarmerDbLock<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/**
+ * Serializes plots-table writes. `persistPlots` does a full DELETE + reinsert, so two
+ * overlapping calls (e.g. local edit + cloud restore) would otherwise race and the slower
+ * snapshot would silently clobber the fresher one. The lock guarantees last-call-wins by
+ * arrival order instead of by network/IO timing.
+ */
+let plotsDbLock: Promise<void> = Promise.resolve();
+
+function withPlotsDbLock<T>(task: () => Promise<T>): Promise<T> {
+  const run = plotsDbLock.then(task, task);
+  plotsDbLock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 /** @internal Reset singleton DB between Vitest cases. */
 export function resetPersistenceDatabaseForTests(): void {
   dbPromise = null;
+  databaseInitPromise = null;
   farmerDbLock = Promise.resolve();
+  plotsDbLock = Promise.resolve();
 }
 
 function getDb() {
@@ -115,7 +134,9 @@ function isUuid(value: unknown): value is string {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
 }
 
-export async function initDatabase() {
+let databaseInitPromise: Promise<void> | null = null;
+
+async function runDatabaseInit(): Promise<void> {
   const db = await getDb();
   await db.execAsync(`
     PRAGMA journal_mode = WAL;
@@ -213,6 +234,21 @@ export async function initDatabase() {
   await ensureFieldRosterSchema(db);
 }
 
+/** Idempotent, single-flight SQLite bootstrap (schema + migrations). */
+export async function initDatabase(): Promise<void> {
+  if (databaseInitPromise) return databaseInitPromise;
+  databaseInitPromise = runDatabaseInit().catch((error) => {
+    databaseInitPromise = null;
+    throw error;
+  });
+  return databaseInitPromise;
+}
+
+async function getReadyDb() {
+  await initDatabase();
+  return getDb();
+}
+
 export type FieldRosterEntryRow = {
   farmerId: string;
   source: 'roster' | 'provisional';
@@ -276,7 +312,7 @@ function mapFieldRosterRow(row: Record<string, unknown>): FieldRosterEntryRow {
 }
 
 export async function loadFieldRosterEntries(): Promise<FieldRosterEntryRow[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const rows = await db.getAllAsync<Record<string, unknown>>(
     'SELECT * FROM field_roster_entries ORDER BY fullName COLLATE NOCASE ASC, village COLLATE NOCASE ASC;',
   );
@@ -288,7 +324,7 @@ export async function loadFieldRosterEntryByFarmerId(
 ): Promise<FieldRosterEntryRow | null> {
   const id = farmerId.trim();
   if (!id) return null;
-  const db = await getDb();
+  const db = await getReadyDb();
   const row = await db.getFirstAsync<Record<string, unknown>>(
     'SELECT * FROM field_roster_entries WHERE farmerId = ? LIMIT 1;',
     [id],
@@ -297,7 +333,7 @@ export async function loadFieldRosterEntryByFarmerId(
 }
 
 export async function persistFieldRosterEntry(entry: FieldRosterEntryRow): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     `
       INSERT INTO field_roster_entries (
@@ -341,7 +377,7 @@ export async function updateFieldRosterMemberStatus(
 ): Promise<void> {
   const id = farmerId.trim();
   if (!id) return;
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     'UPDATE field_roster_entries SET status = ?, updatedAt = ? WHERE farmerId = ?;',
     [status, Date.now(), id],
@@ -461,7 +497,7 @@ async function ensurePlotLegalSchemaExtras(db: SQLite.SQLiteDatabase) {
 }
 
 export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: Plot[] }> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const farmerRow = await db.getFirstAsync<any>('SELECT * FROM farmer LIMIT 1;');
   const plotRows = await db.getAllAsync<any>('SELECT * FROM plots ORDER BY createdAt DESC;');
 
@@ -488,6 +524,20 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
           typeof farmerRow.commodityCode === 'string' && farmerRow.commodityCode.trim()
             ? farmerRow.commodityCode.trim()
             : undefined,
+        declarationLatitude:
+          typeof farmerRow.declarationLatitude === 'number' &&
+          Number.isFinite(farmerRow.declarationLatitude)
+            ? farmerRow.declarationLatitude
+            : undefined,
+        declarationLongitude:
+          typeof farmerRow.declarationLongitude === 'number' &&
+          Number.isFinite(farmerRow.declarationLongitude)
+            ? farmerRow.declarationLongitude
+            : undefined,
+        declarationGeoCapturedAt:
+          typeof farmerRow.declarationGeoCapturedAt === 'number'
+            ? farmerRow.declarationGeoCapturedAt
+            : undefined,
       };
       })()
     : undefined;
@@ -507,6 +557,10 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
     } catch {
       points = [];
     }
+    // Defend against corrupt rows where pointsJson is valid JSON but not an array
+    // (e.g. the literal "null"). Without this, points.length below throws and one bad
+    // row would abort the entire load.
+    if (!Array.isArray(points)) points = [];
     let kind = row.kind as Plot['kind'];
     if (kind === 'point' && points.length >= 3) {
       kind = 'polygon';
@@ -559,6 +613,7 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
       } catch {
         points = [];
       }
+      if (!Array.isArray(points)) points = [];
       let kind = row.kind as Plot['kind'];
       if (kind === 'point' && points.length >= 3) {
         kind = 'polygon';
@@ -596,65 +651,75 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
 
 export async function persistFarmer(farmer?: FarmerProfile) {
   return withFarmerDbLock(async () => {
-    const db = await getDb();
-    await db.runAsync('DELETE FROM farmer;');
-    if (!farmer) return;
-    await db.runAsync(
-      'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
-      [
-        farmer.id,
-        farmer.name ?? null,
-        farmer.role,
-        farmer.selfDeclared ? 1 : 0,
-        farmer.selfDeclaredAt ?? null,
-        farmer.fpicConsent ? 1 : 0,
-        farmer.laborNoChildLabor ? 1 : 0,
-        farmer.laborNoForcedLabor ? 1 : 0,
-        farmer.postalAddress?.trim() ? farmer.postalAddress.trim() : null,
-        farmer.commodityCode?.trim() ? farmer.commodityCode.trim() : null,
-        farmer.declarationLatitude != null && Number.isFinite(farmer.declarationLatitude)
-          ? farmer.declarationLatitude
-          : null,
-        farmer.declarationLongitude != null && Number.isFinite(farmer.declarationLongitude)
-          ? farmer.declarationLongitude
-          : null,
-        farmer.declarationGeoCapturedAt ?? null,
-      ],
-    );
+    const db = await getReadyDb();
+    // Atomic replace so a crash between DELETE and INSERT cannot wipe the farmer profile.
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      await txn.runAsync('DELETE FROM farmer;');
+      if (!farmer) return;
+      await txn.runAsync(
+        'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+        [
+          farmer.id,
+          farmer.name ?? null,
+          farmer.role,
+          farmer.selfDeclared ? 1 : 0,
+          farmer.selfDeclaredAt ?? null,
+          farmer.fpicConsent ? 1 : 0,
+          farmer.laborNoChildLabor ? 1 : 0,
+          farmer.laborNoForcedLabor ? 1 : 0,
+          farmer.postalAddress?.trim() ? farmer.postalAddress.trim() : null,
+          farmer.commodityCode?.trim() ? farmer.commodityCode.trim() : null,
+          farmer.declarationLatitude != null && Number.isFinite(farmer.declarationLatitude)
+            ? farmer.declarationLatitude
+            : null,
+          farmer.declarationLongitude != null && Number.isFinite(farmer.declarationLongitude)
+            ? farmer.declarationLongitude
+            : null,
+          farmer.declarationGeoCapturedAt ?? null,
+        ],
+      );
+    });
   });
 }
 
 export async function persistPlots(plots: Plot[]) {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM plots;');
-  for (const plot of plots) {
-    await db.runAsync(
-      `INSERT INTO plots (
-        id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson,
-        declaredAreaHectares, discrepancyPercent, precisionMetersAtSave,
-        landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt,
-        geometryCaptureMetaJson
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [
-        plot.id,
-        plot.farmerId,
-        plot.name,
-        plot.createdAt,
-        plot.areaSquareMeters,
-        plot.areaHectares,
-        plot.kind,
-        JSON.stringify(plot.points),
-        plot.declaredAreaHectares ?? null,
-        plot.discrepancyPercent ?? null,
-        plot.precisionMetersAtSave ?? null,
-        plot.landTenureDeclared === true ? 1 : plot.landTenureDeclared === false ? 0 : null,
-        plot.landTenureDeclaredAt ?? null,
-        plot.noDeforestationDeclared === true ? 1 : plot.noDeforestationDeclared === false ? 0 : null,
-        plot.noDeforestationDeclaredAt ?? null,
-        plot.geometryCapture ? JSON.stringify(plot.geometryCapture) : null,
-      ],
-    );
-  }
+  return withPlotsDbLock(async () => {
+    const db = await getReadyDb();
+    // Atomic replace: a crash/kill between DELETE and the final INSERT must never leave the
+    // plots table truncated. withExclusiveTransactionAsync wraps in BEGIN EXCLUSIVE and rolls
+    // back on any throw, so on failure the prior rows survive untouched.
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      await txn.runAsync('DELETE FROM plots;');
+      for (const plot of plots) {
+        await txn.runAsync(
+          `INSERT INTO plots (
+            id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson,
+            declaredAreaHectares, discrepancyPercent, precisionMetersAtSave,
+            landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt,
+            geometryCaptureMetaJson
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          [
+            plot.id,
+            plot.farmerId,
+            plot.name,
+            plot.createdAt,
+            plot.areaSquareMeters,
+            plot.areaHectares,
+            plot.kind,
+            JSON.stringify(plot.points),
+            plot.declaredAreaHectares ?? null,
+            plot.discrepancyPercent ?? null,
+            plot.precisionMetersAtSave ?? null,
+            plot.landTenureDeclared === true ? 1 : plot.landTenureDeclared === false ? 0 : null,
+            plot.landTenureDeclaredAt ?? null,
+            plot.noDeforestationDeclared === true ? 1 : plot.noDeforestationDeclared === false ? 0 : null,
+            plot.noDeforestationDeclaredAt ?? null,
+            plot.geometryCapture ? JSON.stringify(plot.geometryCapture) : null,
+          ],
+        );
+      }
+    });
+  });
 }
 
 export async function logAuditEvent(params: {
@@ -662,7 +727,7 @@ export async function logAuditEvent(params: {
   eventType: string;
   payload: Record<string, unknown>;
 }) {
-  const db = await getDb();
+  const db = await getReadyDb();
   const deviceId =
     (Constants as any)?.deviceName ?? (Constants as any)?.deviceId ?? 'unknown-device';
   const timestamp = Date.now();
@@ -673,7 +738,7 @@ export async function logAuditEvent(params: {
 }
 
 export async function loadLocalAuditEvents(params?: { limit?: number }): Promise<LocalAuditEvent[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const limit = Math.max(1, Math.min(500, params?.limit ?? 50));
   const rows = await db.getAllAsync<any>(
     'SELECT id, timestamp, userId, deviceId, eventType, payloadJson FROM audit_log ORDER BY timestamp DESC LIMIT ?;',
@@ -698,7 +763,7 @@ export async function loadLocalAuditEvents(params?: { limit?: number }): Promise
 }
 
 export async function persistPlotPhoto(photo: Omit<PlotPhoto, 'id'>) {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     `INSERT INTO plot_photos (plotId, uri, takenAt, latitude, longitude, direction, storagePath) VALUES (?, ?, ?, ?, ?, ?, ?);`,
     [
@@ -715,7 +780,7 @@ export async function persistPlotPhoto(photo: Omit<PlotPhoto, 'id'>) {
 
 /** Replace any prior ground-truth photo for the same plot + direction. */
 export async function upsertPlotGroundPhoto(photo: Omit<PlotPhoto, 'id'>) {
-  const db = await getDb();
+  const db = await getReadyDb();
   if (photo.direction) {
     await db.runAsync('DELETE FROM plot_photos WHERE plotId = ? AND direction = ?;', [
       photo.plotId,
@@ -726,7 +791,7 @@ export async function upsertPlotGroundPhoto(photo: Omit<PlotPhoto, 'id'>) {
 }
 
 export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const rows = await db.getAllAsync<any>(
     'SELECT * FROM plot_photos WHERE plotId = ? ORDER BY takenAt DESC;',
     [plotId],
@@ -750,7 +815,7 @@ export async function loadPhotosForPlot(plotId: string): Promise<PlotPhoto[]> {
 }
 
 export async function persistPlotTitlePhoto(photo: Omit<PlotTitlePhoto, 'id'>): Promise<number> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const result = await db.runAsync(
     `INSERT INTO plot_title_photos (plotId, uri, takenAt, storagePath) VALUES (?, ?, ?, ?);`,
     [photo.plotId, photo.uri, photo.takenAt, photo.storagePath ?? null],
@@ -762,7 +827,7 @@ export async function updatePlotTitlePhotoAfterUpload(
   photoId: number,
   params: { uri: string; storagePath: string },
 ): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     'UPDATE plot_title_photos SET uri = ?, storagePath = ? WHERE id = ?;',
     [params.uri, params.storagePath, photoId],
@@ -773,7 +838,7 @@ export async function updatePlotGroundPhotoAfterUpload(
   photoId: number,
   params: { uri: string; storagePath: string },
 ): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('UPDATE plot_photos SET uri = ?, storagePath = ? WHERE id = ?;', [
     params.uri,
     params.storagePath,
@@ -782,7 +847,7 @@ export async function updatePlotGroundPhotoAfterUpload(
 }
 
 export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitlePhoto[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const rows = await db.getAllAsync<any>(
     'SELECT * FROM plot_title_photos WHERE plotId = ? ORDER BY takenAt DESC;',
     [plotId],
@@ -797,7 +862,7 @@ export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitleP
 }
 
 export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('DELETE FROM plot_title_photos WHERE id = ?;', [photoId]);
 }
 
@@ -833,12 +898,12 @@ export function isLocalDeliveryReceiptPendingUpload(
 }
 
 export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('DELETE FROM plot_evidence WHERE id = ?;', [evidenceId]);
 }
 
 export async function updatePlotEvidenceUri(evidenceId: number, uri: string): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('UPDATE plot_evidence SET uri = ? WHERE id = ?;', [uri, evidenceId]);
 }
 
@@ -846,7 +911,7 @@ export async function updatePlotEvidenceAfterUpload(
   evidenceId: number,
   params: { uri: string; storagePath: string },
 ): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('UPDATE plot_evidence SET uri = ?, storagePath = ? WHERE id = ?;', [
     params.uri,
     params.storagePath,
@@ -855,7 +920,7 @@ export async function updatePlotEvidenceAfterUpload(
 }
 
 export async function savePlotCadastralKey(plotId: string, cadastralKey: string | null) {
-  const db = await getDb();
+  const db = await getReadyDb();
   if (!cadastralKey) {
     await db.runAsync('DELETE FROM plot_legal WHERE plotId = ?;', [plotId]);
     return;
@@ -869,7 +934,7 @@ export async function savePlotCadastralKey(plotId: string, cadastralKey: string 
 }
 
 export async function loadPlotCadastralKey(plotId: string): Promise<string | null> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const row = await db.getFirstAsync<any>(
     'SELECT cadastralKey FROM plot_legal WHERE plotId = ? LIMIT 1;',
     [plotId],
@@ -878,7 +943,7 @@ export async function loadPlotCadastralKey(plotId: string): Promise<string | nul
 }
 
 export async function savePlotServerLink(localPlotId: string, serverPlotId: string): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const trimmed = serverPlotId.trim();
   if (!trimmed) return;
   await db.runAsync(
@@ -890,7 +955,7 @@ export async function savePlotServerLink(localPlotId: string, serverPlotId: stri
 }
 
 export async function loadPlotServerLinks(): Promise<Record<string, string>> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const rows = await db.getAllAsync<{ plotId: string; serverPlotId: string | null }>(
     `SELECT plotId, serverPlotId FROM plot_legal
      WHERE serverPlotId IS NOT NULL AND TRIM(serverPlotId) != '';`,
@@ -905,7 +970,7 @@ export async function loadPlotServerLinks(): Promise<Record<string, string>> {
 }
 
 export async function clearPlotServerLink(localPlotId: string): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('UPDATE plot_legal SET serverPlotId = NULL WHERE plotId = ?;', [localPlotId]);
 }
 
@@ -925,7 +990,7 @@ export async function savePlotTenure(
   plotId: string,
   params: { informalTenure: boolean; informalTenureNote: string | null },
 ) {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     `INSERT INTO plot_legal (plotId, informalTenure, informalTenureNote)
      VALUES (?, ?, ?)
@@ -937,7 +1002,7 @@ export async function savePlotTenure(
 }
 
 export async function loadPlotTenure(plotId: string): Promise<PlotTenure> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const row = await db.getFirstAsync<any>(
     'SELECT plotId, informalTenure, informalTenureNote FROM plot_legal WHERE plotId = ? LIMIT 1;',
     [plotId],
@@ -953,7 +1018,7 @@ export async function loadPlotTenure(plotId: string): Promise<PlotTenure> {
 }
 
 export async function persistPlotEvidenceItem(item: Omit<PlotEvidenceItem, 'id'>) {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     `INSERT INTO plot_evidence (plotId, kind, uri, mimeType, label, takenAt)
      VALUES (?, ?, ?, ?, ?, ?);`,
@@ -965,7 +1030,7 @@ export async function loadEvidenceForPlot(
   plotId: string,
   kind?: PlotEvidenceKind,
 ): Promise<PlotEvidenceItem[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const rows = kind
     ? await db.getAllAsync<any>(
         'SELECT * FROM plot_evidence WHERE plotId = ? AND kind = ? ORDER BY takenAt DESC;',
@@ -1004,7 +1069,7 @@ export async function enqueuePendingSync(
       (row) => pendingSyncDedupKey(row.actionType, row.payloadJson) === dedupKey,
     );
     if (existing) {
-      const db = await getDb();
+      const db = await getReadyDb();
       await db.runAsync('UPDATE pending_sync SET payloadJson = ?, lastError = ? WHERE id = ?;', [
         action.payloadJson,
         action.lastError ?? existing.lastError ?? null,
@@ -1014,7 +1079,7 @@ export async function enqueuePendingSync(
     }
   }
 
-  const db = await getDb();
+  const db = await getReadyDb();
   const last = await db.getFirstAsync<{ hlcTimestamp?: string | null }>(
     'SELECT hlcTimestamp FROM pending_sync ORDER BY id DESC LIMIT 1;',
   );
@@ -1038,7 +1103,7 @@ export async function enqueuePendingSync(
 }
 
 export async function loadPendingSyncActions(): Promise<PendingSyncAction[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const rows = await db.getAllAsync<any>('SELECT * FROM pending_sync ORDER BY createdAt ASC;');
   return (rows ?? []).map((row) => ({
     id: row.id,
@@ -1056,7 +1121,7 @@ export async function markPendingSyncAttempt(
   id: number,
   params: { attempts: number; lastError: string | null; lastAttemptAt?: number | null },
 ) {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('UPDATE pending_sync SET attempts = ?, lastError = ?, lastAttemptAt = ? WHERE id = ?;', [
     params.attempts,
     params.lastError ?? null,
@@ -1066,7 +1131,7 @@ export async function markPendingSyncAttempt(
 }
 
 export async function deletePendingSyncAction(id: number) {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('DELETE FROM pending_sync WHERE id = ?;', [id]);
 }
 
@@ -1084,7 +1149,7 @@ export type LocalDeliveryReceiptRow = {
 };
 
 export async function persistLocalDeliveryReceipt(row: LocalDeliveryReceiptRow): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     `INSERT OR REPLACE INTO local_delivery_receipts
       (id, farmerId, localPlotId, serverPlotId, plotName, kg, recordedAt, qrCodeRef, pendingSync, buyerLabel)
@@ -1123,7 +1188,7 @@ export async function loadLocalDeliveryReceiptsForFarmer(
   farmerId: string,
   options?: { alsoFarmerIds?: readonly string[] },
 ): Promise<LocalDeliveryReceiptRow[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const farmerIds: string[] = [];
   const seen = new Set<string>();
   for (const raw of [farmerId, ...(options?.alsoFarmerIds ?? [])]) {
@@ -1167,7 +1232,7 @@ function dedupeLocalDeliveryReceiptRows(
 
 /** Single-user device: all stored delivery receipts regardless of legacy farmerId columns. */
 export async function loadAllLocalDeliveryReceipts(): Promise<LocalDeliveryReceiptRow[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const all = await db.getAllAsync<any>(
     'SELECT * FROM local_delivery_receipts ORDER BY recordedAt DESC;',
   );
@@ -1182,7 +1247,7 @@ export async function listLocalDeliveryReceiptFarmerIds(): Promise<string[]> {
 export async function deleteLocalDeliveryReceipt(id: string): Promise<boolean> {
   const trimmed = id.trim();
   if (!trimmed) return false;
-  const db = await getDb();
+  const db = await getReadyDb();
   const existing = await db.getFirstAsync<{ id: string }>(
     'SELECT id FROM local_delivery_receipts WHERE id = ? LIMIT 1;',
     [trimmed],
@@ -1289,7 +1354,7 @@ export async function updateLocalDeliveryReceipt(
     Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId' | 'recordedAt'>
   >,
 ): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const existing = await db.getFirstAsync<any>(
     'SELECT * FROM local_delivery_receipts WHERE id = ? LIMIT 1;',
     [id],
@@ -1310,25 +1375,25 @@ export async function updateLocalDeliveryReceipt(
 }
 
 export async function getSetting(key: string): Promise<string | null> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const row = await db.getFirstAsync<any>('SELECT value FROM settings WHERE key = ? LIMIT 1;', [key]);
   return row?.value ?? null;
 }
 
 export async function setSetting(key: string, value: string): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?);', [key, value]);
 }
 
 export async function deleteSetting(key: string): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('DELETE FROM settings WHERE key = ?;', [key]);
 }
 
 export async function deleteSettingsByPrefix(prefix: string): Promise<void> {
   const trimmed = prefix.trim();
   if (!trimmed) return;
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('DELETE FROM settings WHERE key LIKE ?;', [`${trimmed}%`]);
 }
 
@@ -1352,7 +1417,7 @@ export type PlotMappingDraftRow = {
 };
 
 export async function persistPlotMappingDraft(row: PlotMappingDraftRow): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync(
     `INSERT OR REPLACE INTO plot_mapping_drafts
       (farmerId, editPlotId, plotName, captureMethod, isRecording, drawTracingActive, pointsJson, updatedAt)
@@ -1371,7 +1436,7 @@ export async function persistPlotMappingDraft(row: PlotMappingDraftRow): Promise
 }
 
 export async function loadPlotMappingDraft(farmerId: string): Promise<PlotMappingDraftRow | null> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const row = await db.getFirstAsync<any>(
     'SELECT * FROM plot_mapping_drafts WHERE farmerId = ? LIMIT 1;',
     [farmerId],
@@ -1397,12 +1462,12 @@ export async function loadPlotMappingDraft(farmerId: string): Promise<PlotMappin
 }
 
 export async function clearPlotMappingDraft(farmerId: string): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   await db.runAsync('DELETE FROM plot_mapping_drafts WHERE farmerId = ?;', [farmerId]);
 }
 
 export async function deletePlotLocalData(plotId: string): Promise<void> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const links = await loadPlotServerLinks().catch((): Record<string, string> => ({}));
   const serverPlotId = links[plotId]?.trim();
   if (serverPlotId) {
@@ -1428,7 +1493,7 @@ function sqliteBoolFlag(value: unknown): boolean {
 export async function rekeyFarmerIdInDatabase(previousId: string, nextId: string): Promise<void> {
   if (!previousId || !nextId || previousId === nextId) return;
   return withFarmerDbLock(async () => {
-    const db = await getDb();
+    const db = await getReadyDb();
     const previousRow = await db.getFirstAsync<Record<string, unknown>>(
       'SELECT * FROM farmer WHERE id = ?;',
       [previousId],
@@ -1465,7 +1530,7 @@ export async function repairPendingSyncPayloadFarmerIds(
 ): Promise<number> {
   const scopedId = targetFarmerId.trim();
   if (!scopedId) return 0;
-  const db = await getDb();
+  const db = await getReadyDb();
   const rows = await db.getAllAsync<{ id: number; payloadJson: string }>(
     'SELECT id, payloadJson FROM pending_sync ORDER BY createdAt ASC;',
   );
@@ -1499,7 +1564,7 @@ export async function adoptOnDeviceFarmerScope(targetFarmerId: string): Promise<
   const scopedId = targetFarmerId.trim();
   if (!scopedId || !isUuid(scopedId)) return false;
 
-  const db = await getDb();
+  const db = await getReadyDb();
   const plotIds = await db.getAllAsync<{ farmerId: string }>(
     'SELECT DISTINCT farmerId FROM plots WHERE farmerId IS NOT NULL AND farmerId != ?;',
     [scopedId],
@@ -1527,7 +1592,7 @@ export async function adoptOnDeviceFarmerScope(targetFarmerId: string): Promise<
 
 /** Collect on-device media URIs referenced by Tracebud SQLite tables (for storage footprint). */
 export async function collectTracebudMediaFileUris(): Promise<string[]> {
-  const db = await getDb();
+  const db = await getReadyDb();
   const uris = new Set<string>();
   const addUri = (value: unknown) => {
     if (typeof value === 'string' && value.trim().length > 0) {

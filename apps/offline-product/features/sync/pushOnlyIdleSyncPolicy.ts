@@ -59,3 +59,22 @@ export function shouldRefreshCloudParityAfterSync(input: {
   if (input.hasInboundChanges) return true;
   return false;
 }
+
+/**
+ * Second+ Sync now when nothing local needs upload and inbound markers are satisfied.
+ * Skips declaration/media restore, enqueue, and queue drain.
+ */
+export function isPushOnlyIdleSync(input: {
+  queuePendingCount: number;
+  declarationsComplete: boolean;
+  plotMediaHydrated: boolean;
+  allPlotsLinked: boolean;
+}): boolean {
+  if (input.queuePendingCount > 0) return false;
+  if (!input.allPlotsLinked) return false;
+  return shouldSkipPushOnlyInboundHydration({
+    queuePendingCount: input.queuePendingCount,
+    declarationsComplete: input.declarationsComplete,
+    plotMediaHydrated: input.plotMediaHydrated,
+  });
+}

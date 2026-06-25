@@ -112,9 +112,18 @@ module.exports = ({ config }) => {
     }
   }
 
+  const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim() ?? '';
   const android = { ...(config.android ?? appJson.expo.android) };
   if (allowInsecureLanApi) {
     android.usesCleartextTraffic = true;
+  }
+  if (googleMapsApiKey) {
+    android.config = {
+      ...(android.config ?? {}),
+      googleMaps: {
+        apiKey: googleMapsApiKey,
+      },
+    };
   }
   const existingFilters = android.intentFilters ?? [];
   const hasAppLinkFilter = existingFilters.some(
@@ -153,6 +162,12 @@ module.exports = ({ config }) => {
   if (intentFilters.length > existingFilters.length) {
     android.intentFilters = intentFilters;
   }
+  if (androidGoogleScheme) {
+    const existingQueries = android.queries ?? [];
+    if (!existingQueries.some((query) => query.scheme === androidGoogleScheme)) {
+      android.queries = [...existingQueries, { scheme: androidGoogleScheme }];
+    }
+  }
 
   const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
   const googleOAuth = {
@@ -166,6 +181,7 @@ module.exports = ({ config }) => {
     ...(config.extra ?? {}),
     ...(sentryDsn ? { sentryDsn } : {}),
     googleOAuth,
+    googleMapsConfigured: Boolean(googleMapsApiKey),
   };
 
   return {

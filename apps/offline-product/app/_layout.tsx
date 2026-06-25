@@ -9,6 +9,7 @@ import { ConsentPushBridge } from '@/components/ConsentPushBridge';
 import { AppErrorBoundary } from '@/components/observability/AppErrorBoundary';
 import { PushRegistrationBridge } from '@/components/PushRegistrationBridge';
 import { SplashGate } from '@/components/layout/SplashGate';
+import { LauncherRouteReset } from '@/components/layout/LauncherRouteReset';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
 import { EnumerationProvider } from '@/features/enumeration/EnumerationContext';
@@ -16,8 +17,10 @@ import { initObservability } from '@/features/observability/initObservability';
 import '@/features/auth/googleOAuthEnv';
 import { AppStateProvider } from '@/features/state/AppStateContext';
 import { LanguageProvider } from '@/features/state/LanguageContext';
+import { initDatabase } from '@/features/state/persistence';
 
 void SplashScreen.preventAutoHideAsync().catch(() => undefined);
+void initDatabase();
 initObservability();
 
 export const unstable_settings = {
@@ -38,6 +41,7 @@ export default function RootLayout() {
               <PushRegistrationBridge />
               <ConsentPushBridge />
               <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                <LauncherRouteReset />
                 <Stack>
                   <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                   <Stack.Screen name="auth/callback" options={{ headerShown: false }} />

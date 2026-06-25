@@ -48,13 +48,17 @@ type DeliveryReceiptRow = {
   buyerLabel: string;
 };
 
+type ExpoSqliteMemoryDb = {
+  execAsync: (sql: string) => Promise<void>;
+  runAsync: (sql: string, params?: unknown[]) => Promise<{ lastInsertRowId: number }>;
+  getAllAsync: <T>(sql: string, params?: unknown[]) => Promise<T[]>;
+  getFirstAsync: <T>(sql: string, params?: unknown[]) => Promise<T | null>;
+  withTransactionAsync: (task: () => Promise<void>) => Promise<void>;
+  withExclusiveTransactionAsync: <T>(task: (txn: ExpoSqliteMemoryDb) => Promise<T>) => Promise<T>;
+};
+
 export type ExpoSqliteMemoryMock = {
-  openDatabaseAsync: (name: string) => Promise<{
-    execAsync: (sql: string) => Promise<void>;
-    runAsync: (sql: string, params?: unknown[]) => Promise<{ lastInsertRowId: number }>;
-    getAllAsync: <T>(sql: string, params?: unknown[]) => Promise<T[]>;
-    getFirstAsync: <T>(sql: string, params?: unknown[]) => Promise<T | null>;
-  }>;
+  openDatabaseAsync: (name: string) => Promise<ExpoSqliteMemoryDb>;
   tables: {
     titlePhotos: TitlePhotoRow[];
     evidence: EvidenceRow[];
@@ -99,7 +103,15 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
     declarationGeoCapturedAt: params[12] != null ? Number(params[12]) : null,
   });
 
-  const db = {
+  const db: ExpoSqliteMemoryDb = {
+    // No real transaction isolation needed for the in-memory mock — run the task against the
+    // same db so persistPlots/persistFarmer transactional wrappers behave as before.
+    withTransactionAsync: async (task: () => Promise<void>) => {
+      await task();
+    },
+    withExclusiveTransactionAsync: async <T>(task: (txn: ExpoSqliteMemoryDb) => Promise<T>) => {
+      return task(db);
+    },
     execAsync: async (_sql: string) => {
       /* schema init no-op */
     },

@@ -50,7 +50,7 @@ async function runPostPhoneOtpConnectTasks(params: {
     return;
   }
 
-  void registerFarmerPushToken();
+  void registerFarmerPushToken().catch(() => undefined);
 }
 
 export async function completePhoneOtpFarmerSession(params: {

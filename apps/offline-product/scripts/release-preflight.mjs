@@ -174,8 +174,15 @@ function validateSupabaseUrl(supabaseUrl, profile, issues) {
   if (profile === 'production' && isLocalhost(supabaseUrl)) {
     issues.push('Production preflight forbids localhost Supabase URLs.');
   }
-  if (!parsed.hostname.includes('supabase')) {
-    issues.push('EXPO_PUBLIC_SUPABASE_URL hostname does not look like a Supabase project URL.');
+  if (!parsed.hostname.includes('supabase') && !parsed.hostname.endsWith('tracebud.com')) {
+    issues.push(
+      'EXPO_PUBLIC_SUPABASE_URL should use auth.tracebud.com (or *.supabase.co for local dev only).',
+    );
+  }
+  if (profile === 'production' && parsed.hostname.endsWith('.supabase.co')) {
+    issues.push(
+      'Production builds should use https://auth.tracebud.com so Google sign-in shows Tracebud, not *.supabase.co.',
+    );
   }
 }
 
@@ -239,6 +246,12 @@ function main() {
 
   validateSupabaseUrl(supabaseUrl, profile, issues);
   validateAnonKey(anonKey, issues);
+
+  if (!process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim()) {
+    issues.push(
+      'Missing EXPO_PUBLIC_GOOGLE_MAPS_API_KEY (required for Android field maps — enable Maps SDK for Android in Google Cloud).',
+    );
+  }
 
   const allowTestAuth = isTruthyFlag(process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH);
   const allowLocalhostApi = isTruthyFlag(process.env.EXPO_PUBLIC_ALLOW_LOCALHOST_API);

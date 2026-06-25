@@ -1,8 +1,9 @@
-import MapView, { Circle, Polyline, Region } from 'react-native-maps';
+import { Circle, Polyline, Region } from 'react-native-maps';
 import { View } from 'react-native';
 import type { Plot } from '@/features/state/AppStateContext';
 import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
+import { FieldMapView } from '@/components/plot-map/FieldMapView';
 import {
   fieldMapUsesCustomTiles,
   FIELD_MAP_VIEW_UI_PROPS,
@@ -20,7 +21,7 @@ export function PlotMap(props: {
 
   return (
     <View style={{ height: 220, borderRadius: 12, overflow: 'hidden' }}>
-      <MapView
+      <FieldMapView
         style={{ flex: 1 }}
         initialRegion={props.region}
         {...FIELD_MAP_VIEW_UI_PROPS}
@@ -47,7 +48,7 @@ export function PlotMap(props: {
             strokeWidth={2}
           />
         ) : null}
-      </MapView>
+      </FieldMapView>
       <FieldMapAttribution
         lowDataMap={props.lowDataMap}
         offlineTilesEnabled={props.offlineTilesEnabled}

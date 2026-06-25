@@ -737,3 +737,181 @@ describe('HarvestService.getDeliveryPublicPreview', () => {
     );
   });
 });
+
+describe('HarvestService.create idempotency', () => {
+  it('returns the existing transaction + voucher on clientEventId replay without inserting a duplicate', async () => {
+    const existingTransaction = {
+      id: 'tx_existing',
+      farmer_id: 'farmer_1',
+      plot_id: 'plot_1',
+      kg: 120,
+      client_event_id: 'pending-sync-7',
+    };
+    const existingVoucher = { id: 'voucher_existing', qr_code_ref: 'V-EXISTING1', transaction_id: 'tx_existing' };
+
+    const pool = {
+      query: jest.fn().mockImplementation(async (sql: string) => {
+        const text = String(sql);
+        // Plot ownership lookup.
+        if (text.includes('sinaph_overlap') && text.includes('FROM plot')) {
+          return {
+            rowCount: 1,
+            rows: [
+              { id: 'plot_1', farmer_id: 'farmer_1', area_ha: 1.5, sinaph_overlap: false, indigenous_overlap: false, country_code: 'HN' },
+            ],
+          };
+        }
+        // Idempotent replay lookup.
+        if (text.includes('row_to_json(ht)')) {
+          return { rowCount: 1, rows: [{ transaction: existingTransaction, voucher: existingVoucher }] };
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    const result = await service.create(
+      { farmerId: 'farmer_1', plotId: 'plot_1', kg: 120, clientEventId: 'pending-sync-7' } as any,
+      'auth-user',
+    );
+
+    expect(result.transaction).toEqual(existingTransaction);
+    expect(result.voucher).toEqual(existingVoucher);
+    // Must NOT create a second harvest_transaction / voucher on replay.
+    const insertedHarvest = pool.query.mock.calls.some(([sql]) =>
+      String(sql).includes('INSERT INTO harvest_transaction'),
+    );
+    const insertedVoucher = pool.query.mock.calls.some(([sql]) =>
+      String(sql).includes('INSERT INTO voucher'),
+    );
+    expect(insertedHarvest).toBe(false);
+    expect(insertedVoucher).toBe(false);
+  });
+
+  it('inserts a new harvest when clientEventId has not been seen before', async () => {
+    const pool = {
+      query: jest.fn().mockImplementation(async (sql: string) => {
+        const text = String(sql);
+        if (text.includes('sinaph_overlap') && text.includes('FROM plot')) {
+          return {
+            rowCount: 1,
+            rows: [
+              { id: 'plot_1', farmer_id: 'farmer_1', area_ha: 1.5, sinaph_overlap: false, indigenous_overlap: false, country_code: 'HN' },
+            ],
+          };
+        }
+        // No prior row for this clientEventId.
+        if (text.includes('row_to_json(ht)')) {
+          return { rowCount: 0, rows: [] };
+        }
+        if (text.includes('INSERT INTO harvest_transaction')) {
+          return { rowCount: 1, rows: [{ id: 'tx_new', harvest_date: null }] };
+        }
+        if (text.includes('INSERT INTO voucher')) {
+          return { rowCount: 1, rows: [{ id: 'voucher_new', qr_code_ref: 'V-NEW1' }] };
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    const result = await service.create(
+      { farmerId: 'farmer_1', plotId: 'plot_1', kg: 120, clientEventId: 'pending-sync-8' } as any,
+      'auth-user',
+    );
+
+    expect(result.transaction).toEqual(expect.objectContaining({ id: 'tx_new' }));
+    expect(
+      pool.query.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO harvest_transaction')),
+    ).toBe(true);
+  });
+
+  it('returns the committed winner when a concurrent insert loses the unique race (23505)', async () => {
+    const winnerTransaction = {
+      id: 'tx_winner',
+      farmer_id: 'farmer_1',
+      plot_id: 'plot_1',
+      kg: 120,
+      client_event_id: 'pending-sync-9',
+    };
+    const winnerVoucher = { id: 'voucher_winner', qr_code_ref: 'V-WIN1', transaction_id: 'tx_winner' };
+    let replayLookups = 0;
+
+    const pool = {
+      query: jest.fn().mockImplementation(async (sql: string) => {
+        const text = String(sql);
+        if (text.includes('sinaph_overlap') && text.includes('FROM plot')) {
+          return {
+            rowCount: 1,
+            rows: [
+              { id: 'plot_1', farmer_id: 'farmer_1', area_ha: 1.5, sinaph_overlap: false, indigenous_overlap: false, country_code: 'HN' },
+            ],
+          };
+        }
+        if (text.includes('row_to_json(ht)')) {
+          replayLookups += 1;
+          // First lookup (pre-insert) misses; the post-23505 lookup finds the committed winner.
+          if (replayLookups === 1) {
+            return { rowCount: 0, rows: [] };
+          }
+          return { rowCount: 1, rows: [{ transaction: winnerTransaction, voucher: winnerVoucher }] };
+        }
+        if (text.includes('INSERT INTO harvest_transaction')) {
+          const err: Error & { code?: string } = new Error(
+            'duplicate key value violates unique constraint',
+          );
+          err.code = '23505';
+          throw err;
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    const result = await service.create(
+      { farmerId: 'farmer_1', plotId: 'plot_1', kg: 120, clientEventId: 'pending-sync-9' } as any,
+      'auth-user',
+    );
+
+    expect(result.transaction).toEqual(winnerTransaction);
+    expect(result.voucher).toEqual(winnerVoucher);
+    expect(replayLookups).toBe(2);
+    // The loser must not have created a voucher.
+    expect(
+      pool.query.mock.calls.some(([sql]) => String(sql).includes('INSERT INTO voucher')),
+    ).toBe(false);
+  });
+
+  it('rethrows a non-unique insert failure', async () => {
+    const pool = {
+      query: jest.fn().mockImplementation(async (sql: string) => {
+        const text = String(sql);
+        if (text.includes('sinaph_overlap') && text.includes('FROM plot')) {
+          return {
+            rowCount: 1,
+            rows: [
+              { id: 'plot_1', farmer_id: 'farmer_1', area_ha: 1.5, sinaph_overlap: false, indigenous_overlap: false, country_code: 'HN' },
+            ],
+          };
+        }
+        if (text.includes('row_to_json(ht)')) {
+          return { rowCount: 0, rows: [] };
+        }
+        if (text.includes('INSERT INTO harvest_transaction')) {
+          const err: Error & { code?: string } = new Error('connection reset');
+          err.code = '08006';
+          throw err;
+        }
+        return { rows: [], rowCount: 0 };
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    await expect(
+      service.create(
+        { farmerId: 'farmer_1', plotId: 'plot_1', kg: 120, clientEventId: 'pending-sync-10' } as any,
+        'auth-user',
+      ),
+    ).rejects.toThrow('connection reset');
+  });
+});

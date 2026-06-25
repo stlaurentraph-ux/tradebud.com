@@ -131,6 +131,8 @@ describe('multiPlotDeliverySession', () => {
         kg: 100,
         status: 'synced',
         qrCodeRef: 'V-AAA',
+        // Multi-line sessions (>1 line) generate a shared delivery trip ref grouping the lines.
+        deliveryTripRef: expect.stringMatching(/^T-/),
         buyerInvitePending: false,
       },
       {
@@ -138,8 +140,11 @@ describe('multiPlotDeliverySession', () => {
         plotName: 'B',
         kg: 80,
         status: 'queued',
+        deliveryTripRef: expect.stringMatching(/^T-/),
         messageKey: 'harvest_queued_offline',
       },
     ]);
+    // The trip ref is generated once per session and shared across every line.
+    expect(results[0].deliveryTripRef).toBe(results[1].deliveryTripRef);
   });
 });

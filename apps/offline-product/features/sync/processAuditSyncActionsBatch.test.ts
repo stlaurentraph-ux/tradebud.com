@@ -80,4 +80,40 @@ describe('processAuditSyncActionsBatch', () => {
     ]);
     expect(mocks.deletePendingSyncAction).toHaveBeenCalledWith(7);
   });
+
+  it('does not drop the queue row when the 200 response omits the per-event result', async () => {
+    // Regression: a truncated/empty results array (e.g. `{ ok: true, results: [] }`) must be
+    // treated as a failure so the audit event retries instead of being silently lost.
+    mocks.postAuditEventsBatchToBackend.mockResolvedValue({
+      ok: true,
+      accepted: 0,
+      idempotent: 0,
+      failed: 0,
+      results: [],
+    });
+
+    const result = await processAuditSyncActionsBatch({
+      actions: [
+        {
+          id: 9,
+          actionType: 'audit_sync',
+          payloadJson: JSON.stringify({
+            eventType: 'plot_compliance_declared',
+            payload: { farmerId: 'farmer-1', plotId: 'plot-1' },
+          }),
+          hlcTimestamp: '1:1',
+          createdAt: 1,
+        },
+      ] as never,
+    });
+
+    expect(result.completed).toBe(0);
+    expect(result.failedActions).toBe(1);
+    expect(mocks.deletePendingSyncAction).not.toHaveBeenCalled();
+    expect(mocks.markDeclarationAuditSynced).not.toHaveBeenCalled();
+    expect(mocks.markPendingSyncAttempt).toHaveBeenCalledWith(
+      9,
+      expect.objectContaining({ attempts: 1 }),
+    );
+  });
 });

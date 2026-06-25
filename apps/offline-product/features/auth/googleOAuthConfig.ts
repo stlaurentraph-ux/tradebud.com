@@ -1,6 +1,10 @@
-import { Platform } from 'react-native';
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
+import {
+  getCachedAndroidGoogleOAuthRedirectHandlerInstalled,
+  resolveAndroidGoogleOAuthRedirectHandlerInstalled,
+} from '@/features/auth/androidGoogleOAuthCapability';
 import { GOOGLE_OAUTH_ENV } from '@/features/auth/googleOAuthEnv';
 import { getNativeOAuthCallbackUri } from '@/features/auth/oauthRedirect';
 
@@ -36,14 +40,43 @@ function readGoogleOAuthExtra(): GoogleOAuthExtra {
   };
 }
 
+export function googleReversedSchemeFromClientId(clientId: string | undefined): string | null {
+  const match = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(String(clientId ?? '').trim());
+  return match ? `com.googleusercontent.apps.${match[1]}` : null;
+}
+
+/** True when app.config.js declares the Google oauth2redirect intent filter (may not match installed APK). */
+export function hasAndroidGoogleOAuthIntentFilterInConfig(): boolean {
+  if (Platform.OS !== 'android') return true;
+  const androidClientId = getGoogleOAuthClientIds()?.clientId;
+  const reversedScheme = googleReversedSchemeFromClientId(androidClientId);
+  if (!reversedScheme) return false;
+  const intentFilters = Constants.expoConfig?.android?.intentFilters;
+  if (!Array.isArray(intentFilters)) return false;
+  return intentFilters.some((filter) => {
+    if (!filter || typeof filter !== 'object') return false;
+    const data = (filter as { data?: unknown }).data;
+    if (!Array.isArray(data)) return false;
+    return data.some(
+      (entry) =>
+        entry &&
+        typeof entry === 'object' &&
+        (entry as { scheme?: string }).scheme === reversedScheme,
+    );
+  });
+}
+
+/** @deprecated Prefer resolveAndroidGoogleOAuthRedirectHandlerInstalled for runtime APK checks. */
+export const hasAndroidGoogleOAuthIntentFilter = hasAndroidGoogleOAuthIntentFilterInConfig;
+
 /**
  * Redirect URI for Google native OAuth (iOS/Android installable clients).
  * Do not register this on the Web OAuth client — Google only allows HTTPS there.
  */
 export function getGoogleOAuthRedirectUri(clientId: string): string {
-  const match = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(clientId.trim());
-  if (match) {
-    return `com.googleusercontent.apps.${match[1]}:/oauth2redirect`;
+  const reversed = googleReversedSchemeFromClientId(clientId);
+  if (reversed) {
+    return `${reversed}:/oauth2redirect`;
   }
   return getNativeOAuthCallbackUri();
 }
@@ -77,12 +110,30 @@ export function isGoogleNativeSignInConfigured(): boolean {
 }
 
 /**
- * Native Google (account picker) only works on physical iOS/Android devices.
- * Simulator/emulator must use Supabase browser OAuth — native promptAsync returns dismiss with no UI.
+ * Native Google (account picker) only works on physical iOS/Android devices with
+ * the reversed Google URI scheme baked into the installed APK.
  */
+export async function resolveShouldUseGoogleNativeSignIn(): Promise<boolean> {
+  if (!isGoogleNativeSignInConfigured()) return false;
+  if (Platform.OS === 'ios' && Constants.isDevice === false) return false;
+  if (Platform.OS === 'android' && Constants.isDevice === false) return false;
+  if (Platform.OS === 'android' && !hasAndroidGoogleOAuthIntentFilterInConfig()) return false;
+  if (Platform.OS === 'android') {
+    return await resolveAndroidGoogleOAuthRedirectHandlerInstalled();
+  }
+  return true;
+}
+
+/** Sync check — prefer {@link resolveShouldUseGoogleNativeSignIn} before starting OAuth. */
 export function shouldUseGoogleNativeSignIn(): boolean {
   if (!isGoogleNativeSignInConfigured()) return false;
   if (Platform.OS === 'ios' && Constants.isDevice === false) return false;
   if (Platform.OS === 'android' && Constants.isDevice === false) return false;
+  if (Platform.OS === 'android' && !hasAndroidGoogleOAuthIntentFilterInConfig()) return false;
+  if (Platform.OS === 'android') {
+    const runtimeInstalled = getCachedAndroidGoogleOAuthRedirectHandlerInstalled();
+    if (runtimeInstalled === false) return false;
+    if (runtimeInstalled === null) return false;
+  }
   return true;
 }

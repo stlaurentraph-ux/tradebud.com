@@ -187,4 +187,27 @@ describe('persistence.native sqlite integration', () => {
     expect(loaded.farmer?.selfDeclaredAt).toBe(declaredAt);
     expect(loaded.farmer?.name).toBe('Hector');
   });
+
+  it('persistFarmer then loadAppState round-trips declaration geolocation fields', async () => {
+    const { persistFarmer, loadAppState } = await import('./persistence.native');
+    const farmerId = '33333333-3333-4333-8333-333333333333';
+    const capturedAt = Date.now();
+
+    await persistFarmer({
+      id: farmerId,
+      role: 'farmer',
+      name: 'Geo Farmer',
+      selfDeclared: true,
+      declarationLatitude: 14.0723,
+      declarationLongitude: -87.1921,
+      declarationGeoCapturedAt: capturedAt,
+    });
+
+    const loaded = await loadAppState();
+    // Regression: these were persisted but never mapped back on load, silently dropping the
+    // EUDR micro/small-producer geolocation declaration on every app restart.
+    expect(loaded.farmer?.declarationLatitude).toBe(14.0723);
+    expect(loaded.farmer?.declarationLongitude).toBe(-87.1921);
+    expect(loaded.farmer?.declarationGeoCapturedAt).toBe(capturedAt);
+  });
 });

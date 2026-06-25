@@ -37,6 +37,7 @@ export function WelcomeAccountModal({
     <Modal
       visible={visible}
       transparent
+      statusBarTranslucent
       animationType="fade"
       presentationStyle="overFullScreen"
       onRequestClose={onSkip}

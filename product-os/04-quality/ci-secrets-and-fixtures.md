@@ -12,6 +12,7 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | Secret | Phase | Used by | Purpose |
 |--------|-------|---------|---------|
 | `TEST_DATABASE_URL` | live | backend CI | PostGIS integration tests |
+| `SUPABASE_ACCESS_TOKEN` | optional | backend CI | After **Test** is transferred to a Free org: wake/pause around integration tests (~$7/mo savings). Needs `project_admin_read` + `project_admin_write` ([create](https://supabase.com/dashboard/account/tokens)). Does nothing until Test leaves the Pro org (pause API rejects Pro projects). |
 | `DASHBOARD_BASE_URL` | 2.5 | onboarding proxy smoke | Production dashboard URL (`https://dashboard.tracebud.com`) |
 | `SUPABASE_URL` | 2.5, 2.6 | deploy smoke token mint | Product Supabase project URL — mints fresh smoke JWT each workflow run |
 | `SUPABASE_ANON_KEY` | 2.5, 2.6 | deploy smoke token mint | Anon key for Supabase verify step during mint |

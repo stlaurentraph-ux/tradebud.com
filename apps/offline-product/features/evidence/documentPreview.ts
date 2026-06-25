@@ -16,8 +16,39 @@ export function isImageDocumentUri(uri: string, mimeType: string | null): boolea
   return /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(uri);
 }
 
+/**
+ * Schemes we are willing to hand to the OS opener (`Linking.openURL`). Document evidence is
+ * either a local sandbox file (`file://` / Android `content://`) or a remote signed storage URL
+ * (`https://`). Everything else — `text:` synthetic signatures, cleartext `http:`, `javascript:`,
+ * `data:`, or arbitrary custom app schemes — must be rejected so a maliciously crafted/restored
+ * evidence URI cannot trigger an unexpected redirect or app handoff.
+ */
+const EXTERNALLY_OPENABLE_SCHEMES = new Set(['file:', 'content:', 'https:']);
+
 export function canOpenExternally(uri: string): boolean {
-  return !uri.startsWith('text:');
+  if (typeof uri !== 'string' || uri.length === 0) return false;
+  if (uri.startsWith('text:')) return false;
+  const schemeMatch = /^([a-z][a-z0-9+.-]*):/i.exec(uri);
+  if (!schemeMatch) return false;
+  return EXTERNALLY_OPENABLE_SCHEMES.has(`${schemeMatch[1].toLowerCase()}:`);
+}
+
+/**
+ * How a previewable document should be handed off to the OS.
+ * - `browser`: remote `https:` URL → safe for `Linking.openURL`.
+ * - `share`: local `file:`/`content:` document → MUST go through the share/FileProvider path.
+ *   On Android 7+ calling `Linking.openURL('file://…')` throws `FileUriExposedException`, so the
+ *   "Open document" button silently fails; `Sharing.shareAsync` resolves the file via FileProvider
+ *   on Android and opens the share sheet / Quick Look on iOS.
+ * - `null`: not openable (synthetic `text:` signatures, blocked schemes).
+ */
+export type DocumentOpenStrategy = 'browser' | 'share' | null;
+
+export function resolveDocumentOpenStrategy(uri: string): DocumentOpenStrategy {
+  if (!canOpenExternally(uri)) return null;
+  const schemeMatch = /^([a-z][a-z0-9+.-]*):/i.exec(uri);
+  const scheme = schemeMatch ? `${schemeMatch[1].toLowerCase()}:` : '';
+  return scheme === 'https:' ? 'browser' : 'share';
 }
 
 export type DocumentPreviewItem = {

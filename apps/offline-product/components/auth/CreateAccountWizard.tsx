@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
+import { OAuthDevDiagnosticsPanel } from '@/components/auth/OAuthDevDiagnosticsPanel';
 import { AuthMethodOrDivider } from '@/components/auth/AuthMethodOrDivider';
 import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { Brand, Spacing } from '@/constants/theme';
@@ -25,11 +28,17 @@ import {
   hydrateSyncAuthFromSettings,
 } from '@/features/api/syncAuthSession';
 import {
+  recoverOAuthSignupSessionAfterBrowserReturn,
   signUpWithEmailAndSyncPlots,
   signUpWithOAuthAndSyncPlots,
 } from '@/features/auth/farmerSignUp';
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
+import {
+  clearOAuthDiagnosticEvents,
+  recordOAuthDiagnosticEvent,
+} from '@/features/auth/oauthDiagnosticsStore';
+import { collectOAuthRuntimeDiagnostics, logOAuthRuntimeDiagnostics } from '@/features/auth/oauthRuntimeDiagnostics';
 import type { Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
@@ -48,7 +57,7 @@ type CreateAccountWizardProps = {
   localPlots?: Plot[];
   oauthResume?: CreateAccountOAuthResume | null;
   onClose: () => void;
-  onSuccess: (options?: { existingAccount?: boolean }) => void;
+  onSuccess: (options?: { existingAccount?: boolean }) => void | Promise<void>;
   onSignInInstead: () => void;
 };
 
@@ -73,6 +82,7 @@ export function CreateAccountWizard({
   const [busy, setBusy] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
   const [pendingExistingAccount, setPendingExistingAccount] = useState(false);
+  const [showOAuthDiagnostics, setShowOAuthDiagnostics] = useState(false);
   const oauthInFlightRef = useRef(false);
 
   const reset = useCallback(() => {
@@ -92,10 +102,24 @@ export function CreateAccountWizard({
     }
   }, [visible, reset]);
 
-  const finishSuccess = useCallback((options?: { existingAccount?: boolean }) => {
-    onClose();
-    onSuccess(options);
-  }, [onClose, onSuccess]);
+  const finishSuccess = useCallback(
+    async (options?: { existingAccount?: boolean }, oauthProvider?: OAuthProvider) => {
+      if (oauthProvider) {
+        setOauthBusy(oauthProvider);
+        setHint(t('sign_in_oauth_finishing'));
+      } else {
+        setBusy(true);
+        setHint(t('sign_in_oauth_finishing'));
+      }
+      try {
+        await Promise.resolve(onSuccess(options));
+      } finally {
+        setBusy(false);
+        setOauthBusy(null);
+      }
+    },
+    [onSuccess, t],
+  );
 
   useEffect(() => {
     if (!visible || !oauthResume) return;
@@ -107,7 +131,7 @@ export function CreateAccountWizard({
       setStep('name');
       return;
     }
-    finishSuccess({ existingAccount: oauthResume.existingAccount });
+    void finishSuccess({ existingAccount: oauthResume.existingAccount });
   }, [oauthResume, visible, finishSuccess]);
 
   const resolveMessage = (code: string): string => {
@@ -137,18 +161,41 @@ export function CreateAccountWizard({
         setHint(resolveMessage(result.message));
         return;
       }
-      finishSuccess();
+      await finishSuccess();
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
-    } finally {
       setBusy(false);
     }
   };
 
+  useEffect(() => {
+    if (visible && step === 'method') {
+      logOAuthRuntimeDiagnostics('create_account_wizard_open');
+    }
+  }, [visible, step]);
+
+  useEffect(() => {
+    if (!visible || !oauthInFlightRef.current) return;
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active' || !oauthInFlightRef.current) return;
+      recordOAuthDiagnosticEvent('attempt_started', 'app resumed while OAuth in flight');
+      void hydrateSyncAuthFromSettings();
+    });
+    return () => sub.remove();
+  }, [visible, oauthBusy]);
+
   const handleOAuthSignUp = async (provider: OAuthProvider) => {
     oauthInFlightRef.current = true;
     setOauthBusy(provider);
-    setHint(null);
+    setHint(t('sign_in_oauth_busy'));
+    clearOAuthDiagnosticEvents();
+    recordOAuthDiagnosticEvent('attempt_started', `provider=${provider} surface=create_account`);
+    logOAuthRuntimeDiagnostics('create_account_oauth_sign_up');
+    const snapshot = collectOAuthRuntimeDiagnostics();
+    if (Platform.OS === 'android' && !snapshot.hasGoogleIntentFilterInConfig) {
+      setHint(t('sign_in_oauth_busy'));
+    }
+    let completedViaFinishSuccess = false;
     try {
       const result = await signUpWithOAuthAndSyncPlots({
         provider,
@@ -157,17 +204,23 @@ export function CreateAccountWizard({
         localPlots,
       });
       if (!result.ok) {
-        await hydrateSyncAuthFromSettings().catch(() => undefined);
-        if (hasSyncAuthSession()) {
-          finishSuccess({ existingAccount: true });
+        if (await recoverOAuthSignupSessionAfterBrowserReturn()) {
+          await finishSuccess({ existingAccount: true }, provider);
+          completedViaFinishSuccess = true;
           return;
         }
+        recordOAuthDiagnosticEvent(
+          'sign_up_failed',
+          [result.message, result.oauthStep, result.oauthPath].filter(Boolean).join(' '),
+        );
+        setShowOAuthDiagnostics(true);
         setHint(resolveMessage(result.message));
         return;
       }
       if (result.missingName) {
         if (result.existingAccount) {
-          finishSuccess({ existingAccount: true });
+          await finishSuccess({ existingAccount: true }, provider);
+          completedViaFinishSuccess = true;
           return;
         }
         setOauthBusy(null);
@@ -175,17 +228,23 @@ export function CreateAccountWizard({
         setStep('name');
         return;
       }
-      finishSuccess({ existingAccount: result.existingAccount });
+      await finishSuccess({ existingAccount: result.existingAccount }, provider);
+      completedViaFinishSuccess = true;
     } catch (e) {
-      await hydrateSyncAuthFromSettings().catch(() => undefined);
-      if (hasSyncAuthSession()) {
-        finishSuccess({ existingAccount: true });
+      if (await recoverOAuthSignupSessionAfterBrowserReturn()) {
+        await finishSuccess({ existingAccount: true }, provider);
+        completedViaFinishSuccess = true;
         return;
       }
-      setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
+      const message = e instanceof Error ? e.message : String(e);
+      recordOAuthDiagnosticEvent('sign_up_failed', message);
+      setShowOAuthDiagnostics(true);
+      setHint(formatSignInErrorMessage(t, message));
     } finally {
       oauthInFlightRef.current = false;
-      setOauthBusy(null);
+      if (!completedViaFinishSuccess) {
+        setOauthBusy(null);
+      }
       void dismissOAuthBrowserIfOpen();
     }
   };
@@ -204,15 +263,14 @@ export function CreateAccountWizard({
         setHint(t('sign_in_oauth_failed'));
         return;
       }
-      finishSuccess({ existingAccount: pendingExistingAccount });
+      await finishSuccess({ existingAccount: pendingExistingAccount });
     } catch (e) {
       await hydrateSyncAuthFromSettings().catch(() => undefined);
       if (hasSyncAuthSession()) {
-        finishSuccess({ existingAccount: pendingExistingAccount });
+        await finishSuccess({ existingAccount: pendingExistingAccount });
         return;
       }
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
-    } finally {
       setBusy(false);
     }
   };
@@ -238,6 +296,7 @@ export function CreateAccountWizard({
     <Modal
       visible={visible}
       transparent
+      statusBarTranslucent
       animationType="slide"
       presentationStyle="overFullScreen"
       onRequestClose={onClose}
@@ -256,7 +315,7 @@ export function CreateAccountWizard({
             accessibilityLabel={t('cancel')}
             onPress={onClose}
           />
-          <View style={authSheetStyles.card}>
+          <View style={[authSheetStyles.card, { maxHeight: '88%' }]}>
             <View style={authSheetStyles.headerRow}>
               {showBack ? (
                 <Pressable
@@ -277,6 +336,12 @@ export function CreateAccountWizard({
                 <Ionicons name="close" size={20} color={colors.iconMuted} />
               </Pressable>
             </View>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+              contentContainerStyle={{ gap: Spacing.sm, paddingBottom: Spacing.xs }}
+            >
             <ThemedText type="caption" style={authSheetStyles.subtitle}>
               {t(stepLabelKey)}
             </ThemedText>
@@ -389,7 +454,6 @@ export function CreateAccountWizard({
             {(busy || oauthBusy) && !hint ? (
               <ActivityIndicator color={Brand.primary} style={{ marginVertical: Spacing.xs }} />
             ) : null}
-
             {step === 'method' ? (
               <View style={authSheetStyles.footerRow}>
                 <Pressable
@@ -405,6 +469,14 @@ export function CreateAccountWizard({
                 </Pressable>
               </View>
             ) : null}
+
+            {step === 'method' ? (
+              <OAuthDevDiagnosticsPanel
+                surface="create_account"
+                defaultExpanded={showOAuthDiagnostics}
+              />
+            ) : null}
+            </ScrollView>
           </View>
         </View>
       </KeyboardAvoidingView>

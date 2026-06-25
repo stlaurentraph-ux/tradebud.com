@@ -156,8 +156,10 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         await initDatabase();
-        await hydrateSyncAuthFromSettings();
-        const loaded = await loadAppState();
+        const [, loaded] = await Promise.all([
+          hydrateSyncAuthFromSettings(),
+          loadAppState(),
+        ]);
         if (!cancelled) {
           if (loaded.farmer) {
             setFarmerState((prev) => {
@@ -169,12 +171,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             });
           }
           if (loaded.plots.length > 0) setPlots(loaded.plots);
+          setIsAppReady(true);
         }
       } catch (error) {
         if (__DEV__) {
           console.warn('[AppState] boot failed', error);
         }
-      } finally {
         if (!cancelled) {
           setIsAppReady(true);
         }

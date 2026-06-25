@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, TextInput, View, type ScrollView } from 'react-native';
+import { Alert, BackHandler, Pressable, TextInput, View, type ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { ThemedText } from '@/components/themed-text';
@@ -55,6 +56,7 @@ import { type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
 import { useFocusCloudPull, useReloadOnServerPlotSyncChanged } from '@/features/sync/useFocusCloudPull';
 import { loadPlotServerLinks } from '@/features/state/persistence';
+import { resolveHarvestBackTarget } from '@/features/harvest/harvestBackTarget';
 
 export default function HarvestsScreen() {
   const insets = useSafeAreaInsets();
@@ -79,6 +81,32 @@ export default function HarvestsScreen() {
   const [deliveryPlotSelection, setDeliveryPlotSelection] = useState<Set<string>>(() => new Set());
   const [multiPlotHeaderTitle, setMultiPlotHeaderTitle] = useState('');
   const multiPlotBackRef = useRef<(() => void) | null>(null);
+  const handleSubViewBack = useCallback((): boolean => {
+    switch (
+      resolveHarvestBackTarget({ showMultiPlotDelivery, showRecordWeight, showNewHarvestLog })
+    ) {
+      case 'multi_plot':
+        multiPlotBackRef.current?.();
+        return true;
+      case 'record_weight':
+        setShowRecordWeight(false);
+        return true;
+      case 'new_log':
+        setShowNewHarvestLog(false);
+        setDeliveryPlotSelection(new Set());
+        return true;
+      default:
+        return false;
+    }
+  }, [showMultiPlotDelivery, showRecordWeight, showNewHarvestLog]);
+  // Android hardware back: step back through inline sub-flows instead of switching tabs / exiting.
+  // Returning false when no sub-view is open lets the OS perform its default back behavior.
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', handleSubViewBack);
+      return () => subscription.remove();
+    }, [handleSubViewBack]),
+  );
   const deliveryDeepLinkHandled = useRef(false);
   const clearingFocusRef = useRef(false);
   const scrollRef = useRef<ScrollView>(null);
@@ -467,19 +495,7 @@ export default function HarvestsScreen() {
             {showRecordWeight || showNewHarvestLog || showMultiPlotDelivery ? (
             <Pressable
               onPress={() => {
-                if (showMultiPlotDelivery) {
-                  multiPlotBackRef.current?.();
-                  return;
-                }
-                if (showRecordWeight) {
-                  setShowRecordWeight(false);
-                  return;
-                }
-                if (showNewHarvestLog) {
-                  setShowNewHarvestLog(false);
-                  setDeliveryPlotSelection(new Set());
-                  return;
-                }
+                handleSubViewBack();
               }}
               style={styles.backButton}
             >

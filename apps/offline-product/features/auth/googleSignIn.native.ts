@@ -13,6 +13,8 @@ import { getOAuthBrowserSessionOptions } from '@/features/auth/oauthBrowserSessi
 import { getGoogleOAuthClientIds, getGoogleOAuthRedirectUri } from '@/features/auth/googleOAuthConfig';
 import { captureGoogleNativeOAuthCode } from '@/features/auth/googleNativeOAuthRedirect';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
+import { recordOAuthDiagnosticEvent } from '@/features/auth/oauthDiagnosticsStore';
+import { logOAuthRuntimeDiagnostics } from '@/features/auth/oauthRuntimeDiagnostics';
 import { promptAsyncWithTimeout } from '@/features/auth/promptAsyncWithTimeout';
 import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 
@@ -34,6 +36,8 @@ export async function signInWithGoogleNative(): Promise<Session> {
   }
 
   const redirectUri = getGoogleOAuthRedirectUri(ids.clientId);
+  logOAuthRuntimeDiagnostics('google_native_sign_in');
+  recordOAuthDiagnosticEvent('native_prompt_start', `redirect=${redirectUri}`);
   const rawNonce = Crypto.randomUUID();
   const hashedNonce = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
@@ -58,6 +62,11 @@ export async function signInWithGoogleNative(): Promise<Session> {
     await dismissOAuthBrowserIfOpen();
   }
 
+  recordOAuthDiagnosticEvent(
+    'native_prompt_result',
+    `type=${result.type}${result.type === 'success' ? ' hasCode=' + Boolean(result.params?.code) : ''}`,
+  );
+
   let authCode =
     result.type === 'success' && typeof result.params.code === 'string'
       ? result.params.code
@@ -65,13 +74,21 @@ export async function signInWithGoogleNative(): Promise<Session> {
 
   if (!authCode) {
     authCode = await redirectCapture.waitForCode();
+    if (authCode) {
+      recordOAuthDiagnosticEvent('oauth2redirect_code_recovered', 'code from oauth2redirect deep link');
+    }
   }
   redirectCapture.cancel();
 
   if (!authCode) {
     if (result.type === 'cancel' || result.type === 'dismiss') {
+      recordOAuthDiagnosticEvent(
+        'sign_in_failed',
+        `cancelled type=${result.type} — if Chrome stayed on google.com, rebuild dev client or enable Google custom URI scheme`,
+      );
       throw new OAuthFlowError('sign_in_oauth_cancelled', { step: 'native_prompt', path: 'native' });
     }
+    recordOAuthDiagnosticEvent('sign_in_failed', `no auth code after prompt type=${result.type}`);
     throw new OAuthFlowError('sign_in_oauth_failed', {
       step: 'native_code',
       path: 'native',

@@ -4,14 +4,17 @@ export type GoogleNativeBrowserFallbackInput = {
   platform: OAuthRuntimePlatform;
   isDev: boolean;
   isSimulatorInDev: boolean;
+  /** False when the installed APK cannot handle com.googleusercontent.apps.*:/oauth2redirect. */
+  androidNativeRedirectInstalled?: boolean;
 };
 
 export function shouldAllowGoogleNativeBrowserFallback(
   input: GoogleNativeBrowserFallbackInput,
 ): boolean {
-  // Physical Android must stay on native Google OAuth — browser fallback opens a second
-  // Chrome task and commonly leaves the user on google.com search.
   if (input.platform === 'android') {
+    if (input.androidNativeRedirectInstalled === false) {
+      return input.isDev;
+    }
     return input.isDev && input.isSimulatorInDev;
   }
   if (input.platform === 'ios' && !input.isDev) return true;

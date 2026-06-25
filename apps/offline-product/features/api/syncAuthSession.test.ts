@@ -22,6 +22,13 @@ vi.mock('@/features/security/syncAuthStorage', () => ({
   }),
 }));
 
+// The OAuth orchestrator transitively pulls the full Expo/React Native runtime graph (expo-linking,
+// expo-web-browser, app state, navigation/native packages) that cannot load under Node. The sync-auth
+// module only needs `clearOAuthOrchestratorState`, so stub it at the module boundary.
+vi.mock('@/features/auth/oauthOrchestrator', () => ({
+  clearOAuthOrchestratorState: vi.fn(),
+}));
+
 import {
   abortSyncAuthForSignOut,
   clearPersistedSyncAuth,

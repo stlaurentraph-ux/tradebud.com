@@ -57,8 +57,8 @@ function main() {
     issues.push('googleSignIn.native.ts must recover oauth2redirect codes after Android task split');
   }
   const orchestratorPolicy = read('features/auth/oauthOrchestratorPolicy.ts');
-  if (!orchestratorPolicy.includes('input.isDev && input.isSimulatorInDev')) {
-    issues.push('oauthOrchestratorPolicy must limit Android browser fallback to emulator dev');
+  if (!orchestratorPolicy.includes('androidNativeRedirectInstalled')) {
+    issues.push('oauthOrchestratorPolicy must allow Android browser fallback when oauth2redirect is missing from APK');
   }
 
   if (!packageJson.scripts?.['release:preview:android:safe']) {

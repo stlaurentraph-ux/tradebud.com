@@ -27,12 +27,13 @@ import {
 } from '@/features/network/apiFetchResponse';
 import { probeTracebudApiReachable } from '@/features/network/pingTracebudApi';
 import { getTracebudApiBaseUrl as getRuntimeGuardedApiBaseUrl } from './runtimeGuards';
+import { resolveSupabaseProjectUrl } from './supabaseProjectUrl';
 
 const ALLOW_TEST_AUTH = process.env.EXPO_PUBLIC_ALLOW_TEST_AUTH === '1';
 const ALLOW_LOCALHOST_API = process.env.EXPO_PUBLIC_ALLOW_LOCALHOST_API === '1';
 const IS_DEV_RUNTIME = typeof __DEV__ !== 'undefined' && __DEV__;
 
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const SUPABASE_URL = resolveSupabaseProjectUrl();
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 const DEFAULT_EMAIL = process.env.EXPO_PUBLIC_TRACEBUD_TEST_EMAIL ?? '';
 const DEFAULT_PASSWORD = process.env.EXPO_PUBLIC_TRACEBUD_TEST_PASSWORD ?? '';

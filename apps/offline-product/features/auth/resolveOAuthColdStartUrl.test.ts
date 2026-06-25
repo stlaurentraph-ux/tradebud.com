@@ -15,7 +15,7 @@ vi.mock('@/features/auth/oauthCallbackUrl', () => ({
     url.includes('auth/callback') || url.includes('tracebudoffline://'),
 }));
 
-import { resolveOAuthColdStartUrl } from './resolveOAuthColdStartUrl';
+import { resolveOAuthColdStartUrl, resolveOAuthColdStartUrlForLaunch } from './resolveOAuthColdStartUrl';
 
 describe('resolveOAuthColdStartUrl', () => {
   beforeEach(() => {
@@ -54,10 +54,18 @@ describe('resolveOAuthColdStartUrl', () => {
       handler = cb;
       return { remove: vi.fn() };
     });
-    const promise = resolveOAuthColdStartUrl(1_000);
+    const promise = resolveOAuthColdStartUrl({});
     await Promise.resolve();
     handler?.({ url: 'tracebudoffline://auth/callback?code=event' });
     await expect(promise).resolves.toBe('tracebudoffline://auth/callback?code=event');
     vi.useFakeTimers();
+  });
+
+  it('uses a short probe for stale callback routes without a launch URL', async () => {
+    const { STALE_OAUTH_CALLBACK_MAX_MS } = await import('./resolveOAuthColdStartUrl');
+    linkingMocks.getInitialURL.mockResolvedValue(null);
+    const promise = resolveOAuthColdStartUrlForLaunch(null);
+    await vi.advanceTimersByTimeAsync(STALE_OAUTH_CALLBACK_MAX_MS + 100);
+    await expect(promise).resolves.toBeNull();
   });
 });

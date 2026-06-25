@@ -49,6 +49,7 @@ export const ANALYTICS_EVENTS = {
   SYNC_QUEUE_DRAINED: 'sync_queue_drained',
   SYNC_RUN_COMPLETED: 'sync_run_completed',
   FIELD_SYNC_DELTA_SKIPPED: 'field_sync_delta_skipped',
+  FIELD_SYNC_PUSH_ONLY_IDLE: 'field_sync_push_only_idle',
   FIELD_SYNC_INCREMENTAL_RESTORE: 'field_sync_incremental_restore',
   SYNC_ACTION_FAILED: 'sync_action_failed',
   UI_ACTION_FAILED: 'ui_action_failed',

@@ -257,6 +257,38 @@ export class HarvestService {
       effectiveFarmerId = plotFarmerId;
     }
 
+    // Idempotent replay: a retried submission (the client never received our 200, or a double
+    // sync-queue drain) re-POSTs the same clientEventId. Return the original transaction +
+    // voucher instead of inserting a duplicate harvest/voucher. Scoped to the farmer because
+    // clientEventId (`pending-sync-<localRowId>`) is only unique per device, not globally.
+    const replayClientEventId = clientEventId?.trim();
+    const loadReplay = async () => {
+      if (!replayClientEventId) return null;
+      const replay = await this.pool.query(
+        `
+          SELECT row_to_json(ht) AS transaction, row_to_json(v) AS voucher
+          FROM harvest_transaction ht
+          LEFT JOIN voucher v ON v.transaction_id = ht.id
+          WHERE ht.farmer_id = $1
+            AND ht.client_event_id = $2
+          ORDER BY ht.id
+          LIMIT 1
+        `,
+        [effectiveFarmerId, replayClientEventId],
+      );
+      if (replay.rowCount && replay.rows[0]?.transaction) {
+        return {
+          transaction: replay.rows[0].transaction,
+          voucher: replay.rows[0].voucher ?? undefined,
+        };
+      }
+      return null;
+    };
+    const replayHit = await loadReplay();
+    if (replayHit) {
+      return replayHit;
+    }
+
     const areaHa = Number(plotRes.rows[0].area_ha);
     const sinaphOverlap = plotRes.rows[0].sinaph_overlap === true;
     const indigenousOverlap = plotRes.rows[0].indigenous_overlap === true;
@@ -334,30 +366,45 @@ export class HarvestService {
     }
 
     const transactionId = randomUUID();
-    const insertRes = await this.pool.query(
-      `
-        INSERT INTO harvest_transaction (
-          id,
-          farmer_id,
-          plot_id,
+    let insertRes;
+    try {
+      insertRes = await this.pool.query(
+        `
+          INSERT INTO harvest_transaction (
+            id,
+            farmer_id,
+            plot_id,
+            kg,
+            harvest_date,
+            created_by,
+            client_event_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING *
+        `,
+        [
+          transactionId,
+          effectiveFarmerId,
+          plotId,
           kg,
-          harvest_date,
-          created_by,
-          client_event_id
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *
-      `,
-      [
-        transactionId,
-        effectiveFarmerId,
-        plotId,
-        kg,
-        harvestDate ?? null,
-        userId ?? null,
-        clientEventId?.trim() || null,
-      ],
-    );
+          harvestDate ?? null,
+          userId ?? null,
+          clientEventId?.trim() || null,
+        ],
+      );
+    } catch (error) {
+      // Concurrent submissions with the same (farmer_id, client_event_id) can both pass the replay
+      // lookup above and race to INSERT. The unique index idx_harvest_transaction_farmer_client_event_id
+      // lets exactly one win; the loser gets a 23505 unique violation. Return the committed winner
+      // (idempotent) rather than surfacing a 500 — the client's retried action is replay-safe.
+      if ((error as { code?: string })?.code === '23505') {
+        const replayAfterRace = await loadReplay();
+        if (replayAfterRace) {
+          return replayAfterRace;
+        }
+      }
+      throw error;
+    }
 
     const tx = insertRes.rows[0];
 

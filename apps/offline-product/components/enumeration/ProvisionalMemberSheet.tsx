@@ -119,10 +119,10 @@ export function ProvisionalMemberSheet({
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={closeSheet}>
+    <Modal visible={visible} animationType="slide" transparent statusBarTranslucent onRequestClose={closeSheet}>
       <Pressable style={styles.backdrop} onPress={closeSheet} />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}
       >
         <View style={styles.handle} />

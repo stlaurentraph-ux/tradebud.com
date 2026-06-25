@@ -176,6 +176,8 @@ export function formatSignInErrorMessage(
       return t('settings_password_network');
     case 'sign_in_session_expired':
       return t('sign_in_session_expired');
+    case 'sign_in_google_native_required':
+      return t('sign_in_google_native_required');
     default:
       return raw.replace(/\bsupabase\b/gi, 'Tracebud').trim() || t('sign_in_failed');
   }

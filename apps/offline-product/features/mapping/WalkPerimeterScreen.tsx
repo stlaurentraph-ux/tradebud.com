@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as Location from 'expo-location';
 import { Alert, Animated, BackHandler, Pressable, useWindowDimensions, View } from 'react-native';
 import MapView, { Region } from 'react-native-maps';
+import { FieldMapView } from '@/components/plot-map/FieldMapView';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +21,10 @@ import {
   clearMappingDraftAfterPlotSave,
   useMappingDraftCloudSync,
 } from '@/features/mapping/useMappingDraftCloudSync';
-import { alertLocationPermissionDenied } from '@/features/permissions/locationPermission';
+import {
+  alertLocationPermissionDenied,
+  alertLocationServicesOff,
+} from '@/features/permissions/locationPermission';
 import { useAppState } from '@/features/state/AppStateContext';
 import type { Plot } from '@/features/state/AppStateContext';
 import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMessage';
@@ -159,6 +163,7 @@ export function WalkPerimeterScreen() {
   const styles = useThemedStyles((c) => createWalkPerimeterScreenStyles(c));
   const { t, lang } = useLanguage();
   const onLocationDenied = useCallback(() => alertLocationPermissionDenied(t), [t]);
+  const onLocationServicesOff = useCallback(() => alertLocationServicesOff(t), [t]);
   const {
     points,
     samples,
@@ -177,7 +182,7 @@ export function WalkPerimeterScreen() {
     undoLastVertex,
     reset,
     replacePointsFromPlot,
-  } = useWalkPerimeter({ onLocationDenied });
+  } = useWalkPerimeter({ onLocationDenied, onLocationServicesOff });
   const { farmer, setFarmer, plots, addPlot, updatePlot, isAppReady } = useAppState();
   const { openSignIn } = useSignInSheet();
   const enumeration = useEnumerationOptional();
@@ -2789,7 +2794,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
+                  <FieldMapView
                     ref={walkMapRef}
                     style={[styles.walkMap, { height: walkMapHeight - 8 }]}
                     initialRegion={mapAnchorRegion}
@@ -2810,7 +2815,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       showStartMarker={points.length > 0}
                       youMarkerFollowsPosition={isRecording}
                     />
-                  </MapView>
+                  </FieldMapView>
                   {isRecording && gpsFixDropped && points.length > 0 ? (
                     <View style={styles.walkCoachMapChip} pointerEvents="none" testID="walk-coach-gps-paused">
                       <Ionicons name="pause-circle-outline" size={14} color="#FFFFFF" />
@@ -2885,7 +2890,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
+                  <FieldMapView
                     ref={drawMapRef}
                     style={[styles.walkMap, { height: drawMapHeight - 8 }]}
                     initialRegion={mapAnchorRegion}
@@ -2915,7 +2920,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         closeStrokeRing={false}
                       />
                     ) : null}
-                  </MapView>
+                  </FieldMapView>
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
@@ -2938,7 +2943,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
+                  <FieldMapView
                     style={[styles.walkMap, { height: pinMapHeight - 8 }]}
                     initialRegion={mapAnchorRegion}
                     {...FIELD_MAP_CAPTURE_UI_PROPS}
@@ -2955,7 +2960,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       showYouMarker
                       showStartMarker={points.length > 0}
                     />
-                  </MapView>
+                  </FieldMapView>
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
@@ -3003,7 +3008,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
+                  <FieldMapView
                     style={[styles.walkMap, { height: Math.max(200, cornerMapHeight - 8) }]}
                     initialRegion={mapAnchorRegion}
                     {...FIELD_MAP_CAPTURE_UI_PROPS}
@@ -3033,7 +3038,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         closeStrokeRing={false}
                       />
                     ) : null}
-                  </MapView>
+                  </FieldMapView>
                   {isRecording ? (
                     <View style={styles.recordingMapBadge} pointerEvents="none">
                       <Animated.View

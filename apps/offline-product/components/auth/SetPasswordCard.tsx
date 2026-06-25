@@ -178,9 +178,9 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
         </Pressable>
       </View>
 
-      <Modal visible={modalOpen} animationType="slide" transparent onRequestClose={closeModal}>
+      <Modal visible={modalOpen} animationType="slide" transparent statusBarTranslucent onRequestClose={closeModal}>
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalBackdrop}
         >
           <View style={styles.modalCard}>
