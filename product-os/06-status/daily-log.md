@@ -5,7 +5,13 @@
   - `formatSyncNowUserMessage.ts` — `n: outcome.receiptsRequeued ?? 0` (the `?? 0` guard did not narrow the property type).
   - `measureCloudParitySummary.ts` — import `loadLocalDeliveryReceiptsForFarmer` from `@/features/state/persistence` (its real home, matching sibling sync files) instead of the non-exporting `@/features/harvest/localDeliveryReceipts`.
 - **Verify**: `npm run typecheck` → 0 errors; `npm run lint` green; `npx vitest run` → 478/478. No registry/state/permission/analytics surface changed.
-- **Status**: pushed as `fix/offline-typecheck-main`; offline app is type-clean on `main` for the first time.
+- **Status**: pushed as `fix/offline-typecheck-main` (#301); offline app is type-clean on `main` for the first time.
+
+### 2026-06-25 (Lane 2 fix — sync queue mutex fencing token)
+- **Context**: Extracted a self-contained reliability fix from the red-team work (#298) onto `main`. Prevents two pipelines draining the pending sync queue concurrently after a stale-lock force-release.
+- **Fix**: `syncQueueMutex.ts` now assigns a unique fencing token (`currentHolderId`) per lock acquisition. A holder may only mutate shared lock state on release if it is still the current holder, so a hung holder's eventual `finally` becomes a no-op once the lock is force-released and handed to a new acquirer. Adds `releaseStaleSyncQueueLockIfNeeded` (safety valve when a holder outlives `SYNC_*_OPERATION_MS`).
+- **Verify**: `npm run typecheck` (no new errors), `npm run lint` green, `npx vitest run` → 480/480 (incl. 2 new mutex cases). Depends only on `syncOperationLimits` (already on `main`).
+- **Status**: pushed as `fix/offline-sync-queue-mutex-fencing` (#302).
 
 ### 2026-06-24 (Lane 2 fix — bulk-plot-import CI regressions on PR #267)
 - **Failing checks**: Backend build (TS2307 missing `field-enumeration.service`) and Dashboard typecheck/build (5 TypeScript errors in bulk import parsers) — both PR-caused by Phases D–F commits.
