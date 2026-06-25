@@ -1,3 +1,12 @@
+### 2026-06-25 (Lane 2 fix — offline app typecheck now clean)
+- **Context**: After merging #299 (iOS/Android platform + security hardening, clean off `main`), `tsc --noEmit` on `apps/offline-product` still failed with 3 pre-existing errors in `features/sync/`.
+- **Fixes (no behavior change except a crash repair)**:
+  - `autoBackupPolicy.ts` — `params.work.hasWork` → `work.hasWork`. `params` is `{ plots, nowMs }`; `params.work` was `undefined` at runtime, so `evaluateConservativeAutoBackup` threw whenever called. Now uses the local `LocalSyncWorkSnapshot`.
+  - `formatSyncNowUserMessage.ts` — `n: outcome.receiptsRequeued ?? 0` (the `?? 0` guard did not narrow the property type).
+  - `measureCloudParitySummary.ts` — import `loadLocalDeliveryReceiptsForFarmer` from `@/features/state/persistence` (its real home, matching sibling sync files) instead of the non-exporting `@/features/harvest/localDeliveryReceipts`.
+- **Verify**: `npm run typecheck` → 0 errors; `npm run lint` green; `npx vitest run` → 478/478. No registry/state/permission/analytics surface changed.
+- **Status**: pushed as `fix/offline-typecheck-main`; offline app is type-clean on `main` for the first time.
+
 ### 2026-06-24 (Lane 2 fix — bulk-plot-import CI regressions on PR #267)
 - **Failing checks**: Backend build (TS2307 missing `field-enumeration.service`) and Dashboard typecheck/build (5 TypeScript errors in bulk import parsers) — both PR-caused by Phases D–F commits.
 - **Root causes fixed by prior agents**: `plots.module.ts` restored correct imports; dashboard `bulk-plot-import-{csv,geojson,kml,package}.ts` corrected `string|null → string|undefined` and `ParentNode → Element|Document` type errors.
