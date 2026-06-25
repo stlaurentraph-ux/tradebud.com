@@ -19,6 +19,7 @@ import {
 import { withSyncQueueLock, setSyncQueuePhase } from '@/features/sync/syncQueueMutex';
 import {
   SYNC_BACKGROUND_OPERATION_MS,
+  SYNC_LOCK_WAIT_MS,
   SyncOperationTimeoutError,
   withSyncOperationTimeout,
 } from '@/features/sync/syncOperationLimits';
@@ -37,6 +38,8 @@ const ALL_AUTO_BACKUP_ACTION_TYPES: PendingSyncAction['actionType'][] = [
 ];
 
 const noopTranslate: TranslateFn = (key) => key;
+
+const inFlightAutoBackupByFarmer = new Map<string, Promise<RunAutoBackupResult>>();
 
 function isConsentQueueActionType(actionType: PendingSyncAction['actionType']): boolean {
   return CONSENT_ACTION_TYPES.includes(actionType);
@@ -80,8 +83,16 @@ export async function runAutoBackup(params: {
       }),
     };
   }
-  try {
-    return await withSyncQueueLock(async () => {
+
+  const existing = inFlightAutoBackupByFarmer.get(params.farmerId);
+  if (existing) {
+    return existing;
+  }
+
+  const run = (async (): Promise<RunAutoBackupResult> => {
+    try {
+      return await withSyncQueueLock(
+        async () => {
       const work = (async () => {
         const sessionOpened = await openFieldSyncSession();
         if (!sessionOpened.ok) {
@@ -149,12 +160,24 @@ export async function runAutoBackup(params: {
         }
       })();
       return withSyncOperationTimeout(work, SYNC_BACKGROUND_OPERATION_MS);
-    });
-  } catch (e) {
-    if (e instanceof SyncOperationTimeoutError) {
-      emitSyncOperationOutcome({ kind: 'timeout', source: 'background' });
+        },
+        { waitMs: SYNC_LOCK_WAIT_MS },
+      );
+    } catch (e) {
+      if (e instanceof SyncOperationTimeoutError) {
+        emitSyncOperationOutcome({ kind: 'timeout', source: 'background' });
+      }
+      throw e;
     }
-    throw e;
+  })();
+
+  inFlightAutoBackupByFarmer.set(params.farmerId, run);
+  try {
+    return await run;
+  } finally {
+    if (inFlightAutoBackupByFarmer.get(params.farmerId) === run) {
+      inFlightAutoBackupByFarmer.delete(params.farmerId);
+    }
   }
 }
 

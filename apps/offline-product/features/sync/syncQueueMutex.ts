@@ -1,7 +1,16 @@
+import {
+  SYNC_BACKGROUND_OPERATION_MS,
+  SYNC_MANUAL_OPERATION_MS,
+} from '@/features/sync/syncOperationLimits';
+
 let locked = false;
 const waitQueue: Array<() => void> = [];
 
 const DEFAULT_LOCK_WAIT_MS = 45_000;
+
+/** Safety valve when a lock holder outlives operation timeouts (abandoned work). */
+const MAX_LOCK_HOLD_MS =
+  Math.max(SYNC_MANUAL_OPERATION_MS, SYNC_BACKGROUND_OPERATION_MS) + 15_000;
 
 export type SyncQueuePhase =
   | 'idle'
@@ -73,7 +82,21 @@ export class SyncQueueLockTimeoutError extends Error {
 
 type LockWaitMs = number | 'never';
 
+/** @internal Test helper and recovery hook when a holder never releases. */
+export function releaseStaleSyncQueueLockIfNeeded(nowMs = Date.now()): boolean {
+  if (!locked || lockStartedAt == null) return false;
+  if (nowMs - lockStartedAt < MAX_LOCK_HOLD_MS) return false;
+  locked = false;
+  phase = 'idle';
+  lockStartedAt = null;
+  waitingSince = null;
+  waitQueue.length = 0;
+  emitSyncQueueLockChange();
+  return true;
+}
+
 function waitForSyncQueueLock(waitMs: LockWaitMs): Promise<void> {
+  releaseStaleSyncQueueLockIfNeeded();
   return new Promise<void>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let settled = false;

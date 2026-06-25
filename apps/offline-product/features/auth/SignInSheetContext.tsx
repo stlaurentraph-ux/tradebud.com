@@ -66,6 +66,13 @@ import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingCo
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
 import { runAutoBackup, type RunAutoBackupResult } from '@/features/sync/runAutoBackup';
 import {
+  SyncQueueLockTimeoutError,
+} from '@/features/sync/syncQueueMutex';
+import {
+  SyncOperationTimeoutError,
+} from '@/features/sync/syncOperationLimits';
+import { syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
+import {
   listUnsyncedLocalPlots,
 } from '@/features/sync/plotServerSync';
 import {
@@ -304,12 +311,23 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     const plotCountHint = postAuthSyncPlotCountHint(offerInput);
 
     if ((await hasDataProcessingConsent()) && activeFarmer.id) {
-      const backup = await runAutoBackup({
-        farmerId: activeFarmer.id,
-        localPlots: activePlots,
-      });
-      await reloadFromDisk();
-      showBackupOutcomeAlert(backup);
+      try {
+        const backup = await runAutoBackup({
+          farmerId: activeFarmer.id,
+          localPlots: activePlots,
+        });
+        await reloadFromDisk();
+        showBackupOutcomeAlert(backup);
+      } catch (e) {
+        if (
+          e instanceof SyncQueueLockTimeoutError ||
+          e instanceof SyncOperationTimeoutError
+        ) {
+          return;
+        }
+        const message = e instanceof Error ? e.message : String(e);
+        Alert.alert(t('backup_consent_title'), message || t('backend_unreachable'));
+      }
       return;
     }
     if (backupBusy) return;
@@ -359,6 +377,14 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       showBackupOutcomeAlert(backup);
       if (cb) await cb();
     } catch (e) {
+      if (e instanceof SyncQueueLockTimeoutError) {
+        Alert.alert(t('backup_consent_title'), t('sync_busy_try_later'));
+        return;
+      }
+      if (e instanceof SyncOperationTimeoutError) {
+        Alert.alert(t('backup_consent_title'), syncTimedOutMessage(t, 'settings'));
+        return;
+      }
       const message = e instanceof Error ? e.message : String(e);
       Alert.alert(t('backup_consent_title'), message || t('backend_unreachable'));
     } finally {

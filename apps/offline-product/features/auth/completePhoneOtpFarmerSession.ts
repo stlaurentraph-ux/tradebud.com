@@ -7,7 +7,6 @@ import {
 import { saveAndApplyPhoneOtpSession, testBackendLogin } from '@/features/api/syncAuthSession';
 import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
-import { runAutoBackup } from '@/features/sync/runAutoBackup';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 
@@ -52,18 +51,6 @@ async function runPostPhoneOtpConnectTasks(params: {
   }
 
   void registerFarmerPushToken();
-
-  if (params.localPlots) {
-    await Promise.race([
-      runAutoBackup({
-        farmerId: params.farmerId,
-        localPlots: params.localPlots,
-      }),
-      new Promise<void>((resolve) => {
-        setTimeout(resolve, CONNECT_TIMEOUT_MS);
-      }),
-    ]);
-  }
 }
 
 export async function completePhoneOtpFarmerSession(params: {

@@ -14,7 +14,6 @@ import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
-import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 const OAUTH_CONNECT_TIMEOUT_MS = 5_000;
 
@@ -63,18 +62,6 @@ async function runPostOAuthConnectTasks(params: {
     }
 
     void registerFarmerPushToken();
-
-    if (params.farmerId && params.localPlots) {
-      await Promise.race([
-        runAutoBackup({
-          farmerId: params.farmerId,
-          localPlots: params.localPlots,
-        }),
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, OAUTH_CONNECT_TIMEOUT_MS);
-        }),
-      ]);
-    }
   } catch {
     // Post-connect work is best-effort and must never undo a successful OAuth sign-in.
   }

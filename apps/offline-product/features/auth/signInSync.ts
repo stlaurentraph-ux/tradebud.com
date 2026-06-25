@@ -15,8 +15,6 @@ import { mapPasswordSignInError, normalizeSignInErrorCode } from '@/features/aut
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
 import { trackOAuthFailure } from '@/features/auth/oauthTelemetry';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
-import { runAutoBackup } from '@/features/sync/runAutoBackup';
-
 export type SignInSyncResult =
   | { ok: true; missingName?: boolean; apiUnreachable?: boolean; existingAccount?: boolean }
   | { ok: false; message: string; oauthStep?: string; oauthPath?: string };
@@ -78,12 +76,6 @@ export async function signInAndSyncPlots(params: {
       await clearPersistedSyncAuth();
       const code = normalizeSignInErrorCode(res.message);
       return { ok: false, message: code === res.message ? res.message : code };
-    }
-    if (params.farmerId && params.localPlots) {
-      await runAutoBackup({
-        farmerId: params.farmerId,
-        localPlots: params.localPlots,
-      });
     }
     return { ok: true };
   } catch (e) {
