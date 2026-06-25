@@ -16,8 +16,8 @@ import { InboxService } from '../inbox/inbox.service';
 import {
   dispatchCampaignRequestEmails,
   remindUnclaimedCampaignRecipientInvites,
-  resolveCampaignRecipientContactTypes,
   resolveSenderPrimaryRole,
+  type DispatchCampaignRequestEmailsResult,
 } from './campaign-request-email';
 import { queueCampaignRecipientInvites } from './campaign-recipient-invite';
 import {
@@ -397,100 +397,15 @@ export class RequestsService {
   private async dispatchCampaignEmails(
     campaign: RequestCampaignRecord,
     emailDeliveries: readonly CampaignDeliveryRecipient[],
-  ): Promise<{
-    sentCount: number;
-    failedCount: number;
-    failureMessages: string[];
-    sentEmails: string[];
-    sentDeliveries: CampaignDeliveryRecipient[];
-  }> {
-    const recipients = emailDeliveries
-      .map((delivery) => delivery.email)
-      .filter((email): email is string => Boolean(email));
-    if (recipients.length === 0) {
-      return {
-        sentCount: 0,
-        failedCount: 0,
-        failureMessages: [],
-        sentEmails: [],
-        sentDeliveries: [],
-      };
-    }
-    const resend = this.getResendClient();
-    const requestingOrganization = await this.getRequestingOrganizationLabel(campaign);
-    const senderRole = await resolveSenderPrimaryRole(this.pool, campaign.tenant_id);
-    const dashboardBaseUrl = this.getDashboardBaseUrl();
-    const docsBaseUrl = this.getDocsBaseUrl();
-    const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
-    const contactTypes = await resolveCampaignRecipientContactTypes(
-      this.pool,
-      campaign.tenant_id,
-      emailDeliveries,
-    );
-
-    return dispatchCampaignRequestEmails({
-      resend,
-      fromEmail: this.getResendSender(),
-      senderOrgLabel: requestingOrganization,
-      senderRole,
-      campaign: {
-        id: campaign.id,
-        tenant_id: campaign.tenant_id,
-        title: campaign.title,
-        description: campaign.description,
-        request_type: campaign.request_type,
-        due_at: campaign.due_at,
-      },
-      emailDeliveries,
-      contactTypes,
-      dashboardBaseUrl,
-      docsBaseUrl,
-      fieldAuthBaseUrl,
-      buildUrls: ({ campaignId, recipientEmail, isFarmerRecipient }) => {
-        const acceptUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=accept`;
-        const refuseUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=refuse`;
-        const decisionToken = this.signDecisionToken(campaignId, recipientEmail);
-        const connectUrl = isFarmerRecipient
-          ? `${fieldAuthBaseUrl}/campaign?campaign=${encodeURIComponent(campaignId)}`
-          : `${dashboardBaseUrl}/create-account?campaign=${encodeURIComponent(campaignId)}`;
-        return {
-          connectUrl,
-          acceptUrl: `${acceptUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
-          refuseUrl: `${refuseUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
-        };
-      },
-    });
+  ): Promise<DispatchCampaignRequestEmailsResult> {
+    return dispatchCampaignRequestEmails(this.pool, campaign, emailDeliveries);
   }
 
   async remindUnclaimedCampaignRecipientInvites(): Promise<
-    import('./campaign-request-email').RemindUnclaimedCampaignInvitesResult
+    import('./campaign-request-email').RemindUnclaimedCampaignRecipientInvitesResult
   > {
     try {
-      const resend = this.getResendClient();
-      const dashboardBaseUrl = this.getDashboardBaseUrl();
-      const docsBaseUrl = this.getDocsBaseUrl();
-      const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
-      return remindUnclaimedCampaignRecipientInvites(this.pool, {
-        resend,
-        dashboardBaseUrl,
-        docsBaseUrl,
-        fieldAuthBaseUrl,
-        resolveSenderOrgLabel: (row) =>
-          this.getRequestingOrganizationLabel(row as RequestCampaignRecord),
-        buildUrls: ({ campaignId, recipientEmail, isFarmerRecipient }) => {
-          const acceptUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=accept`;
-          const refuseUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=refuse`;
-          const decisionToken = this.signDecisionToken(campaignId, recipientEmail);
-          const connectUrl = isFarmerRecipient
-            ? `${fieldAuthBaseUrl}/campaign?campaign=${encodeURIComponent(campaignId)}`
-            : `${dashboardBaseUrl}/create-account?campaign=${encodeURIComponent(campaignId)}`;
-          return {
-            connectUrl,
-            acceptUrl: `${acceptUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
-            refuseUrl: `${refuseUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
-          };
-        },
-      });
+      return await remindUnclaimedCampaignRecipientInvites(this.pool);
     } catch (error) {
       if (error instanceof BadRequestException) {
         return { scanned: 0, sent: 0, skipped: 0, failures: [] };

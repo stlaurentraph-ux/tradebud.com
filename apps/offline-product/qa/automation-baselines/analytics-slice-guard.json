@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-06-25T07:38:41.660Z",
-  "canonicalEventCount": 63,
+  "canonicalEventCount": 64,
   "canonicalEvents": [
     "backup_confirmed",
     "backup_declined",
@@ -31,6 +31,7 @@
     "farmer_auth_phone_otp_success",
     "field_sync_delta_skipped",
     "field_sync_incremental_restore",
+    "field_sync_push_only_idle",
     "geometry_confidence_assessed",
     "geometry_confidence_cta_clicked",
     "geometry_low_confidence_saved",
