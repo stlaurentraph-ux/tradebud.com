@@ -16,13 +16,54 @@ describe('oauthOrchestratorPolicy', () => {
     ).toBe(true);
   });
 
-  it('routes cold-start phases', () => {
+  it('disallows Android physical-device browser fallback', () => {
+    expect(
+      shouldAllowGoogleNativeBrowserFallback({
+        platform: 'android',
+        isDev: false,
+        isSimulatorInDev: false,
+      }),
+    ).toBe(false);
+    expect(
+      shouldAllowGoogleNativeBrowserFallback({
+        platform: 'android',
+        isDev: true,
+        isSimulatorInDev: false,
+      }),
+    ).toBe(false);
+  });
+
+  it('allows Android emulator browser fallback in dev', () => {
+    expect(
+      shouldAllowGoogleNativeBrowserFallback({
+        platform: 'android',
+        isDev: true,
+        isSimulatorInDev: true,
+      }),
+    ).toBe(true);
+  });
+
+  it('routes cold-start phases after session hydration', () => {
     expect(
       resolveOAuthColdStartPhase({
         url: null,
         deliveredToWaiter: false,
         hasSession: false,
       }),
-    ).toBe('missing_url');
+    ).toBe('exit_to_home');
+    expect(
+      resolveOAuthColdStartPhase({
+        url: null,
+        deliveredToWaiter: false,
+        hasSession: true,
+      }),
+    ).toBe('already_signed_in');
+    expect(
+      resolveOAuthColdStartPhase({
+        url: 'tracebudoffline://auth/callback?code=abc',
+        deliveredToWaiter: false,
+        hasSession: false,
+      }),
+    ).toBe('needs_session_exchange');
   });
 });

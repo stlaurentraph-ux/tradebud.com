@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { ExtendedCloudParityCounts } from './measureCloudParitySummaryLogic';
 import {
+  effectiveCloudParityNeedsRestore,
   extendedParityGaps,
   formatCloudParityHints,
+  parityNeedsFullInboundRestore,
   summarizeCloudParityCounts,
 } from './measureCloudParitySummaryLogic';
 
@@ -66,6 +68,30 @@ describe('extendedParityGaps', () => {
       }),
     );
     expect(gaps.declarationGap).toBe(2);
+  });
+
+  it('does not require full restore for declaration-only parity gaps', () => {
+    const summary = summarizeCloudParityCounts(
+      baseCounts({
+        producerAttestationMissingOnDevice: true,
+        plotAttestationsMissingOnDevice: 1,
+      }),
+    );
+    expect(parityNeedsFullInboundRestore(summary)).toBe(false);
+    expect(
+      effectiveCloudParityNeedsRestore({
+        flagged: summary.needsInboundRestore,
+        summary,
+        localDeclarationsComplete: true,
+      }),
+    ).toBe(false);
+    expect(
+      effectiveCloudParityNeedsRestore({
+        flagged: summary.needsInboundRestore,
+        summary,
+        localDeclarationsComplete: false,
+      }),
+    ).toBe(true);
   });
 });
 

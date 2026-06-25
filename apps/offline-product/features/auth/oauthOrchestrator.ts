@@ -23,6 +23,7 @@ import {
   sessionFromOAuthCallbackUrl,
 } from '@/features/auth/oauthCallbackUrl';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
+import { getOAuthBrowserSessionOptions } from '@/features/auth/oauthBrowserSessionOptions';
 import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
 import { trackOAuthBrowserFallback, trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
@@ -55,7 +56,7 @@ export type OAuthDeepLinkCompleteResult =
 
 export type OAuthColdStartResult =
   | { status: 'delivered_to_waiter' }
-  | { status: 'missing_url' }
+  | { status: 'exit_to_home'; reason: string }
   | { status: 'already_signed_in' }
   | { status: 'completed'; result: SignInSyncResult }
   | { status: 'failed'; message: string };
@@ -109,8 +110,7 @@ async function openOAuthBrowser(
 
   try {
     const browserResult = await WebBrowser.openAuthSessionAsync(authUrl, redirectTo, {
-      showInRecents: true,
-      ...(Platform.OS === 'android' ? { createTask: false } : {}),
+      ...getOAuthBrowserSessionOptions(),
     });
 
     if (browserResult.type === 'success' && browserResult.url) {
@@ -254,19 +254,24 @@ export async function completeOAuthFromDeepLink(
 export async function runOAuthColdStartCallback(
   params: OAuthDeepLinkCompleteParams & { url: string | null },
 ): Promise<OAuthColdStartResult> {
-  const phase = resolveOAuthColdStartPhase({
-    url: params.url,
-    deliveredToWaiter: params.url ? deliverOAuthDeepLink(params.url) : false,
-    hasSession: false,
-  });
-  if (phase === 'missing_url') return { status: 'missing_url' };
-  if (phase === 'delivered_to_waiter') return { status: 'delivered_to_waiter' };
+  if (params.url && deliverOAuthDeepLink(params.url)) {
+    return { status: 'delivered_to_waiter' };
+  }
 
   await hydrateSyncAuthFromSettings();
-  if (hasSyncAuthSession()) return { status: 'already_signed_in' };
+  const phase = resolveOAuthColdStartPhase({
+    url: params.url,
+    deliveredToWaiter: false,
+    hasSession: hasSyncAuthSession(),
+  });
+  if (phase === 'delivered_to_waiter') return { status: 'delivered_to_waiter' };
+  if (phase === 'already_signed_in') return { status: 'already_signed_in' };
+  if (phase === 'exit_to_home') {
+    return { status: 'exit_to_home', reason: 'missing_initial_url' };
+  }
 
   try {
-    const session = await sessionFromOAuthCallbackUrl(params.url);
+    const session = await sessionFromOAuthCallbackUrl(params.url!);
     const result = await completeOAuthFarmerSession({
       session,
       farmerId: params.farmerId,

@@ -52,6 +52,18 @@ describe('resolveFieldSyncMode', () => {
     ).toBe('push_only');
   });
 
+  it('uses push_only when delta probe fails but cursor exists and nothing is pending', () => {
+    expect(
+      resolveFieldSyncMode({
+        queuePendingCount: 0,
+        unsyncedPlotCount: 0,
+        needsCloudRestore: false,
+        hasFieldSyncCursor: true,
+        deltaProbeFailed: true,
+      }),
+    ).toBe('push_only');
+  });
+
   it('uses full when delta reports inbound changes even without local work', () => {
     expect(
       resolveFieldSyncMode({

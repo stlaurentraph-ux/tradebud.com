@@ -9,24 +9,29 @@ export type GoogleNativeBrowserFallbackInput = {
 export function shouldAllowGoogleNativeBrowserFallback(
   input: GoogleNativeBrowserFallbackInput,
 ): boolean {
-  if (input.platform === 'android') return true;
+  // Physical Android must stay on native Google OAuth — browser fallback opens a second
+  // Chrome task and commonly leaves the user on google.com search.
+  if (input.platform === 'android') {
+    return input.isDev && input.isSimulatorInDev;
+  }
   if (input.platform === 'ios' && !input.isDev) return true;
   if (input.isDev && input.isSimulatorInDev) return true;
   return false;
 }
 
 export type OAuthColdStartStatus =
-  | 'missing_url'
   | 'delivered_to_waiter'
-  | 'already_signed_in';
+  | 'already_signed_in'
+  | 'exit_to_home'
+  | 'needs_session_exchange';
 
 export function resolveOAuthColdStartPhase(input: {
   url: string | null;
   deliveredToWaiter: boolean;
   hasSession: boolean;
-}): OAuthColdStartStatus | 'needs_session_exchange' {
-  if (!input.url) return 'missing_url';
+}): OAuthColdStartStatus {
   if (input.deliveredToWaiter) return 'delivered_to_waiter';
   if (input.hasSession) return 'already_signed_in';
+  if (!input.url) return 'exit_to_home';
   return 'needs_session_exchange';
 }

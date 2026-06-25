@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isOAuthCallbackUrl } from './oauthCallbackUrlPolicy';
+import {
+  extractGoogleNativeOAuthCode,
+  isGoogleNativeOAuthRedirectUrl,
+  isOAuthCallbackUrl,
+} from './oauthCallbackUrlPolicy';
 
 describe('isOAuthCallbackUrl', () => {
   it('accepts Tracebud custom-scheme callbacks', () => {
@@ -12,11 +16,11 @@ describe('isOAuthCallbackUrl', () => {
   });
 
   it('rejects Google native oauth2redirect URLs', () => {
-    expect(
-      isOAuthCallbackUrl(
-        'com.googleusercontent.apps.123:/oauth2redirect?code=4%2F0AeanS0q_example',
-      ),
-    ).toBe(false);
+    const url =
+      'com.googleusercontent.apps.123:/oauth2redirect?code=4%2F0AeanS0q_example';
+    expect(isGoogleNativeOAuthRedirectUrl(url)).toBe(true);
+    expect(isOAuthCallbackUrl(url)).toBe(false);
+    expect(extractGoogleNativeOAuthCode(url)).toBe('4/0AeanS0q_example');
   });
 
   it('rejects bare google.com URLs with code param', () => {

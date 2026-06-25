@@ -6,6 +6,11 @@ import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Colors, Spacing } from '@/constants/theme';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
+import {
+  OAUTH_CALLBACK_INTERMEDIARY_TIMEOUT_MS,
+  planOAuthColdStartLaunch,
+  shouldExitOAuthIntermediaryScreen,
+} from '@/features/auth/oauthColdStartLaunch';
 import { runOAuthColdStartCallback } from '@/features/auth/oauthOrchestrator';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
@@ -19,10 +24,22 @@ type CallbackPhase = 'loading' | 'error' | 'success';
  */
 export default function AuthCallbackScreen() {
   const { t } = useLanguage();
-  const { farmer, plots } = useAppState();
+  const { farmer, plots, isAppReady } = useAppState();
   const [phase, setPhase] = useState<CallbackPhase>('loading');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const runIdRef = useRef(0);
+  const phaseRef = useRef<CallbackPhase>('loading');
+  const farmerIdRef = useRef(farmer?.id);
+  const plotsRef = useRef(plots);
+
+  farmerIdRef.current = farmer?.id;
+  plotsRef.current = plots;
+  phaseRef.current = phase;
+
+  const exitToHome = useCallback((reason: string) => {
+    trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_SUCCESS, { source: 'cold_start', reason });
+    router.replace('/(tabs)');
+  }, []);
 
   const finishSuccess = useCallback(() => {
     setPhase('success');
@@ -47,33 +64,22 @@ export default function AuthCallbackScreen() {
 
       const outcome = await runOAuthColdStartCallback({
         url,
-        farmerId: farmer?.id,
-        localPlots: plots,
+        farmerId: farmerIdRef.current,
+        localPlots: plotsRef.current,
       });
       if (runId !== runIdRef.current) return;
 
+      if (outcome.status === 'exit_to_home') {
+        exitToHome(outcome.reason);
+        return;
+      }
+
       if (outcome.status === 'delivered_to_waiter') {
-        router.replace('/(tabs)');
+        exitToHome('delivered_to_waiter');
         return;
       }
 
-      if (outcome.status === 'missing_url') {
-        const message = t('auth_callback_missing_url');
-        setErrorMessage(message);
-        setPhase('error');
-        trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
-          source: 'cold_start',
-          reason: 'missing_initial_url',
-        });
-        trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
-          method: 'oauth',
-          source: 'cold_start',
-          reason: 'missing_initial_url',
-        });
-        return;
-      }
-
-      if (outcome.status === 'already_signed_in' || outcome.status === 'completed') {
+      if (shouldExitOAuthIntermediaryScreen(outcome)) {
         finishSuccess();
         return;
       }
@@ -108,14 +114,32 @@ export default function AuthCallbackScreen() {
         message: raw,
       });
     }
-  }, [farmer?.id, finishSuccess, plots, t]);
+  }, [exitToHome, finishSuccess, t]);
 
   useEffect(() => {
+    if (planOAuthColdStartLaunch({ isAppReady }).action === 'wait_for_bootstrap') {
+      return;
+    }
     void runCallback();
     return () => {
       runIdRef.current += 1;
     };
-  }, [runCallback]);
+  }, [isAppReady, runCallback]);
+
+  useEffect(() => {
+    if (!isAppReady || phase !== 'loading') return;
+
+    const timer = setTimeout(() => {
+      if (phaseRef.current !== 'loading') return;
+      trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
+        source: 'cold_start',
+        reason: 'intermediary_timeout',
+      });
+      exitToHome('intermediary_timeout');
+    }, OAUTH_CALLBACK_INTERMEDIARY_TIMEOUT_MS);
+
+    return () => clearTimeout(timer);
+  }, [exitToHome, isAppReady, phase]);
 
   if (phase === 'error') {
     return (
@@ -140,7 +164,7 @@ export default function AuthCallbackScreen() {
           {errorMessage ?? t('sign_in_oauth_failed')}
         </ThemedText>
         <Button onPress={() => void runCallback()}>{t('auth_callback_retry')}</Button>
-        <Pressable onPress={() => router.replace('/(tabs)/settings')} accessibilityRole="button">
+        <Pressable onPress={() => router.replace('/(tabs)')} accessibilityRole="button">
           <ThemedText type="link">{t('auth_callback_open_settings')}</ThemedText>
         </Pressable>
       </View>

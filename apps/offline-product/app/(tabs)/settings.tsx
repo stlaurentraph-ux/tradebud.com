@@ -53,7 +53,11 @@ import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
 import { probeFieldSyncInboundChanges } from '@/features/sync/fieldSyncCursor';
 import { buildFieldSyncRestoreScope } from '@/features/sync/fieldSyncRestoreScope';
 import { resolveFieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
-import { shouldRefreshCloudParityAfterSync } from '@/features/sync/pushOnlyIdleSyncPolicy';
+import {
+  localDeclarationsComplete,
+  shouldRefreshCloudParityAfterSync,
+} from '@/features/sync/pushOnlyIdleSyncPolicy';
+import { effectiveCloudParityNeedsRestore } from '@/features/sync/measureCloudParitySummaryLogic';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { formatSyncRunHttpSummary } from '@/features/sync/syncRunHttpTelemetry';
 import { reportSyncFailure } from '@/features/sync/reportSyncFailure';
@@ -534,7 +538,13 @@ export default function SettingsScreen() {
         localPlots: plotSnapshot ?? plots,
         localFarmer: farmer,
       }).catch(() => null);
-      setCloudParityNeedsRestore(summary?.needsInboundRestore === true);
+      setCloudParityNeedsRestore(
+        effectiveCloudParityNeedsRestore({
+          flagged: summary?.needsInboundRestore === true,
+          summary,
+          localDeclarationsComplete: localDeclarationsComplete(farmer, plotSnapshot ?? plots),
+        }),
+      );
       setCloudParityHints(
         summary
           ? formatCloudParityHints(summary, t, {
@@ -1120,8 +1130,8 @@ export default function SettingsScreen() {
   const runSyncNow = async () => {
     setSyncNowBusy(true);
     freezeSyncMetricsDisplayRef.current = true;
-    setSyncMessage(null);
-    setSyncMessageKind(null);
+    setSyncMessage(t('sync_now_syncing'));
+    setSyncMessageKind('success');
     setSyncSupportMailto(null);
     setSyncOpenPlotId(null);
     try {
@@ -1203,6 +1213,7 @@ export default function SettingsScreen() {
               cloudDeltaHasInboundChanges: deltaProbe.probeFailed
                 ? undefined
                 : deltaProbe.hasInboundChanges,
+              deltaProbeFailed: deltaProbe.probeFailed,
             });
             const skipInboundRestore = syncMode === 'push_only';
             let restoreScope: ReturnType<typeof buildFieldSyncRestoreScope> | undefined;

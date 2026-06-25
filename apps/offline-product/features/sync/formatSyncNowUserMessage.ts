@@ -184,6 +184,9 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
     if (requeuedReceipts > 0) {
       return t('sync_result_receipts_requeued', { n: requeuedReceipts });
     }
+    if (outcome.plotsAlreadySynced) {
+      return t('backup_up_to_date');
+    }
     return t('sync_result_complete');
   }
 

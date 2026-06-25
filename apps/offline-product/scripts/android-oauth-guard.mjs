@@ -48,6 +48,19 @@ function main() {
   if (!packageJson.scripts?.['oauth:verify:android']) {
     issues.push('package.json missing oauth:verify:android script');
   }
+
+  const googleSignInNative = read('features/auth/googleSignIn.native.ts');
+  if (!googleSignInNative.includes('getOAuthBrowserSessionOptions')) {
+    issues.push('googleSignIn.native.ts must use getOAuthBrowserSessionOptions');
+  }
+  if (!googleSignInNative.includes('captureGoogleNativeOAuthCode')) {
+    issues.push('googleSignIn.native.ts must recover oauth2redirect codes after Android task split');
+  }
+  const orchestratorPolicy = read('features/auth/oauthOrchestratorPolicy.ts');
+  if (!orchestratorPolicy.includes('input.isDev && input.isSimulatorInDev')) {
+    issues.push('oauthOrchestratorPolicy must limit Android browser fallback to emulator dev');
+  }
+
   if (!packageJson.scripts?.['release:preview:android:safe']) {
     issues.push('package.json missing release:preview:android:safe script');
   }
