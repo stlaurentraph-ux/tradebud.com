@@ -15,8 +15,14 @@ import {
   type OnboardingEmailTemplateVars,
 } from '../launch/onboarding-email.templates';
 
-export function buildCampaignRequestInviteSubject(senderOrgLabel: string | null | undefined): string {
+export function buildCampaignRequestInviteSubject(
+  senderOrgLabel: string | null | undefined,
+  senderRole?: string | null,
+): string {
   const sender = senderOrgLabel?.trim() || 'A Tracebud organization';
+  if (normalizeCampaignSenderRole(senderRole) === 'sponsor') {
+    return `${sender} invited you to a Tracebud compliance programme`;
+  }
   return `${sender} sent you a compliance request`;
 }
 
@@ -31,12 +37,18 @@ export function getCampaignRequestInviteReminderTemplateId(
 export function buildCampaignRequestInviteReminderSubject(
   senderOrgLabel: string | null | undefined,
   reminderNudgeCount: number,
+  senderRole?: string | null,
 ): string {
   const sender = senderOrgLabel?.trim() || 'A Tracebud organization';
+  const isSponsor = normalizeCampaignSenderRole(senderRole) === 'sponsor';
   if (reminderNudgeCount >= 1) {
-    return `Last reminder: ${sender} is waiting for your compliance response`;
+    return isSponsor
+      ? `Last reminder: respond to ${sender}'s Tracebud programme`
+      : `Last reminder: ${sender} is waiting for your compliance response`;
   }
-  return `Reminder: ${sender} is waiting for your compliance response`;
+  return isSponsor
+    ? `Reminder: ${sender} is waiting for your programme response`
+    : `Reminder: ${sender} is waiting for your compliance response`;
 }
 
 function sanitizeRequestTypeLabel(raw: string | null | undefined): string {

@@ -65,4 +65,32 @@ describe('campaign-request-email.templates', () => {
     expect(text).toContain('Open Tracebud field app');
     expect(text).toContain('Farm Plot Validation');
   });
+
+  it('builds sponsor programme invite copy', () => {
+    const vars = buildCampaignRequestInviteTemplateVars({
+      recipientEmail: 'exports@coop.example',
+      senderOrgLabel: 'Global Cocoa Initiative',
+      senderRole: 'sponsor',
+      recipientContactType: 'exporter',
+      campaignTitle: 'Programme evidence collection',
+      campaignDescription: 'Share plot and shipment evidence for the 2026 programme.',
+      dueDateLabel: '30 Sep 2026',
+      requestTypeLabel: 'GENERAL_EVIDENCE',
+      connectUrl: 'https://dashboard.tracebud.com/create-account?campaign=cmp_sp',
+      acceptUrl: 'https://dashboard.tracebud.com/requests/intent?campaign=cmp_sp&decision=accept',
+      refuseUrl: 'https://dashboard.tracebud.com/requests/intent?campaign=cmp_sp&decision=refuse',
+      docsUrl: 'https://docs.tracebud.com/getting-started/compliance-requests',
+    });
+
+    expect(buildCampaignRequestInviteSubject('Global Cocoa Initiative', 'sponsor')).toBe(
+      'Global Cocoa Initiative invited you to a Tracebud compliance programme',
+    );
+    expect(vars.senderContextLine).toContain('compliance programme');
+    expect(buildCampaignRequestInviteReminderSubject('Global Cocoa Initiative', 0, 'sponsor')).toBe(
+      'Reminder: Global Cocoa Initiative is waiting for your programme response',
+    );
+    expect(buildCampaignRequestInviteReminderSubject('Global Cocoa Initiative', 1, 'sponsor')).toBe(
+      'Last reminder: respond to Global Cocoa Initiative\'s Tracebud programme',
+    );
+  });
 });

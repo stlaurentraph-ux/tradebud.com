@@ -6,6 +6,7 @@ import {
   getResendReplyTo,
   isResendConfigured,
 } from '../common/resend-mail';
+import { resolveCampaignSenderRoleFromSignals } from '../common/cold-recipient-email-copy';
 import {
   buildCampaignRequestInviteReminderSubject,
   buildCampaignRequestInviteSubject,
@@ -124,21 +125,21 @@ export async function resolveSenderPrimaryRole(pool: Pool, tenantId: string): Pr
     return 'other';
   }
 
+  let supplyChainRoles: string[] = [];
+  let primaryRole: string | null = null;
+
   try {
-    const profile = await pool.query<{ roles: string[] | null }>(
+    const profile = await pool.query<{ roles: string[] | null; primary_role: string | null }>(
       `
-        SELECT supply_chain_roles AS roles
+        SELECT supply_chain_roles AS roles, primary_role
         FROM tenant_commercial_profiles
         WHERE tenant_id = $1
         LIMIT 1
       `,
       [cleanTenantId],
     );
-    const roles = profile.rows[0]?.roles ?? [];
-    const normalized = roles.map((role) => role.trim().toLowerCase()).filter(Boolean);
-    if (normalized.includes('importer')) return 'importer';
-    if (normalized.includes('exporter')) return 'exporter';
-    if (normalized.includes('cooperative')) return 'cooperative';
+    supplyChainRoles = profile.rows[0]?.roles ?? [];
+    primaryRole = profile.rows[0]?.primary_role ?? null;
   } catch (error) {
     const code = (error as { code?: string } | null)?.code;
     if (code !== '42P01' && code !== '42703') {
@@ -146,10 +147,11 @@ export async function resolveSenderPrimaryRole(pool: Pool, tenantId: string): Pr
     }
   }
 
+  let adminRoles: string[] = [];
   try {
-    const admin = await pool.query<{ role: string | null }>(
+    const admin = await pool.query<{ roles: string[] | null }>(
       `
-        SELECT role
+        SELECT roles
         FROM admin_users
         WHERE tenant_id = $1
         ORDER BY invited_at DESC
@@ -157,10 +159,7 @@ export async function resolveSenderPrimaryRole(pool: Pool, tenantId: string): Pr
       `,
       [cleanTenantId],
     );
-    const role = admin.rows[0]?.role?.trim().toLowerCase();
-    if (role && role.length > 0) {
-      return role;
-    }
+    adminRoles = admin.rows[0]?.roles ?? [];
   } catch (error) {
     const code = (error as { code?: string } | null)?.code;
     if (code !== '42P01' && code !== '42703') {
@@ -168,7 +167,11 @@ export async function resolveSenderPrimaryRole(pool: Pool, tenantId: string): Pr
     }
   }
 
-  return 'other';
+  return resolveCampaignSenderRoleFromSignals({
+    supplyChainRoles,
+    primaryRole,
+    adminRoles,
+  });
 }
 
 export async function resolveCampaignRecipientContactTypes(
@@ -325,7 +328,7 @@ export async function dispatchCampaignRequestEmails(
         docsUrl,
         dashboardBaseUrl: dashboardBase,
       });
-      const subject = buildCampaignRequestInviteSubject(senderOrgLabel);
+      const subject = buildCampaignRequestInviteSubject(senderOrgLabel, senderRole);
       const sent = await sendCampaignRequestEmail({
         toEmail,
         senderOrgLabel,
@@ -390,7 +393,11 @@ async function sendCampaignRequestReminderForInvite(
     dashboardBaseUrl: dashboardBase,
   });
   const templateId = getCampaignRequestInviteReminderTemplateId(invite.reminder_nudge_count);
-  const subject = buildCampaignRequestInviteReminderSubject(senderOrgLabel, invite.reminder_nudge_count);
+  const subject = buildCampaignRequestInviteReminderSubject(
+    senderOrgLabel,
+    invite.reminder_nudge_count,
+    senderRole,
+  );
   try {
     const sent = await sendCampaignRequestEmail({
       toEmail: recipientEmail,

@@ -520,6 +520,7 @@ export class RequestsService {
     }
 
     const fromOrg = await this.getRequestingOrganizationLabel(campaign);
+    const senderRole = await resolveSenderPrimaryRole(this.pool, campaign.tenant_id);
     const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
     const inviteDeliveries: Array<{
       contact_id: string;
@@ -569,6 +570,7 @@ export class RequestsService {
           fromOrg,
           claimUrl,
           recipientContactType: delivery.contact_type,
+          senderRole,
         });
         if (smsResult.sent) {
           deliveryChannel = 'sms';

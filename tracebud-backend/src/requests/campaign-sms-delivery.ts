@@ -1,6 +1,8 @@
 import {
   buildCampaignSmsBody,
   normalizeCampaignRecipientAudience,
+  normalizeCampaignSenderRole,
+  type CampaignSenderRole,
 } from '../common/cold-recipient-email-copy';
 
 export type SmsCampaignDeliveryResult = {
@@ -15,6 +17,7 @@ type SmsTemplatePayload = {
   fromOrg: string;
   claimUrl: string;
   recipientContactType?: string | null;
+  senderRole?: string | null;
 };
 
 function isSmsConfigured(): boolean {
@@ -49,11 +52,13 @@ export async function sendCampaignSmsInvite(
   const from = process.env.TWILIO_CAMPAIGN_SMS_FROM?.trim() ?? '';
   const to = normalizeSmsPhone(input.toPhoneE164);
   const audience = normalizeCampaignRecipientAudience(input.recipientContactType);
+  const senderRole: CampaignSenderRole = normalizeCampaignSenderRole(input.senderRole);
   const body = buildCampaignSmsBody({
     senderOrg: input.fromOrg,
     campaignTitle: input.campaignTitle,
     claimUrl: input.claimUrl,
     audience,
+    senderRole,
   });
 
   const params = new URLSearchParams({

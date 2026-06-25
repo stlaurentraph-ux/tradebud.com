@@ -13,9 +13,12 @@ export type CampaignSenderRole =
   | 'importer'
   | 'exporter'
   | 'cooperative'
+  | 'sponsor'
   | 'compliance_manager'
   | 'admin'
   | 'other';
+
+const OPERATIONAL_SUPPLY_CHAIN_SENDER_ROLES = ['importer', 'exporter', 'cooperative'] as const;
 
 const CONTACT_TYPE_ALIASES: Record<string, CampaignRecipientAudience> = {
   farmer: 'farmer',
@@ -45,11 +48,50 @@ export function normalizeCampaignRecipientAudience(
 
 export function normalizeCampaignSenderRole(raw: string | null | undefined): CampaignSenderRole {
   const key = (raw ?? '').trim().toLowerCase();
-  if (key === 'importer' || key === 'exporter' || key === 'cooperative') {
+  if (key === 'importer' || key === 'exporter' || key === 'cooperative' || key === 'sponsor') {
     return key;
   }
   if (key === 'compliance_manager') return 'compliance_manager';
   if (key === 'admin') return 'admin';
+  return 'other';
+}
+
+function normalizeRoleToken(raw: string): string {
+  return raw.trim().toLowerCase().replace(/[\s-]+/g, '_');
+}
+
+function hasOperationalSupplyChainRole(roles: readonly string[]): boolean {
+  const normalized = roles.map(normalizeRoleToken).filter(Boolean);
+  return OPERATIONAL_SUPPLY_CHAIN_SENDER_ROLES.some((role) => normalized.includes(role));
+}
+
+/** Resolve sender voice from tenant profile + admin role signals (no DB). */
+export function resolveCampaignSenderRoleFromSignals(input: {
+  supplyChainRoles?: readonly string[] | null;
+  primaryRole?: string | null;
+  adminRoles?: readonly string[] | null;
+}): CampaignSenderRole {
+  const supplyRoles = (input.supplyChainRoles ?? []).map(normalizeRoleToken).filter(Boolean);
+  if (supplyRoles.includes('sponsor')) return 'sponsor';
+  if (supplyRoles.includes('importer')) return 'importer';
+  if (supplyRoles.includes('exporter')) return 'exporter';
+  if (supplyRoles.includes('cooperative')) return 'cooperative';
+
+  const adminRoles = (input.adminRoles ?? []).map(normalizeRoleToken).filter(Boolean);
+  if (adminRoles.includes('sponsor')) return 'sponsor';
+
+  const primaryRole = normalizeRoleToken(input.primaryRole ?? '');
+  if (primaryRole === 'compliance_manager' && !hasOperationalSupplyChainRole(supplyRoles)) {
+    return 'sponsor';
+  }
+  if (primaryRole === 'compliance_manager') return 'compliance_manager';
+  if (primaryRole === 'admin') return 'admin';
+  if (adminRoles.includes('compliance_manager')) return 'compliance_manager';
+  if (adminRoles.includes('admin')) return 'admin';
+  if (adminRoles.includes('importer')) return 'importer';
+  if (adminRoles.includes('exporter')) return 'exporter';
+  if (adminRoles.includes('cooperative')) return 'cooperative';
+
   return 'other';
 }
 
@@ -80,6 +122,8 @@ export function senderRoleLabel(role: CampaignSenderRole): string {
       return 'exporter';
     case 'cooperative':
       return 'cooperative';
+    case 'sponsor':
+      return 'network sponsor';
     case 'compliance_manager':
       return 'compliance team';
     case 'admin':
@@ -102,6 +146,8 @@ export function campaignSenderContextLine(senderOrg: string, senderRole: Campaig
       return `${org} is requesting evidence from suppliers to prepare export compliance records.`;
     case 'cooperative':
       return `${org} is coordinating compliance data collection across member producers.`;
+    case 'sponsor':
+      return `${org} is running a Tracebud compliance programme and has included you in this governed network request.`;
     default:
       return `${org} is requesting supply-chain evidence through Tracebud.`;
   }
@@ -174,6 +220,7 @@ export function buildCampaignSmsBody(input: {
   campaignTitle: string;
   claimUrl: string;
   audience: CampaignRecipientAudience;
+  senderRole?: CampaignSenderRole;
 }): string {
   const org = input.senderOrg.trim() || 'A partner';
   const title = input.campaignTitle.trim() || 'compliance request';
@@ -181,5 +228,9 @@ export function buildCampaignSmsBody(input: {
     input.audience === 'farmer'
       ? 'Open Tracebud on your phone to respond.'
       : 'Create your Tracebud workspace to respond.';
-  return `${org} sent you a compliance request ("${title}") on Tracebud — ${roleHint} ${input.claimUrl}`;
+  const requestLead =
+    input.senderRole === 'sponsor'
+      ? `${org} invited you to a Tracebud compliance programme ("${title}")`
+      : `${org} sent you a compliance request ("${title}") on Tracebud`;
+  return `${requestLead} — ${roleHint} ${input.claimUrl}`;
 }
