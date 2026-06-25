@@ -27,12 +27,25 @@ detect_wifi_packager_ip() {
   ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true
 }
 
+prefer_wifi_packager() {
+  [[ "${TRACEBUD_PACKAGER_USE_WIFI:-}" == "1" ]] && return 0
+  [[ "${TRACE_BUD_IOS_DEVICE_KIND:-}" == "ipad" ]] && return 0
+  return 1
+}
+
 if [[ -z "$IP" ]]; then
-  IP="$(detect_usb_packager_ip || true)"
-  if [[ -n "$IP" ]]; then
-    echo "Using USB link-local packager IP ${IP} (physical iOS device connected)" >&2
-  else
+  if prefer_wifi_packager; then
     IP="$(detect_wifi_packager_ip)"
+    if [[ -n "$IP" ]]; then
+      echo "Using Wi‑Fi packager IP ${IP} (wireless iPad / TRACEBUD_PACKAGER_USE_WIFI)" >&2
+    fi
+  else
+    IP="$(detect_usb_packager_ip || true)"
+    if [[ -n "$IP" ]]; then
+      echo "Using USB link-local packager IP ${IP} (physical iOS device connected)" >&2
+    else
+      IP="$(detect_wifi_packager_ip)"
+    fi
   fi
 fi
 if [[ -z "$IP" ]]; then

@@ -1,4 +1,4 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { deleteSetting, getSetting, setSetting } from '@/features/state/persistence';
 
 import type { CampaignInvitePreview } from './campaignInviteTypes';
 
@@ -43,12 +43,12 @@ export function isCampaignInviteDeepLink(url: string): boolean {
 }
 
 export async function readPendingCampaignInviteId(): Promise<string | null> {
-  const value = (await AsyncStorage.getItem(STORAGE_KEY))?.trim();
+  const value = (await getSetting(STORAGE_KEY))?.trim();
   return value || null;
 }
 
 export async function readPendingCampaignClaimToken(): Promise<string | null> {
-  const value = (await AsyncStorage.getItem(CLAIM_TOKEN_STORAGE_KEY))?.trim();
+  const value = (await getSetting(CLAIM_TOKEN_STORAGE_KEY))?.trim();
   return value || null;
 }
 
@@ -64,7 +64,7 @@ export async function readPendingCampaignBootstrapContext(): Promise<{
 }
 
 export async function readPendingCampaignInvitePreview(): Promise<CampaignInvitePreview | null> {
-  const raw = await AsyncStorage.getItem(PREVIEW_STORAGE_KEY);
+  const raw = await getSetting(PREVIEW_STORAGE_KEY);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw) as CampaignInvitePreview;
@@ -86,20 +86,20 @@ export async function readPendingCampaignInvitePreview(): Promise<CampaignInvite
 export async function persistPendingCampaignInviteId(campaignId: string | null | undefined): Promise<void> {
   const trimmed = campaignId?.trim();
   if (!trimmed) return;
-  await AsyncStorage.setItem(STORAGE_KEY, trimmed);
+  await setSetting(STORAGE_KEY, trimmed);
 }
 
 export async function persistPendingCampaignClaimToken(token: string | null | undefined): Promise<void> {
   const trimmed = token?.trim();
   if (!trimmed) return;
-  await AsyncStorage.setItem(CLAIM_TOKEN_STORAGE_KEY, trimmed);
+  await setSetting(CLAIM_TOKEN_STORAGE_KEY, trimmed);
 }
 
 export async function persistPendingCampaignInvitePreview(
   preview: CampaignInvitePreview | null | undefined,
 ): Promise<void> {
   if (!preview?.campaignId?.trim()) return;
-  await AsyncStorage.setItem(PREVIEW_STORAGE_KEY, JSON.stringify(preview));
+  await setSetting(PREVIEW_STORAGE_KEY, JSON.stringify(preview));
 }
 
 export async function persistCampaignInvite(
@@ -117,7 +117,11 @@ export async function persistCampaignInvite(
 }
 
 export async function clearPendingCampaignInviteId(): Promise<void> {
-  await AsyncStorage.multiRemove([STORAGE_KEY, CLAIM_TOKEN_STORAGE_KEY, PREVIEW_STORAGE_KEY]);
+  await Promise.all([
+    deleteSetting(STORAGE_KEY),
+    deleteSetting(CLAIM_TOKEN_STORAGE_KEY),
+    deleteSetting(PREVIEW_STORAGE_KEY),
+  ]);
 }
 
 export async function consumePendingCampaignInviteId(): Promise<string | null> {

@@ -97,6 +97,7 @@ while (( SECONDS < deadline )); do
   if resolved="$(resolve_udid 2>/dev/null || true)" && [[ -n "$resolved" ]]; then
     echo "Found device UDID: ${resolved}"
     export TRACE_BUD_IOS_DEVICE_UDID="$resolved"
+    export TRACE_BUD_IOS_DEVICE_KIND="$KIND"
     exec bash ./scripts/run-ios-device-lan.sh "$@"
   fi
   echo "  …no ${KIND} device yet ($(date +%H:%M:%S)); retry in ${POLL_SECS}s"

@@ -51,57 +51,64 @@ export default function HomeScreen() {
   const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
   const campaignBannerTrackedRef = useRef<string | null>(null);
   const readinessRefreshGenRef = useRef(0);
+  const plotsRef = useRef(plots);
+  plotsRef.current = plots;
   const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
   const enumeration = useEnumerationOptional();
   const isEnumerationHome = Boolean(enumeration?.isEnumerationMode);
 
   const refreshPlotReadiness = useCallback(async () => {
-    if (plots.length === 0) {
-      setActionRequired(null);
-      setHomeReadinessStats(null);
+    const currentPlots = plotsRef.current;
+    if (currentPlots.length === 0) {
+      setActionRequired((prev) => (prev === null ? prev : null));
+      setHomeReadinessStats((prev) => (prev === null ? prev : null));
       return;
     }
     const gen = ++readinessRefreshGenRef.current;
-    const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer);
+    const results = await loadAllPlotReadinessStates(currentPlots, backendPlots, farmer);
     if (gen !== readinessRefreshGenRef.current) return;
 
     const compliant = results.filter((r) => r.done).length;
-    const pending = Math.max(0, plots.length - compliant);
-    setHomeReadinessStats({ compliant, pending });
+    const pending = Math.max(0, currentPlots.length - compliant);
+    setHomeReadinessStats((prev) =>
+      prev?.compliant === compliant && prev?.pending === pending ? prev : { compliant, pending },
+    );
     const firstIncomplete = results.find((r) => !r.done);
     if (!firstIncomplete) {
-      setActionRequired(null);
+      setActionRequired((prev) => (prev === null ? prev : null));
       return;
     }
-    const plot = plots.find((p) => p.id === firstIncomplete.plotId);
+    const plot = currentPlots.find((p) => p.id === firstIncomplete.plotId);
     if (!plot) {
-      setActionRequired(null);
+      setActionRequired((prev) => (prev === null ? prev : null));
       return;
     }
     const message = !firstIncomplete.checklist.groundOk
       ? t('home_action_plot_photos', { name: plot.name })
       : t('home_action_plot_setup', { name: plot.name });
-    setActionRequired({ message, plotId: plot.id });
-  }, [plots, backendPlots, farmer, t]);
+    setActionRequired((prev) =>
+      prev?.message === message && prev?.plotId === plot.id ? prev : { message, plotId: plot.id },
+    );
+  }, [backendPlots, farmer, t, plots.length]);
 
   const refreshBackendPlots = useCallback(
     async (force = false) => {
       if (!farmer?.id || !isSignedIn) {
-        setBackendPlots([]);
+        setBackendPlots((prev) => (prev.length === 0 ? prev : []));
         return;
       }
       try {
         const rows = await fetchServerPlotListForUi({
           profileFarmerId: farmer.id,
-          localPlots: plots,
+          localPlots: plotsRef.current,
           force,
         });
         setBackendPlots(rows ?? []);
       } catch {
-        setBackendPlots([]);
+        setBackendPlots((prev) => (prev.length === 0 ? prev : []));
       }
     },
-    [farmer?.id, isSignedIn, plots],
+    [farmer?.id, isSignedIn],
   );
 
   const refreshBackendPlotsRef = useRef(refreshBackendPlots);

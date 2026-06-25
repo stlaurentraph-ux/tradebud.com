@@ -142,6 +142,7 @@ export function findServerPlotForSyncConfirmation(
   backendRows: unknown[],
   localPlotIds: ReadonlySet<string>,
 ): BackendPlotRow | null {
+  if (!Array.isArray(backendRows)) return null;
   const rows = backendRows as BackendPlotRow[];
 
   const byClientId = rows.find((row) => backendRowMatchesLocalClientId(row, localPlot.id));
@@ -182,6 +183,7 @@ export function findBackendPlotForLocal(
   localPlot: LocalPlotForBackendMatch,
   backendRows: unknown[],
 ): unknown | null {
+  if (!Array.isArray(backendRows)) return null;
   const rows = backendRows as BackendPlotRow[];
 
   const byClientId = rows.find((p) => backendRowMatchesLocalClientId(p, localPlot.id));

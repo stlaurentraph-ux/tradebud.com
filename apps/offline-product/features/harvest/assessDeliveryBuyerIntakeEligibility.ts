@@ -25,7 +25,7 @@ export function resolveBackendPlotStatusForLocalPlot(
   backendPlots: unknown[],
   serverPlotId: string | null,
 ): unknown {
-  if (!serverPlotId) return null;
+  if (!serverPlotId || !Array.isArray(backendPlots)) return null;
   const match = backendPlots.find((row) => {
     if (!row || typeof row !== 'object') return false;
     const id = (row as { id?: unknown }).id;

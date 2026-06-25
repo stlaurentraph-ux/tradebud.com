@@ -391,12 +391,20 @@ export default function HarvestsScreen() {
 
   const deliveryIntakeAdvisory = useMemo(() => {
     if (!selectedPlotId || !isSignedIn) return null;
-    const serverPlotId = resolveServerPlotIdForLocal(selectedPlotId, plotServerLinks);
+    const local = resolveLocalPlotForHarvestSubmit({
+      selectedPlotId,
+      localPlots,
+      backendPlots,
+      plotServerLinks,
+    });
+    const serverPlotId = local
+      ? resolveServerPlotIdForLocal(local, backendPlots, plotServerLinks)
+      : null;
     const plotStatus = resolveBackendPlotStatusForLocalPlot(backendPlots, serverPlotId);
     if (plotStatus == null) return null;
     const eligibility = assessDeliveryBuyerIntakeEligibility(plotStatus);
     return eligibility.ready ? null : eligibility;
-  }, [backendPlots, isSignedIn, plotServerLinks, selectedPlotId]);
+  }, [backendPlots, isSignedIn, localPlots, plotServerLinks, selectedPlotId]);
 
   useEffect(() => {
     if (!deliveryIntakeAdvisory) return;

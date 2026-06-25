@@ -1,29 +1,32 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('@react-native-async-storage/async-storage', () => ({
-  default: {
-    getItem: vi.fn(),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-  },
+const settings = new Map<string, string>();
+
+vi.mock('@/features/state/persistence', () => ({
+  getSetting: vi.fn(async (key: string) => settings.get(key) ?? null),
+  setSetting: vi.fn(async (key: string, value: string) => {
+    settings.set(key, value);
+  }),
+  deleteSetting: vi.fn(async (key: string) => {
+    settings.delete(key);
+  }),
 }));
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   isCampaignInviteDeepLink,
   parseCampaignClaimTokenFromUrl,
   parseCampaignIdFromUrl,
+  persistPendingCampaignClaimToken,
   persistPendingCampaignInviteId,
   persistPendingCampaignInvitePreview,
+  readPendingCampaignClaimToken,
   readPendingCampaignInviteId,
   readPendingCampaignInvitePreview,
 } from './campaignInviteContext';
 
 describe('campaignInviteContext', () => {
   beforeEach(() => {
-    vi.mocked(AsyncStorage.getItem).mockReset();
-    vi.mocked(AsyncStorage.setItem).mockReset();
-    vi.mocked(AsyncStorage.removeItem).mockReset();
+    settings.clear();
   });
 
   it('parses campaign id from field-auth and app deep links', () => {
@@ -36,8 +39,6 @@ describe('campaignInviteContext', () => {
 
   it('persists pending campaign invite', async () => {
     await persistPendingCampaignInviteId('camp-xyz');
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith('tracebud_pending_campaign_invite', 'camp-xyz');
-    vi.mocked(AsyncStorage.getItem).mockResolvedValue('camp-xyz');
     await expect(readPendingCampaignInviteId()).resolves.toBe('camp-xyz');
   });
 
@@ -50,15 +51,7 @@ describe('campaignInviteContext', () => {
   });
 
   it('persists pending claim token', async () => {
-    const { persistPendingCampaignClaimToken, readPendingCampaignClaimToken } = await import(
-      './campaignInviteContext'
-    );
     await persistPendingCampaignClaimToken('tok-123');
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith(
-      'tracebud_pending_campaign_claim_token',
-      'tok-123',
-    );
-    vi.mocked(AsyncStorage.getItem).mockResolvedValue('tok-123');
     await expect(readPendingCampaignClaimToken()).resolves.toBe('tok-123');
   });
 
@@ -70,15 +63,6 @@ describe('campaignInviteContext', () => {
       dueAt: null,
       senderTenantId: 'tenant_a',
     });
-    vi.mocked(AsyncStorage.getItem).mockResolvedValue(
-      JSON.stringify({
-        campaignId: 'camp-1',
-        title: 'Land papers',
-        fromOrg: 'Coop A',
-        dueAt: null,
-        senderTenantId: 'tenant_a',
-      }),
-    );
     await expect(readPendingCampaignInvitePreview()).resolves.toMatchObject({
       campaignId: 'camp-1',
       fromOrg: 'Coop A',
