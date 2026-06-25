@@ -84,6 +84,7 @@ import { syncTimedOutMessage, resolveUnexpectedSyncErrorMessage } from '@/featur
 import { resolveSyncOpenPlotId, resolveSyncSupportMailto } from '@/features/sync/formatSyncNowUserMessage';
 import { resolveSyncAttentionMessage } from '@/features/sync/resolveSyncAttentionMessage';
 import { resolveBackupStatusDisplay } from '@/features/sync/backupStatusDisplay';
+import { resolveBackupCardStatus } from '@/features/sync/resolveBackupCardStatus';
 import {
   primaryGeometryBlockForWhy,
   resolveGeometrySyncWhyExplain,
@@ -820,7 +821,18 @@ export default function SettingsScreen() {
 
   const backupAttentionPrimarySummary = pendingDetailMessage;
 
-  const showBackupResultMessage = Boolean(syncMessage && !isSyncInProgress);
+  const backupCardStatus = useMemo(
+    () =>
+      resolveBackupCardStatus({
+        cloudParityHints,
+        syncMessage,
+        syncMessageKind,
+        isSyncInProgress,
+      }),
+    [cloudParityHints, isSyncInProgress, syncMessage, syncMessageKind],
+  );
+
+  const showBackupCardStatus = Boolean(backupCardStatus.text);
 
   const syncGeometryWhyBlock = useMemo(
     () => primaryGeometryBlockForWhy(measuredSyncPending?.blockedPlots),
@@ -830,7 +842,7 @@ export default function SettingsScreen() {
   const showSyncGeometryWhy = syncGeometryWhyBlock != null && syncMessageKind === 'error';
 
   const showUploadAttentionPanel =
-    showUploadAttention && !showBackupResultMessage;
+    showUploadAttention && !showBackupCardStatus;
 
   const resetQueueRetryPreferences = () => {
     setQueueAttemptScope('all');
@@ -1541,18 +1553,6 @@ export default function SettingsScreen() {
                 <ThemedText type="caption" style={styles.backupIntroText}>
                   {t('settings_backup_sync_body')}
                 </ThemedText>
-                {cloudParityHints.length > 0 && isSignedIn && !isSyncInProgress
-                  ? cloudParityHints.map((hint, index) => (
-                      <ThemedText
-                        key={hint}
-                        testID={`settings-cloud-parity-hint-${index}`}
-                        type="caption"
-                        style={styles.uploadIssueSummary}
-                      >
-                        {hint}
-                      </ThemedText>
-                    ))
-                  : null}
                 {syncUsesLocalApi ? (
                   <ThemedText type="caption" style={styles.uploadIssueSummary}>
                     {resolveSyncConnectivityUserMessage(t, syncApiBaseUrl)}
@@ -1594,17 +1594,23 @@ export default function SettingsScreen() {
                   )}
                 </View>
 
-                {showBackupResultMessage ? (
+                {showBackupCardStatus ? (
                   <View style={styles.syncResultBlock}>
                     <ThemedText
+                      testID={
+                        backupCardStatus.includesParityHints || cloudParityHints.length > 0
+                          ? 'settings-cloud-parity-hint-0'
+                          : 'settings-backup-status'
+                      }
                       type="caption"
                       style={[
                         styles.syncHint,
-                        syncMessageKind === 'success' && styles.syncHintSuccess,
-                        syncMessageKind === 'error' && styles.syncHintError,
+                        backupCardStatus.kind === 'success' && styles.syncHintSuccess,
+                        backupCardStatus.kind === 'error' && styles.syncHintError,
+                        backupCardStatus.kind === 'info' && styles.uploadIssueSummary,
                       ]}
                     >
-                      {syncMessage}
+                      {backupCardStatus.text}
                     </ThemedText>
                     {showSyncGeometryWhy && syncGeometryWhyBlock ? (
                       <Pressable

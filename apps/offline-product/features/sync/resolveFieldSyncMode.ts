@@ -14,6 +14,13 @@ export type ResolveFieldSyncModeInput = {
   queuePendingCount?: number;
   /** Last plot-list fetch failed — need a full pass to reconcile. */
   plotsFetchFailed?: boolean;
+  /** Device has a persisted field-sync cursor from a prior successful sync. */
+  hasFieldSyncCursor?: boolean;
+  /**
+   * Delta probe result: false = server has nothing new to pull.
+   * Omit when the probe failed — stay conservative (full).
+   */
+  cloudDeltaHasInboundChanges?: boolean;
 };
 
 /**
@@ -27,5 +34,13 @@ export function resolveFieldSyncMode(input: ResolveFieldSyncModeInput): FieldSyn
   if ((input.unsyncedPlotCount ?? 0) > 0) return 'full';
   if ((input.blockedPlotCount ?? 0) > 0) return 'full';
   if ((input.queuePendingCount ?? 0) > 0) return 'push_only';
+  if (input.cloudDeltaHasInboundChanges === true) return 'full';
+  if (
+    input.hasFieldSyncCursor === true &&
+    input.cloudDeltaHasInboundChanges === false &&
+    input.needsCloudRestore !== true
+  ) {
+    return 'push_only';
+  }
   return 'full';
 }

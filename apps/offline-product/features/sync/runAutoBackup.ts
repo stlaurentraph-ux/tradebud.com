@@ -8,6 +8,7 @@ import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import { type UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
 import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
+import { probeFieldSyncInboundChanges } from '@/features/sync/fieldSyncCursor';
 import { resolveFieldSyncMode, type FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
 import { measureTotalSyncPending } from '@/features/sync/measureTotalSyncPending';
 import {
@@ -203,11 +204,23 @@ export async function runConservativeAutoBackup(params: {
       plots: params.localPlots,
       isSignedIn: true,
     }).catch(() => null);
+    const deltaProbe = await probeFieldSyncInboundChanges().catch(() => ({
+      hasInboundChanges: true,
+      hasCursor: false,
+      delta: null,
+      snapshot: null,
+      changeSet: null,
+      probeFailed: true,
+    }));
     const syncMode = resolveFieldSyncMode({
       unsyncedPlotCount: prePending?.unsyncedPlotCount ?? 0,
       blockedPlotCount: prePending?.blockedPlotCount ?? 0,
       queuePendingCount: prePending?.queuePendingCount ?? 0,
       plotsFetchFailed: prePending?.plotsFetchFailed === true,
+      hasFieldSyncCursor: deltaProbe.hasCursor,
+      cloudDeltaHasInboundChanges: deltaProbe.probeFailed
+        ? undefined
+        : deltaProbe.hasInboundChanges,
     });
 
     const result = await runAutoBackup({

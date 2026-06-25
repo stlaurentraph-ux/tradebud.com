@@ -30,7 +30,7 @@ describe('resolveFieldSyncMode', () => {
     ).toBe('full');
   });
 
-  it('uses full when nothing is pending (refresh / parity check)', () => {
+  it('uses full when nothing is pending and no delta cursor yet', () => {
     expect(
       resolveFieldSyncMode({
         queuePendingCount: 0,
@@ -38,6 +38,18 @@ describe('resolveFieldSyncMode', () => {
         needsCloudRestore: false,
       }),
     ).toBe('full');
+  });
+
+  it('uses push_only when delta reports no inbound changes and nothing local is pending', () => {
+    expect(
+      resolveFieldSyncMode({
+        queuePendingCount: 0,
+        unsyncedPlotCount: 0,
+        needsCloudRestore: false,
+        hasFieldSyncCursor: true,
+        cloudDeltaHasInboundChanges: false,
+      }),
+    ).toBe('push_only');
   });
 
   it('uses full when delta reports inbound changes even without local work', () => {
