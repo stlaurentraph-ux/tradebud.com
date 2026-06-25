@@ -95,10 +95,28 @@ function withFarmerDbLock<T>(task: () => Promise<T>): Promise<T> {
   return run;
 }
 
+/**
+ * Serializes plots-table writes. `persistPlots` does a full DELETE + reinsert, so two
+ * overlapping calls (e.g. local edit + cloud restore) would otherwise race and the slower
+ * snapshot could silently clobber the fresher one. The lock guarantees last-call-wins by
+ * arrival order instead of by network/IO timing.
+ */
+let plotsDbLock: Promise<void> = Promise.resolve();
+
+function withPlotsDbLock<T>(task: () => Promise<T>): Promise<T> {
+  const run = plotsDbLock.then(task, task);
+  plotsDbLock = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 /** @internal Reset singleton DB between Vitest cases. */
 export function resetPersistenceDatabaseForTests(): void {
   dbPromise = null;
   farmerDbLock = Promise.resolve();
+  plotsDbLock = Promise.resolve();
 }
 
 function getDb() {
@@ -348,6 +366,20 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
           typeof farmerRow.commodityCode === 'string' && farmerRow.commodityCode.trim()
             ? farmerRow.commodityCode.trim()
             : undefined,
+        declarationLatitude:
+          typeof farmerRow.declarationLatitude === 'number' &&
+          Number.isFinite(farmerRow.declarationLatitude)
+            ? farmerRow.declarationLatitude
+            : undefined,
+        declarationLongitude:
+          typeof farmerRow.declarationLongitude === 'number' &&
+          Number.isFinite(farmerRow.declarationLongitude)
+            ? farmerRow.declarationLongitude
+            : undefined,
+        declarationGeoCapturedAt:
+          typeof farmerRow.declarationGeoCapturedAt === 'number'
+            ? farmerRow.declarationGeoCapturedAt
+            : undefined,
       };
       })()
     : undefined;
@@ -367,6 +399,10 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
     } catch {
       points = [];
     }
+    // Defend against corrupt rows where pointsJson is valid JSON but not an array
+    // (e.g. the literal "null"). Without this, points.length below throws and one bad
+    // row would abort the entire load.
+    if (!Array.isArray(points)) points = [];
     let kind = row.kind as Plot['kind'];
     if (kind === 'point' && points.length >= 3) {
       kind = 'polygon';
@@ -419,6 +455,7 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
       } catch {
         points = [];
       }
+      if (!Array.isArray(points)) points = [];
       let kind = row.kind as Plot['kind'];
       if (kind === 'point' && points.length >= 3) {
         kind = 'polygon';
@@ -457,64 +494,74 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
 export async function persistFarmer(farmer?: FarmerProfile) {
   return withFarmerDbLock(async () => {
     const db = await getDb();
-    await db.runAsync('DELETE FROM farmer;');
-    if (!farmer) return;
-    await db.runAsync(
-      'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
-      [
-        farmer.id,
-        farmer.name ?? null,
-        farmer.role,
-        farmer.selfDeclared ? 1 : 0,
-        farmer.selfDeclaredAt ?? null,
-        farmer.fpicConsent ? 1 : 0,
-        farmer.laborNoChildLabor ? 1 : 0,
-        farmer.laborNoForcedLabor ? 1 : 0,
-        farmer.postalAddress?.trim() ? farmer.postalAddress.trim() : null,
-        farmer.commodityCode?.trim() ? farmer.commodityCode.trim() : null,
-        farmer.declarationLatitude != null && Number.isFinite(farmer.declarationLatitude)
-          ? farmer.declarationLatitude
-          : null,
-        farmer.declarationLongitude != null && Number.isFinite(farmer.declarationLongitude)
-          ? farmer.declarationLongitude
-          : null,
-        farmer.declarationGeoCapturedAt ?? null,
-      ],
-    );
+    // Atomic replace so a crash/kill between DELETE and INSERT cannot wipe the farmer profile.
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      await txn.runAsync('DELETE FROM farmer;');
+      if (!farmer) return;
+      await txn.runAsync(
+        'INSERT INTO farmer (id, name, role, selfDeclared, selfDeclaredAt, fpicConsent, laborNoChildLabor, laborNoForcedLabor, postalAddress, commodityCode, declarationLatitude, declarationLongitude, declarationGeoCapturedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);',
+        [
+          farmer.id,
+          farmer.name ?? null,
+          farmer.role,
+          farmer.selfDeclared ? 1 : 0,
+          farmer.selfDeclaredAt ?? null,
+          farmer.fpicConsent ? 1 : 0,
+          farmer.laborNoChildLabor ? 1 : 0,
+          farmer.laborNoForcedLabor ? 1 : 0,
+          farmer.postalAddress?.trim() ? farmer.postalAddress.trim() : null,
+          farmer.commodityCode?.trim() ? farmer.commodityCode.trim() : null,
+          farmer.declarationLatitude != null && Number.isFinite(farmer.declarationLatitude)
+            ? farmer.declarationLatitude
+            : null,
+          farmer.declarationLongitude != null && Number.isFinite(farmer.declarationLongitude)
+            ? farmer.declarationLongitude
+            : null,
+          farmer.declarationGeoCapturedAt ?? null,
+        ],
+      );
+    });
   });
 }
 
 export async function persistPlots(plots: Plot[]) {
-  const db = await getDb();
-  await db.runAsync('DELETE FROM plots;');
-  for (const plot of plots) {
-    await db.runAsync(
-      `INSERT INTO plots (
-        id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson,
-        declaredAreaHectares, discrepancyPercent, precisionMetersAtSave,
-        landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt,
-        geometryCaptureMetaJson
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
-      [
-        plot.id,
-        plot.farmerId,
-        plot.name,
-        plot.createdAt,
-        plot.areaSquareMeters,
-        plot.areaHectares,
-        plot.kind,
-        JSON.stringify(plot.points),
-        plot.declaredAreaHectares ?? null,
-        plot.discrepancyPercent ?? null,
-        plot.precisionMetersAtSave ?? null,
-        plot.landTenureDeclared === true ? 1 : plot.landTenureDeclared === false ? 0 : null,
-        plot.landTenureDeclaredAt ?? null,
-        plot.noDeforestationDeclared === true ? 1 : plot.noDeforestationDeclared === false ? 0 : null,
-        plot.noDeforestationDeclaredAt ?? null,
-        plot.geometryCapture ? JSON.stringify(plot.geometryCapture) : null,
-      ],
-    );
-  }
+  return withPlotsDbLock(async () => {
+    const db = await getDb();
+    // Atomic replace: a crash/kill between DELETE and the final INSERT must never leave the
+    // plots table truncated. withExclusiveTransactionAsync wraps in BEGIN EXCLUSIVE and rolls
+    // back on any throw, so on failure the prior rows survive untouched.
+    await db.withExclusiveTransactionAsync(async (txn) => {
+      await txn.runAsync('DELETE FROM plots;');
+      for (const plot of plots) {
+        await txn.runAsync(
+          `INSERT INTO plots (
+            id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson,
+            declaredAreaHectares, discrepancyPercent, precisionMetersAtSave,
+            landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt,
+            geometryCaptureMetaJson
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+          [
+            plot.id,
+            plot.farmerId,
+            plot.name,
+            plot.createdAt,
+            plot.areaSquareMeters,
+            plot.areaHectares,
+            plot.kind,
+            JSON.stringify(plot.points),
+            plot.declaredAreaHectares ?? null,
+            plot.discrepancyPercent ?? null,
+            plot.precisionMetersAtSave ?? null,
+            plot.landTenureDeclared === true ? 1 : plot.landTenureDeclared === false ? 0 : null,
+            plot.landTenureDeclaredAt ?? null,
+            plot.noDeforestationDeclared === true ? 1 : plot.noDeforestationDeclared === false ? 0 : null,
+            plot.noDeforestationDeclaredAt ?? null,
+            plot.geometryCapture ? JSON.stringify(plot.geometryCapture) : null,
+          ],
+        );
+      }
+    });
+  });
 }
 
 export async function logAuditEvent(params: {

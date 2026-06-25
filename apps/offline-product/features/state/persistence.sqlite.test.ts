@@ -187,4 +187,24 @@ describe('persistence.native sqlite integration', () => {
     expect(loaded.farmer?.selfDeclaredAt).toBe(declaredAt);
     expect(loaded.farmer?.name).toBe('Hector');
   });
+
+  it('persistFarmer then loadAppState round-trips the geo declaration fields', async () => {
+    const { persistFarmer, loadAppState } = await import('./persistence.native');
+    const farmerId = '33333333-3333-4333-8333-333333333333';
+    const capturedAt = Date.now();
+
+    await persistFarmer({
+      id: farmerId,
+      role: 'farmer',
+      selfDeclared: true,
+      declarationLatitude: 6.123456,
+      declarationLongitude: -1.654321,
+      declarationGeoCapturedAt: capturedAt,
+    });
+
+    const loaded = await loadAppState();
+    expect(loaded.farmer?.declarationLatitude).toBe(6.123456);
+    expect(loaded.farmer?.declarationLongitude).toBe(-1.654321);
+    expect(loaded.farmer?.declarationGeoCapturedAt).toBe(capturedAt);
+  });
 });
