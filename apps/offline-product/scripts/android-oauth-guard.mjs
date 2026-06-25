@@ -41,6 +41,14 @@ function main() {
     issues.push('app.config.js must register Google OAuth reversed scheme in Android intentFilters');
   }
 
+  const googleSignInNative = read('features/auth/googleSignIn.native.ts');
+  if (!googleSignInNative.includes('getOAuthBrowserSessionOptions')) {
+    issues.push('googleSignIn.native.ts must pass getOAuthBrowserSessionOptions to promptAsync');
+  }
+  if (!googleSignInNative.includes('isGoogleNativeOAuthRedirectUrl')) {
+    issues.push('googleSignIn.native.ts must dismiss browser on native oauth2redirect deep links');
+  }
+
   if (!verifyOAuth.includes('EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID')) {
     issues.push('verify-oauth-providers.mjs must validate EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID');
   }

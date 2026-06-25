@@ -4,7 +4,7 @@ export type FieldSyncMode = 'push_only' | 'full';
 export type ResolveFieldSyncModeInput = {
   /** User or caller explicitly wants restore + push (sign-in backup, parity restore). */
   forceFull?: boolean;
-  /** Cloud parity says server has artifacts this device should pull down. */
+  /** Cloud parity says plots/receipts/media/profile/walk need pull — not declaration-only gaps. */
   needsCloudRestore?: boolean;
   /** Local plots not confirmed on Tracebud yet. */
   unsyncedPlotCount?: number;

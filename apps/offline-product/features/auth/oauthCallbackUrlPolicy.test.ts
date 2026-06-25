@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isOAuthCallbackUrl } from './oauthCallbackUrlPolicy';
+import { isGoogleNativeOAuthRedirectUrl, isOAuthCallbackUrl } from './oauthCallbackUrlPolicy';
 
 describe('isOAuthCallbackUrl', () => {
   it('accepts Tracebud custom-scheme callbacks', () => {
@@ -21,5 +21,16 @@ describe('isOAuthCallbackUrl', () => {
 
   it('rejects bare google.com URLs with code param', () => {
     expect(isOAuthCallbackUrl('https://www.google.com/search?code=not-ours')).toBe(false);
+  });
+});
+
+describe('isGoogleNativeOAuthRedirectUrl', () => {
+  it('detects native Google redirect URLs', () => {
+    expect(
+      isGoogleNativeOAuthRedirectUrl(
+        'com.googleusercontent.apps.123:/oauth2redirect?code=abc',
+      ),
+    ).toBe(true);
+    expect(isGoogleNativeOAuthRedirectUrl('tracebudoffline://auth/callback?code=abc')).toBe(false);
   });
 });

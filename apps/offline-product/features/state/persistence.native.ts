@@ -1466,8 +1466,8 @@ export async function repairPendingSyncPayloadFarmerIds(
   const scopedId = targetFarmerId.trim();
   if (!scopedId) return 0;
   const db = await getDb();
-  const rows = await db.getAllAsync<{ id: number; payloadJson: string }>(
-    'SELECT id, payloadJson FROM pending_sync ORDER BY createdAt ASC;',
+  const rows = await db.getAllAsync<{ id: number; actionType: string; payloadJson: string }>(
+    'SELECT id, actionType, payloadJson FROM pending_sync ORDER BY createdAt ASC;',
   );
   let updated = 0;
   for (const row of rows ?? []) {
@@ -1477,16 +1477,41 @@ export async function repairPendingSyncPayloadFarmerIds(
     } catch {
       continue;
     }
+
+    const rewriteFarmerId = (current: string): boolean => {
+      if (!current || current === scopedId) return false;
+      if (previousFarmerId && current !== previousFarmerId) return false;
+      return true;
+    };
+
+    let rowUpdated = false;
     const payloadFarmerId =
       typeof payload.farmerId === 'string' ? payload.farmerId.trim() : '';
-    if (!payloadFarmerId || payloadFarmerId === scopedId) continue;
-    if (previousFarmerId && payloadFarmerId !== previousFarmerId) continue;
-    payload.farmerId = scopedId;
-    await db.runAsync('UPDATE pending_sync SET payloadJson = ? WHERE id = ?;', [
-      JSON.stringify(payload),
-      row.id,
-    ]);
-    updated += 1;
+    if (payloadFarmerId && rewriteFarmerId(payloadFarmerId)) {
+      payload.farmerId = scopedId;
+      rowUpdated = true;
+    }
+
+    if (row.actionType === 'audit_sync') {
+      const inner = payload.payload;
+      if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+        const innerObj = inner as Record<string, unknown>;
+        const innerFarmerId =
+          typeof innerObj.farmerId === 'string' ? innerObj.farmerId.trim() : '';
+        if (innerFarmerId && rewriteFarmerId(innerFarmerId)) {
+          innerObj.farmerId = scopedId;
+          rowUpdated = true;
+        }
+      }
+    }
+
+    if (rowUpdated) {
+      await db.runAsync('UPDATE pending_sync SET payloadJson = ? WHERE id = ?;', [
+        JSON.stringify(payload),
+        row.id,
+      ]);
+      updated += 1;
+    }
   }
   return updated;
 }

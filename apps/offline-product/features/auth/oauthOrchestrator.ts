@@ -24,6 +24,7 @@ import {
 } from '@/features/auth/oauthCallbackUrl';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
 import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
+import { getOAuthBrowserSessionOptions } from '@/features/auth/oauthBrowserSessionOptions';
 import { trackOAuthBrowserFallback, trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import {
@@ -109,8 +110,7 @@ async function openOAuthBrowser(
 
   try {
     const browserResult = await WebBrowser.openAuthSessionAsync(authUrl, redirectTo, {
-      showInRecents: true,
-      ...(Platform.OS === 'android' ? { createTask: false } : {}),
+      ...getOAuthBrowserSessionOptions(),
     });
 
     if (browserResult.type === 'success' && browserResult.url) {

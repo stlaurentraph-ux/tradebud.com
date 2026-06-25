@@ -49,6 +49,14 @@ describe('pushOnlyIdleSyncPolicy', () => {
     ).toBe(false);
     expect(
       shouldSkipPushOnlyInboundHydration({
+        queuePendingCount: 1,
+        queueDeclarationAuditCount: 1,
+        declarationsComplete: true,
+        plotMediaHydrated: true,
+      }),
+    ).toBe(true);
+    expect(
+      shouldSkipPushOnlyInboundHydration({
         queuePendingCount: 0,
         declarationsComplete: false,
         plotMediaHydrated: true,
@@ -94,6 +102,17 @@ describe('pushOnlyIdleSyncPolicy', () => {
         hasInboundChanges: false,
         pendingTotal: 0,
         cloudParityNeedsRestore: true,
+      }),
+    ).toBe(false);
+    expect(
+      shouldRefreshCloudParityAfterSync({
+        syncMode: 'push_only',
+        probeFailed: false,
+        hasCursor: true,
+        hasInboundChanges: false,
+        pendingTotal: 0,
+        cloudParityNeedsRestore: true,
+        cloudParityNeedsFullRestore: true,
       }),
     ).toBe(true);
   });

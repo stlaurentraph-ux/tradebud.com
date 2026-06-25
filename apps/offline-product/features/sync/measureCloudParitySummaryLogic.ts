@@ -87,6 +87,23 @@ export type CloudParitySummary = ExtendedCloudParityCounts & {
   walkDraftGap: boolean;
 };
 
+/** Non-declaration inbound gaps require a full cloud restore pass. */
+export function parityNeedsFullInboundRestore(gaps: {
+  plotGap: number;
+  receiptGap: number;
+  mediaGap: number;
+  profilePhotoGap: boolean;
+  walkDraftGap: boolean;
+}): boolean {
+  return (
+    gaps.plotGap > 0 ||
+    gaps.receiptGap > 0 ||
+    gaps.mediaGap > 0 ||
+    gaps.profilePhotoGap ||
+    gaps.walkDraftGap
+  );
+}
+
 export function summarizeCloudParityCounts(input: ExtendedCloudParityCounts): CloudParitySummary {
   const gaps = extendedParityGaps(input);
   const needsInboundRestore =

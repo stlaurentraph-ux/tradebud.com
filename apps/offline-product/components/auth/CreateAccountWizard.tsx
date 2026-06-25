@@ -93,6 +93,7 @@ export function CreateAccountWizard({
   }, [visible, reset]);
 
   const finishSuccess = useCallback((options?: { existingAccount?: boolean }) => {
+    void dismissOAuthBrowserIfOpen();
     onClose();
     onSuccess(options);
   }, [onClose, onSuccess]);
@@ -214,6 +215,7 @@ export function CreateAccountWizard({
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
+      void dismissOAuthBrowserIfOpen();
     }
   };
 

@@ -12,13 +12,25 @@ describe('resolveFieldSyncMode', () => {
     ).toBe('push_only');
   });
 
-  it('uses full when cloud restore is needed even with queue rows', () => {
+  it('uses full when non-declaration cloud restore is needed even with queue rows', () => {
     expect(
       resolveFieldSyncMode({
         queuePendingCount: 2,
         needsCloudRestore: true,
       }),
     ).toBe('full');
+  });
+
+  it('uses push_only when only declaration parity gap exists (handled in push_only path)', () => {
+    expect(
+      resolveFieldSyncMode({
+        queuePendingCount: 0,
+        unsyncedPlotCount: 0,
+        needsCloudRestore: false,
+        hasFieldSyncCursor: true,
+        cloudDeltaHasInboundChanges: false,
+      }),
+    ).toBe('push_only');
   });
 
   it('uses full when plots still need upload', () => {

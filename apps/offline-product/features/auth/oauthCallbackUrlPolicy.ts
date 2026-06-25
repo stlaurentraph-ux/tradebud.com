@@ -2,8 +2,7 @@
  * True when a URL is a Tracebud/Supabase OAuth callback — not Google native oauth2redirect.
  */
 export function isOAuthCallbackUrl(url: string): boolean {
-  const lower = url.toLowerCase();
-  if (lower.includes('oauth2redirect') || lower.includes('googleusercontent.apps')) {
+  if (isGoogleNativeOAuthRedirectUrl(url)) {
     return false;
   }
   if (url.includes('auth/callback') || url.includes('app.tracebud.com/auth/')) {
@@ -20,4 +19,10 @@ export function isOAuthCallbackUrl(url: string): boolean {
     );
   }
   return false;
+}
+
+/** Google native client redirect — dismiss browser only; session is handled by promptAsync. */
+export function isGoogleNativeOAuthRedirectUrl(url: string): boolean {
+  const lower = url.toLowerCase();
+  return lower.includes('oauth2redirect') || lower.includes('googleusercontent.apps');
 }

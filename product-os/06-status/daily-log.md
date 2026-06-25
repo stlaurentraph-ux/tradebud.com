@@ -1,4 +1,17 @@
+### 2026-06-25 (Field app — Android Google signup lands on Chrome/Google search)
+
+- **Root cause** — Native Google `promptAsync` opened Chrome Custom Tabs with Android default `createTask:true`, leaving a separate browser task on google.com after `oauth2redirect`. Browser dismiss ran only after slow token exchange; signup wizard completion paths did not always close the tab.
+- **Fix** — Shared `getOAuthBrowserSessionOptions()` (`createTask:false` on Android) for native + Supabase browser OAuth; dismiss on `oauth2redirect` deep link, immediately after `promptAsync` success, and on all auth surface close paths (`closeAllAuthSurfaces`, wizard finish, sign-in OAuth finally).
+- **Verify** — Reload Metro on Android physical device → create account → Google → complete wizard → should return to Tracebud, not Chrome.
+
+### 2026-06-25 (Field app — iOS idle sync + declaration queue structural fix)
+
+- **Root cause** — Stuck `audit_sync` rows kept `queuePendingCount > 0`, blocking `push_only` idle fast path; `Declarations: 1` in Settings tech details is queue `audit_sync` count (not parity gap). Nested `payload.payload.farmerId` in audit queue rows was not repaired on farmer scope rekey; redundant rows were re-enqueued because server audit_log was not consulted before enqueue.
+- **Fix** — `reconcilePendingDeclarationAuditsFromServer` drops redundant declaration uploads when server already has events; `repairPendingSyncPayloadFarmerIds` rewrites nested audit_sync farmer ids; declaration-only parity no longer forces `full` sync (`cloudParityNeedsFullRestore` vs declaration gap); idle hydration skips when queue is audit-only and local declarations complete.
+- **Verify** — `npm test -- --run features/sync/{declarationAuditServerMatch,reconcilePendingDeclarationAuditsFromServer,pushOnlyIdleSyncPolicy,resolveFieldSyncMode}.test.ts` on device: Sync now should finish quickly with 0 queue items when cloud+device aligned.
+
 ### 2026-06-24 (Lane 2 fix — bulk-plot-import CI regressions on PR #267)
+
 - **Failing checks**: Backend build (TS2307 missing `field-enumeration.service`) and Dashboard typecheck/build (5 TypeScript errors in bulk import parsers) — both PR-caused by Phases D–F commits.
 - **Root causes fixed by prior agents**: `plots.module.ts` restored correct imports; dashboard `bulk-plot-import-{csv,geojson,kml,package}.ts` corrected `string|null → string|undefined` and `ParentNode → Element|Document` type errors.
 - **Remaining failures exposed**: Integration tests `ownership-scope.int.spec.ts` and `integrations.controller.int.spec.ts` used no-op `withSearchPath` (same pattern fixed for inbox tests in 1ec3983b), causing search_path leakage between pool connections.

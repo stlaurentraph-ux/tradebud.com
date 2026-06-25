@@ -1,6 +1,9 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
-import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
+import {
+  serverHasPlotComplianceAuditForLocalPlot,
+  serverHasProducerAttestationAudit,
+} from '@/features/sync/declarationAuditServerMatch';
 import {
   fetchMergedAuditEventsForFarmer,
   type AuditLogRow,
@@ -51,7 +54,11 @@ export async function hydrateDeclarationSyncMarkersFromServer(params: {
   const latestProducer = auditRows.find(
     (row) => row.event_type === 'producer_attestations_updated',
   );
-  if (hasProducerAttestationsComplete(localFarmer) && latestProducer?.payload) {
+  if (
+    hasProducerAttestationsComplete(localFarmer) &&
+    serverHasProducerAttestationAudit(auditRows) &&
+    latestProducer?.payload
+  ) {
     await markDeclarationAuditSynced({
       eventType: 'producer_attestations_updated',
       payload: {
@@ -82,20 +89,17 @@ export async function hydrateDeclarationSyncMarkersFromServer(params: {
 
   for (const plot of params.localPlots) {
     if (!(plot.landTenureDeclared && plot.noDeforestationDeclared)) continue;
-    const hasAudit = auditRows.some((row) => {
-      if (row.event_type !== 'plot_compliance_declared' || !row.payload) return false;
-      const payloadPlotId = String(row.payload.plotId ?? '').trim();
-      if (!payloadPlotId) return false;
-      if (payloadPlotId === plot.id) return true;
-      const resolvedLocalPlotId = resolveLocalPlotIdForServerPlot({
-        serverPlotId: payloadPlotId,
+    if (
+      !serverHasPlotComplianceAuditForLocalPlot({
+        plot,
         localPlots: params.localPlots,
         plotServerLinks,
         backendPlots,
-      });
-      return resolvedLocalPlotId === plot.id;
-    });
-    if (!hasAudit) continue;
+        auditRows,
+      })
+    ) {
+      continue;
+    }
     await markDeclarationAuditSynced({
       eventType: 'plot_compliance_declared',
       payload: {

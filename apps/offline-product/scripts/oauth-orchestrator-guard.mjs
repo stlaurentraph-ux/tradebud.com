@@ -77,6 +77,9 @@ function main() {
   if (!signInSheet.includes('completeOAuthFromDeepLink')) {
     issues.push('SignInSheetContext must use completeOAuthFromDeepLink for warm deep links');
   }
+  if (!signInSheet.includes('isGoogleNativeOAuthRedirectUrl')) {
+    issues.push('SignInSheetContext must dismiss browser on Google native oauth2redirect deep links');
+  }
   if (signInSheet.includes('sessionFromOAuthCallbackUrl')) {
     issues.push('SignInSheetContext must not call sessionFromOAuthCallbackUrl directly');
   }

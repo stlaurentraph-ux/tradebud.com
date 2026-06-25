@@ -2,6 +2,14 @@ import { postAuditEventToBackend } from '@/features/api/audit';
 import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
+import {
+  serverHasPlotComplianceAuditForLocalPlot,
+  serverHasProducerAttestationAudit,
+} from '@/features/sync/declarationAuditServerMatch';
+import {
+  fetchMergedAuditEventsForFarmer,
+  type AuditLogRow,
+} from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import { pendingSyncDedupKey } from '@/features/sync/pendingSyncDedup';
 import { invalidateAuditFetchCache } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import {
@@ -200,10 +208,24 @@ export async function queuePlotComplianceAuditSync(params: {
 export async function enqueuePendingDeclarationAuditsForDevice(params: {
   farmer: FarmerProfile | undefined;
   plots: Plot[];
+  apiFarmerId?: string;
+  ownedFarmerIds?: string[];
+  auditRows?: AuditLogRow[] | null;
+  plotServerLinks?: Record<string, string>;
+  backendPlots?: unknown[];
 }): Promise<{ producer: boolean; plots: number }> {
   let producer = false;
   let plots = 0;
   const farmer = params.farmer;
+
+  let auditRows = params.auditRows;
+  const apiFarmerId = params.apiFarmerId?.trim();
+  if (auditRows == null && apiFarmerId) {
+    auditRows = await fetchMergedAuditEventsForFarmer([
+      apiFarmerId,
+      ...(params.ownedFarmerIds ?? []),
+    ]).catch(() => null);
+  }
 
   if (farmer?.id && hasProducerAttestationsComplete(farmer)) {
     const payload = {
@@ -219,17 +241,25 @@ export async function enqueuePendingDeclarationAuditsForDevice(params: {
       payload,
     });
     if (!synced) {
-      await queueDeclarationAuditSync({
-        eventType: 'producer_attestations_updated',
-        payload,
-        deferPost: true,
-      });
-      producer = true;
+      if (auditRows && serverHasProducerAttestationAudit(auditRows)) {
+        await markDeclarationAuditSynced({
+          eventType: 'producer_attestations_updated',
+          payload,
+        }).catch(() => undefined);
+      } else {
+        await queueDeclarationAuditSync({
+          eventType: 'producer_attestations_updated',
+          payload,
+          deferPost: true,
+        });
+        producer = true;
+      }
     }
   }
 
   if (!farmer?.id) return { producer, plots };
 
+  const plotServerLinks = params.plotServerLinks ?? {};
   for (const plot of params.plots) {
     if (!(plot.landTenureDeclared && plot.noDeforestationDeclared)) continue;
     const payload = {
@@ -244,6 +274,22 @@ export async function enqueuePendingDeclarationAuditsForDevice(params: {
       payload,
     });
     if (synced) continue;
+    if (
+      auditRows &&
+      serverHasPlotComplianceAuditForLocalPlot({
+        plot,
+        localPlots: params.plots,
+        plotServerLinks,
+        backendPlots: params.backendPlots,
+        auditRows,
+      })
+    ) {
+      await markDeclarationAuditSynced({
+        eventType: 'plot_compliance_declared',
+        payload,
+      }).catch(() => undefined);
+      continue;
+    }
     await queueDeclarationAuditSync({
       eventType: 'plot_compliance_declared',
       payload,

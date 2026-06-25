@@ -100,6 +100,7 @@ import {
   formatCloudParityHints,
   measureCloudParitySummary,
 } from '@/features/sync/measureCloudParitySummary';
+import { parityNeedsFullInboundRestore } from '@/features/sync/measureCloudParitySummaryLogic';
 import { isLocalLanSyncApi } from '@/features/dev/syncApiTarget';
 import {
   isNetworkReachabilityFailure,
@@ -181,6 +182,7 @@ export default function SettingsScreen() {
   const [syncMessageKind, setSyncMessageKind] = useState<'success' | 'error' | null>(null);
   const [cloudParityHints, setCloudParityHints] = useState<string[]>([]);
   const [cloudParityNeedsRestore, setCloudParityNeedsRestore] = useState(false);
+  const [cloudParityNeedsFullRestore, setCloudParityNeedsFullRestore] = useState(false);
   const [lastSyncMode, setLastSyncMode] = useState<'push_only' | 'full' | null>(null);
   const [lastSyncHttpSummary, setLastSyncHttpSummary] = useState<string | null>(null);
   const [syncSupportMailto, setSyncSupportMailto] = useState<string | null>(null);
@@ -527,6 +529,7 @@ export default function SettingsScreen() {
       if (!isSignedIn || !farmer?.id) {
         setCloudParityHints([]);
         setCloudParityNeedsRestore(false);
+        setCloudParityNeedsFullRestore(false);
         return;
       }
       const summary = await measureCloudParitySummary({
@@ -534,6 +537,9 @@ export default function SettingsScreen() {
         localPlots: plotSnapshot ?? plots,
         localFarmer: farmer,
       }).catch(() => null);
+      setCloudParityNeedsFullRestore(
+        summary ? parityNeedsFullInboundRestore(summary) : false,
+      );
       setCloudParityNeedsRestore(summary?.needsInboundRestore === true);
       setCloudParityHints(
         summary
@@ -1191,7 +1197,7 @@ export default function SettingsScreen() {
               probeFailed: true,
             }));
             const syncMode = resolveFieldSyncMode({
-              needsCloudRestore: cloudParityNeedsRestore,
+              needsCloudRestore: cloudParityNeedsFullRestore,
               unsyncedPlotCount: preSyncPending?.unsyncedPlotCount ?? measuredSyncPending?.unsyncedPlotCount ?? 0,
               blockedPlotCount: preSyncPending?.blockedPlotCount ?? measuredSyncPending?.blockedPlotCount ?? 0,
               queuePendingCount: preSyncPending?.queuePendingCount ?? queuePendingCount,
@@ -1283,6 +1289,7 @@ export default function SettingsScreen() {
               hasInboundChanges: deltaProbe.hasInboundChanges,
               pendingTotal: freshPending?.total ?? outcome.remainingPending ?? 0,
               cloudParityNeedsRestore,
+              cloudParityNeedsFullRestore,
             })
               ? await measureCloudParitySummary({
                   profileFarmerId: apiFarmerId,
@@ -1290,6 +1297,16 @@ export default function SettingsScreen() {
                   localFarmer: diskState.farmer ?? syncFarmer,
                 }).catch(() => null)
               : null;
+            setCloudParityNeedsFullRestore(
+              paritySummary
+                ? parityNeedsFullInboundRestore(paritySummary)
+                : syncMode === 'push_only' &&
+                    !deltaProbe.probeFailed &&
+                    !deltaProbe.hasInboundChanges &&
+                    (freshPending?.total ?? 0) === 0
+                  ? false
+                  : cloudParityNeedsFullRestore,
+            );
             setCloudParityNeedsRestore(
               paritySummary?.needsInboundRestore === true
                 ? true

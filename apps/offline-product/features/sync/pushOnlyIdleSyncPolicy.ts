@@ -34,10 +34,15 @@ export function countQueueActionsForTypes(
  */
 export function shouldSkipPushOnlyInboundHydration(input: {
   queuePendingCount: number;
+  /** Stale declaration audit_sync rows — reconciled separately from heavy hydration. */
+  queueDeclarationAuditCount?: number;
   declarationsComplete: boolean;
   plotMediaHydrated: boolean;
 }): boolean {
-  if (input.queuePendingCount > 0) return false;
+  const declarationOnlyQueue = Math.max(0, input.queueDeclarationAuditCount ?? 0);
+  const nonDeclarationQueue = Math.max(0, input.queuePendingCount - declarationOnlyQueue);
+  if (nonDeclarationQueue > 0) return false;
+  if (declarationOnlyQueue > 0 && !input.declarationsComplete) return false;
   if (!input.declarationsComplete) return false;
   return input.plotMediaHydrated;
 }
@@ -50,8 +55,11 @@ export function shouldRefreshCloudParityAfterSync(input: {
   hasInboundChanges: boolean;
   pendingTotal: number;
   cloudParityNeedsRestore: boolean;
+  /** Plot/receipt/media/profile/walk gaps — not declaration-only parity. */
+  cloudParityNeedsFullRestore?: boolean;
 }): boolean {
-  if (input.cloudParityNeedsRestore) return true;
+  if (input.cloudParityNeedsFullRestore) return true;
+  if (input.cloudParityNeedsRestore && input.pendingTotal > 0) return true;
   if (input.syncMode !== 'push_only') return true;
   if (input.pendingTotal > 0) return true;
   if (input.probeFailed) return true;

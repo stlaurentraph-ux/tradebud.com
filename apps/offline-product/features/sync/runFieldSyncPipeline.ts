@@ -30,7 +30,7 @@ import {
 } from '@/features/sync/plotServerSync';
 import { restoreLocalDeclarationsFromServer } from '@/features/sync/restoreLocalDeclarationsFromServer';
 import { restoreLocalPlotsFromServer } from '@/features/sync/restoreLocalPlotsFromServer';
-import { pruneRedundantPendingUploadActions } from '@/features/sync/pruneRedundantPendingUploadActions';
+import { reconcilePendingDeclarationAuditsFromServer } from '@/features/sync/reconcilePendingDeclarationAuditsFromServer';
 import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
 import { restoreFarmerCloudState } from '@/features/sync/restoreFarmerCloudState';
 import { reconcileUnuploadedLocalDeliveryReceipts } from '@/features/harvest/reconcileUnuploadedLocalDeliveryReceipts';
@@ -299,10 +299,28 @@ async function runFieldSyncPipelineBody(
         (actionType) => syncDrainActionTypes.includes(actionType),
       );
     const queuePendingCount = countQueueActionsForTypes(pendingRows, queueDrainTypesPreview);
+    let queueDeclarationAuditCount = countQueueActionsForTypes(pendingRows, ['audit_sync']);
     const declarationsComplete = localDeclarationsComplete(activeFarmer, activePlots);
     const plotMediaHydrated = await areLinkedPlotMediaScopesHydrated(activePlots, plotServerLinks);
+
+    let effectiveQueuePendingCount = queuePendingCount;
+    if (queueDeclarationAuditCount > 0) {
+      const reconciled = await reconcilePendingDeclarationAuditsFromServer({
+        apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localFarmer: activeFarmer,
+        localPlots: activePlots,
+      }).catch(() => ({ dropped: 0, marked: 0 }));
+      if (reconciled.dropped > 0) {
+        const freshRows = await loadPendingSyncActions().catch(() => []);
+        effectiveQueuePendingCount = countQueueActionsForTypes(freshRows, queueDrainTypesPreview);
+        queueDeclarationAuditCount = countQueueActionsForTypes(freshRows, ['audit_sync']);
+      }
+    }
+
     const skipInboundHydration = shouldSkipPushOnlyInboundHydration({
-      queuePendingCount,
+      queuePendingCount: effectiveQueuePendingCount,
+      queueDeclarationAuditCount,
       declarationsComplete,
       plotMediaHydrated,
     });

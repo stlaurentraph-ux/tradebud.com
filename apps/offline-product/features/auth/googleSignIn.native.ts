@@ -1,4 +1,5 @@
 import * as Crypto from 'expo-crypto';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 import {
   AuthRequest,
@@ -6,11 +7,14 @@ import {
   exchangeCodeAsync,
 } from 'expo-auth-session';
 import type { Session } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
 import { OAuthFlowError } from '@/features/auth/oauthFlowError';
 import { getGoogleOAuthClientIds, getGoogleOAuthRedirectUri } from '@/features/auth/googleOAuthConfig';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
+import { isGoogleNativeOAuthRedirectUrl } from '@/features/auth/oauthCallbackUrlPolicy';
+import { getOAuthBrowserSessionOptions } from '@/features/auth/oauthBrowserSessionOptions';
 import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -47,11 +51,30 @@ export async function signInWithGoogleNative(): Promise<Session> {
   });
 
   trackOAuthStep('native_prompt', { provider: 'google', path: 'native' });
-  const result = await request.promptAsync(GOOGLE_DISCOVERY);
-  if (result.type !== 'success' || !result.params.code) {
-    if (result.type === 'cancel' || result.type === 'dismiss') {
-      throw new OAuthFlowError('sign_in_oauth_cancelled', { step: 'native_prompt', path: 'native' });
-    }
+
+  const linkingSubscription =
+    Platform.OS === 'android'
+      ? Linking.addEventListener('url', (event) => {
+          if (isGoogleNativeOAuthRedirectUrl(event.url)) {
+            void dismissOAuthBrowserIfOpen();
+          }
+        })
+      : null;
+
+  let result;
+  try {
+    result = await request.promptAsync(GOOGLE_DISCOVERY, getOAuthBrowserSessionOptions());
+  } finally {
+    linkingSubscription?.remove();
+  }
+
+  if (result.type === 'success' && result.params.code) {
+    await dismissOAuthBrowserIfOpen();
+  } else if (result.type === 'cancel' || result.type === 'dismiss') {
+    await dismissOAuthBrowserIfOpen();
+    throw new OAuthFlowError('sign_in_oauth_cancelled', { step: 'native_prompt', path: 'native' });
+  } else if (result.type !== 'success' || !result.params.code) {
+    await dismissOAuthBrowserIfOpen();
     throw new OAuthFlowError('sign_in_oauth_failed', {
       step: 'native_code',
       path: 'native',
