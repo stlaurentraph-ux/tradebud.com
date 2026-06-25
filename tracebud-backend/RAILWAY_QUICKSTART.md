@@ -13,7 +13,19 @@ If `DATABASE_URL` is missing, add it to repo root `.env.local` from Supabase (sa
 
 - Dashboard → **Project Settings** → **Database** → **Connection string** → **URI** (pooler recommended)
 
-Use the **transaction** or **session** pooler URL; not the service role key in `DATABASE_URL`.
+Use the **transaction** pooler URL (`:6543` + `?pgbouncer=true`); not the service role key in `DATABASE_URL`. Never use direct `db.*.supabase.co` for the API (IPv6-only; exhausts Postgres slots).
+
+```bash
+npm run check:db-connection   # pooler URL, PG_POOL_MAX, live probe
+```
+
+## Connection hygiene (Supabase)
+
+- **One pool per API process** — NestJS uses `pg` with `PG_POOL_MAX` (default **5**). Set on Railway; do not exceed ~8 per replica unless load-tested.
+- **Pooler only** — `aws-*-*.pooler.supabase.com:6543`; scripts auto-prefer pooler over direct `db.*` URLs in env files.
+- **Separate test DB** — `DATABASE_URL` → prod migrations and tooling; `TEST_DATABASE_URL` → `npm run test:integration` only. Run `npm run db:sync:test-env` once to copy test URL from repo root `.env.local`. Prod/test mix-ups are blocked at startup (API), in migration scripts, and by `backend-db-url-split-guard` in `npm run qa:structural`.
+- **Graceful shutdown** — API drains the pool on SIGTERM (Railway deploys).
+- **Scale out** — more Railway replicas × `PG_POOL_MAX` = Postgres backend connections; watch Supabase **Database → Observability**.
 
 ## 1) Railway project (10 min)
 
@@ -27,7 +39,8 @@ Use the **transaction** or **session** pooler URL; not the service role key in `
 | Key | Value |
 |-----|--------|
 | `NODE_ENV` | `production` |
-| `DATABASE_URL` | from Supabase (pooler URI) |
+| `DATABASE_URL` | from Supabase (pooler URI, port **6543** transaction mode) |
+| `PG_POOL_MAX` | `5` (per API replica — see §Connection hygiene) |
 | `SUPABASE_URL` | `https://uzsktajlnofosxeqwdwl.supabase.co` |
 | `SUPABASE_ANON_KEY` | Supabase anon key |
 | `GFW_API_KEY` | GFW Data API key (deforestation screening) |
@@ -57,7 +70,7 @@ npm run railway:sync:gfw
 `-s tradebud.com` selects the API service (`api.tracebud.com`) without the interactive picker.
 Do not paste shell comments on the same line as `railway link` — `#` is passed as an argument.
 
-5. **Deploy** (or push to `main` if auto-deploy is on).
+5. **Deploy** by pushing to the GitHub branch linked in Railway (auto-deploy). Do **not** use dashboard **Redeploy** or `railway up` from a subdirectory — use **git push** so the monorepo root + `tracebud-backend` Root Directory resolve correctly.
 6. **Settings** → **Networking** → generate **Public domain** if none yet.
 
 ## 2) Smoke test

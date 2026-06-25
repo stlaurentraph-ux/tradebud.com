@@ -40,7 +40,7 @@ This checklist is the minimum bar before publishing the Tracebud farmer field ap
 - [x] Retry with exponential backoff implemented for failed sync actions (`processPendingSyncQueue` + Settings queue UI).
 - [x] Queue limits and retention policy are enforced (`MAX_PENDING_SYNC_ACTIONS` = 1000).
 - [x] Conflict handling is deterministic and idempotent (`clientEventId` on harvest/photo sync; HLC queue ordering).
-- [ ] Offline-to-online recovery tested with flaky network scenarios (see `DEVICE_SMOKE_CHECKLIST.md`).
+- [ ] Offline-to-online recovery tested with flaky network scenarios (see `DEVICE_SMOKE_CHECKLIST.md` §11 + §11b field-sync-delta; Maestro `field-sync-delta-smoke.yaml` covers UI entry points only).
 - [x] Sync status is visible and understandable to farmers (Settings backup card + queue diagnostics).
 
 ## 5) Compliance Gates (Tracebud Core)

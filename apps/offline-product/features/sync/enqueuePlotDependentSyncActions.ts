@@ -15,6 +15,9 @@ import {
   loadPlotTenure,
   loadTitlePhotosForPlot,
   isPlotTitlePhotoPendingUpload,
+  isPlotGroundPhotoPendingUpload,
+  isPlotEvidencePendingUpload,
+  isLocalDeliveryReceiptPendingUpload,
 } from '@/features/state/persistence';
 
 export type EnqueuePlotDependentSyncResult = {
@@ -55,7 +58,7 @@ export async function enqueuePlotDependentSyncActions(params: {
   const now = Date.now();
 
   const groundPhotos = await loadPhotosForPlot(localPlotId).catch(() => []);
-  if (groundPhotos.length > 0) {
+  if (groundPhotos.some(isPlotGroundPhotoPendingUpload)) {
     await enqueuePendingSync({
       createdAt: now,
       actionType: 'photos_sync',
@@ -105,7 +108,7 @@ export async function enqueuePlotDependentSyncActions(params: {
   }
 
   const evidence = await loadEvidenceForPlot(localPlotId).catch(() => []);
-  if (evidence.length > 0) {
+  if (evidence.some(isPlotEvidencePendingUpload)) {
     await enqueuePendingSync({
       createdAt: now,
       actionType: 'evidence_sync',
@@ -124,7 +127,7 @@ export async function enqueuePlotDependentSyncActions(params: {
     loadPendingSyncActions().catch(() => []),
   ]);
   for (const receipt of localReceipts) {
-    if (receipt.localPlotId !== localPlotId || !receipt.pendingSync || receipt.qrCodeRef?.trim()) {
+    if (receipt.localPlotId !== localPlotId || !isLocalDeliveryReceiptPendingUpload(receipt)) {
       continue;
     }
     if (harvestAlreadyQueued(pendingActions, receipt.id)) continue;
@@ -182,7 +185,7 @@ export async function enqueueProducerSupportingEvidenceSync(params: {
 
   const scopeId = producerEvidenceScopeId(farmerId);
   const items = await loadEvidenceForPlot(scopeId).catch(() => []);
-  if (items.length === 0) return false;
+  if (items.length === 0 || !items.some(isPlotEvidencePendingUpload)) return false;
 
   const reason = resolveDocumentUploadReason(null);
   const payloadJson = JSON.stringify({

@@ -1,9 +1,10 @@
 'use client';
 
-import { useContext, useState } from 'react';
-import { Eye, EyeOff, Loader2, AlertCircle, ShieldCheck, Zap, Globe } from 'lucide-react';
+import { useContext } from 'react';
+import { Loader2, AlertCircle, ShieldCheck, Zap, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Label } from '@/components/ui/label';
 import { LocaleContext } from '@/lib/locale-context';
 import { getAuthCopy, getSignupCopy } from '@/lib/workflow-terminology-labels';
@@ -34,7 +35,6 @@ export function StepCreateAccount({
 }: StepCreateAccountProps) {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,29 +89,18 @@ export function StepCreateAccount({
 
         <div className="space-y-2">
           <Label htmlFor="password">{getAuthCopy('field_password', t)}</Label>
-          <div className="relative">
-            <Input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              placeholder={getAuthCopy('placeholder_password_new', t)}
-              value={data.password}
-              onChange={(e) => onChange({ ...data, password: e.target.value })}
-              autoComplete="new-password"
-              minLength={8}
-              required
-              disabled={isSubmitting}
-              className="pr-10"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword((v) => !v)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground focus:outline-none"
-              tabIndex={-1}
-              aria-label={showPassword ? getAuthCopy('hide_password', t) : getAuthCopy('show_password', t)}
-            >
-              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-            </button>
-          </div>
+          <PasswordInput
+            id="password"
+            placeholder={getAuthCopy('placeholder_password_new', t)}
+            value={data.password}
+            onChange={(e) => onChange({ ...data, password: e.target.value })}
+            autoComplete="new-password"
+            minLength={8}
+            required
+            disabled={isSubmitting}
+            showPasswordLabel={getAuthCopy('show_password', t)}
+            hidePasswordLabel={getAuthCopy('hide_password', t)}
+          />
         </div>
 
         {error && (

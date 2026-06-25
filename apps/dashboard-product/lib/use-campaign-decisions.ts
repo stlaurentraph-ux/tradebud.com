@@ -18,6 +18,8 @@ export interface CampaignDecisionsPayload {
   tenant_id: string;
   last_synced_at: string | null;
   decisions: CampaignDecision[];
+  recipients: import('@/lib/campaign-recipient-timeline').CampaignRecipientTimelineEntry[];
+  recipient_status_counts: import('@/lib/campaign-recipient-timeline').CampaignRecipientStatusCounts;
   counts: {
     all: number;
     accept: number;

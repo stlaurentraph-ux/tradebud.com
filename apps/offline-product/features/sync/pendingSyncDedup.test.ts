@@ -43,6 +43,38 @@ describe('pendingSyncDedupKey', () => {
     );
     expect(key).toBe('harvest:harvest-p1-1');
   });
+
+  it('dedupes field cloud audit sync by eventType and farmer scope', () => {
+    expect(
+      pendingSyncDedupKey(
+        'audit_sync',
+        JSON.stringify({
+          eventType: 'field_device_preferences_updated',
+          payload: { farmerId: 'farmer-1', updatedAt: 1 },
+        }),
+      ),
+    ).toBe('audit_sync:field_device_preferences_updated:farmer-1');
+
+    expect(
+      pendingSyncDedupKey(
+        'audit_sync',
+        JSON.stringify({
+          eventType: 'farmer_profile_photo_synced',
+          payload: { farmerId: 'farmer-1', storagePath: 'path/a.jpg' },
+        }),
+      ),
+    ).toBe('audit_sync:farmer_profile_photo_synced:farmer-1');
+
+    expect(
+      pendingSyncDedupKey(
+        'audit_sync',
+        JSON.stringify({
+          eventType: 'plot_mapping_draft_saved',
+          payload: { farmerId: 'farmer-1', pointCount: 3 },
+        }),
+      ),
+    ).toBe('audit_sync:plot_mapping_draft_saved:farmer-1');
+  });
 });
 
 describe('planPendingSyncCompaction', () => {

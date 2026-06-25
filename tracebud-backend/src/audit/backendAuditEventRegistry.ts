@@ -47,6 +47,7 @@ export const BACKEND_WORKFLOW_AUDIT_EVENT_TYPES = [
 export const BACKEND_PLOT_AUDIT_EVENT_TYPES = [
   'plot_created',
   'plot_geometry_superseded',
+  'plot_geometry_approved',
   'plot_geometry_quality_checked',
   'plot_evidence_synced',
   'plot_deforestation_decision_recorded',
@@ -59,7 +60,16 @@ export const BACKEND_PLOT_AUDIT_EVENT_TYPES = [
   'farmer_set',
 ] as const;
 
-export const BACKEND_HARVEST_AUDIT_EVENT_TYPES = ['harvest_recorded'] as const;
+export const BACKEND_HARVEST_AUDIT_EVENT_TYPES = [
+  'harvest_recorded',
+  'delivery_buyer_invite_queued',
+  'delivery_buyer_invite_sent',
+  'delivery_buyer_invite_send_skipped',
+  'delivery_buyer_invite_send_failed',
+  'delivery_buyer_invite_claimed',
+  'delivery_buyer_invite_claim_skipped',
+  'delivery_handoff_confirmed',
+] as const;
 
 export const BACKEND_TENURE_AUDIT_EVENT_TYPES = [
   'tenure_parse_completed',
@@ -136,6 +146,12 @@ export const BACKEND_INBOX_AUDIT_EVENT_TYPES = [
   'inbox_requests_campaign_fanout_failed',
   'inbox_requests_signup_backfill',
   'inbox_requests_email_cta_inbox_ensured',
+  'campaign_recipient_invite_queued',
+  'campaign_recipient_invites_queued',
+  'campaign_recipient_invite_claimed',
+  'campaign_recipient_invite_claim_skipped',
+  'campaign_recipient_invites_queue_failed',
+  'campaign_recipient_invite_resent',
 ] as const;
 
 export const BACKEND_YIELD_BENCHMARK_AUDIT_EVENT_TYPES = [

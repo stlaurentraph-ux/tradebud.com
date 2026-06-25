@@ -123,6 +123,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/requests/campaigns/{id}/recipients/{contactId}/desk-claim-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Issue desk QR claim link for a desk-only campaign invite */
+        post: operations["issueCampaignDeskClaimLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/requests/campaigns/{id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Validate campaign invite token for field-auth landing
+         * @description Returns campaign preview when the signed claim token is valid. No auth required.
+         */
+        get: operations["getCampaignInvitePublicPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/public/requests/campaigns/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Public campaign invite preview for field-app smart links
+         * @description Returns org name, request title, and due date for a sent campaign. Used before farmer sign-in. No auth required.
+         */
+        get: operations["getCampaignPublicPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/plots": {
         parameters: {
             query?: never;
@@ -2652,6 +2709,35 @@ export interface components {
             decided_at: string;
             source: string;
         };
+        /** @enum {string} */
+        RequestCampaignRecipientOnboardingStatus: "fulfilled" | "accepted" | "refused" | "signed_up" | "invite_sent" | "on_platform";
+        /** @enum {string|null} */
+        RequestCampaignFulfillmentSource: "farmer_app_email" | "farmer_app_phone" | "cooperative_on_behalf" | null;
+        RequestCampaignRecipientTimelineEntry: {
+            contact_id: string | null;
+            /** Format: email */
+            recipient_email: string | null;
+            recipient_label: string;
+            delivery_channel: string | null;
+            onboarding_status: components["schemas"]["RequestCampaignRecipientOnboardingStatus"];
+            invite_status: string | null;
+            /** @enum {string|null} */
+            decision: "accept" | "refuse" | null;
+            decision_source: string | null;
+            fulfillment_source: components["schemas"]["RequestCampaignFulfillmentSource"];
+            /** Format: date-time */
+            decided_at: string | null;
+            /** Format: date-time */
+            updated_at: string | null;
+        };
+        RequestCampaignRecipientStatusCounts: {
+            fulfilled: number;
+            accepted: number;
+            refused: number;
+            signed_up: number;
+            invite_sent: number;
+            on_platform: number;
+        };
         RequestCampaignDecisionTimelineCounts: {
             all: number;
             accept: number;
@@ -2673,6 +2759,17 @@ export interface components {
             counts: components["schemas"]["RequestCampaignDecisionTimelineCounts"];
             pagination: components["schemas"]["RequestCampaignDecisionTimelinePagination"];
             decisions: components["schemas"]["RequestCampaignDecisionRecord"][];
+            recipients: components["schemas"]["RequestCampaignRecipientTimelineEntry"][];
+            recipient_status_counts: components["schemas"]["RequestCampaignRecipientStatusCounts"];
+        };
+        CampaignDeskClaimLinkResponse: {
+            campaignId: string;
+            contactId: string;
+            recipientLabel: string;
+            /** Format: uri */
+            claimUrl: string;
+            /** Format: date-time */
+            claimExpiresAt: string;
         };
         CreatePlotRequest: {
             /** Format: uuid */
@@ -3329,6 +3426,115 @@ export interface operations {
             400: components["responses"]["BadRequest"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["BadRequest"];
+        };
+    };
+    issueCampaignDeskClaimLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPath"];
+                contactId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Desk claim link issued */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CampaignDeskClaimLinkResponse"];
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Unauthorized"];
+            404: components["responses"]["BadRequest"];
+        };
+    };
+    getCampaignInvitePublicPreview: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign invite preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preview: {
+                            campaignId: string;
+                            title: string;
+                            fromOrg: string;
+                            /** Format: date-time */
+                            dueAt?: string | null;
+                            senderTenantId: string;
+                            /** @enum {string} */
+                            deliveryChannel: "email" | "whatsapp" | "desk_only";
+                            recipientLabel: string;
+                        };
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Campaign invite not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    getCampaignPublicPreview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preview: {
+                            campaignId: string;
+                            title: string;
+                            fromOrg: string;
+                            /** Format: date-time */
+                            dueAt?: string | null;
+                            senderTenantId: string;
+                        };
+                    };
+                };
+            };
+            /** @description Campaign not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     createPlot: {

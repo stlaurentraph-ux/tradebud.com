@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "slice": "4.5",
+  "slice": "4.6",
   "goldenTenantId": "tenant_rwanda_001",
   "smoke": {
     "role": "compliance_manager",
@@ -26,6 +26,27 @@
       "specFile": "e2e/golden-paths.spec.ts",
       "testName": "onboarding proxy read/write uses golden smoke role and step key",
       "mockedApi": "/api/launch/onboarding"
+    },
+    {
+      "id": "outreach_send_archive",
+      "route": "/outreach",
+      "specFile": "e2e/outreach-campaign-actions.spec.ts",
+      "testName": "outreach table sends and archives draft campaign with mocked APIs",
+      "mockedApi": "/api/requests/campaigns"
+    },
+    {
+      "id": "compliance_issues_status",
+      "route": "/compliance/issues",
+      "specFile": "e2e/compliance-issues-status.spec.ts",
+      "testName": "compliance issues board resolves owned issue with mocked PATCH",
+      "mockedApi": "/api/requests/issues"
+    },
+    {
+      "id": "exporter_package_readiness",
+      "route": "/packages",
+      "specFile": "e2e/exporter-package-readiness.spec.ts",
+      "testName": "assemble shipment disabled while readiness blockers present",
+      "mockedApi": "/api/harvest/packages"
     }
   ]
 }

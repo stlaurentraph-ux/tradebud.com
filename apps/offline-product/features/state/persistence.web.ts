@@ -15,6 +15,7 @@ export type PlotPhoto = {
   latitude?: number | null;
   longitude?: number | null;
   direction?: 'north' | 'east' | 'south' | 'west' | null;
+  storagePath?: string | null;
 };
 
 export type PlotTitlePhoto = {
@@ -156,6 +157,15 @@ export async function updatePlotTitlePhotoAfterUpload(
   );
 }
 
+export async function updatePlotGroundPhotoAfterUpload(
+  photoId: number,
+  params: { uri: string; storagePath: string },
+): Promise<void> {
+  memPhotos = memPhotos.map((row) =>
+    row.id === photoId ? { ...row, uri: params.uri, storagePath: params.storagePath } : row,
+  );
+}
+
 export async function loadTitlePhotosForPlot(plotId: string): Promise<PlotTitlePhoto[]> {
   return memTitlePhotos.filter((p) => p.plotId === plotId);
 }
@@ -166,6 +176,33 @@ export async function deletePlotTitlePhoto(photoId: number): Promise<void> {
 
 export function isPlotTitlePhotoPendingUpload(photo: Pick<PlotTitlePhoto, 'storagePath'>): boolean {
   return !photo.storagePath?.trim();
+}
+
+export function isPlotGroundPhotoPendingUpload(
+  photo: Pick<PlotPhoto, 'uri' | 'storagePath'>,
+): boolean {
+  if (photo.storagePath?.trim()) return false;
+  const uri = photo.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isPlotEvidencePendingUpload(
+  item: Pick<PlotEvidenceItem, 'uri' | 'storagePath'>,
+): boolean {
+  if (item.storagePath?.trim()) return false;
+  const uri = item.uri.trim();
+  if (!uri) return false;
+  if (uri.startsWith('http://') || uri.startsWith('https://')) return false;
+  return uri.startsWith('file://') || uri.startsWith('content://') || uri.startsWith('ph://');
+}
+
+export function isLocalDeliveryReceiptPendingUpload(
+  receipt: Pick<LocalDeliveryReceiptRow, 'pendingSync' | 'qrCodeRef'>,
+): boolean {
+  if (!receipt.pendingSync) return false;
+  return !receipt.qrCodeRef?.trim();
 }
 
 export async function deletePlotEvidenceItem(evidenceId: number): Promise<void> {
@@ -505,6 +542,16 @@ export async function deleteSetting(key: string): Promise<void> {
   delete memSettings[key];
 }
 
+export async function deleteSettingsByPrefix(prefix: string): Promise<void> {
+  const trimmed = prefix.trim();
+  if (!trimmed) return;
+  for (const key of Object.keys(memSettings)) {
+    if (key.startsWith(trimmed)) {
+      delete memSettings[key];
+    }
+  }
+}
+
 export async function saveFarmerProfilePhotoUri(uri: string | null): Promise<void> {
   if (uri == null || uri === '') {
     delete memSettings['farmerProfilePhotoUri'];
@@ -536,6 +583,53 @@ export async function loadPlotMappingDraft(farmerId: string): Promise<PlotMappin
 
 export async function clearPlotMappingDraft(farmerId: string): Promise<void> {
   delete memPlotMappingDrafts[farmerId];
+}
+
+export type FieldRosterEntryRow = {
+  farmerId: string;
+  source: 'roster' | 'provisional';
+  fullName: string;
+  village: string;
+  phone: string | null;
+  nationalId: string | null;
+  email: string | null;
+  producerContactId: string | null;
+  campaignId: string | null;
+  assignmentId: string | null;
+  status: 'pending' | 'in_progress' | 'completed';
+  createdAt: number;
+  updatedAt: number;
+};
+
+let memFieldRoster: FieldRosterEntryRow[] = [];
+
+export async function loadFieldRosterEntries(): Promise<FieldRosterEntryRow[]> {
+  return [...memFieldRoster];
+}
+
+export async function loadFieldRosterEntryByFarmerId(
+  farmerId: string,
+): Promise<FieldRosterEntryRow | null> {
+  return memFieldRoster.find((row) => row.farmerId === farmerId.trim()) ?? null;
+}
+
+export async function persistFieldRosterEntry(entry: FieldRosterEntryRow): Promise<void> {
+  const idx = memFieldRoster.findIndex((row) => row.farmerId === entry.farmerId);
+  if (idx >= 0) {
+    memFieldRoster[idx] = entry;
+  } else {
+    memFieldRoster.push(entry);
+  }
+}
+
+export async function updateFieldRosterMemberStatus(
+  farmerId: string,
+  status: FieldRosterEntryRow['status'],
+): Promise<void> {
+  const row = memFieldRoster.find((entry) => entry.farmerId === farmerId.trim());
+  if (!row) return;
+  row.status = status;
+  row.updatedAt = Date.now();
 }
 
 export async function deletePlotLocalData(plotId: string): Promise<void> {

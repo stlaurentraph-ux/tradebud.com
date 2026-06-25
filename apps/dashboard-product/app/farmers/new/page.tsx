@@ -9,6 +9,7 @@ import { AppHeader } from '@/components/layout/app-header';
 import { Button } from '@/components/ui/button';
 import { AddContactWizard } from '@/components/contacts/add-contact-wizard';
 import { createContact } from '@/lib/contact-service';
+import { validateFarmerContactDraft } from '@/lib/crm-contact-reachability';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
@@ -68,10 +69,22 @@ export default function NewProducerPage() {
             defaultContactType="farmer"
             lockContactType
             onComplete={async (data) => {
+              const farmerReachability =
+                data.contact_type === 'farmer'
+                  ? validateFarmerContactDraft({
+                      email: data.email,
+                      phone: data.phone,
+                      phoneOnlyNoEmail: data.phoneOnlyNoEmail,
+                    })
+                  : null;
+              if (farmerReachability?.error) {
+                throw new Error(farmerReachability.error);
+              }
               await createContact({
                 full_name: data.full_name,
-                email: data.email,
-                phone: data.phone || null,
+                email: farmerReachability ? farmerReachability.email : data.email,
+                phone: farmerReachability?.phone ?? (data.phone || null),
+                phone_only: data.phoneOnlyNoEmail,
                 organization: data.organization || null,
                 contact_type: 'farmer',
                 country: data.country || null,

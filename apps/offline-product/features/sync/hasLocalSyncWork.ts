@@ -4,7 +4,12 @@ import {
   loadPendingSyncActions,
   loadPlotServerLinks,
 } from '@/features/state/persistence';
-import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
+import { createTranslator } from '@/features/i18n/translate';
+import { defaultLocale } from '@/features/i18n/config';
+import {
+  classifyLocalPlotSyncPending,
+  summarizePlotSyncPending,
+} from '@/features/sync/plotSyncPending';
 
 export type LocalSyncWorkSnapshot = {
   queuePendingCount: number;
@@ -19,9 +24,18 @@ export async function measureLocalSyncWork(params: {
   await compactDuplicatePendingSyncActions().catch(() => 0);
   const rows = await loadPendingSyncActions().catch(() => []);
   const plotServerLinks = await loadPlotServerLinks().catch(() => ({}));
+  const t = createTranslator(defaultLocale);
   const unsyncedPlotCount =
     params.plots.length > 0
-      ? listUnsyncedLocalPlots(params.plots, [], plotServerLinks).length
+      ? summarizePlotSyncPending(
+          classifyLocalPlotSyncPending({
+            localPlots: params.plots,
+            backendPlots: [],
+            plotServerLinks,
+            t,
+            trustPersistedLinksWithoutServer: true,
+          }),
+        ).needsUploadPlots.length
       : 0;
   const queuePendingCount = rows.length;
   return {

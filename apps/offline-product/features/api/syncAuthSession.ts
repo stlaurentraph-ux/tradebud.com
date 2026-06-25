@@ -7,14 +7,16 @@ import {
   activateSyncAuthOnSignIn,
   clearSyncAuthCredentials,
   isSyncAuthDismissedOnDevice,
+  persistSyncAuthSignOutLatch,
   loadSyncAuthCredentials,
   saveOAuthSyncAuthCredentials,
+  savePhoneOtpSyncAuthCredentials,
   saveSyncAuthCredentials,
   saveOAuthAccessTokenCache,
   type SyncAuthCredentials,
 } from '@/features/security/syncAuthStorage';
-import { mapPasswordSignInError } from '@/features/auth/mapAuthError';
-import { clearOAuthCallbackDedupState } from '@/features/auth/oauthCallbackUrl';
+import { mapPasswordSignInError, mapSetPasswordError } from '@/features/auth/mapAuthError';
+import { clearOAuthOrchestratorState } from '@/features/auth/oauthOrchestrator';
 import { getFieldAppEmailFromSession } from '@/features/auth/oauthSession';
 import { isLikelyNetworkError } from '@/features/network/normalizeNetworkError';
 import {
@@ -42,6 +44,7 @@ let cachedExpiresAt: number | null = null;
 let currentAuthMethod: SyncAuthCredentials['method'] | null = ALLOW_TEST_AUTH ? 'password' : null;
 let currentEmail = ALLOW_TEST_AUTH ? DEFAULT_EMAIL : '';
 let currentPassword = ALLOW_TEST_AUTH ? DEFAULT_PASSWORD : '';
+let currentPhone = '';
 let currentRefreshToken = '';
 
 /** In-memory guard: blocks token refresh from re-persisting OAuth creds after sign-out. */
@@ -93,6 +96,7 @@ function clearInMemorySyncAuth(): void {
   currentAuthMethod = null;
   currentEmail = '';
   currentPassword = '';
+  currentPhone = '';
   currentRefreshToken = '';
   clearSessionCache();
 }
@@ -111,7 +115,7 @@ function isLocalhostApi(url: string): boolean {
 
 export function getSupabaseAuthClient(): SupabaseClient {
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error('Supabase URL or ANON key not configured');
+    throw new Error('sign_in_auth_not_configured');
   }
   if (!supabaseClient) {
     supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
@@ -128,7 +132,7 @@ export function getSupabaseAuthClient(): SupabaseClient {
 function applySessionToCache(session: { access_token: string; expires_at?: number | null }) {
   cachedAccessToken = session.access_token;
   cachedExpiresAt = session.expires_at ?? null;
-  if (currentAuthMethod === 'oauth') {
+  if (currentAuthMethod === 'oauth' || currentAuthMethod === 'phone_otp') {
     void saveOAuthAccessTokenCache(session.access_token, session.expires_at ?? null).catch(
       () => undefined,
     );
@@ -151,6 +155,21 @@ function applyPasswordAuth(email: string, password: string) {
 function applyOAuthAuth(email: string, refreshToken: string, accessToken?: string, expiresAt?: number | null) {
   currentAuthMethod = 'oauth';
   currentEmail = email.trim();
+  currentPhone = '';
+  currentPassword = '';
+  currentRefreshToken = refreshToken;
+  if (accessToken) {
+    cachedAccessToken = accessToken;
+    cachedExpiresAt = expiresAt ?? null;
+  } else {
+    clearSessionCache();
+  }
+}
+
+function applyPhoneOtpAuth(phone: string, refreshToken: string, accessToken?: string, expiresAt?: number | null) {
+  currentAuthMethod = 'phone_otp';
+  currentPhone = phone.trim();
+  currentEmail = '';
   currentPassword = '';
   currentRefreshToken = refreshToken;
   if (accessToken) {
@@ -167,6 +186,9 @@ export function hasSyncAuthSession(): boolean {
   }
   if (currentAuthMethod === 'oauth') {
     return Boolean(currentEmail.trim() && currentRefreshToken);
+  }
+  if (currentAuthMethod === 'phone_otp') {
+    return Boolean(currentPhone.trim() && currentRefreshToken);
   }
   if (currentAuthMethod === 'password') {
     return Boolean(currentEmail.trim() && currentPassword);
@@ -197,7 +219,10 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
 
     const supabase = getSupabaseAuthClient();
 
-    if (currentAuthMethod === 'oauth' && currentRefreshToken) {
+    if (
+      (currentAuthMethod === 'oauth' || currentAuthMethod === 'phone_otp') &&
+      currentRefreshToken
+    ) {
       let refreshError: { message?: string } | null = null;
       let data: Awaited<ReturnType<typeof supabase.auth.refreshSession>>['data'] | null = null;
       for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -224,19 +249,30 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
         throw new Error('sign_in_session_expired');
       }
       if (
-        currentAuthMethod === 'oauth' &&
+        (currentAuthMethod === 'oauth' || currentAuthMethod === 'phone_otp') &&
         data.session.refresh_token &&
         data.session.refresh_token !== currentRefreshToken
       ) {
         if (!syncAuthStillActive(revisionAtStart) || (await isSyncAuthDismissedOnDevice())) {
           return null;
         }
-        await saveOAuthSyncAuthCredentials(
-          getFieldAppEmailFromSession(data.session) || currentEmail,
-          data.session.refresh_token,
-          data.session.access_token,
-          data.session.expires_at ?? null,
-        );
+        if (currentAuthMethod === 'phone_otp') {
+          const refreshedPhone = data.session.user.phone?.trim() || currentPhone;
+          await savePhoneOtpSyncAuthCredentials(
+            refreshedPhone,
+            data.session.refresh_token,
+            data.session.access_token,
+            data.session.expires_at ?? null,
+          );
+          currentPhone = refreshedPhone;
+        } else {
+          await saveOAuthSyncAuthCredentials(
+            getFieldAppEmailFromSession(data.session) || currentEmail,
+            data.session.refresh_token,
+            data.session.access_token,
+            data.session.expires_at ?? null,
+          );
+        }
         if (!syncAuthStillActive(revisionAtStart)) {
           return null;
         }
@@ -252,6 +288,10 @@ export async function getAccessTokenFromSupabase(): Promise<string | null> {
         currentEmail = refreshedEmail;
       } else if (data.session.user.email) {
         currentEmail = data.session.user.email;
+      }
+      const refreshedPhone = data.session.user.phone?.trim();
+      if (refreshedPhone) {
+        currentPhone = refreshedPhone;
       }
       applySessionToCache(data.session);
       return data.session.access_token;
@@ -419,14 +459,22 @@ export function abortSyncAuthForSignOut(): void {
   authUiGeneration += 1;
   syncAuthDismissedByUser = true;
   clearInMemorySyncAuth();
+  void persistSyncAuthSignOutLatch().catch(() => undefined);
+  void import('@/features/sync/fieldSyncCursor')
+    .then((m) => m.clearFieldSyncCursor())
+    .catch(() => undefined);
 }
 
 export async function hydrateSyncAuthFromSettings(): Promise<void> {
   return runAuthStateMutation(async () => {
     try {
+      if (syncAuthDismissedByUser) {
+        clearInMemorySyncAuth();
+        return;
+      }
       const dismissed = await isSyncAuthDismissedOnDevice();
-      syncAuthDismissedByUser = dismissed;
       if (dismissed) {
+        syncAuthDismissedByUser = true;
         clearInMemorySyncAuth();
         return;
       }
@@ -439,6 +487,15 @@ export async function hydrateSyncAuthFromSettings(): Promise<void> {
       if (credentials.method === 'oauth') {
         applyOAuthAuth(
           credentials.email,
+          credentials.refreshToken,
+          credentials.accessToken,
+          credentials.expiresAt,
+        );
+        return;
+      }
+      if (credentials.method === 'phone_otp') {
+        applyPhoneOtpAuth(
+          credentials.phone,
           credentials.refreshToken,
           credentials.accessToken,
           credentials.expiresAt,
@@ -488,6 +545,22 @@ export async function saveAndApplyOAuthSyncAuth(
   });
 }
 
+export async function saveAndApplyPhoneOtpSession(
+  phone: string,
+  refreshToken: string,
+  accessToken?: string,
+  expiresAt?: number | null,
+): Promise<void> {
+  return runAuthStateMutation(async () => {
+    syncAuthDismissedByUser = false;
+    await activateSyncAuthOnSignIn();
+    authUiGeneration += 1;
+    const normalizedPhone = phone.trim();
+    await savePhoneOtpSyncAuthCredentials(normalizedPhone, refreshToken, accessToken, expiresAt);
+    applyPhoneOtpAuth(normalizedPhone, refreshToken, accessToken, expiresAt);
+  });
+}
+
 export async function clearPersistedSyncAuth(): Promise<void> {
   abortSyncAuthForSignOut();
   return runAuthStateMutation(async () => {
@@ -499,7 +572,7 @@ export async function clearPersistedSyncAuth(): Promise<void> {
     } finally {
       supabaseClient = null;
     }
-    clearOAuthCallbackDedupState();
+    clearOAuthOrchestratorState();
   });
 }
 
@@ -556,12 +629,15 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
 
   const supabase = getSupabaseAuthClient();
 
-  if (currentAuthMethod === 'oauth' && currentRefreshToken) {
+  if (
+    (currentAuthMethod === 'oauth' || currentAuthMethod === 'phone_otp') &&
+    currentRefreshToken
+  ) {
     let accessToken: string | null;
     try {
       accessToken = await getAccessTokenFromSupabase();
-    } catch {
-      return null;
+    } catch (error) {
+      throw error;
     }
     if (!accessToken) {
       return null;
@@ -571,7 +647,7 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
       refresh_token: currentRefreshToken,
     });
     if (error) {
-      return null;
+      throw new Error(mapSetPasswordError(error));
     }
     return supabase;
   }

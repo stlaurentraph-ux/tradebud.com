@@ -4,6 +4,7 @@ import {
   isTechnicalApiMessage,
   mapPlotUploadErrorMessage,
   mapSyncActionErrorMessage,
+  resolveUnexpectedSyncErrorMessage,
 } from './mapApiErrorToUserMessage';
 
 const t = (key: string) => key;
@@ -17,6 +18,30 @@ describe('isTechnicalApiMessage', () => {
 
   it('allows short validation copy', () => {
     expect(isTechnicalApiMessage('Declared area must be greater than zero.')).toBe(false);
+  });
+});
+
+describe('resolveUnexpectedSyncErrorMessage', () => {
+  const opts = {
+    apiBase: 'https://api.tracebud.com/api',
+    isNetworkReachabilityFailure: (msg: string) => msg.includes('Network request failed'),
+    resolveSyncReachFailedShortMessage: () => 'sync_reach_failed_short',
+    surface: 'settings' as const,
+  };
+
+  it('never shows incomplete with zero pending', () => {
+    expect(resolveUnexpectedSyncErrorMessage('Something broke', 0, t, opts)).toBe(
+      'sync_failed_try_later_settings',
+    );
+  });
+
+  it('shows pending count when items remain', () => {
+    expect(
+      resolveUnexpectedSyncErrorMessage('Something broke', 3, t, {
+        ...opts,
+        surface: 'default',
+      }),
+    ).toBe('sync_result_incomplete');
   });
 });
 

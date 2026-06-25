@@ -8,9 +8,20 @@ import { useAuth } from '@/lib/auth-context';
 import { getSupabaseBrowserClient } from '@/lib/supabase-browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LocaleContext } from '@/lib/locale-context';
 import { getAuthCopy } from '@/lib/workflow-terminology-labels';
+import {
+  buildCreateAccountHrefFromSearchParams,
+  extractCampaignFromNextPath,
+  persistPendingSupplierCampaignId,
+  resolvePostAuthNetworkRedirect,
+} from '@/lib/supplier-campaign-redirect';
+import {
+  extractClaimFromNextPath,
+  resolvePostAuthIntakeRedirect,
+} from '@/lib/delivery-intake-redirect';
 import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 export default function LoginPage() {
@@ -52,8 +63,20 @@ function LoginPageContent() {
     try {
       await login(email, password);
       const nextPath = searchParams.get('next');
+      const claimFromQuery =
+        searchParams.get('claim')?.trim() || extractClaimFromNextPath(nextPath);
+      const campaignFromQuery =
+        searchParams.get('campaign')?.trim() || extractCampaignFromNextPath(nextPath);
+      if (campaignFromQuery) persistPendingSupplierCampaignId(campaignFromQuery);
       const safeNext = nextPath && nextPath.startsWith('/') ? nextPath : '/';
-      router.push(safeNext);
+      router.push(
+        resolvePostAuthNetworkRedirect({
+          claimRef: claimFromQuery,
+          campaignId: campaignFromQuery,
+          fallbackPath: safeNext,
+          resolveClaim: resolvePostAuthIntakeRedirect,
+        }),
+      );
     } catch (err: unknown) {
       setIsLoading(false);
       const message = err instanceof Error ? err.message : 'Login failed';
@@ -156,12 +179,13 @@ function LoginPageContent() {
                       : getAuthCopy('forgot_password', t)}
                   </button>
                 </div>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   placeholder={getAuthCopy('placeholder_password', t)}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  showPasswordLabel={getAuthCopy('show_password', t)}
+                  hidePasswordLabel={getAuthCopy('hide_password', t)}
                   className="bg-secondary"
                   required
                 />
@@ -180,7 +204,7 @@ function LoginPageContent() {
               </Button>
               <p className="text-center text-sm text-muted-foreground">
                 {getAuthCopy('new_to_tracebud', t)}{' '}
-                <Link href="/create-account" className="font-medium text-primary hover:underline">
+                <Link href={buildCreateAccountHrefFromSearchParams(searchParams)} className="font-medium text-primary hover:underline">
                   {getAuthCopy('create_workspace', t)}
                 </Link>
               </p>

@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useContext, useEffect, useMemo, useState } from 'react';
+import { use, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, CheckCircle, FileCheck } from 'lucide-react';
@@ -48,55 +48,56 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
+  const loadProducer = useCallback(async () => {
     setLoading(true);
-    void listContacts()
-      .then(async (contacts) => {
-        if (cancelled) return;
-        const match = contacts.find((item) => item.id === id);
-        if (!match) {
-          setContact(null);
-          setLoadError(getProducerNotFoundMessage(role, t));
-          setFarmerProfileId(null);
-          setResolveError(null);
-          return;
-        }
-        if (match.contact_type !== 'farmer') {
-          router.replace(getContactDetailHref(id));
-          return;
-        }
-        setContact(match);
-        setLoadError(null);
-
-        if (match.farmer_profile_id) {
-          setFarmerProfileId(match.farmer_profile_id);
-          setResolveError(null);
-          return;
-        }
-
-        const resolved = await resolveProducerFarmerId(match.email);
-        if (cancelled) return;
-        if (resolved) {
-          setFarmerProfileId(resolved);
-          setResolveError(null);
-        } else {
-          setFarmerProfileId(null);
-          setResolveError(getProducerDetailCopy('resolve_error_no_account', role, t));
-        }
-      })
-      .catch((error) => {
-        if (cancelled) return;
-        setLoadError(error instanceof Error ? error.message : getProducerDetailCopy('load_error', role, t));
+    try {
+      const contacts = await listContacts();
+      const match = contacts.find((item) => item.id === id);
+      if (!match) {
         setContact(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+        setLoadError(getProducerNotFoundMessage(role, t));
+        setFarmerProfileId(null);
+        setResolveError(null);
+        return;
+      }
+      if (match.contact_type !== 'farmer') {
+        router.replace(getContactDetailHref(id));
+        return;
+      }
+      setContact(match);
+      setLoadError(null);
+
+      if (match.farmer_profile_id) {
+        setFarmerProfileId(match.farmer_profile_id);
+        setResolveError(null);
+        return;
+      }
+
+      if (!match.email) {
+        setFarmerProfileId(null);
+        setResolveError(getProducerDetailCopy('resolve_error_no_account', role, t));
+        return;
+      }
+
+      const resolved = await resolveProducerFarmerId(match.email);
+      if (resolved) {
+        setFarmerProfileId(resolved);
+        setResolveError(null);
+      } else {
+        setFarmerProfileId(null);
+        setResolveError(getProducerDetailCopy('resolve_error_no_account', role, t));
+      }
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : getProducerDetailCopy('load_error', role, t));
+      setContact(null);
+    } finally {
+      setLoading(false);
+    }
   }, [id, role, router, t]);
+
+  useEffect(() => {
+    void loadProducer();
+  }, [loadProducer]);
 
   const fpicSigned = useMemo(() => (contact ? deriveFpicSigned(contact) : false), [contact]);
   const verified = contact?.status === 'submitted' || contact?.status === 'engaged';
@@ -106,7 +107,11 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
     <div className="flex flex-col">
       <AppHeader
         title={contact?.full_name ?? getProducerDetailFallbackTitle(role, t)}
-        subtitle={contact ? contact.email : `ID: ${id}`}
+        subtitle={
+          contact
+            ? (contact.email ?? contact.phone ?? 'Phone-only contact')
+            : `ID: ${id}`
+        }
         breadcrumbs={[
           { label: getDashboardBreadcrumbLabel(t), href: '/' },
           { label: getProducersNavLabel(role, t), href: producersHref },
@@ -225,7 +230,9 @@ export default function FarmerDetailPage({ params }: FarmerDetailPageProps) {
                     </p>
                   ) : (
                     <p className="text-muted-foreground">
-                      {getProducerDetailCopy('field_app_not_linked', role, t, { email: contact.email })}
+                      {getProducerDetailCopy('field_app_not_linked', role, t, {
+                        email: contact.email ?? contact.phone ?? 'Phone-only contact',
+                      })}
                     </p>
                   )}
                 </CardContent>

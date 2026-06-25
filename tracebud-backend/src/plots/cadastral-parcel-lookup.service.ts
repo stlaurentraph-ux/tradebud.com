@@ -1,5 +1,7 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import * as Sentry from '@sentry/nestjs';
 import { normalizeCadastralKeyForCountry } from './cadastral-country-packs';
+import { BACKEND_CADASTRAL_PARCEL_LOOKUP_SENTRY_TAGS } from './backendCadastralParcelRegistry';
 import { CADASTRAL_PARCEL_FIXTURES } from './cadastral-parcel-fixtures';
 import type { CadastralParcelLookupResponse } from './cadastral-parcel.types';
 
@@ -31,6 +33,10 @@ export class CadastralParcelLookupService {
     );
 
     if (!normalizedCadastralKey) {
+      this.captureMiss(BACKEND_CADASTRAL_PARCEL_LOOKUP_SENTRY_TAGS.invalidKey, {
+        countryCode,
+        cadastralKey: params.cadastralKey,
+      });
       return {
         found: false,
         code: 'CADASTRAL_PARCEL_NOT_FOUND',
@@ -45,6 +51,11 @@ export class CadastralParcelLookupService {
     );
 
     if (!fixture) {
+      this.captureMiss(BACKEND_CADASTRAL_PARCEL_LOOKUP_SENTRY_TAGS.miss, {
+        countryCode,
+        cadastralKey: params.cadastralKey,
+        normalizedCadastralKey,
+      });
       return {
         found: false,
         code: 'CADASTRAL_PARCEL_NOT_FOUND',
@@ -64,5 +75,15 @@ export class CadastralParcelLookupService {
       geometry: fixture.geometry,
       registryAttribution: fixture.registryAttribution,
     };
+  }
+
+  private captureMiss(tag: string, extra: Record<string, string | undefined>) {
+    Sentry.withScope((scope) => {
+      scope.setTag('cadastral.lookup', tag);
+      for (const [key, value] of Object.entries(extra)) {
+        if (value) scope.setExtra(key, value);
+      }
+      Sentry.captureMessage('cadastral_parcel_lookup_miss', 'info');
+    });
   }
 }

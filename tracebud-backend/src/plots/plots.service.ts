@@ -1,11 +1,13 @@
 import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
 import { Pool } from 'pg';
 import { resolveFarmerIdsForTenant, isFarmerInTenant } from '../common/tenant-farmer-scope';
-import {
-  claimSelfLinkedFarmerProfileForAuthUser,
+import { claimSelfLinkedFarmerProfileForAuthUser,
   isFarmerProfileOwnedByUser,
   listFarmerProfileIdsForUser,
 } from '../auth/farmer-ownership';
+import { claimCampaignInvitesForFieldFarmer } from '../requests/claim-campaign-invites-for-field-farmer';
+import { claimCampaignInviteByToken } from '../requests/claim-campaign-invite-by-token';
+import { normalizeFarmerPhoneE164 } from '../contacts/crm-contact-reachability';
 import { PG_POOL } from '../db/db.module';
 import { plotKindEnum } from '../db/schema';
 import { CreatePlotDto } from './dto/create-plot.dto';
@@ -128,6 +130,7 @@ export interface PlotAssignmentExportAuditEvent {
 @Injectable()
 export class PlotsService {
   private geometryCaptureColumnAvailable: boolean | null = null;
+  private geometryApprovalColumnsAvailable: boolean | null = null;
   private clientPlotIdColumnAvailable: boolean | null = null;
 
   constructor(
@@ -158,6 +161,24 @@ export class PlotsService {
     );
     this.geometryCaptureColumnAvailable = (res.rowCount ?? 0) > 0;
     return this.geometryCaptureColumnAvailable;
+  }
+
+  private async plotHasGeometryApprovalColumns(): Promise<boolean> {
+    if (this.geometryApprovalColumnsAvailable !== null) {
+      return this.geometryApprovalColumnsAvailable;
+    }
+    const res = await this.pool.query(
+      `
+        SELECT 1
+        FROM information_schema.columns
+        WHERE table_schema = 'public'
+          AND table_name = 'plot'
+          AND column_name = 'geometry_approved_at'
+        LIMIT 1
+      `,
+    );
+    this.geometryApprovalColumnsAvailable = (res.rowCount ?? 0) > 0;
+    return this.geometryApprovalColumnsAvailable;
   }
 
   private async plotHasClientPlotIdColumn(): Promise<boolean> {
@@ -485,6 +506,9 @@ export class PlotsService {
     countryCode?: string;
     fullName?: string | null;
     email?: string | null;
+    phoneE164?: string | null;
+    campaignId?: string | null;
+    claimToken?: string | null;
   }): Promise<{ created: boolean }> {
     const created = await this.ensureFarmerProfileForPlot(params.farmerId, params.userId, {
       countryCode: params.countryCode,
@@ -495,6 +519,33 @@ export class PlotsService {
       params.farmerId,
       params.userId,
     );
+    const claimToken = params.claimToken?.trim() || null;
+    const campaignId = params.campaignId?.trim() || null;
+    const verifiedPhone = normalizeFarmerPhoneE164(params.phoneE164);
+    if (claimToken && campaignId && verifiedPhone) {
+      const tokenClaim = await claimCampaignInviteByToken(this.pool, {
+        campaignId,
+        token: claimToken,
+        farmerProfileId: params.farmerId,
+        verifiedPhoneE164: verifiedPhone,
+        actorUserId: params.userId,
+      }).catch(() => ({ claimed: false as const, reason: 'not_found' as const }));
+      if (!tokenClaim.claimed && tokenClaim.reason === 'phone_mismatch') {
+        throw new ForbiddenException(
+          'This invite was sent to a different phone number. Sign in with the phone that received the WhatsApp message.',
+        );
+      }
+      if (!tokenClaim.claimed && tokenClaim.reason === 'expired') {
+        throw new ForbiddenException('This campaign invite has expired. Ask your buyer to resend the request.');
+      }
+    } else if (params.email?.trim()) {
+      await claimCampaignInvitesForFieldFarmer(this.pool, {
+        recipientEmail: params.email,
+        farmerProfileId: params.farmerId,
+        actorUserId: params.userId,
+        campaignId,
+      }).catch(() => undefined);
+    }
     if (params.fullName?.trim()) {
       await this.pool.query(
         `
@@ -613,6 +664,18 @@ export class PlotsService {
     return true;
   }
 
+  /** Delegated producer bootstrap for cooperative enumeration provisional sync. */
+  async ensureDelegatedProducerProfile(
+    farmerId: string,
+    authUserId: string,
+    options: { tenantId: string; producerDisplayName?: string | null },
+  ): Promise<void> {
+    await this.ensureFarmerProfileForPlot(farmerId, authUserId, {
+      tenantId: options.tenantId,
+      producerDisplayName: options.producerDisplayName ?? null,
+    });
+  }
+
   private async linkProducerToTenantDirectory(input: {
     tenantId: string | null;
     farmerId: string;
@@ -672,6 +735,7 @@ export class PlotsService {
       productionSystem,
       producerContactId,
       geometryCapture,
+      assignmentId,
     } = createDto;
     const displayName = createDto.name?.trim() || null;
     const plotName = displayName || clientPlotId;
@@ -978,6 +1042,17 @@ export class PlotsService {
         [row.id, clientPlotId.trim()],
       );
       row.client_plot_id = clientPlotId.trim();
+    }
+
+    if (assignmentId?.trim() && userId && row?.id) {
+      try {
+        await this.createAssignment(String(row.id), assignmentId.trim(), userId);
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01' && code !== '23505') {
+          throw error;
+        }
+      }
     }
 
     return row;
@@ -2207,6 +2282,10 @@ export class PlotsService {
     const geometryCaptureSelect = hasGeometryCapture
       ? 'p.geometry_capture'
       : 'NULL::jsonb AS geometry_capture';
+    const hasGeometryApproval = await this.plotHasGeometryApprovalColumns();
+    const geometryApprovalSelect = hasGeometryApproval
+      ? 'p.geometry_approved_at, p.geometry_approved_by_user_id'
+      : 'NULL::timestamptz AS geometry_approved_at, NULL::uuid AS geometry_approved_by_user_id';
 
     const res = await this.pool.query(
       `
@@ -2219,6 +2298,7 @@ export class PlotsService {
           p.declared_area_ha,
           p.status,
           ${geometryCaptureSelect},
+          ${geometryApprovalSelect},
           ST_AsGeoJSON(p.geometry) AS geometry_geojson,
           COALESCE(cc.full_name, ua.name, LEFT(fp.id::text, 8)) AS farmer_name
         FROM plot p
@@ -2270,12 +2350,58 @@ export class PlotsService {
       status: row.status as string,
       geometry,
       geometry_capture: row.geometry_capture ?? null,
+      geometry_approved_at: row.geometry_approved_at ?? null,
+      geometry_approved_by_user_id: row.geometry_approved_by_user_id ?? null,
       ground_truth_photos: {
         clearance_verified_count: groundTruthPhotos.clearanceVerifiedCount,
         min_required: groundTruthPhotos.minRequired,
         clearance_eligible: groundTruthPhotos.clearanceEligible,
         total_count: groundTruthPhotos.totalCount,
       },
+    };
+  }
+
+  async approvePlotGeometry(plotId: string, userId: string) {
+    const hasGeometryApproval = await this.plotHasGeometryApprovalColumns();
+    if (!hasGeometryApproval) {
+      throw new BadRequestException('Geometry approval is not available on this database.');
+    }
+
+    const res = await this.pool.query(
+      `
+        UPDATE plot
+        SET
+          geometry_approved_at = NOW(),
+          geometry_approved_by_user_id = $2::uuid,
+          updated_at = NOW()
+        WHERE id = $1::uuid
+        RETURNING id, geometry_approved_at, geometry_approved_by_user_id
+      `,
+      [plotId, userId],
+    );
+    if (res.rowCount === 0) {
+      throw new BadRequestException('Plot not found');
+    }
+
+    await this.pool.query(
+      `
+        INSERT INTO audit_log (user_id, event_type, payload)
+        VALUES ($1, $2, $3::jsonb)
+      `,
+      [
+        userId,
+        'plot_geometry_approved',
+        JSON.stringify({
+          plotId,
+          geometryApprovedAt: res.rows[0].geometry_approved_at,
+        }),
+      ],
+    );
+
+    return {
+      id: res.rows[0].id as string,
+      geometry_approved_at: res.rows[0].geometry_approved_at as string,
+      geometry_approved_by_user_id: res.rows[0].geometry_approved_by_user_id as string,
     };
   }
 
@@ -3168,6 +3294,17 @@ export class PlotsService {
       }
     }
 
+    if (await this.plotHasGeometryApprovalColumns()) {
+      await this.pool.query(
+        `
+          UPDATE plot
+          SET geometry_approved_at = NULL, geometry_approved_by_user_id = NULL
+          WHERE id = $1::uuid
+        `,
+        [plotId],
+      );
+    }
+
     await this.pool.query(
       `
         INSERT INTO audit_log (user_id, device_id, event_type, payload)
@@ -3207,6 +3344,110 @@ export class PlotsService {
       areaHa: row.area_ha,
       declaredAreaHa: row.declared_area_ha,
       geometryGeoJson: row.geometry_geojson,
+    };
+  }
+
+  /**
+   * Compact restore cursor for field-app pull: plots, vouchers, and audit watermarks per farmer.
+   */
+  async buildFieldSyncDeltaForAuthUser(userId: string, sinceRaw?: string) {
+    const authUserId = userId.trim();
+    if (!authUserId) {
+      return { serverTime: new Date().toISOString(), farmers: [] as Array<Record<string, unknown>> };
+    }
+
+    const sinceMs = sinceRaw ? Number(sinceRaw) : NaN;
+    const sinceIso =
+      Number.isFinite(sinceMs) && sinceMs > 0
+        ? new Date(sinceMs).toISOString()
+        : null;
+
+    const farmerIds = await this.listFarmerProfileIdsForAuthUser(authUserId);
+    if (farmerIds.length === 0) {
+      return { serverTime: new Date().toISOString(), farmers: [] };
+    }
+
+    const plotsRes = await this.pool.query<{
+      farmer_id: string;
+      plot_id: string;
+      updated_at: string;
+    }>(
+      `
+        SELECT p.farmer_id, p.id AS plot_id, p.updated_at
+        FROM plot p
+        WHERE p.farmer_id = ANY($1::uuid[])
+          ${sinceIso ? 'AND p.updated_at >= $2::timestamptz' : ''}
+        ORDER BY p.updated_at DESC
+      `,
+      sinceIso ? [farmerIds, sinceIso] : [farmerIds],
+    );
+
+    const auditRes = await this.pool.query<{
+      farmer_id: string;
+      latest_audit_at: string | null;
+    }>(
+      `
+        SELECT
+          payload ->> 'farmerId' AS farmer_id,
+          MAX(timestamp)::text AS latest_audit_at
+        FROM audit_log
+        WHERE payload ->> 'farmerId' = ANY(
+          SELECT unnest($1::text[])
+        )
+        GROUP BY payload ->> 'farmerId'
+      `,
+      [farmerIds.map((id) => String(id))],
+    );
+
+    const voucherRes = await this.pool.query<{
+      farmer_id: string;
+      voucher_id: string;
+      created_at: string;
+    }>(
+      `
+        SELECT DISTINCT ON (v.id)
+          v.farmer_id,
+          v.id AS voucher_id,
+          v.created_at
+        FROM voucher v
+        LEFT JOIN harvest_transaction tx ON tx.id = v.transaction_id
+        LEFT JOIN plot p ON p.id = tx.plot_id
+        WHERE tx.created_by = $1::uuid
+           OR v.farmer_id = ANY($2::uuid[])
+           OR tx.farmer_id = ANY($2::uuid[])
+           OR p.farmer_id = ANY($2::uuid[])
+        ORDER BY v.id, v.created_at DESC
+      `,
+      [authUserId, farmerIds],
+    );
+
+    const auditByFarmer = new Map(
+      auditRes.rows.map((row) => [row.farmer_id, row.latest_audit_at]),
+    );
+    const plotsByFarmer = new Map<string, Array<{ id: string; updatedAt: string }>>();
+    for (const row of plotsRes.rows) {
+      const bucket = plotsByFarmer.get(row.farmer_id) ?? [];
+      bucket.push({ id: row.plot_id, updatedAt: row.updated_at });
+      plotsByFarmer.set(row.farmer_id, bucket);
+    }
+    const vouchersByFarmer = new Map<string, string[]>();
+    for (const row of voucherRes.rows) {
+      const bucket = vouchersByFarmer.get(row.farmer_id) ?? [];
+      bucket.push(row.voucher_id);
+      vouchersByFarmer.set(row.farmer_id, bucket);
+    }
+
+    const farmers = farmerIds.map((farmerId) => ({
+      farmerId,
+      plots: plotsByFarmer.get(farmerId) ?? [],
+      voucherIds: vouchersByFarmer.get(farmerId) ?? [],
+      latestAuditAt: auditByFarmer.get(farmerId) ?? null,
+    }));
+
+    return {
+      serverTime: new Date().toISOString(),
+      since: sinceIso,
+      farmers,
     };
   }
 }

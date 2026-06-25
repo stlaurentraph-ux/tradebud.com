@@ -84,5 +84,13 @@ export class CreatePlotDto {
   })
   @IsOptional()
   geometryCapture?: Record<string, unknown>;
+
+  @ApiProperty({
+    required: false,
+    description: 'Active agent assignment id when mapping on behalf of a roster member.',
+  })
+  @IsOptional()
+  @IsString()
+  assignmentId?: string;
 }
 

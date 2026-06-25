@@ -1,4 +1,5 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
+import type { FieldSyncRestoreScope } from '@/features/sync/fieldSyncRestoreScope';
 import { restoreLocalDeclarationsFromServer } from '@/features/sync/restoreLocalDeclarationsFromServer';
 import { restoreLocalEvidenceFromServer } from '@/features/sync/restoreLocalEvidenceFromServer';
 import { restoreLocalPlotPhotosFromServerAudit } from '@/features/sync/restoreLocalGroundTruthPhotosFromServer';
@@ -13,6 +14,7 @@ export type RestoreFarmerCloudStateParams = {
   localPlots: Plot[];
   /** When true, skip declaration restore (media-only focus refresh). */
   mediaOnly?: boolean;
+  restoreScope?: FieldSyncRestoreScope;
 };
 
 export type RestoreFarmerCloudStateResult = {
@@ -26,6 +28,14 @@ export type RestoreFarmerCloudStateResult = {
   offlinePacksQueued: number;
   fetchFailed: boolean;
   downloadFailed: number;
+};
+
+const emptyPhotoRestore = {
+  groundTruthRestored: 0,
+  landTitleRestored: 0,
+  fetchFailed: false,
+  downloadFailed: 0,
+  skippedUnlinked: 0,
 };
 
 /** Single orchestrator for all cross-device restore steps after plot linking. */
@@ -59,16 +69,23 @@ export async function restoreFarmerCloudState(
       declarationRestore.legalRestored;
   }
 
+  const skipAuditPhotos =
+    params.restoreScope != null && !params.restoreScope.restoreFarmerAuditArtifacts;
+
   const [photos, evidence, devicePrefs, profilePhoto, mappingDraft] = await Promise.all([
-    restoreLocalPlotPhotosFromServerAudit({
-      apiFarmerId: params.apiFarmerId,
-      ownedFarmerIds: params.ownedFarmerIds,
-      localPlots: params.localPlots,
-    }),
+    skipAuditPhotos
+      ? Promise.resolve(emptyPhotoRestore)
+      : restoreLocalPlotPhotosFromServerAudit({
+          apiFarmerId: params.apiFarmerId,
+          ownedFarmerIds: params.ownedFarmerIds,
+          localPlots: params.localPlots,
+          restoreScope: params.restoreScope,
+        }),
     restoreLocalEvidenceFromServer({
       apiFarmerId: params.apiFarmerId,
       ownedFarmerIds: params.ownedFarmerIds,
       localPlots: params.localPlots,
+      restoreScope: params.restoreScope,
     }),
     restoreLocalFieldDevicePreferencesFromServer({
       apiFarmerId: params.apiFarmerId,

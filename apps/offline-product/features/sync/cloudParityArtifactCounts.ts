@@ -1,4 +1,7 @@
 import type { AuditLogRow } from '@/features/sync/fetchMergedAuditEventsForFarmer';
+import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
+import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
+import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
 import {
   FARMER_PROFILE_PHOTO_AUDIT,
   PLOT_MAPPING_DRAFT_AUDIT,
@@ -78,6 +81,49 @@ export function countServerDeclarationSignals(auditRows: readonly AuditLogRow[])
     }
   }
   return { producerAudit, plotAttestations: plotIds.size, legalSynced };
+}
+
+/** Restorable declaration gaps on this device (not raw server audit totals). */
+export function measureDeclarationParityMissing(params: {
+  auditRows: readonly AuditLogRow[];
+  localPlots: Plot[];
+  plotServerLinks: Record<string, string>;
+  backendPlots?: unknown[];
+  localFarmer?: FarmerProfile;
+}): {
+  producerMissingOnDevice: boolean;
+  plotAttestationsMissingOnDevice: number;
+} {
+  const producerMissingOnDevice =
+    !hasProducerAttestationsComplete(params.localFarmer) &&
+    params.auditRows.some((row) => row.event_type === 'producer_attestations_updated');
+
+  const serverDeclaredPlotIds = new Set<string>();
+  for (const row of params.auditRows) {
+    if (row.event_type !== 'plot_compliance_declared') continue;
+    const plotId = String(row.payload?.plotId ?? '').trim();
+    if (plotId) serverDeclaredPlotIds.add(plotId);
+  }
+
+  let plotAttestationsMissingOnDevice = 0;
+  for (const plot of params.localPlots) {
+    if (plot.landTenureDeclared && plot.noDeforestationDeclared) continue;
+    const linkedServerId = params.plotServerLinks[plot.id]?.trim();
+    const hasServerAudit =
+      serverDeclaredPlotIds.has(plot.id) ||
+      (linkedServerId ? serverDeclaredPlotIds.has(linkedServerId) : false) ||
+      [...serverDeclaredPlotIds].some((serverPlotId) =>
+        resolveLocalPlotIdForServerPlot({
+          serverPlotId,
+          localPlots: params.localPlots,
+          plotServerLinks: params.plotServerLinks,
+          backendPlots: params.backendPlots ?? [],
+        }) === plot.id,
+      );
+    if (hasServerAudit) plotAttestationsMissingOnDevice += 1;
+  }
+
+  return { producerMissingOnDevice, plotAttestationsMissingOnDevice };
 }
 
 export function gapCount(server: number | null, local: number): number {

@@ -6,9 +6,10 @@ import { createLaunchServiceMock } from '../testing/launch-service.mock';
 import { HarvestService } from '../harvest/harvest.service';
 import { ConsentService } from '../consent/consent.service';
 import { ReportsController } from './reports.controller';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = 'tb_api_access_test';
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
@@ -23,7 +24,7 @@ function makeResponseMock() {
   };
 }
 
-describeIfDb('API integration: package/report access policy', () => {
+describe('API integration: package/report access policy', () => {
   let pool: Pool;
   let harvestController: HarvestController;
   let reportsController: ReportsController;

@@ -24,7 +24,7 @@ export function createAuthSheetStyles(c: AppColors, isDark: boolean) {
       paddingHorizontal: 16,
       paddingTop: 14,
       paddingBottom: 16,
-      gap: 8,
+      gap: Spacing.sm,
       borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
       borderColor: c.border,
       zIndex: 1,
@@ -84,6 +84,23 @@ export function createAuthSheetStyles(c: AppColors, isDark: boolean) {
     textLinkLabel: {
       color: c.link,
       fontSize: 14,
+    },
+    authOrRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: Spacing.sm,
+      width: '100%',
+      marginVertical: 2,
+    },
+    authOrLine: {
+      flex: 1,
+      height: StyleSheet.hairlineWidth,
+      backgroundColor: c.borderStrong,
+    },
+    authOrText: {
+      color: c.textMuted,
+      fontSize: 13,
+      textTransform: 'lowercase',
     },
     welcomeTitle: {
       color: c.tint,

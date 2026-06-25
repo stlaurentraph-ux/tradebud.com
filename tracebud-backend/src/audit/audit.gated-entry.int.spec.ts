@@ -1,16 +1,18 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { AuditController } from './audit.controller';
+import { AuditWriteService } from './audit-write.service';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_audit_gated_entry_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
   return connectionString;
 }
 
-describeIfDb('AuditController integration: gated-entry telemetry listing', () => {
+describe('AuditController integration: gated-entry telemetry listing', () => {
   let pool: Pool;
   let controller: AuditController;
 
@@ -51,7 +53,8 @@ describeIfDb('AuditController integration: gated-entry telemetry listing', () =>
       )
     `);
 
-    controller = new AuditController(pool as any);
+    const auditWriteService = new AuditWriteService(pool as any);
+    controller = new AuditController(pool as any, auditWriteService);
   }, 20_000);
 
   afterAll(async () => {

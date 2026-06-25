@@ -1,8 +1,10 @@
 'use client';
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { InboxFulfillmentDialog } from '@/components/inbox/inbox-fulfillment-dialog';
+import { InboundCampaignBanner } from '@/components/inbox/inbound-campaign-banner';
 import { PermissionGate } from '@/components/common/permission-gate';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,23 +28,40 @@ import {
   getInboxStatusLabel,
   getInboxTableColumnLabel,
 } from '@/lib/workflow-terminology-labels';
+import {
+  DASHBOARD_INBOX_UI_STATUSES,
+  mapInboxStatusToUi,
+  type DashboardInboxUiStatus,
+} from '@/lib/dashboardCrmOutreachRegistry';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
+import {
+  extractCampaignFromNextPath,
+  findInboxRequestForCampaign,
+  persistPendingSupplierCampaignId,
+} from '@/lib/supplier-campaign-redirect';
+import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
-type InboxStatus = 'Pending' | 'Fulfilled';
+type InboxStatus = DashboardInboxUiStatus;
 
-const INBOX_STATUS_TABS: InboxStatus[] = ['Pending', 'Fulfilled'];
+const INBOX_STATUS_TABS: InboxStatus[] = [...DASHBOARD_INBOX_UI_STATUSES];
 
 const statusBadgeClass: Record<InboxStatus, string> = {
   Pending: 'bg-amber-500/15 text-amber-700',
   Fulfilled: 'bg-emerald-500/15 text-emerald-700',
 };
 
-function mapStatus(request: InboxRequest): InboxStatus {
-  return request.status === 'PENDING' ? 'Pending' : 'Fulfilled';
+export default function InboxPage() {
+  return (
+    <SearchParamsPageBoundary>
+      <InboxPageContent />
+    </SearchParamsPageBoundary>
+  );
 }
 
-export default function InboxPage() {
+function InboxPageContent() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const role = user?.active_role;
   const isImporter = role === 'importer';
@@ -52,15 +71,41 @@ export default function InboxPage() {
   const [statusTab, setStatusTab] = useState<InboxStatus>('Pending');
   const [selectedRequest, setSelectedRequest] = useState<InboxRequest | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const trackedCampaignRef = useRef<string | null>(null);
+
+  const campaignFromQuery =
+    searchParams.get('campaign')?.trim() ||
+    extractCampaignFromNextPath(searchParams.get('next')) ||
+    null;
+
+  useEffect(() => {
+    if (campaignFromQuery) persistPendingSupplierCampaignId(campaignFromQuery);
+  }, [campaignFromQuery]);
 
   const mappedRequests = useMemo(
     () =>
       backendRequests.map((request) => ({
         ...request,
-        displayStatus: mapStatus(request),
+        displayStatus: mapInboxStatusToUi(request.status),
       })),
     [backendRequests],
   );
+
+  const highlightedRequest = useMemo(() => {
+    if (!campaignFromQuery) return undefined;
+    return findInboxRequestForCampaign(mappedRequests, campaignFromQuery, user?.tenant_id);
+  }, [campaignFromQuery, mappedRequests, user?.tenant_id]);
+
+  useEffect(() => {
+    if (!highlightedRequest || isLoading) return;
+    if (trackedCampaignRef.current === campaignFromQuery) return;
+    trackedCampaignRef.current = campaignFromQuery;
+    trackDashboardEvent(DASHBOARD_EVENTS.INBOUND_CAMPAIGN_REQUEST_VIEWED, {
+      campaign_id: highlightedRequest.campaign_id,
+      request_id: highlightedRequest.id,
+      status: highlightedRequest.displayStatus,
+    });
+  }, [campaignFromQuery, highlightedRequest, isLoading]);
 
   const filteredRequests = useMemo(
     () => mappedRequests.filter((request) => request.displayStatus === statusTab),
@@ -76,8 +121,20 @@ export default function InboxPage() {
     requestId: string,
     payload: { notes?: string; evidencePlotIds?: string[]; evidencePackageIds?: string[] },
   ) => {
-    await respond(requestId, payload);
-    await reload();
+    const request = backendRequests.find((item) => item.id === requestId);
+    try {
+      await respond(requestId, payload);
+      trackDashboardEvent(DASHBOARD_EVENTS.INBOX_RESPOND_SUCCESS, {
+        request_type: request?.request_type ?? 'unknown',
+      });
+      await reload();
+    } catch (error) {
+      trackDashboardEvent(DASHBOARD_EVENTS.INBOX_RESPOND_FAILURE, {
+        request_type: request?.request_type ?? 'unknown',
+        reason: error instanceof Error ? error.message : 'unknown',
+      });
+      throw error;
+    }
   };
 
   const pageTitle = getInboxPageTitle(role, t);
@@ -92,6 +149,14 @@ export default function InboxPage() {
       />
 
       <div className="flex-1 space-y-6 p-6">
+        {highlightedRequest && highlightedRequest.displayStatus === 'Pending' ? (
+          <InboundCampaignBanner
+            request={highlightedRequest}
+            onFulfill={() => openFulfillment(highlightedRequest)}
+            t={t}
+          />
+        ) : null}
+
         <Card>
           <CardHeader>
             <CardTitle>{getInboxCardTitle(role, t)}</CardTitle>
@@ -136,31 +201,38 @@ export default function InboxPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell className="font-medium">{request.id}</TableCell>
-                      <TableCell>{request.title}</TableCell>
-                      <TableCell>{request.from_org}</TableCell>
-                      <TableCell>{request.request_type.replace(/_/g, ' ').toLowerCase()}</TableCell>
-                      <TableCell>{new Date(request.due_at).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <Badge className={statusBadgeClass[request.displayStatus]}>
-                          {getInboxStatusLabel(request.displayStatus, t)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {request.displayStatus === 'Pending' ? (
-                          <PermissionGate permission="requests:respond">
-                            <Button size="sm" onClick={() => openFulfillment(request)}>
-                              {getInboxFulfillButtonLabel(t)}
-                            </Button>
-                          </PermissionGate>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">{getInboxCompletedLabel(t)}</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredRequests.map((request) => {
+                    const isHighlighted = highlightedRequest?.id === request.id;
+                    return (
+                      <TableRow
+                        key={request.id}
+                        className={isHighlighted ? 'bg-blue-50/70 ring-1 ring-inset ring-blue-200' : undefined}
+                        data-testid={isHighlighted ? 'inbox-row-highlighted' : undefined}
+                      >
+                        <TableCell className="font-medium">{request.id}</TableCell>
+                        <TableCell>{request.title}</TableCell>
+                        <TableCell>{request.from_org}</TableCell>
+                        <TableCell>{request.request_type.replace(/_/g, ' ').toLowerCase()}</TableCell>
+                        <TableCell>{new Date(request.due_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <Badge className={statusBadgeClass[request.displayStatus]}>
+                            {getInboxStatusLabel(request.displayStatus, t)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {request.displayStatus === 'Pending' ? (
+                            <PermissionGate permission="requests:respond">
+                              <Button size="sm" onClick={() => openFulfillment(request)}>
+                                {getInboxFulfillButtonLabel(t)}
+                              </Button>
+                            </PermissionGate>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">{getInboxCompletedLabel(t)}</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             )}

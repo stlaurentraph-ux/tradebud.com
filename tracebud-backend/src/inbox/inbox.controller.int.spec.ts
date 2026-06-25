@@ -3,9 +3,10 @@ import { Pool } from 'pg';
 import { createInboxTablesForIntTest } from '../testing/inbox-tables.fixture';
 import { InboxController } from './inbox.controller';
 import { InboxService } from './inbox.service';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_inbox_controller_int_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, targetSchema: string): string {
@@ -13,7 +14,7 @@ function withSearchPath(connectionString: string, targetSchema: string): string 
   return `${connectionString}${separator}options=-csearch_path%3D${targetSchema}%2Cpublic`;
 }
 
-describeIfDb('InboxController integration: tenant claim + role policy', () => {
+describe('InboxController integration: tenant claim + role policy', () => {
   jest.setTimeout(30_000);
   let pool: Pool;
   let service: InboxService;

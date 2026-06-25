@@ -1,12 +1,30 @@
 import { ForbiddenException } from '@nestjs/common';
 import { AuditController } from './audit.controller';
+import { AuditWriteService } from './audit-write.service';
+
+function makeController(pool: { query: jest.Mock }) {
+  const auditWriteService = {
+    appendEvent: jest.fn(async ({ dto, user }) => {
+      const write = new AuditWriteService(pool as any);
+      return write.appendEvent({ dto, user });
+    }),
+    appendBatch: jest.fn(async (params) => {
+      const write = new AuditWriteService(pool as any);
+      return write.appendBatch(params);
+    }),
+  };
+  return {
+    controller: new AuditController(pool as any, auditWriteService as any),
+    auditWriteService,
+  };
+}
 
 describe('AuditController tenant-claim and role checks', () => {
   it('rejects create for dashboard users without tenant claim or field-app actor', async () => {
     const pool = {
       query: jest.fn(async () => ({ rows: [] })),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool);
 
     await expect(
       controller.create(
@@ -23,12 +41,15 @@ describe('AuditController tenant-claim and role checks', () => {
   });
 
   it('allows create for linked field-app farmer without tenant claim', async () => {
+    // deriveRoleFromSupabaseUser defaults to 'farmer' for users without a role claim,
+    // so assertTenantClaimOrFieldActor passes without a DB round-trip.
+    // No clientEventId in the DTO, so only the INSERT is issued.
     const pool = {
-      query: jest.fn().mockResolvedValue({
+      query: jest.fn().mockResolvedValueOnce({
         rows: [{ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' }],
       }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.create(
@@ -49,7 +70,7 @@ describe('AuditController tenant-claim and role checks', () => {
           },
         },
       ),
-    ).resolves.toEqual({ id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' });
+    ).resolves.toEqual({ ok: true, id: 'evt_1', timestamp: '2026-06-20T12:00:00.000Z' });
 
     expect(pool.query).toHaveBeenLastCalledWith(
       expect.stringContaining('INSERT INTO audit_log'),
@@ -63,7 +84,7 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('rejects list when tenant claim is missing', async () => {
     const pool = { query: jest.fn() };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.list(undefined, undefined, undefined, undefined, {
@@ -79,7 +100,7 @@ describe('AuditController tenant-claim and role checks', () => {
         .mockResolvedValueOnce({ rowCount: 1, rows: [{ id: 'farmer_1' }] })
         .mockResolvedValueOnce({ rows: [{ id: 'evt_decl_1' }] }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.list('dcdd88e5-13e6-45d6-8e09-e6f1968e7e17', undefined, undefined, '50', {
@@ -90,7 +111,7 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('allows list when tenant claim is present', async () => {
     const pool = { query: jest.fn().mockResolvedValue({ rows: [{ id: 'evt_1' }] }) };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.list(undefined, undefined, undefined, undefined, {
@@ -101,7 +122,7 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('rejects gated-entry list when tenant claim is missing', async () => {
     const pool = { query: jest.fn() };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.listGatedEntry(undefined, undefined, undefined, undefined, undefined, {
@@ -117,7 +138,7 @@ describe('AuditController tenant-claim and role checks', () => {
         .mockResolvedValueOnce({ rows: [{ total: 1 }] })
         .mockResolvedValueOnce({ rows: [{ id: 'evt_gate_1' }] }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.listGatedEntry(undefined, undefined, undefined, undefined, undefined, {
@@ -138,7 +159,7 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('rejects invalid pagination parameters for gated-entry list', async () => {
     const pool = { query: jest.fn() };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.listGatedEntry(undefined, '0', '50', '0', undefined, {
@@ -149,7 +170,7 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('rejects invalid sort parameter for gated-entry list', async () => {
     const pool = { query: jest.fn() };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.listGatedEntry(undefined, '24', '20', '0', 'sideways' as any, {
@@ -177,7 +198,7 @@ describe('AuditController tenant-claim and role checks', () => {
         })
         .mockResolvedValueOnce({ rows: [] }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     const response = { setHeader: jest.fn() };
 
     const csv = await controller.exportGatedEntryCsv(
@@ -238,7 +259,7 @@ describe('AuditController tenant-claim and role checks', () => {
           rows: [{ id: 'evt_export_1', event_type: 'dashboard_gated_entry_exported' }],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.listGatedEntryExports('24', '10', '0', 'desc', {
@@ -264,7 +285,7 @@ describe('AuditController tenant-claim and role checks', () => {
           ],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.listAssignmentExports('24', '10', '0', 'desc', undefined, undefined, {
@@ -290,7 +311,7 @@ describe('AuditController tenant-claim and role checks', () => {
           rows: [{ id: 'evt_assign_2', event_type: 'plot_assignment_export_succeeded' }],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await controller.listAssignmentExports('24', '10', '0', 'desc', 'succeeded', 'active', {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
@@ -323,7 +344,7 @@ describe('AuditController tenant-claim and role checks', () => {
         ],
       }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     const response = { setHeader: jest.fn() };
 
     const csv = await controller.exportAssignmentExportsCsv(
@@ -354,7 +375,7 @@ describe('AuditController tenant-claim and role checks', () => {
           ],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.listRiskScoreActivity('24', '10', '0', 'desc', undefined, undefined, {
@@ -380,7 +401,7 @@ describe('AuditController tenant-claim and role checks', () => {
           rows: [{ id: 'evt_risk_2', event_type: 'dds_package_risk_score_medium' }],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await controller.listRiskScoreActivity('24', '10', '0', 'desc', 'medium', 'medium', {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
@@ -414,7 +435,7 @@ describe('AuditController tenant-claim and role checks', () => {
         ],
       }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     const response = { setHeader: jest.fn() };
 
     const csv = await controller.exportRiskScoreActivityCsv(
@@ -445,7 +466,7 @@ describe('AuditController tenant-claim and role checks', () => {
           ],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     await expect(
       controller.listFilingActivity('24', '10', '0', 'desc', undefined, {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
@@ -482,7 +503,7 @@ describe('AuditController tenant-claim and role checks', () => {
         ],
       }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     const response = { setHeader: jest.fn() };
     const csv = await controller.exportFilingActivityCsv(
       '24',
@@ -508,7 +529,7 @@ describe('AuditController tenant-claim and role checks', () => {
           rows: [{ id: 'evt_chat_1', event_type: 'chat_thread_created' }],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     await expect(
       controller.listChatThreadActivity('24', '10', '0', 'desc', 'created', {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
@@ -530,7 +551,7 @@ describe('AuditController tenant-claim and role checks', () => {
           rows: [{ id: 'evt_chat_2', event_type: 'chat_thread_resolved' }],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     await controller.listChatThreadActivity('24', '10', '0', 'desc', 'resolved', {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
     });
@@ -550,7 +571,7 @@ describe('AuditController tenant-claim and role checks', () => {
           rows: [{ id: 'evt_wf_1', event_type: 'workflow_stage_transitioned' }],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     await expect(
       controller.listWorkflowActivity('24', '10', '0', 'desc', 'stage_transitioned', undefined, {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
@@ -572,7 +593,7 @@ describe('AuditController tenant-claim and role checks', () => {
           rows: [{ id: 'evt_wf_1', event_type: 'workflow_stage_sla_warning' }],
         }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     await controller.listWorkflowActivity('24', '10', '0', 'desc', 'sla_warning', 'warning', {
       user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
     });
@@ -615,7 +636,7 @@ describe('AuditController tenant-claim and role checks', () => {
         ],
       }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     await expect(
       controller.getDashboardDiagnosticsSummary('24', {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
@@ -678,7 +699,7 @@ describe('AuditController tenant-claim and role checks', () => {
         ],
       }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
     await expect(
       controller.getDashboardDiagnosticsSummary('24', {
         user: { id: 'user_1', email: 'farmer@example.com', app_metadata: { tenant_id: 'tenant_1' } },
@@ -726,7 +747,7 @@ describe('AuditController tenant-claim and role checks', () => {
         ],
       }),
     };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.resolveGatedEntryActors(
@@ -745,7 +766,7 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('rejects actor lookup when ids include invalid uuid values', async () => {
     const pool = { query: jest.fn() };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.resolveGatedEntryActors('not-a-uuid,11111111-1111-1111-1111-111111111111', {
@@ -757,7 +778,7 @@ describe('AuditController tenant-claim and role checks', () => {
 
   it('rejects actor lookup when ids are missing', async () => {
     const pool = { query: jest.fn() };
-    const controller = new AuditController(pool as any);
+    const { controller } = makeController(pool as any);
 
     await expect(
       controller.resolveGatedEntryActors(undefined, {

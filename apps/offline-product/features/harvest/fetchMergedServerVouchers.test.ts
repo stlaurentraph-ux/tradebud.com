@@ -16,11 +16,29 @@ vi.mock('@/features/api/syncAuthSession', () => ({
   getAuthenticatedSupabaseClient: vi.fn(async () => null),
 }));
 
-import { fetchMergedServerVouchers } from './fetchMergedServerVouchers';
+vi.mock('@/features/harvest/supplementVoucherHarvestDates', () => ({
+  supplementVoucherHarvestDatesFromSupabase: vi.fn(async (rows: unknown[]) => rows),
+}));
+
+vi.mock('@/features/sync/syncQueueMutex', () => ({
+  getSyncQueueLockSnapshot: vi.fn(() => ({
+    locked: false,
+    phase: 'idle',
+    lockStartedAt: null,
+    waitingSince: null,
+    waiterCount: 0,
+  })),
+}));
+
+import {
+  fetchMergedServerVouchers,
+  resetMergedServerVouchersCacheForTests,
+} from './fetchMergedServerVouchers';
 
 describe('fetchMergedServerVouchers', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    resetMergedServerVouchersCacheForTests();
     mocks.getAccessTokenFromSupabaseWithTimeout.mockResolvedValue('token');
     mocks.getTracebudApiBaseUrl.mockReturnValue('https://api.example.com');
     vi.stubGlobal(

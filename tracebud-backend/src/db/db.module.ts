@@ -3,9 +3,11 @@ import { setDefaultResultOrder } from 'node:dns';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from './schema';
+import { buildPgPoolConfig, collectDatabaseUrlWarnings } from './pg-pool-config';
+import { assertProdDatabaseUrl } from './supabase-db-refs';
+import { PgPoolShutdownService } from './pg-pool-shutdown.service';
 
-export const DRIZZLE = Symbol('DRIZZLE');
-export const PG_POOL = Symbol('PG_POOL');
+import { DRIZZLE, PG_POOL } from './db.tokens';
 
 // Railway and some hosts cannot reach Supabase direct `db.*` IPv6 endpoints.
 setDefaultResultOrder('ipv4first');
@@ -16,19 +18,15 @@ function createPgPool(): Pool {
     throw new Error('DATABASE_URL is not configured.');
   }
 
-  const pool = new Pool({
-    connectionString,
-    ssl: connectionString.includes('localhost')
-      ? false
-      : {
-          rejectUnauthorized: false,
-        },
-    max: Number(process.env.PG_POOL_MAX ?? 10),
-    idleTimeoutMillis: 30_000,
-    connectionTimeoutMillis: 10_000,
-    keepAlive: true,
-    options: '-c search_path=public,extensions,integrations,commercial,internal,ops,crm,gtm',
-  });
+  if (process.env.NODE_ENV === 'production') {
+    assertProdDatabaseUrl(connectionString);
+  }
+
+  for (const warning of collectDatabaseUrlWarnings(connectionString)) {
+    console.warn(`[pg] ${warning}`);
+  }
+
+  const pool = new Pool(buildPgPoolConfig(connectionString));
 
   // Idle clients dropped by Supabase pooler must not take down the process.
   pool.on('error', (err) => {
@@ -51,7 +49,10 @@ function createPgPool(): Pool {
       },
       inject: [PG_POOL],
     },
+    PgPoolShutdownService,
   ],
   exports: [DRIZZLE, PG_POOL],
 })
 export class DbModule {}
+
+export { DRIZZLE, PG_POOL } from './db.tokens';

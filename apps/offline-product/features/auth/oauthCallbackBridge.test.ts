@@ -14,7 +14,7 @@ import {
   cancelOAuthCallbackWait,
   deliverOAuthCallbackUrl,
   endOAuthCallbackWait,
-} from './oauthCallbackBridge';
+} from './oauthCallbackWaiter';
 
 describe('oauthCallbackBridge', () => {
   beforeEach(() => {

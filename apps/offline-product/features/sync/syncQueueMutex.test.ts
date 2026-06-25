@@ -5,6 +5,7 @@ import {
 } from './syncProgressCaption';
 import {
   getSyncQueueLockSnapshot,
+  releaseStaleSyncQueueLockIfNeeded,
   resetSyncQueueLockForTests,
   setSyncQueuePhase,
   SyncQueueLockTimeoutError,
@@ -61,6 +62,23 @@ describe('withSyncQueueLock', () => {
 
     releaseFirst?.();
     await first;
+  });
+
+  it('releases a stale lock before granting a new holder', async () => {
+    resetSyncQueueLockForTests();
+    void withSyncQueueLock(async () => {
+      await new Promise(() => undefined);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(getSyncQueueLockSnapshot().locked).toBe(true);
+
+    const snap = getSyncQueueLockSnapshot();
+    expect(releaseStaleSyncQueueLockIfNeeded((snap.lockStartedAt ?? 0) + 200_000)).toBe(true);
+    expect(getSyncQueueLockSnapshot().locked).toBe(false);
+
+    await expect(withSyncQueueLock(async () => 'recovered', { waitMs: 30 })).resolves.toBe(
+      'recovered',
+    );
   });
 
   it('waits indefinitely when waitMs is never', async () => {

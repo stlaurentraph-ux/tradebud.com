@@ -5,14 +5,8 @@ import { router } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { Button } from '@/components/ui/button';
 import { Colors, Spacing } from '@/constants/theme';
-import { sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
-import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
-import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
-import {
-  hasSyncAuthSession,
-  hydrateSyncAuthFromSettings,
-} from '@/features/api/syncAuthSession';
+import { runOAuthColdStartCallback } from '@/features/auth/oauthOrchestrator';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -21,7 +15,7 @@ type CallbackPhase = 'loading' | 'error' | 'success';
 
 /**
  * Deep-link target for OAuth (tracebudoffline:// or exp://…/auth/callback).
- * Usually handled in-app by WebBrowser; this route covers cold-start returns.
+ * Cold-start returns are handled here; warm-app callbacks go through oauthOrchestrator.
  */
 export default function AuthCallbackScreen() {
   const { t } = useLanguage();
@@ -51,7 +45,19 @@ export default function AuthCallbackScreen() {
       const url = await getInitialURL();
       if (runId !== runIdRef.current) return;
 
-      if (!url) {
+      const outcome = await runOAuthColdStartCallback({
+        url,
+        farmerId: farmer?.id,
+        localPlots: plots,
+      });
+      if (runId !== runIdRef.current) return;
+
+      if (outcome.status === 'delivered_to_waiter') {
+        router.replace('/(tabs)');
+        return;
+      }
+
+      if (outcome.status === 'missing_url') {
         const message = t('auth_callback_missing_url');
         setErrorMessage(message);
         setPhase('error');
@@ -67,44 +73,23 @@ export default function AuthCallbackScreen() {
         return;
       }
 
-      if (deliverOAuthCallbackUrl(url)) {
-        router.replace('/(tabs)');
-        return;
-      }
-
-      await hydrateSyncAuthFromSettings();
-      if (hasSyncAuthSession()) {
+      if (outcome.status === 'already_signed_in' || outcome.status === 'completed') {
         finishSuccess();
         return;
       }
 
-      const session = await sessionFromOAuthCallbackUrl(url);
-      if (runId !== runIdRef.current) return;
-
-      const result = await completeOAuthFarmerSession({
-        session,
-        farmerId: farmer?.id,
-        localPlots: plots,
+      const message = formatSignInErrorMessage(t, outcome.message);
+      setErrorMessage(message);
+      setPhase('error');
+      trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
+        source: 'cold_start',
+        reason: outcome.message,
       });
-      if (runId !== runIdRef.current) return;
-
-      if (!result.ok) {
-        const message = formatSignInErrorMessage(t, result.message);
-        setErrorMessage(message);
-        setPhase('error');
-        trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
-          source: 'cold_start',
-          reason: result.message,
-        });
-        trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
-          method: 'oauth',
-          source: 'cold_start',
-          reason: result.message,
-        });
-        return;
-      }
-
-      finishSuccess();
+      trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+        method: 'oauth',
+        source: 'cold_start',
+        reason: outcome.message,
+      });
     } catch (e) {
       if (runId !== runIdRef.current) return;
       const raw = e instanceof Error ? e.message : String(e);
@@ -135,6 +120,7 @@ export default function AuthCallbackScreen() {
   if (phase === 'error') {
     return (
       <View
+        testID="auth-callback-error"
         style={{
           flex: 1,
           alignItems: 'center',
@@ -143,7 +129,11 @@ export default function AuthCallbackScreen() {
           gap: Spacing.md,
         }}
       >
-        <ThemedText type="subtitle" style={{ textAlign: 'center' }}>
+        <ThemedText
+          testID="auth-callback-error-title"
+          type="subtitle"
+          style={{ textAlign: 'center' }}
+        >
           {t('auth_callback_error_title')}
         </ThemedText>
         <ThemedText type="default" style={{ textAlign: 'center', color: Colors.light.textMuted }}>
@@ -158,7 +148,10 @@ export default function AuthCallbackScreen() {
   }
 
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+    <View
+      testID="auth-callback-loading"
+      style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}
+    >
       <ActivityIndicator size="large" />
       <ThemedText type="default" style={{ marginTop: 16, textAlign: 'center' }}>
         {phase === 'success' ? t('auth_callback_success') : t('sign_in_oauth_busy')}

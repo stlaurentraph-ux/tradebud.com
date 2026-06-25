@@ -15,9 +15,10 @@ import { PlotsService } from './plots.service';
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
 import { TenureParseService } from './tenure-parse.service';
 import { EvidenceDocumentsService } from './evidence-documents.service';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_plots_sync_api_int_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
@@ -52,7 +53,7 @@ class TestAuthGuard implements CanActivate {
   }
 }
 
-describeIfDb('Plots sync API integration: tenant + HLC envelope', () => {
+describe('Plots sync API integration: tenant + HLC envelope', () => {
   let pool: Pool;
   let app: INestApplication;
   let plotsService: PlotsService;

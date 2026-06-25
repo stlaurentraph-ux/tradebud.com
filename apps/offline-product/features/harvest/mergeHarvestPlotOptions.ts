@@ -153,18 +153,19 @@ export function buildMergedHarvestPlots(params: {
   farmerId?: string | null;
   plotServerLinks?: PlotServerLinks | null;
 }): HarvestPlotOption[] {
+  const backendPlots = Array.isArray(params.backendPlots) ? params.backendPlots : [];
   const scopedLocal = resolveLocalPlotsForFarmer(params.localPlots, params.farmerId);
   const links = params.plotServerLinks ?? null;
   const byId = new Map<string, HarvestPlotOption>();
   const localIdsLinkedToServer = new Set<string>();
 
-  for (const row of params.backendPlots) {
+  for (const row of backendPlots) {
     const id = String((row as { id?: unknown })?.id ?? '');
     if (!id) continue;
 
     const localMatch =
       params.localPlots.find((lp) => {
-        const resolved = resolveServerPlotIdForLocal(lp, params.backendPlots, links);
+        const resolved = resolveServerPlotIdForLocal(lp, backendPlots, links);
         return resolved === id;
       }) ?? null;
 
@@ -200,8 +201,8 @@ export function buildMergedHarvestPlots(params: {
     const persisted = links?.[lp.id]?.trim();
     if (persisted) {
       const linkStillValid =
-        params.backendPlots.length === 0 ||
-        (params.backendPlots as { id?: unknown }[]).some(
+        backendPlots.length === 0 ||
+        (backendPlots as { id?: unknown }[]).some(
           (row) => String(row?.id ?? '') === persisted,
         );
       if (linkStillValid) {

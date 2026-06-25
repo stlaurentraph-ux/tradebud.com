@@ -28,6 +28,16 @@ import {
   getSignupCopy,
   getSignupStepMeta,
 } from '@/lib/workflow-terminology-labels';
+import {
+  extractClaimFromNextPath,
+  persistPendingDeliveryClaimRef,
+  resolvePostAuthIntakeRedirect,
+} from '@/lib/delivery-intake-redirect';
+import {
+  extractCampaignFromNextPath,
+  persistPendingSupplierCampaignId,
+  resolvePostAuthNetworkRedirect,
+} from '@/lib/supplier-campaign-redirect';
 import { SearchParamsPageBoundary } from '@/components/routing/search-params-page-boundary';
 
 type Step = 1 | 2 | 3;
@@ -116,6 +126,10 @@ function CreateAccountPageContent() {
   const localeContext = useContext(LocaleContext);
   const t = localeContext?.t;
   const resumeWorkspace = searchParams.get('resume') === 'workspace';
+  const claimFromQuery =
+    searchParams.get('claim')?.trim() || extractClaimFromNextPath(searchParams.get('next'));
+  const campaignFromQuery =
+    searchParams.get('campaign')?.trim() || extractCampaignFromNextPath(searchParams.get('next'));
   const [step, setStep] = useState<Step>(resumeWorkspace ? 2 : 1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -141,6 +155,11 @@ function CreateAccountPageContent() {
 
   const prefillRole = parsePrefillRole(searchParams.get('role'));
   const effectivePrimaryRole = workspaceData.primaryRole || prefillRole;
+
+  useEffect(() => {
+    if (claimFromQuery) persistPendingDeliveryClaimRef(claimFromQuery);
+    if (campaignFromQuery) persistPendingSupplierCampaignId(campaignFromQuery);
+  }, [claimFromQuery, campaignFromQuery]);
 
   useEffect(() => {
     if (!resumeWorkspace || !isAuthenticated) return;
@@ -274,7 +293,14 @@ function CreateAccountPageContent() {
       }
     } finally {
       setIsSubmitting(false);
-      router.push(getRedirectUrl(effectivePrimaryRole));
+      router.push(
+        resolvePostAuthNetworkRedirect({
+          claimRef: claimFromQuery,
+          campaignId: campaignFromQuery,
+          fallbackPath: getRedirectUrl(effectivePrimaryRole),
+          resolveClaim: resolvePostAuthIntakeRedirect,
+        }),
+      );
     }
   };
 

@@ -47,6 +47,7 @@ const eligibleVoucher = {
   farmer_id: 'farmer_1',
   kg: 420,
   eligible_for_package: true,
+  directed_to_tenant: false,
   package_id: null,
 };
 

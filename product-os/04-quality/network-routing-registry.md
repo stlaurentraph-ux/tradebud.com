@@ -1,0 +1,92 @@
+# Network routing registry (field app ↔ dashboard)
+
+Cross-surface handoffs where contact email or tenant id must land on the correct workspace or field producer.
+
+**Code mirror:** `tracebud-backend/src/network/networkRoutingRegistry.ts`  
+**Email resolver:** `tracebud-backend/src/network/email-to-tenant-resolution.ts`  
+**CI guard:** `backend-network-routing-guard.mjs` (bundled in `npm run qa:structural`)
+
+## Email → tenant resolution (shared)
+
+Both **farmer delivery routing** and **campaign inbox fan-out** use the same resolver:
+
+| Source table | When used |
+|--------------|-----------|
+| `tenant_signup_contacts` | Primary lookup for workspace signup emails |
+| `admin_users` | Fallback for invited operators not yet in signup contacts |
+
+Module: `resolveTenantIdsByEmails` / `resolveTenantIdForContactEmail`.
+
+## Flows
+
+### `field_delivery_to_buyer_tenant`
+
+Farmer records harvest with buyer picker, email, or QR-only.
+
+| Step | Surface | Requirement |
+|------|---------|-------------|
+| 1 | Field app `DeliveryRecipientFields` | Pick buyer, enter email, or QR-only |
+| 2 | Backend `resolveVoucherDeliveryRecipient` | Email → tenant via shared resolver |
+| 3 | Backend `ensureActiveConsentForDirectedDelivery` | Auto-create/activate `SHIPMENT_PREPARATION` grant when tenant resolves |
+| 3b | Backend `queueDeliveryBuyerInvite` | Unknown dashboard email → store on voucher + `voucher_buyer_invites` row + optional Resend email |
+| 3c | Backend `claimDeliveryBuyerInvitesOnSignup` | New buyer signup claims pending invites (`launch.service.ts`) |
+| 4 | Backend harvest create | Sets `voucher.intended_recipient_tenant_id` or `intended_recipient_email`; returns `buyerInvite` |
+| 5 | Buyer dashboard vouchers | Farmer in tenant scope **and** intended recipient match |
+
+**Field app surfaces:** `DeliveryRecipientFields`, `submitHarvest`, `completeHarvestSubmitFlow`, `deliveryBuyerInviteMessages`, `MultiPlotDeliveryWizard`, `harvests.tsx`.
+
+**Invite row lifecycle:** `voucher_buyer_invites.status` — `pending` → `sent` (Resend) → `claimed` (buyer signup).
+
+**Integration test:** `src/network/network-routing-delivery.int.spec.ts`
+
+### `dashboard_consent_to_field_app`
+
+Organisation requests data access from `/farmers/[id]`.
+
+| Step | Surface | Requirement |
+|------|---------|-------------|
+| 1 | Dashboard | `POST /v1/farmers/:id/consent-requests` |
+| 2 | Backend | `consent_grants` row `pending` + optional Expo push |
+| 3 | Field app `/data-sharing` | Farmer approve/deny/revoke (offline queue supported) |
+
+**Integration test:** `src/consent/consent-lineage-revoke.int.spec.ts`
+
+### `dashboard_campaign_inbox_fanout`
+
+Bulk outreach from importer/exporter/cooperative to contact emails.
+
+| Step | Surface | Requirement |
+|------|---------|-------------|
+| 1 | Dashboard send campaign | `POST /v1/requests/campaigns/:id/send` |
+| 2 | Backend inbox fan-out | Email → tenant; skip self-tenant and unresolved |
+| 2b | Backend `queueCampaignRecipientInvites` | Unresolved emails → `campaign_recipient_invites` (`sent`); phone-only CRM targets → `desk_only` (`pending`) keyed by `contact_id` |
+| 3 | Recipient dashboard `/inbox` | `inbox_requests` row per distinct recipient tenant |
+
+**Note:** Field producers without a workspace tenant receive campaign **email/CTA only** until signup.
+
+### `dashboard_campaign_supplier_onboarding`
+
+Off-platform supplier targeted by request campaign.
+
+| Step | Surface | Requirement |
+|------|---------|-------------|
+| 1 | Campaign email CTA | Accept → `/requests/intent` → login/signup with `campaign` context |
+| 2 | Signup / login | `supplier-campaign-redirect.ts` → `/inbox?campaign={id}` |
+| 3 | Backend claim | `claimPendingCampaignRecipientInvitesOnSignup` + inbox backfill fallback |
+| 4 | Dashboard `/inbox` | `InboundCampaignBanner` + highlighted pending row |
+| 5 | Sender outreach timeline | `GET /v1/requests/campaigns/:id/decisions` → `recipients[]` onboarding status (`invite_sent` → `signed_up` → `accepted`/`fulfilled`) |
+
+**Dashboard modules:** `lib/supplier-campaign-redirect.ts`, `app/inbox/page.tsx`, `components/inbox/inbound-campaign-banner.tsx`, `components/requests/campaign-decisions-dialog.tsx`, `lib/campaign-recipient-timeline.ts`
+
+## Guards
+
+- `backend-network-routing-guard.mjs` — resolver wired in delivery + inbox; consent in tenant scope; registry modules exist
+- `voucher-delivery-routing.spec.ts` — unit tests for consent gate + email resolution
+- `test:integration:network-routing` — consent → delivery → buyer voucher list
+- `test:integration:supplier-onboarding` — campaign invite → signup claim → CRM submitted
+
+## When changing routing
+
+1. Update resolver, registry mirror, and this doc together.
+2. Extend integration test if preconditions change.
+3. Run `cd tracebud-backend && npm run qa:structural`.

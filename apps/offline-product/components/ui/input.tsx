@@ -1,5 +1,6 @@
 import { forwardRef, useState } from 'react';
 import {
+  Pressable,
   TextInput,
   StyleSheet,
   View,
@@ -7,6 +8,7 @@ import {
   type TextInputProps,
   type ViewStyle,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Radius, Spacing, Typography } from '@/constants/theme';
 import { useAppColors } from '@/features/theme/useThemedStyles';
 
@@ -16,12 +18,34 @@ export interface InputProps extends TextInputProps {
   error?: boolean;
   /** Tighter padding for compact forms (e.g. auth sheets). */
   dense?: boolean;
+  /** Eye toggle for password fields (iOS + Android). Requires secureTextEntry. */
+  showPasswordToggle?: boolean;
+  showPasswordAccessibilityLabel?: string;
+  hidePasswordAccessibilityLabel?: string;
 }
 
 export const Input = forwardRef<TextInput, InputProps>(
-  ({ label, style, containerStyle, error = false, dense = false, onFocus, onBlur, ...props }, ref) => {
+  (
+    {
+      label,
+      style,
+      containerStyle,
+      error = false,
+      dense = false,
+      onFocus,
+      onBlur,
+      showPasswordToggle = false,
+      showPasswordAccessibilityLabel = 'Show password',
+      hidePasswordAccessibilityLabel = 'Hide password',
+      secureTextEntry,
+      ...props
+    },
+    ref,
+  ) => {
     const [focused, setFocused] = useState(false);
+    const [passwordVisible, setPasswordVisible] = useState(false);
     const colors = useAppColors();
+    const obscurePassword = secureTextEntry === true && !(showPasswordToggle && passwordVisible);
 
     return (
       <View style={containerStyle}>
@@ -34,6 +58,7 @@ export const Input = forwardRef<TextInput, InputProps>(
           style={[
             styles.container,
             dense && styles.containerDense,
+            showPasswordToggle && styles.containerWithToggle,
             {
               backgroundColor: colors.inputBackground,
               borderColor: error
@@ -46,8 +71,14 @@ export const Input = forwardRef<TextInput, InputProps>(
         >
           <TextInput
             ref={ref}
-            style={[styles.input, { color: colors.text }, style]}
+            style={[
+              styles.input,
+              showPasswordToggle && styles.inputWithToggle,
+              { color: colors.text },
+              style,
+            ]}
             placeholderTextColor={colors.inputPlaceholder}
+            secureTextEntry={obscurePassword}
             onFocus={(e) => {
               setFocused(true);
               onFocus?.(e);
@@ -58,6 +89,23 @@ export const Input = forwardRef<TextInput, InputProps>(
             }}
             {...props}
           />
+          {showPasswordToggle ? (
+            <Pressable
+              onPress={() => setPasswordVisible((visible) => !visible)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                passwordVisible ? hidePasswordAccessibilityLabel : showPasswordAccessibilityLabel
+              }
+              hitSlop={8}
+              style={styles.passwordToggle}
+            >
+              <Ionicons
+                name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                size={20}
+                color={colors.iconMuted}
+              />
+            </Pressable>
+          ) : null}
         </View>
       </View>
     );
@@ -86,5 +134,16 @@ const styles = StyleSheet.create({
   input: {
     ...Typography.sizes.base,
     padding: 0,
+  },
+  containerWithToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputWithToggle: {
+    flex: 1,
+    paddingRight: Spacing.xs,
+  },
+  passwordToggle: {
+    paddingLeft: Spacing.xs,
   },
 });

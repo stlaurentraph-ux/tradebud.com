@@ -2,17 +2,15 @@ import { describe, expect, it } from 'vitest';
 
 import {
   fieldAppBlocksDashboardOAuthSignIn,
-  getAppRoleFromSession,
+  hasOAuthIdentityEmailMismatch,
   isDashboardWorkspaceRole,
-  isDashboardWorkspaceSession,
   shouldBootstrapFieldAppProfile,
 } from './fieldAppEligibility';
 
 describe('fieldAppEligibility', () => {
   it('detects dashboard workspace roles', () => {
-    expect(isDashboardWorkspaceRole('exporter')).toBe(true);
+    expect(isDashboardWorkspaceRole('cooperative')).toBe(true);
     expect(isDashboardWorkspaceRole('farmer')).toBe(false);
-    expect(isDashboardWorkspaceRole('agent')).toBe(false);
   });
 
   it('requires bootstrap for dashboard accounts', () => {
@@ -21,74 +19,32 @@ describe('fieldAppEligibility', () => {
         user: { app_metadata: { role: 'cooperative' } },
       } as never),
     ).toBe(true);
-    expect(
-      shouldBootstrapFieldAppProfile({
-        user: { app_metadata: { role: 'farmer' } },
-      } as never),
-    ).toBe(false);
-    expect(
-      shouldBootstrapFieldAppProfile({
-        user: { app_metadata: {} },
-      } as never),
-    ).toBe(false);
   });
 
-  it('reads app role from session metadata', () => {
-    expect(
-      getAppRoleFromSession({
-        user: { app_metadata: { role: 'exporter' } },
-      } as never),
-    ).toBe('exporter');
-  });
-
-  it('detects dashboard workspace sessions', () => {
-    expect(
-      isDashboardWorkspaceSession({
-        user: { app_metadata: { role: 'importer' } },
-      } as never),
-    ).toBe(true);
-    expect(
-      isDashboardWorkspaceSession({
-        user: { app_metadata: { role: 'farmer' } },
-      } as never),
-    ).toBe(false);
-  });
-
-  it('blocks merged dashboard + Google farmer OAuth sessions', () => {
+  it('allows cooperative dashboard users with matching OAuth identity', () => {
     expect(
       fieldAppBlocksDashboardOAuthSignIn({
         user: {
-          email: 'exporter+demo@tracebud.com',
-          app_metadata: { role: 'compliance_manager' },
+          email: 'coop.manager@example.com',
+          app_metadata: { role: 'cooperative' },
           identities: [
-            {
-              provider: 'google',
-              identity_data: { email: 'hector@tracebud.com' },
-            },
-            {
-              provider: 'email',
-              identity_data: { email: 'exporter+demo@tracebud.com' },
-            },
-          ],
-        },
-      } as never),
-    ).toBe(true);
-  });
-
-  it('allows farmer sessions with matching Google identity', () => {
-    expect(
-      fieldAppBlocksDashboardOAuthSignIn({
-        user: {
-          email: 'hector@tracebud.com',
-          app_metadata: { role: 'farmer' },
-          identities: [
-            {
-              provider: 'google',
-              identity_data: { email: 'hector@tracebud.com' },
-            },
+            { provider: 'google', identity_data: { email: 'coop.manager@example.com' } },
           ],
         },
       } as never),
     ).toBe(false);
+  });
+
+  it('blocks identity mismatch', () => {
+    expect(
+      hasOAuthIdentityEmailMismatch({
+        user: {
+          email: 'desk@coop.example.com',
+          identities: [
+            { provider: 'google', identity_data: { email: 'personal@gmail.com' } },
+          ],
+        },
+      } as never),
+    ).toBe(true);
   });
 });

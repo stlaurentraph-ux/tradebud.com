@@ -1,5 +1,6 @@
 import { formatVoucherBuyerLabel } from '@/features/harvest/deliveryReceiptModels';
 import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
+import { reconcileLocalDeliveryReceiptSyncStateFromServer } from '@/features/harvest/reconcileLocalDeliveryReceiptSyncState';
 import { resolveFieldHarvestFarmerIds } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
 import {
@@ -18,11 +19,13 @@ import {
   loadPlotServerLinks,
   persistLocalDeliveryReceipt,
   updateLocalDeliveryReceipt,
+  isLocalDeliveryReceiptPendingUpload,
   type LocalDeliveryReceiptRow,
 } from '@/features/state/persistence';
 
 export type RestoreLocalDeliveryReceiptsResult = {
   restoredCount: number;
+  reconciledCount: number;
   fetchFailed: boolean;
   skippedUnlinked: number;
   vouchers: unknown[];
@@ -94,9 +97,22 @@ export async function persistServerVouchersAsLocalReceipts(params: {
       : null;
     const stored = storedById ?? storedByQr;
     if (stored) {
+      const patch: Partial<
+        Pick<LocalDeliveryReceiptRow, 'qrCodeRef' | 'pendingSync' | 'serverPlotId' | 'recordedAt'>
+      > = {};
       if (stored.recordedAt !== recordedAt) {
-        await updateLocalDeliveryReceipt(stored.id, { recordedAt }).catch(() => undefined);
-        stored.recordedAt = recordedAt;
+        patch.recordedAt = recordedAt;
+      }
+      const serverQr = voucherQrRef(voucher);
+      const serverPlot = voucherPlotId(voucher);
+      if (isLocalDeliveryReceiptPendingUpload(stored) || !stored.qrCodeRef?.trim()) {
+        patch.pendingSync = false;
+        if (serverQr) patch.qrCodeRef = serverQr;
+        if (serverPlot) patch.serverPlotId = serverPlot;
+      }
+      if (Object.keys(patch).length > 0) {
+        await updateLocalDeliveryReceipt(stored.id, patch).catch(() => undefined);
+        Object.assign(stored, patch);
       }
       continue;
     }
@@ -161,7 +177,7 @@ export async function restoreLocalDeliveryReceiptsFromServer(params: {
   const apiFarmerId = params.apiFarmerId.trim();
   const storageFarmerId = params.profileFarmerId?.trim() || apiFarmerId;
   if (!apiFarmerId) {
-    return { restoredCount: 0, fetchFailed: false, skippedUnlinked: 0, vouchers: [] };
+    return { restoredCount: 0, reconciledCount: 0, fetchFailed: false, skippedUnlinked: 0, vouchers: [] };
   }
 
   let vouchers: readonly unknown[] = params.vouchers ?? [];
@@ -173,7 +189,7 @@ export async function restoreLocalDeliveryReceiptsFromServer(params: {
       });
       vouchers = await fetchMergedServerVouchers(voucherFarmerIds);
     } catch {
-      return { restoredCount: 0, fetchFailed: true, skippedUnlinked: 0, vouchers: [] };
+      return { restoredCount: 0, reconciledCount: 0, fetchFailed: true, skippedUnlinked: 0, vouchers: [] };
     }
   }
 
@@ -194,8 +210,16 @@ export async function restoreLocalDeliveryReceiptsFromServer(params: {
     plotServerLinks,
   });
 
+  const { reconciledCount } = await reconcileLocalDeliveryReceiptSyncStateFromServer({
+    vouchers,
+    localPlots: params.localPlots,
+    backendPlots,
+    plotServerLinks,
+  });
+
   return {
     restoredCount,
+    reconciledCount,
     fetchFailed: false,
     skippedUnlinked,
     vouchers: [...vouchers],

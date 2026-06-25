@@ -16,10 +16,21 @@ describe('plot-geometry-capture', () => {
       geometry_confidence_score: 44,
       horizontal_uncertainty_m: 17,
       capture_method: 'MOBILE_GPS',
+      capture_intent: null,
       imagery_source: null,
       offline_tiles_pack_id: null,
       recorded_at: 1_700_000_000_000,
     });
+  });
+
+  it('normalizes capture intent when provided', () => {
+    const payload = normalizePlotGeometryCaptureInput({
+      geometryConfidenceTier: 'high',
+      geometryConfidenceScore: 90,
+      captureMethod: 'MOBILE_GPS',
+      captureIntent: 'full_boundary',
+    });
+    expect(payload?.capture_intent).toBe('full_boundary');
   });
 
   it('rejects invalid tier', () => {

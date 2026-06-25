@@ -1,4 +1,11 @@
 import { Controller, Get } from '@nestjs/common';
+import {
+  collectDatabaseUrlWarnings,
+  isSupabasePoolerUrl,
+  resolvePgPoolMax,
+} from '../db/pg-pool-config';
+import { PROD_PROJECT_REF, getSupabaseProjectRef } from '../db/supabase-db-refs';
+import { getRateLimit429Snapshot } from '../http/rate-limit-observability';
 
 @Controller()
 export class HealthController {
@@ -36,9 +43,13 @@ export class HealthController {
     const pushNotifications = this.getPushNotificationReadiness();
     warnings.push(...pushNotifications.warnings);
 
+    const database = this.getDatabaseReadiness();
+    warnings.push(...database.warnings);
+
     return {
       status: 'ok',
       warnings,
+      rateLimit429: getRateLimit429Snapshot(),
       benchmarkAdminAuth: {
         claimEnforced: true,
         configured: requiredClaims.length > 0,
@@ -46,6 +57,28 @@ export class HealthController {
       },
       tenureParse,
       pushNotifications,
+      database,
+    };
+  }
+
+  private getDatabaseReadiness() {
+    const connectionString = process.env.DATABASE_URL?.trim() ?? '';
+    const warnings = collectDatabaseUrlWarnings(connectionString);
+    const projectRef = connectionString ? getSupabaseProjectRef(connectionString) : null;
+    const matchesProdProject = projectRef === PROD_PROJECT_REF;
+    if (connectionString && projectRef && !matchesProdProject) {
+      warnings.push(
+        `DATABASE_URL project ref ${projectRef} does not match Tracebud prod (${PROD_PROJECT_REF}).`,
+      );
+    }
+    return {
+      poolMaxPerReplica: resolvePgPoolMax(),
+      usesSupabasePooler: connectionString ? isSupabasePoolerUrl(connectionString) : false,
+      applicationName: process.env.PG_APPLICATION_NAME?.trim() || 'tracebud_api',
+      projectRef,
+      expectedProdProjectRef: PROD_PROJECT_REF,
+      matchesProdProject,
+      warnings,
     };
   }
 

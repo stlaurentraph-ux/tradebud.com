@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { parseBackendErrorMessage } from '@/lib/request-campaign-payload';
+import { archiveRequestCampaign, sendRequestCampaign } from '@/lib/request-campaign-client';
 import { useDemoData } from '@/lib/demo-data-context';
 import { getMockInboxRequests, mockRequestCampaigns } from '@/lib/mocks/requests';
 
@@ -42,6 +43,7 @@ export interface RequestCampaign {
   accepted_count?: number;
   pending_count?: number;
   expired_count?: number;
+  recipient_status_counts?: import('@/lib/campaign-recipient-timeline').CampaignRecipientStatusCounts;
 }
 
 function getAuthHeaders(): Record<string, string> | undefined {
@@ -245,5 +247,31 @@ export function useRequestCampaigns(tenantId: string | null) {
     [campaigns],
   );
 
-  return { campaigns, counts, isLoading, error, reload };
+  const sendDraft = async (campaignId: string) => {
+    if (demoDataEnabled) {
+      setCampaigns((prev) =>
+        prev.map((item) =>
+          item.id === campaignId ? { ...item, status: 'RUNNING', updated_at: new Date().toISOString() } : item,
+        ),
+      );
+      return;
+    }
+    await sendRequestCampaign(campaignId);
+    reload();
+  };
+
+  const archive = async (campaignId: string) => {
+    if (demoDataEnabled) {
+      setCampaigns((prev) =>
+        prev.map((item) =>
+          item.id === campaignId ? { ...item, status: 'CANCELLED', updated_at: new Date().toISOString() } : item,
+        ),
+      );
+      return;
+    }
+    await archiveRequestCampaign(campaignId);
+    reload();
+  };
+
+  return { campaigns, counts, isLoading, error, reload, sendDraft, archive };
 }

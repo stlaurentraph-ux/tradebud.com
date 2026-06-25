@@ -1,6 +1,12 @@
 import type { ContactActivityType, ProcessingFacilitySubtype } from '@/lib/contact-activity-types';
+import type {
+  DashboardContactConsentStatus,
+  DashboardContactStatus,
+} from '@/lib/dashboardCrmOutreachRegistry';
+import { DASHBOARD_EVENTS, trackDashboardEvent } from '@/lib/observability/analytics';
 
-export type ContactStatus = 'new' | 'invited' | 'engaged' | 'submitted' | 'inactive' | 'blocked';
+export type ContactStatus = DashboardContactStatus;
+export type ContactConsentStatus = DashboardContactConsentStatus;
 export type {
   ContactActivityType,
   ContactActivityType as ContactType,
@@ -10,7 +16,7 @@ export type {
 export interface ContactRecord {
   id: string;
   full_name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   organization: string | null;
   contact_type: ContactActivityType;
@@ -18,7 +24,7 @@ export interface ContactRecord {
   status: ContactStatus;
   country: string | null;
   tags: string[];
-  consent_status: 'unknown' | 'granted' | 'revoked';
+  consent_status: ContactConsentStatus;
   farmer_profile_id: string | null;
   last_activity_at: string | null;
   created_at: string;
@@ -93,8 +99,9 @@ export async function listContacts(): Promise<ContactRecord[]> {
 
 export async function createContact(input: {
   full_name: string;
-  email: string;
+  email?: string | null;
   phone?: string | null;
+  phone_only?: boolean;
   organization?: string | null;
   contact_type?: ContactActivityType;
   processing_subtype?: ProcessingFacilitySubtype | null;
@@ -102,25 +109,49 @@ export async function createContact(input: {
   tags?: string[];
   consent_status?: 'unknown' | 'granted' | 'revoked';
 }): Promise<ContactRecord> {
-  return requestJson<ContactRecord>('/api/contacts', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
+  try {
+    const created = await requestJson<ContactRecord>('/api/contacts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    trackDashboardEvent(DASHBOARD_EVENTS.CONTACT_CREATE_SUCCESS, {
+      contact_type: created.contact_type,
+    });
+    return created;
+  } catch (error) {
+    trackDashboardEvent(DASHBOARD_EVENTS.CONTACT_CREATE_FAILURE, {
+      contact_type: input.contact_type ?? 'unknown',
+      reason: error instanceof Error ? error.message : 'unknown',
+    });
+    throw error;
+  }
 }
 
 export async function updateContactStatus(id: string, status: ContactStatus): Promise<ContactRecord> {
-  return requestJson<ContactRecord>(`/api/contacts/${encodeURIComponent(id)}/status`, {
-    method: 'PATCH',
-    body: JSON.stringify({ status }),
-  });
+  try {
+    const updated = await requestJson<ContactRecord>(`/api/contacts/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    trackDashboardEvent(DASHBOARD_EVENTS.CONTACT_STATUS_CHANGED, { contact_id: id, status });
+    return updated;
+  } catch (error) {
+    trackDashboardEvent(DASHBOARD_EVENTS.CONTACT_STATUS_CHANGE_FAILURE, {
+      contact_id: id,
+      status,
+      reason: error instanceof Error ? error.message : 'unknown',
+    });
+    throw error;
+  }
 }
 
 export async function updateContact(
   id: string,
   input: {
     full_name?: string;
-    email?: string;
+    email?: string | null;
     phone?: string | null;
+    phone_only?: boolean;
     organization?: string | null;
     contact_type?: ContactActivityType;
     processing_subtype?: ProcessingFacilitySubtype | null;

@@ -4,6 +4,7 @@ import { useContext, useState } from 'react';
 import { AppHeader } from '@/components/layout/app-header';
 import { PlotMapHero } from '@/components/plots/plot-map-hero';
 import { PlotGeometryReviewerPanel } from '@/components/plots/plot-geometry-reviewer-panel';
+import { PlotGeometryApprovalCard } from '@/components/plots/plot-geometry-approval-card';
 import { PlotDetailSections } from '@/components/plots/plot-detail-sections';
 import { PlotDetailWhatsMissingCard } from '@/components/plots/plot-detail-whats-missing-card';
 import { PlotDetailProvider, usePlotDetailContext } from '@/lib/plot-detail-context';
@@ -33,6 +34,7 @@ function PlotDetailPageInner({ plotId }: { plotId: string }) {
       />
       <div className="flex-1 space-y-4 p-6 pb-24 md:pb-6">
         <PlotMapHero plotId={plotId} />
+        <PlotGeometryApprovalCard plotId={plotId} />
         <PlotGeometryReviewerPanel plotId={plotId} />
         <PlotDetailWhatsMissingCard onOpenSection={setOpenSectionRequest} />
         <PlotDetailSections

@@ -34,7 +34,7 @@ export class RequestsController {
 
   private requireRequestsAccess(req: any): void {
     const role = deriveRoleFromSupabaseUser(req?.user);
-    if (!['admin', 'exporter', 'compliance_manager'].includes(role)) {
+    if (!['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer'].includes(role)) {
       throw new ForbiddenException('This role cannot access request campaigns.');
     }
   }
@@ -178,7 +178,7 @@ export class RequestsController {
   async sendDraft(@Req() req: any, @Param('id') id: string) {
     this.requireRequestsAccess(req);
     const tenantId = this.getTenantId(req);
-    return this.requestsService.sendDraft(tenantId, id);
+    return this.requestsService.sendDraft(tenantId, id, req.user?.id ?? null);
   }
 
   @Get('campaigns/:id/decisions')
@@ -198,6 +198,37 @@ export class RequestsController {
       limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined,
       offset: Number.isFinite(parsedOffset) ? parsedOffset : undefined,
     });
+  }
+
+  @Post('campaigns/:id/recipients/resend')
+  async resendRecipientInvite(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { recipient_email?: string },
+  ) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    const recipientEmail = body?.recipient_email?.trim();
+    if (!recipientEmail) {
+      throw new BadRequestException('recipient_email is required.');
+    }
+    return this.requestsService.resendCampaignRecipientInvite(
+      tenantId,
+      id,
+      recipientEmail,
+      req.user?.id ?? null,
+    );
+  }
+
+  @Post('campaigns/:id/recipients/:contactId/desk-claim-link')
+  async issueDeskClaimLink(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Param('contactId') contactId: string,
+  ) {
+    this.requireRequestsAccess(req);
+    const tenantId = this.getTenantId(req);
+    return this.requestsService.issueCampaignDeskClaimLink(tenantId, id, contactId);
   }
 
   @Post('campaigns/:id/archive')

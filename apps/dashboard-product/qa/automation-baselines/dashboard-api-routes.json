@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T12:25:54.737Z",
+  "generatedAt": "2026-06-25T07:25:23.385Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -35,6 +35,7 @@
     "/v1/plots/{id}/deforestation-decision-history",
     "/v1/plots/{id}/geometry-history",
     "/v1/requests/campaigns",
+    "/v1/requests/campaigns/{id}/recipients/{contactId}/desk-claim-link",
     "/v1/shipment-headers",
     "/v1/shipment-headers/{id}/seal",
     "/v1/webhooks"
@@ -160,6 +161,14 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/cadastral/parcels/lookup",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/cadastral/parcels/lookup"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/contacts",
       "category": "backend-proxy",
       "backendPaths": [
@@ -280,6 +289,22 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/harvest/delivery-preview/[qrRef]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/public/harvest/delivery-preview/{qrRef}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/delivery-trip-preview/[tripRef]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/public/harvest/delivery-trip-preview/{tripRef}"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/harvest/packages",
       "category": "backend-proxy",
       "backendPaths": [
@@ -359,6 +384,14 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/harvest/vouchers/claim"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/harvest/vouchers/handoff-confirm",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/harvest/vouchers/handoff-confirm"
       ],
       "failClosed": true
     },
@@ -618,6 +651,14 @@
       "failClosed": true
     },
     {
+      "dashboardPath": "/api/plots/[id]/approve-geometry",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/plots/{id}/approve-geometry"
+      ],
+      "failClosed": true
+    },
+    {
       "dashboardPath": "/api/plots/[id]/assignments",
       "category": "backend-proxy",
       "backendPaths": [
@@ -782,6 +823,22 @@
       "dashboardPath": "/api/requests/campaigns/[id]/decisions",
       "category": "backend-proxy",
       "backendPaths": [],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/recipients/[contactId]/desk-claim-link",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/recipients/{contactId}/desk-claim-link"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/recipients/resend",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/recipients/resend"
+      ],
       "failClosed": true
     },
     {

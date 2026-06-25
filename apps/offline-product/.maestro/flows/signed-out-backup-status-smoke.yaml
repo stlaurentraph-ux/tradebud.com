@@ -1,0 +1,16 @@
+appId: com.tracebud.app
+---
+# DEVICE_SMOKE §10 subset — signed-out farmer with device-remembered server plot links.
+# Bootstrap: MAESTRO_SEED_PROFILE=backed_up_offline before this flow (nightly runner).
+- launchApp
+- tapOn:
+    id: "tab-home"
+    optional: true
+- assertVisible:
+    id: "home-backup-sync-card"
+- assertVisible:
+    id: "home-backup-status-caption"
+    text: "Backed up"
+- assertNotVisible:
+    text: ".*sign in to upload.*"
+    optional: true

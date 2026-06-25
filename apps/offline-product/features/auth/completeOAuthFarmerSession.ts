@@ -1,16 +1,19 @@
 import type { Session } from '@supabase/supabase-js';
 
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
+import { readPendingCampaignBootstrapContext } from '@/features/campaign/campaignInviteContext';
 import {
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
+import { isExistingAuthUserAtSignup } from '@/features/auth/oauthExistingAccount';
+import { deriveDisplayNameFromEmail } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile, getFieldAppEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import { fieldAppBlocksDashboardOAuthSignIn } from '@/features/auth/fieldAppEligibility';
+import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
 import type { Plot } from '@/features/state/AppStateContext';
 import { registerFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
-import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 const OAUTH_CONNECT_TIMEOUT_MS = 5_000;
 
@@ -37,10 +40,13 @@ async function runPostOAuthConnectTasks(params: {
     void ensureFarmerOAuthProfile(params.fullName, params.session).catch(() => undefined);
 
     if (params.farmerId) {
+      const { campaignId, claimToken } = await readPendingCampaignBootstrapContext();
       const bootstrap = await bootstrapFieldAppProducer(
         {
           farmerId: params.farmerId,
           fullName: params.fullName || undefined,
+          campaignId: campaignId ?? undefined,
+          claimToken: claimToken ?? undefined,
         },
         { timeoutMs: OAUTH_CONNECT_TIMEOUT_MS },
       );
@@ -56,18 +62,6 @@ async function runPostOAuthConnectTasks(params: {
     }
 
     void registerFarmerPushToken();
-
-    if (params.farmerId && params.localPlots) {
-      await Promise.race([
-        runAutoBackup({
-          farmerId: params.farmerId,
-          localPlots: params.localPlots,
-        }),
-        new Promise<void>((resolve) => {
-          setTimeout(resolve, OAUTH_CONNECT_TIMEOUT_MS);
-        }),
-      ]);
-    }
   } catch {
     // Post-connect work is best-effort and must never undo a successful OAuth sign-in.
   }
@@ -78,6 +72,8 @@ export async function completeOAuthFarmerSession(params: {
   fullName?: string;
   farmerId?: string;
   localPlots?: Plot[];
+  /** Set when completing OAuth from the create-account wizard. */
+  signupFlowStartedAtMs?: number;
 }): Promise<SignInSyncResult> {
   if (fieldAppBlocksDashboardOAuthSignIn(params.session)) {
     return { ok: false, message: 'sign_in_dashboard_account' };
@@ -94,7 +90,10 @@ export async function completeOAuthFarmerSession(params: {
   }
 
   const nameFromSession =
-    params.fullName || getNameFromSession(params.session) || '';
+    params.fullName ||
+    getNameFromSession(params.session) ||
+    deriveDisplayNameFromEmail(email) ||
+    '';
 
   await saveAndApplyOAuthSyncAuth(
     email,
@@ -103,6 +102,13 @@ export async function completeOAuthFarmerSession(params: {
     params.session.expires_at,
   );
 
+  trackOAuthStep('session_persist', {
+    provider: params.session.user.identities?.some((row) => row.provider === 'apple')
+      ? 'apple'
+      : 'google',
+    path: 'native',
+  });
+
   void runPostOAuthConnectTasks({
     fullName: nameFromSession,
     session: params.session,
@@ -110,5 +116,9 @@ export async function completeOAuthFarmerSession(params: {
     localPlots: params.localPlots,
   });
 
-  return { ok: true, missingName: !nameFromSession };
+  const existingAccount =
+    params.signupFlowStartedAtMs != null &&
+    isExistingAuthUserAtSignup(params.session, params.signupFlowStartedAtMs);
+
+  return { ok: true, missingName: !nameFromSession, existingAccount };
 }

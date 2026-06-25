@@ -16,6 +16,7 @@ import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.
 import { CadastralParcelController } from './cadastral-parcel.controller';
 import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service';
 import { FieldAppController } from './field-app.controller';
+import { FieldEnumerationService } from './field-enumeration.service';
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
 import { PlotsController } from './plots.controller';
 import { PlotsService } from './plots.service';
@@ -46,6 +47,7 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     BulkPlotImportIntegratorKeyService,
     BulkPlotImportSigningKeyService,
     CadastralParcelLookupService,
+    FieldEnumerationService,
     TenureParseService,
     EvidenceDocumentsService,
     TenureReviewAlertService,

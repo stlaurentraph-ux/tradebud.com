@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useContext } from 'react';
+import { useCallback, useEffect, useMemo, useState, useContext } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { PermissionGate } from '@/components/common/permission-gate';
@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ContactStatusPipeline } from '@/components/contacts/contact-status-pipeline';
 import { listContacts, type ContactRecord, type ContactStatus, updateContactStatus } from '@/lib/contact-service';
+import { DASHBOARD_CONTACT_STATUSES } from '@/lib/dashboardCrmOutreachRegistry';
 import type { ContactActivityType } from '@/lib/contact-activity-types';
 import { listContactActivityTypesForRole } from '@/lib/contact-activity-types';
 import { useAuth } from '@/lib/auth-context';
@@ -37,24 +39,9 @@ import { Plus, Upload } from 'lucide-react';
 import { SupplierOrganizationList } from '@/components/contacts/supplier-organization-list';
 import { groupContactsByOrganization } from '@/lib/contact-directory';
 
-const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
-const CONTACT_TABLE_COLUMN_KEYS = [
-  'name',
-  'email',
-  'organization',
-  'activity',
-  'status',
-  'consent',
-  'last_activity',
-  'update_status',
-] as const;
-type ContactTableColumnKey = (typeof CONTACT_TABLE_COLUMN_KEYS)[number];
+const CONTACT_STATUSES: ContactStatus[] = [...DASHBOARD_CONTACT_STATUSES];
 
-const CONTACT_TABLE_COLUMNS: Array<{
-  key: ContactTableColumnKey;
-  minWidth: number;
-  defaultWidth: number;
-}> = [
+const CONTACT_TABLE_COLUMNS = [
   { key: 'name', minWidth: 140, defaultWidth: 180 },
   { key: 'email', minWidth: 180, defaultWidth: 240 },
   { key: 'organization', minWidth: 140, defaultWidth: 180 },
@@ -63,7 +50,8 @@ const CONTACT_TABLE_COLUMNS: Array<{
   { key: 'consent', minWidth: 120, defaultWidth: 130 },
   { key: 'last_activity', minWidth: 180, defaultWidth: 220 },
   { key: 'update_status', minWidth: 160, defaultWidth: 180 },
-];
+] as const;
+type ContactTableColumnKey = (typeof CONTACT_TABLE_COLUMNS)[number]['key'];
 
 export default function ContactsPage() {
   const localeContext = useContext(LocaleContext);
@@ -88,7 +76,7 @@ export default function ContactsPage() {
     ),
   );
 
-  const refreshContacts = async () => {
+  const refreshContacts = useCallback(async () => {
     try {
       setError(null);
       const data = await listContacts();
@@ -97,17 +85,32 @@ export default function ContactsPage() {
       setError(nextError instanceof Error ? nextError.message : getContactsErrorMessage('load', t));
       setContacts([]);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
-    void refreshContacts();
-  }, []);
+    let cancelled = false;
+    listContacts()
+      .then((data) => {
+        if (!cancelled) setContacts(data);
+      })
+      .catch((nextError) => {
+        if (!cancelled) {
+          setError(
+            nextError instanceof Error ? nextError.message : getContactsErrorMessage('load', t),
+          );
+          setContacts([]);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   const filtered = useMemo(() => {
     return contacts.filter((contact) => {
       const matchesSearch =
         contact.full_name.toLowerCase().includes(search.toLowerCase()) ||
-        contact.email.toLowerCase().includes(search.toLowerCase()) ||
+        (contact.email ?? '').toLowerCase().includes(search.toLowerCase()) ||
         (contact.organization ?? '').toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' || contact.status === statusFilter;
       const matchesActivity =
@@ -122,6 +125,7 @@ export default function ContactsPage() {
   );
 
   const stats = useMemo(() => {
+    const submitted = contacts.filter((contact) => contact.status === 'submitted').length;
     const active = contacts.filter((contact) =>
       ['invited', 'engaged', 'submitted'].includes(contact.status),
     ).length;
@@ -133,6 +137,7 @@ export default function ContactsPage() {
         people: contacts.length,
         active,
         blocked,
+        submitted,
         total: organizations.length,
       };
     }
@@ -140,6 +145,7 @@ export default function ContactsPage() {
       total: contacts.length,
       active,
       blocked,
+      submitted,
       organizations: 0,
       people: contacts.length,
     };
@@ -177,7 +183,7 @@ export default function ContactsPage() {
         breadcrumbs={buildAppBreadcrumbs(t, { name: navName })}
       />
       <div className="flex-1 space-y-6 p-6">
-        <div className={`grid gap-4 ${useOrganizationGrouping ? 'md:grid-cols-3' : 'md:grid-cols-3'}`}>
+        <div className={`grid gap-4 md:grid-cols-4`}>
           {useOrganizationGrouping ? (
             <>
               <Card>
@@ -206,6 +212,12 @@ export default function ContactsPage() {
               <CardTitle className="text-sm">{getContactsStatLabel('active', audience, t)}</CardTitle>
             </CardHeader>
             <CardContent className="text-2xl font-bold">{stats.active}</CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm">{getContactsStatLabel('submitted', audience, t)}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-2xl font-bold text-emerald-700">{stats.submitted}</CardContent>
           </Card>
           {!useOrganizationGrouping ? (
             <Card>
@@ -374,7 +386,7 @@ export default function ContactsPage() {
                           </Badge>
                         </td>
                         <td className="px-3 py-2">
-                          <Badge variant="outline">{getContactStatusLabel(contact.status, t)}</Badge>
+                          <ContactStatusPipeline status={contact.status} t={t} />
                         </td>
                         <td className="px-3 py-2">
                           {contact.consent_status !== 'unknown' ? (

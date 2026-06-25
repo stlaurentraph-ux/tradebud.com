@@ -1,10 +1,12 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
 import { resolveFieldHarvestFarmerIds } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
+import { countServerPlotsMissingOnDevice } from '@/features/sync/countServerPlotsMissingOnDevice';
 import {
   fetchBackendPlotsForSyncScope,
   prepareFieldSyncContext,
 } from '@/features/sync/resolveFieldSyncScope';
+import { loadPlotServerLinks } from '@/features/state/persistence';
 
 export type { PostAuthSyncOfferInput } from './postAuthSyncOfferLogic';
 export {
@@ -17,6 +19,16 @@ export async function countServerPlotsForPostAuthRestore(params: {
   profileFarmerId: string;
   localPlots: Plot[];
 }): Promise<number | null> {
+  const missing = await countServerPlotsMissingOnDeviceForRestore(params);
+  if (missing != null) return missing;
+  return null;
+}
+
+/** Plots on Tracebud that restoreLocalPlotsFromServer would add (not gross count delta). */
+export async function countServerPlotsMissingOnDeviceForRestore(params: {
+  profileFarmerId: string;
+  localPlots: Plot[];
+}): Promise<number | null> {
   const profileFarmerId = params.profileFarmerId.trim();
   if (!profileFarmerId) return null;
   try {
@@ -24,11 +36,18 @@ export async function countServerPlotsForPostAuthRestore(params: {
       profileFarmerId,
       localPlots: params.localPlots,
     });
-    const rows = await fetchBackendPlotsForSyncScope({
-      farmerId: scope.farmerId,
-      ownedFarmerIds: scope.ownedFarmerIds,
+    const [rows, plotServerLinks] = await Promise.all([
+      fetchBackendPlotsForSyncScope({
+        farmerId: scope.farmerId,
+        ownedFarmerIds: scope.ownedFarmerIds,
+      }),
+      loadPlotServerLinks().catch(() => ({})),
+    ]);
+    return countServerPlotsMissingOnDevice({
+      backendPlots: rows,
+      localPlots: params.localPlots,
+      plotServerLinks: plotServerLinks as Record<string, string>,
     });
-    return rows.length;
   } catch {
     return null;
   }

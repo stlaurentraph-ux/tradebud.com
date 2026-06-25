@@ -252,6 +252,119 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/BadRequest"
+  /v1/requests/campaigns/{id}/recipients/{contactId}/desk-claim-link:
+    post:
+      tags: [Requests]
+      operationId: issueCampaignDeskClaimLink
+      summary: Issue desk QR claim link for a desk-only campaign invite
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: contactId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Desk claim link issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignDeskClaimLinkResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/BadRequest"
+  /v1/public/requests/campaigns/{id}/invite:
+    get:
+      tags: [Requests Public]
+      operationId: getCampaignInvitePublicPreview
+      summary: Validate campaign invite token for field-auth landing
+      description: Returns campaign preview when the signed claim token is valid. No auth required.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Campaign invite preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [preview]
+                properties:
+                  preview:
+                    type: object
+                    required:
+                      [campaignId, title, fromOrg, senderTenantId, deliveryChannel, recipientLabel]
+                    properties:
+                      campaignId:
+                        type: string
+                      title:
+                        type: string
+                      fromOrg:
+                        type: string
+                      dueAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      senderTenantId:
+                        type: string
+                      deliveryChannel:
+                        type: string
+                        enum: [email, whatsapp, desk_only]
+                      recipientLabel:
+                        type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Campaign invite not found
+  /v1/public/requests/campaigns/{id}/preview:
+    get:
+      tags: [Requests Public]
+      operationId: getCampaignPublicPreview
+      summary: Public campaign invite preview for field-app smart links
+      description: Returns org name, request title, and due date for a sent campaign. Used before farmer sign-in. No auth required.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+      responses:
+        "200":
+          description: Campaign preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [preview]
+                properties:
+                  preview:
+                    type: object
+                    required: [campaignId, title, fromOrg, senderTenantId]
+                    properties:
+                      campaignId:
+                        type: string
+                      title:
+                        type: string
+                      fromOrg:
+                        type: string
+                      dueAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      senderTenantId:
+                        type: string
+        "404":
+          description: Campaign not found
   /v1/plots:
     post:
       tags: [Plots]
@@ -5434,6 +5547,56 @@ components:
         decided_at: { type: string, format: date-time }
         source: { type: string }
       required: [campaign_id, recipient_email, decision, decided_at, source]
+    RequestCampaignRecipientOnboardingStatus:
+      type: string
+      enum: [fulfilled, accepted, refused, signed_up, invite_sent, on_platform]
+    RequestCampaignFulfillmentSource:
+      type: string
+      enum: [farmer_app_email, farmer_app_phone, cooperative_on_behalf]
+      nullable: true
+    RequestCampaignRecipientTimelineEntry:
+      type: object
+      properties:
+        contact_id: { type: string, nullable: true }
+        recipient_email: { type: string, format: email, nullable: true }
+        recipient_label: { type: string }
+        delivery_channel: { type: string, nullable: true }
+        onboarding_status:
+          $ref: "#/components/schemas/RequestCampaignRecipientOnboardingStatus"
+        invite_status: { type: string, nullable: true }
+        decision:
+          type: string
+          enum: [accept, refuse]
+          nullable: true
+        decision_source: { type: string, nullable: true }
+        fulfillment_source:
+          $ref: "#/components/schemas/RequestCampaignFulfillmentSource"
+        decided_at: { type: string, format: date-time, nullable: true }
+        updated_at: { type: string, format: date-time, nullable: true }
+      required:
+        [
+          contact_id,
+          recipient_email,
+          recipient_label,
+          delivery_channel,
+          onboarding_status,
+          invite_status,
+          decision,
+          decision_source,
+          fulfillment_source,
+          decided_at,
+          updated_at,
+        ]
+    RequestCampaignRecipientStatusCounts:
+      type: object
+      properties:
+        fulfilled: { type: integer, minimum: 0 }
+        accepted: { type: integer, minimum: 0 }
+        refused: { type: integer, minimum: 0 }
+        signed_up: { type: integer, minimum: 0 }
+        invite_sent: { type: integer, minimum: 0 }
+        on_platform: { type: integer, minimum: 0 }
+      required: [fulfilled, accepted, refused, signed_up, invite_sent, on_platform]
     RequestCampaignDecisionTimelineCounts:
       type: object
       properties:
@@ -5469,7 +5632,32 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/RequestCampaignDecisionRecord"
-      required: [campaign_id, tenant_id, last_synced_at, counts, pagination, decisions]
+        recipients:
+          type: array
+          items:
+            $ref: "#/components/schemas/RequestCampaignRecipientTimelineEntry"
+        recipient_status_counts:
+          $ref: "#/components/schemas/RequestCampaignRecipientStatusCounts"
+      required:
+        [
+          campaign_id,
+          tenant_id,
+          last_synced_at,
+          counts,
+          pagination,
+          decisions,
+          recipients,
+          recipient_status_counts,
+        ]
+    CampaignDeskClaimLinkResponse:
+      type: object
+      properties:
+        campaignId: { type: string }
+        contactId: { type: string }
+        recipientLabel: { type: string }
+        claimUrl: { type: string, format: uri }
+        claimExpiresAt: { type: string, format: date-time }
+      required: [campaignId, contactId, recipientLabel, claimUrl, claimExpiresAt]
     CreatePlotRequest:
       type: object
       properties:

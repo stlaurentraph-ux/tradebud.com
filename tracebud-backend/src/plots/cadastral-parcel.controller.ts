@@ -34,21 +34,23 @@ export class CadastralParcelController {
     description:
       'Returns registry polygon when available. Demo deployments ship fixture parcels only; live country adapters plug in behind the same contract.',
   })
-  @ApiQuery({ name: 'countryCode', required: true, example: 'HN' })
+  @ApiQuery({ name: 'countryCode', required: false, example: 'HN' })
+  @ApiQuery({ name: 'countryIso', required: false, example: 'HN' })
   @ApiQuery({ name: 'cadastralKey', required: true, example: '012-345-678-9' })
   async lookupParcel(
     @Query('countryCode') countryCode: string | undefined,
+    @Query('countryIso') countryIso: string | undefined,
     @Query('cadastralKey') cadastralKey: string | undefined,
     @Req() req: unknown,
   ) {
     this.assertCadastralLookupRole(req);
-    const country = countryCode?.trim();
+    const country = (countryCode ?? countryIso)?.trim();
     const key = cadastralKey?.trim();
     if (!country || !key) {
       return {
         found: false as const,
         code: 'CADASTRAL_PARCEL_NOT_FOUND' as const,
-        message: 'countryCode and cadastralKey are required.',
+        message: 'countryCode (or countryIso) and cadastralKey are required.',
       };
     }
     return this.lookupService.lookup({ countryCode: country, cadastralKey: key });

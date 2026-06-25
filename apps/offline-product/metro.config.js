@@ -1,9 +1,11 @@
+const fs = require('fs');
 const path = require('path');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
 const projectRoot = __dirname;
 const monorepoRoot = path.resolve(projectRoot, '../..');
 const appNodeModules = path.resolve(projectRoot, 'node_modules');
+const monorepoPackageJson = path.join(monorepoRoot, 'package.json');
 
 /** npm workspaces lockfile paths baked into older debug builds on device. */
 const WORKSPACE_MODULE_PREFIX = /^\.\/?apps\/offline-product\/node_modules\//;
@@ -13,7 +15,11 @@ const config = getSentryExpoConfig(projectRoot);
 
 // Field app is self-contained (Expo SDK 54 / RN 0.81). Never resolve JS from root node_modules —
 // root is Next.js and must not hoist a second react-native stack into Metro.
-config.watchFolders = [monorepoRoot];
+// EAS_NO_VCS uploads only apps/offline-product; ../../ is not a valid monorepo on the worker.
+const shouldWatchMonorepo = !process.env.EAS_BUILD && fs.existsSync(monorepoPackageJson);
+if (shouldWatchMonorepo) {
+  config.watchFolders = [monorepoRoot];
+}
 config.resolver.nodeModulesPaths = [appNodeModules];
 
 const defaultResolveRequest = config.resolver.resolveRequest;

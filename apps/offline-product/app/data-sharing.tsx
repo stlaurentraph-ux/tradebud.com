@@ -1,10 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, Share, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Constants from 'expo-constants';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useFocusEffect } from '@react-navigation/native';
 
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
@@ -38,6 +38,12 @@ import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createDataSharingScreenStyles } from '@/screenStyles/dataSharingScreenStyles';
+import { createCampaignInviteScreenStyles } from '@/screenStyles/campaignInviteScreenStyles';
+import {
+  clearPendingCampaignInviteId,
+  readPendingCampaignInviteId,
+} from '@/features/campaign/campaignInviteContext';
+import { useCampaignInvitePreview } from '@/features/campaign/useCampaignInvitePreview';
 
 type ScopeItem = 'identity' | 'plots' | 'evidence';
 
@@ -106,20 +112,23 @@ function PendingGrantCard({
   grant,
   t,
   busy,
+  highlighted,
   onApprove,
   onDeny,
 }: {
   grant: ConsentGrant;
-  t: (key: string) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
   busy: boolean;
+  highlighted?: boolean;
   onApprove: () => void;
   onDeny: () => void;
 }) {
   const colors = useAppColors();
   const styles = useThemedStyles(createDataSharingScreenStyles);
+  const campaignStyles = useThemedStyles(createCampaignInviteScreenStyles);
   const orgName = grant.grantee_org_name?.trim() || grant.grantee_tenant_id;
   return (
-    <View style={styles.pendingCard}>
+    <View style={[styles.pendingCard, highlighted ? campaignStyles.pendingCardHighlighted : null]}>
       <View style={styles.pendingAccent} />
       <View style={styles.pendingBody}>
         <View style={styles.pendingTop}>
@@ -232,9 +241,11 @@ function SettingsRow({
 
 export default function DataSharingScreen() {
   const styles = useThemedStyles(createDataSharingScreenStyles);
+  const campaignStyles = useThemedStyles(createCampaignInviteScreenStyles);
   const insets = useSafeAreaInsets();
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
+  const params = useLocalSearchParams<{ campaign?: string }>();
   const { farmer, plots } = useAppState();
   const { t } = useLanguage();
   const { isSignedIn, openSignIn } = useSignInSheet();
@@ -247,6 +258,24 @@ export default function DataSharingScreen() {
   const [erasureDetails, setErasureDetails] = useState('');
   const [erasureSubmitting, setErasureSubmitting] = useState(false);
   const [auditSyncBusy, setAuditSyncBusy] = useState(false);
+  const [campaignId, setCampaignId] = useState<string | null>(
+    typeof params.campaign === 'string' ? params.campaign.trim() || null : null,
+  );
+  const [campaignFulfilled, setCampaignFulfilled] = useState(false);
+  const [fulfillmentOrgLabel, setFulfillmentOrgLabel] = useState<string | null>(null);
+
+  const { preview: campaignPreview } = useCampaignInvitePreview(campaignId);
+
+  useEffect(() => {
+    const fromParams = typeof params.campaign === 'string' ? params.campaign.trim() : '';
+    if (fromParams) {
+      setCampaignId(fromParams);
+      return;
+    }
+    void readPendingCampaignInviteId().then((stored) => {
+      if (stored) setCampaignId(stored);
+    });
+  }, [params.campaign]);
 
   const refresh = useCallback(async () => {
     if (!isSignedIn) {
@@ -340,12 +369,34 @@ export default function DataSharingScreen() {
       Alert.alert(t('warning'), res.message ?? t('data_sharing_action_failed'));
       return;
     }
+    const matchesCampaign =
+      campaignPreview?.senderTenantId &&
+      grant.grantee_tenant_id === campaignPreview.senderTenantId;
     if (res.queued) {
       setItems((prev) => applyOptimisticConsentStatus(prev, grant.id, 'approve'));
       setHint(t('data_sharing_queued_offline'));
+      if (matchesCampaign) {
+        setCampaignFulfilled(true);
+        setFulfillmentOrgLabel(
+          grant.grantee_org_name?.trim() || campaignPreview?.fromOrg?.trim() || null,
+        );
+        void clearPendingCampaignInviteId();
+      }
       return;
     }
     trackEvent(ANALYTICS_EVENTS.CONSENT_GRANT_APPROVED, { grantId: grant.id });
+    if (matchesCampaign) {
+      trackEvent(ANALYTICS_EVENTS.CAMPAIGN_INVITE_FULFILLMENT_SUCCESS, {
+        campaignId: campaignPreview?.campaignId,
+        grantId: grant.id,
+      });
+      setCampaignFulfilled(true);
+      setFulfillmentOrgLabel(
+        grant.grantee_org_name?.trim() || campaignPreview?.fromOrg?.trim() || null,
+      );
+      void clearPendingCampaignInviteId();
+      setCampaignId(null);
+    }
     await refresh();
   };
 
@@ -403,6 +454,26 @@ export default function DataSharingScreen() {
   const pending = items.filter((g) => g.status === 'pending');
   const active = items.filter((g) => g.status === 'active');
 
+  const highlightedPendingGrantId = useMemo(() => {
+    if (!campaignPreview?.senderTenantId) return null;
+    const match = pending.find((g) => g.grantee_tenant_id === campaignPreview.senderTenantId);
+    return match?.id ?? null;
+  }, [campaignPreview?.senderTenantId, pending]);
+
+  const showCampaignMismatch = useMemo(() => {
+    if (!isSignedIn || loading || !campaignId || campaignFulfilled) return false;
+    if (!campaignPreview?.senderTenantId) return false;
+    return pending.length > 0 && !highlightedPendingGrantId;
+  }, [
+    campaignId,
+    campaignPreview?.senderTenantId,
+    campaignFulfilled,
+    highlightedPendingGrantId,
+    isSignedIn,
+    loading,
+    pending.length,
+  ]);
+
   return (
     <ThemedView style={styles.screen}>
       <LinearGradient
@@ -453,6 +524,40 @@ export default function DataSharingScreen() {
             </ThemedText>
           ) : null}
         </View>
+
+        {campaignFulfilled ? (
+          <View style={campaignStyles.successBanner}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.linkStrong} />
+            <ThemedText type="caption" style={campaignStyles.successText}>
+              {fulfillmentOrgLabel
+                ? t('data_sharing_campaign_fulfilled', { org: fulfillmentOrgLabel })
+                : t('data_sharing_campaign_fulfilled_generic')}
+            </ThemedText>
+          </View>
+        ) : campaignPreview?.fromOrg && campaignId ? (
+          <View style={campaignStyles.contextBanner}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.textWarningStrong} />
+            <ThemedText type="caption" style={campaignStyles.contextText}>
+              {t('data_sharing_campaign_context', { org: campaignPreview.fromOrg })}
+            </ThemedText>
+          </View>
+        ) : campaignId ? (
+          <View style={campaignStyles.contextBanner}>
+            <Ionicons name="information-circle-outline" size={20} color={colors.textWarningStrong} />
+            <ThemedText type="caption" style={campaignStyles.contextText}>
+              {t('data_sharing_campaign_context_generic')}
+            </ThemedText>
+          </View>
+        ) : null}
+
+        {showCampaignMismatch ? (
+          <View style={campaignStyles.mismatchBanner}>
+            <Ionicons name="help-circle-outline" size={20} color={colors.iconMuted} />
+            <ThemedText type="caption" style={campaignStyles.mismatchText}>
+              {t('data_sharing_campaign_mismatch')}
+            </ThemedText>
+          </View>
+        ) : null}
 
         {!isSignedIn ? (
           <Pressable style={styles.signInBanner} onPress={() => openSignIn({ variant: 'sync' })}>
@@ -506,10 +611,18 @@ export default function DataSharingScreen() {
                 grant={grant}
                 t={t}
                 busy={actionId === grant.id}
+                highlighted={grant.id === highlightedPendingGrantId}
                 onApprove={() => void onApprove(grant)}
                 onDeny={() => void onDeny(grant)}
               />
             ))}
+          </View>
+        ) : isSignedIn && campaignId && !loading && pending.length === 0 && !campaignFulfilled ? (
+          <View style={campaignStyles.mismatchBanner}>
+            <Ionicons name="mail-unread-outline" size={20} color={colors.iconMuted} />
+            <ThemedText type="caption" style={campaignStyles.mismatchText}>
+              {t('data_sharing_campaign_mismatch')}
+            </ThemedText>
           </View>
         ) : null}
 

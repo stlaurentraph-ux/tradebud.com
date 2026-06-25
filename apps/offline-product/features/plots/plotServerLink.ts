@@ -35,16 +35,17 @@ export function resolveServerPlotIdForLocal(
   backendRows: unknown[],
   links?: PlotServerLinks | null,
 ): string | null {
+  const rows = Array.isArray(backendRows) ? backendRows : [];
   const persisted = links?.[localPlot.id]?.trim();
   if (persisted) {
-    if (backendRows.length === 0) return persisted;
-    const row = (backendRows as { id?: unknown }[]).find(
+    if (rows.length === 0) return persisted;
+    const row = (rows as { id?: unknown }[]).find(
       (entry) => String(entry?.id ?? '') === persisted,
     );
     if (row) return persisted;
   }
 
-  const hit = findBackendPlotForLocal(localPlot, backendRows);
+  const hit = findBackendPlotForLocal(localPlot, rows);
   return hit != null && (hit as { id?: unknown }).id != null
     ? String((hit as { id: unknown }).id)
     : null;
@@ -112,6 +113,9 @@ export function resolveConfirmedServerPlotIdForLocal(
 ): string | null {
   const localPlotIds = options?.localPlotIds ?? new Set([localPlot.id]);
   const persisted = links?.[localPlot.id]?.trim();
+  if (persisted && backendRows.length === 0) {
+    return persisted;
+  }
   if (persisted && backendRows.length > 0) {
     const row = (backendRows as {
       id?: unknown;

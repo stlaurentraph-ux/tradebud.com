@@ -180,13 +180,14 @@ async function main() {
         );
       }
 
+      const authConfig = await fetchAuthManagementConfig(projectRef, accessToken);
+      const googleClientIds = (authConfig.external_google_client_id ?? '')
+        .split(',')
+        .map((entry) => entry.trim())
+        .filter(Boolean);
+
       const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
       if (iosClientId) {
-        const authConfig = await fetchAuthManagementConfig(projectRef, accessToken);
-        const googleClientIds = (authConfig.external_google_client_id ?? '')
-          .split(',')
-          .map((entry) => entry.trim())
-          .filter(Boolean);
         if (googleClientIds.includes(iosClientId)) {
           console.log('[ok] Google native: iOS client ID registered in Supabase');
         } else {
@@ -195,6 +196,29 @@ async function main() {
           );
           console.error('[fail] Google native: iOS client ID missing from Supabase Google provider');
         }
+      }
+
+      const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
+      if (androidClientId) {
+        if (googleClientIds.includes(androidClientId)) {
+          console.log('[ok] Google native: Android client ID registered in Supabase');
+        } else {
+          issues.push(
+            `Supabase Google client IDs missing Android client (${androidClientId}). Run: npm run oauth:sync-google-ids`,
+          );
+          console.error('[fail] Google native: Android client ID missing from Supabase Google provider');
+        }
+        if (androidClientId === process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim()) {
+          issues.push(
+            'EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID must be an Android OAuth client — do not reuse the Web client ID.',
+          );
+          console.error('[fail] Google native: Android client ID matches Web client ID');
+        }
+      } else {
+        warnings.push(
+          'Set EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID for native Google sign-in on Android (EAS preview/production env).',
+        );
+        console.warn('[warn] Google native: EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID not set');
       }
     } catch (error) {
       warnings.push(`Could not verify redirect allow-list: ${error.message}`);

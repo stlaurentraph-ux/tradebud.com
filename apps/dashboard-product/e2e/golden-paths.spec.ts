@@ -14,7 +14,7 @@ test('login page renders sign-in shell', async ({ page }) => {
   await page.goto('/login');
   await expect(page.getByRole('heading', { name: 'Sign in to your account' })).toBeVisible();
   await expect(page.getByLabel('Email')).toBeVisible();
-  await expect(page.getByLabel('Password')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Password' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
 });
 
@@ -25,7 +25,7 @@ test('login stub signs in with mocked Supabase grant and lands on dashboard', as
 
   await page.goto('/login');
   await page.getByLabel('Email').fill(GOLDEN_SMOKE.email);
-  await page.getByLabel('Password').fill('playwright-smoke-password');
+  await page.getByRole('textbox', { name: 'Password' }).fill('playwright-smoke-password');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
   await page.waitForURL((url) => url.pathname === '/', { timeout: 15_000 });

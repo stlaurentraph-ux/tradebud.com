@@ -3,6 +3,7 @@ export type PostAuthSyncOfferInput = {
   unsyncedPlotCount: number;
   pendingQueueCount: number;
   serverPlotCount: number | null;
+  serverPlotsMissingOnDevice?: number | null;
   localReceiptCount: number;
   serverVoucherCount: number | null;
 };
@@ -12,7 +13,10 @@ export function shouldOfferPostAuthSync(input: PostAuthSyncOfferInput): boolean 
   if (input.pendingQueueCount > 0) return true;
   if (input.unsyncedPlotCount > 0) return true;
   if (input.localPlotCount === 0 && (input.serverPlotCount ?? 0) > 0) return true;
-  if ((input.serverPlotCount ?? 0) > input.localPlotCount) return true;
+  const missingPlots =
+    input.serverPlotsMissingOnDevice ??
+    Math.max(0, (input.serverPlotCount ?? 0) - input.localPlotCount);
+  if (missingPlots > 0) return true;
   if ((input.serverVoucherCount ?? 0) > input.localReceiptCount) return true;
   return false;
 }
@@ -20,9 +24,10 @@ export function shouldOfferPostAuthSync(input: PostAuthSyncOfferInput): boolean 
 export function postAuthSyncPlotCountHint(input: PostAuthSyncOfferInput): number {
   if (input.unsyncedPlotCount > 0) return input.unsyncedPlotCount;
   if (input.pendingQueueCount > 0) return input.pendingQueueCount;
-  if ((input.serverPlotCount ?? 0) > input.localPlotCount) {
-    return (input.serverPlotCount ?? 0) - input.localPlotCount;
-  }
+  const missingPlots =
+    input.serverPlotsMissingOnDevice ??
+    Math.max(0, (input.serverPlotCount ?? 0) - input.localPlotCount);
+  if (missingPlots > 0) return missingPlots;
   if (input.localPlotCount === 0 && (input.serverPlotCount ?? 0) > 0) {
     return input.serverPlotCount ?? 0;
   }

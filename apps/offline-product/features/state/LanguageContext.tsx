@@ -15,6 +15,7 @@ import {
   localeCodes,
   type SupportedLanguage,
 } from '@/features/i18n/config';
+import { createTranslator } from '@/features/i18n/translate';
 import { messages } from '@/features/i18n/messages';
 import { getSetting, initDatabase, setSetting } from '@/features/state/persistence';
 
@@ -31,6 +32,16 @@ type LanguageContextValue = {
 };
 
 const LanguageContext = createContext<LanguageContextValue | undefined>(undefined);
+
+const fallbackLanguageContext: LanguageContextValue = {
+  lang: defaultLocale,
+  setLang: () => undefined,
+  languageCode: localeCodes[defaultLocale],
+  openLanguagePicker: () => undefined,
+  t: createTranslator(defaultLocale),
+};
+
+let warnedMissingLanguageProvider = false;
 
 export type { SupportedLanguage };
 
@@ -98,7 +109,13 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useLanguage() {
   const ctx = useContext(LanguageContext);
   if (!ctx) {
-    throw new Error('useLanguage must be used within LanguageProvider');
+    if (__DEV__ && !warnedMissingLanguageProvider) {
+      warnedMissingLanguageProvider = true;
+      console.warn(
+        'useLanguage called outside LanguageProvider — using English fallback (common after Metro fast refresh; reload JS if tabs stay wrong).',
+      );
+    }
+    return fallbackLanguageContext;
   }
   return ctx;
 }

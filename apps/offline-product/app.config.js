@@ -92,19 +92,22 @@ module.exports = ({ config }) => {
     ].filter((value, index, arr) => arr.indexOf(value) === index);
   }
 
+  const googleReversedSchemeFromClientId = (clientId) => {
+    const match = clientId && /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(clientId);
+    return match ? `com.googleusercontent.apps.${match[1]}` : null;
+  };
+
   const iosGoogleClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim();
-  const iosGoogleSchemeMatch =
-    iosGoogleClientId && /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(iosGoogleClientId);
-  if (iosGoogleSchemeMatch) {
-    const reversedScheme = `com.googleusercontent.apps.${iosGoogleSchemeMatch[1]}`;
+  const iosGoogleScheme = googleReversedSchemeFromClientId(iosGoogleClientId);
+  if (iosGoogleScheme) {
     const existingTypes = ios.infoPlist?.CFBundleURLTypes ?? [];
     const hasScheme = existingTypes.some((entry) =>
-      (entry.CFBundleURLSchemes ?? []).includes(reversedScheme),
+      (entry.CFBundleURLSchemes ?? []).includes(iosGoogleScheme),
     );
     if (!hasScheme) {
       ios.infoPlist = {
         ...(ios.infoPlist ?? {}),
-        CFBundleURLTypes: [...existingTypes, { CFBundleURLSchemes: [reversedScheme] }],
+        CFBundleURLTypes: [...existingTypes, { CFBundleURLSchemes: [iosGoogleScheme] }],
       };
     }
   }
@@ -118,22 +121,37 @@ module.exports = ({ config }) => {
     (filter) =>
       filter.data?.some((d) => d.host === 'app.tracebud.com'),
   );
+  const androidGoogleClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
+  const androidGoogleScheme = googleReversedSchemeFromClientId(androidGoogleClientId);
+  const intentFilters = [...existingFilters];
   if (!hasAppLinkFilter) {
-    android.intentFilters = [
-      ...existingFilters,
-      {
-        action: 'VIEW',
-        autoVerify: true,
-        data: [
-          {
-            scheme: 'https',
-            host: 'app.tracebud.com',
-            pathPrefix: '/auth',
-          },
-        ],
-        category: ['BROWSABLE', 'DEFAULT'],
-      },
-    ];
+    intentFilters.push({
+      action: 'VIEW',
+      autoVerify: true,
+      data: [
+        {
+          scheme: 'https',
+          host: 'app.tracebud.com',
+          pathPrefix: '/auth',
+        },
+      ],
+      category: ['BROWSABLE', 'DEFAULT'],
+    });
+  }
+  if (
+    androidGoogleScheme &&
+    !intentFilters.some((filter) =>
+      filter.data?.some((entry) => entry.scheme === androidGoogleScheme),
+    )
+  ) {
+    intentFilters.push({
+      action: 'VIEW',
+      data: [{ scheme: androidGoogleScheme }],
+      category: ['BROWSABLE', 'DEFAULT'],
+    });
+  }
+  if (intentFilters.length > existingFilters.length) {
+    android.intentFilters = intentFilters;
   }
 
   const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();

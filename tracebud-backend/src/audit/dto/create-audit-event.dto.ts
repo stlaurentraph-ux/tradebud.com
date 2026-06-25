@@ -20,4 +20,13 @@ export class CreateAuditEventDto {
   @IsString()
   @MaxLength(200)
   deviceId?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Stable idempotency key from the field app (also stored in payload.clientEventId).',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  clientEventId?: string;
 }

@@ -1,16 +1,17 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { YieldBenchmarksController } from './yield-benchmarks.controller';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = 'tb_yield_benchmarks_controller_test';
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
   return connectionString;
 }
 
-describeIfDb('YieldBenchmarksController integration', () => {
+describe('YieldBenchmarksController integration', () => {
   let pool: Pool;
   let controller: YieldBenchmarksController;
 

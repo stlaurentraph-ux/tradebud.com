@@ -125,7 +125,14 @@ describe('multiPlotDeliverySession', () => {
 
     expect(submitHarvestRecord).toHaveBeenCalledTimes(2);
     expect(results).toEqual([
-      { plotId: 'plot_a', plotName: 'A', kg: 100, status: 'synced', qrCodeRef: 'V-AAA' },
+      {
+        plotId: 'plot_a',
+        plotName: 'A',
+        kg: 100,
+        status: 'synced',
+        qrCodeRef: 'V-AAA',
+        buyerInvitePending: false,
+      },
       {
         plotId: 'plot_b',
         plotName: 'B',

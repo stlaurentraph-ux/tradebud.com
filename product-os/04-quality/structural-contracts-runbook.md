@@ -19,7 +19,12 @@ How Tracebud encodes cross-cutting invariants as **contract-as-code** so agents 
 
 | Domain | Markdown | Code mirror | Guard |
 |--------|----------|-------------|-------|
-| RBAC + shipment states | `dashboard-rbac-registry.md` | `lib/dashboardRbacRegistry.ts`, `lib/rbac.ts` | `dashboard-rbac-guard.mjs`, `dashboard-shipment-transition-guard.mjs` |
+| RBAC + shipment states | `dashboard-rbac-registry.md` | `lib/dashboardRbacRegistry.ts`, `lib/rbac.ts` | `dashboard-rbac-guard.mjs`, `dashboard-shipment-transition-guard.mjs`, `dashboard-permission-matrix-guard.mjs`, `dashboard-backend-role-parity-guard.mjs` |
+| Legal workflow + DDS | `dashboard-legal-workflow-registry.md` | `lib/dashboardLegalWorkflowRegistry.ts` | `dashboard-legal-workflow-guard.mjs` |
+| CRM + outreach | `dashboard-crm-outreach-registry.md` | `lib/dashboardCrmOutreachRegistry.ts` | `dashboard-crm-guard.mjs`, `dashboard-campaign-guard.mjs`, `dashboard-network-permission-guard.mjs`, `dashboard-backend-network-parity-guard.mjs` |
+| Compliance issues | `dashboard-compliance-issues-registry.md` | `lib/dashboardComplianceIssuesRegistry.ts` | `dashboard-compliance-issues-guard.mjs`, `dashboard-compliance-permission-guard.mjs`, `dashboard-compliance-backend-parity-guard.mjs` |
+| Exporter critical path | `dashboard-exporter-workflow-registry.md` | `lib/dashboardExporterWorkflowRegistry.ts` | `dashboard-exporter-workflow-guard.mjs` |
+| Analytics events | — | `lib/observability/analytics.ts` | `dashboard-analytics-slice-guard.mjs` (strict in `qa:structural:ci`) |
 | API regressions / proxy / e2e | — | baselines under `scripts/` | bundled in `run-structural-guards.mjs` |
 
 ### Backend (`tracebud-backend`)
@@ -30,6 +35,7 @@ How Tracebud encodes cross-cutting invariants as **contract-as-code** so agents 
 | Audit events | `backend-structural-contracts.md` | `backendAuditEventRegistry.ts` | `backend-audit-event-guard.mjs` (strict in CI) |
 | Filing states | `backend-structural-contracts.md` | `backendFilingStateRegistry.ts` | `backend-filing-state-guard.mjs` |
 | Plot compliance | `backend-plot-compliance-registry.md` | `backendPlotComplianceRegistry.ts` | `backend-plot-compliance-guard.mjs` |
+| Cross-surface routing | `network-routing-registry.md` | `network/networkRoutingRegistry.ts`, `network/email-to-tenant-resolution.ts` | `backend-network-routing-guard.mjs` |
 | Deploy / billing / tenure | — | — | bundled: deploy smoke, stripe webhook, tenure parse static, benchmark claims (CI) |
 
 ### Marketing (`apps/marketing`)

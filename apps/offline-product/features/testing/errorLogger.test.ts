@@ -42,6 +42,14 @@ describe('Error Logger', () => {
       expect(classified.category).toBe('server');
     });
 
+    it('classifies rate limit errors', () => {
+      const rateLimitError = new Error('Too many requests');
+      const classified = classifyError(rateLimitError, { statusCode: 429 });
+      expect(classified.category).toBe('server');
+      expect(classified.code).toBe('RATE_LIMITED');
+      expect(classified.statusCode).toBe(429);
+    });
+
     it('classifies unknown errors', () => {
       const unknownError = new Error('something went wrong');
       const classified = classifyError(unknownError);
@@ -113,6 +121,13 @@ describe('Error Logger', () => {
       logError(new Error('network failed'), {});
       const log = getErrorLog(1);
       expect(log[0].userMessage).toBeDefined();
+    });
+
+    it('deduplicates repeated rate-limit errors within the suppression window', () => {
+      logError(new Error('Too many requests'), { statusCode: 429, context: 'plot_fetch' });
+      logError(new Error('Too many requests'), { statusCode: 429, context: 'plot_fetch' });
+      logError(new Error('Too many requests'), { statusCode: 429, context: 'plot_fetch' });
+      expect(getErrorLog(100).length).toBe(1);
     });
   });
 

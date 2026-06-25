@@ -11,6 +11,7 @@ Documents **role gates** on Nest controllers (403 scope). Runtime ownership proo
 |----|------------|-------|
 | `harvest_dds_workspace` | `harvest/harvest.controller.ts` | exporter, cooperative, admin, compliance_manager |
 | `requests_campaigns` | `requests/requests.controller.ts` | admin, exporter, compliance_manager |
+| `requests_operational_issues` | `requests/requests.controller.ts` | admin, exporter, compliance_manager, cooperative, importer, country_reviewer, sponsor |
 | `requests_evidence` | `requests/requests.controller.ts` | admin, exporter, compliance_manager, cooperative |
 | `contacts_crm` | `contacts/contacts.controller.ts` | admin, exporter, importer, cooperative |
 | `inbox_requests` | `inbox/inbox.controller.ts` | exporter, admin, compliance_manager, agent |
@@ -21,12 +22,14 @@ Documents **role gates** on Nest controllers (403 scope). Runtime ownership proo
 | `partner_export_status` | `integrations/partner-data.controller.ts` | exporter, agent |
 | `eudr_connectivity` | `integrations/eudr.controller.ts` | exporter, agent |
 | `field_plot_sync` | `plots/plots.controller.ts` | farmer, agent (plot scope) |
+| `plots_approve_geometry` | `plots/plots.controller.ts` | exporter, compliance_manager, country_reviewer, admin |
 | `bulk_plot_import` | `plots/bulk-plot-import.controller.ts` | cooperative, exporter, admin, compliance_manager — sync preview/execute + async jobs |
 | `cadastral_parcel_lookup` | `plots/cadastral-parcel.controller.ts` | farmer, agent, exporter, cooperative, compliance_manager, admin, country_reviewer |
 
 ## Notes
 
 - `importer` appears in contacts CRM but is not an `AppRole` JWT claim today — tracked as known drift.
+- `sponsor` appears on operational issues routes but is not an `AppRole` JWT claim today — tracked as known drift.
 - Field plot sync uses assignment/ownership checks beyond role list.
 
 ## When adding a controller gate
