@@ -262,6 +262,8 @@ export default function PlotDetailScreen() {
     } catch {
       // Non-blocking; full Sync now still available from Settings.
     }
+    // Keyed on farmer?.id (identity) so a new farmer object reference does not retrigger restore; plots covers data changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmer?.id, plots]);
 
   useEffect(() => {

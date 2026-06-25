@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { Image, Linking, Modal, ScrollView, View } from 'react-native';
+import * as Sharing from 'expo-sharing';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +11,7 @@ import {
   canOpenExternally,
   decodeFpicSignatureUri,
   isImageDocumentUri,
+  resolveDocumentOpenStrategy,
   type DocumentPreviewItem,
 } from '@/features/evidence/documentPreview';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -34,10 +36,24 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
     [item],
   );
   const isImage = item ? isImageDocumentUri(item.uri, item.mimeType) : false;
+  const canOpenDocument = !!item && !isImage && canOpenExternally(item.uri);
 
   const openExternally = async () => {
-    if (!item || !canOpenExternally(item.uri)) return;
+    if (!item) return;
+    const strategy = resolveDocumentOpenStrategy(item.uri);
+    if (!strategy) return;
     try {
+      if (strategy === 'browser') {
+        await Linking.openURL(item.uri);
+        return;
+      }
+      // Local file/content URIs: never hand a `file://` URI to `Linking.openURL` — Android 7+
+      // throws FileUriExposedException. `Sharing.shareAsync` resolves via FileProvider on Android
+      // and opens the share sheet / Quick Look on iOS.
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(item.uri, item.mimeType ? { mimeType: item.mimeType } : undefined);
+        return;
+      }
       await Linking.openURL(item.uri);
     } catch {
       // Farmer can retry from the device files app if needed.
@@ -76,13 +92,13 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
           ) : null}
         </ScrollView>
 
-        {item && canOpenExternally(item.uri) && !isImage ? (
+        {canOpenDocument ? (
           <View style={styles.footer}>
             <Button title={t('documents_preview_open')} variant="primary" onPress={() => void openExternally()} />
           </View>
         ) : null}
         {onDelete ? (
-          <View style={[styles.footer, item && canOpenExternally(item.uri) && !isImage ? styles.footerStacked : null]}>
+          <View style={[styles.footer, canOpenDocument ? styles.footerStacked : null]}>
             <Button
               title={t('delete_land_document_action')}
               variant="secondary"

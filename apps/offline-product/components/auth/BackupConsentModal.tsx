@@ -32,7 +32,7 @@ export function BackupConsentModal({
   const styles = useThemedStyles(createAuthSheetStyles);
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onDecline}>
+    <Modal visible={visible} transparent statusBarTranslucent animationType="fade" onRequestClose={onDecline}>
       <View style={[styles.backupBackdrop, { paddingBottom: Math.max(insets.bottom, Spacing.md) }]}>
         <View style={styles.card}>
           <ThemedText type="title" style={styles.backupTitle}>
