@@ -53,6 +53,7 @@ import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
 import { probeFieldSyncInboundChanges } from '@/features/sync/fieldSyncCursor';
 import { buildFieldSyncRestoreScope } from '@/features/sync/fieldSyncRestoreScope';
 import { resolveFieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import { shouldRefreshCloudParityAfterSync } from '@/features/sync/pushOnlyIdleSyncPolicy';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { formatSyncRunHttpSummary } from '@/features/sync/syncRunHttpTelemetry';
 import { reportSyncFailure } from '@/features/sync/reportSyncFailure';
@@ -1241,6 +1242,7 @@ export default function SettingsScreen() {
               syncMode,
               skipInboundRestore,
               restoreScope,
+              fieldSyncDelta: deltaProbe.probeFailed ? null : deltaProbe.delta,
               t,
               selectedQueueActionTypes: selectedQueueActionTypes,
               allQueueActionTypes: ALL_QUEUE_ACTION_TYPES,
@@ -1274,21 +1276,39 @@ export default function SettingsScreen() {
               ownedFarmerIds: farmerScopeIds,
               plots: restoredPlots,
             });
-            const paritySummary = await measureCloudParitySummary({
-              profileFarmerId: apiFarmerId,
-              localPlots: restoredPlots,
-              localFarmer: diskState.farmer ?? syncFarmer,
-            }).catch(() => null);
-            setCloudParityNeedsRestore(paritySummary?.needsInboundRestore === true);
-            setCloudParityHints(
-              paritySummary
-                ? formatCloudParityHints(paritySummary, t, {
-                    queueMediaPendingCount: freshPending?.queueMediaPendingCount ?? 0,
-                    unsyncedPlotCount: freshPending?.unsyncedPlotCount ?? 0,
-                    queuePendingCount: freshPending?.queuePendingCount ?? 0,
-                  })
-                : [],
+            const paritySummary = shouldRefreshCloudParityAfterSync({
+              syncMode,
+              probeFailed: deltaProbe.probeFailed,
+              hasCursor: deltaProbe.hasCursor,
+              hasInboundChanges: deltaProbe.hasInboundChanges,
+              pendingTotal: freshPending?.total ?? outcome.remainingPending ?? 0,
+              cloudParityNeedsRestore,
+            })
+              ? await measureCloudParitySummary({
+                  profileFarmerId: apiFarmerId,
+                  localPlots: restoredPlots,
+                  localFarmer: diskState.farmer ?? syncFarmer,
+                }).catch(() => null)
+              : null;
+            setCloudParityNeedsRestore(
+              paritySummary?.needsInboundRestore === true
+                ? true
+                : syncMode === 'push_only' &&
+                    !deltaProbe.probeFailed &&
+                    !deltaProbe.hasInboundChanges &&
+                    (freshPending?.total ?? 0) === 0
+                  ? false
+                  : cloudParityNeedsRestore,
             );
+            if (paritySummary) {
+              setCloudParityHints(
+                formatCloudParityHints(paritySummary, t, {
+                  queueMediaPendingCount: freshPending?.queueMediaPendingCount ?? 0,
+                  unsyncedPlotCount: freshPending?.unsyncedPlotCount ?? 0,
+                  queuePendingCount: freshPending?.queuePendingCount ?? 0,
+                }),
+              );
+            }
 
             const attention = resolveSyncAttentionMessage({
               pending: {

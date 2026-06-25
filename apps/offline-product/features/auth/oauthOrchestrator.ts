@@ -22,6 +22,7 @@ import {
   isOAuthCallbackUrl,
   sessionFromOAuthCallbackUrl,
 } from '@/features/auth/oauthCallbackUrl';
+import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
 import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
 import { trackOAuthBrowserFallback, trackOAuthStep } from '@/features/auth/oauthTelemetry';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
@@ -101,17 +102,21 @@ async function openOAuthBrowser(
   trackOAuthStep('browser_start', { provider, path: 'browser' });
   const callbackWait = beginOAuthCallbackWait();
   linkingSubscription = Linking.addEventListener('url', (event) => {
-    deliverOAuthDeepLink(event.url);
+    if (deliverOAuthDeepLink(event.url)) {
+      void dismissOAuthBrowserIfOpen();
+    }
   });
 
   try {
     const browserResult = await WebBrowser.openAuthSessionAsync(authUrl, redirectTo, {
       showInRecents: true,
+      ...(Platform.OS === 'android' ? { createTask: false } : {}),
     });
 
     if (browserResult.type === 'success' && browserResult.url) {
       stopLinkingWait();
       endOAuthCallbackWait();
+      await dismissOAuthBrowserIfOpen();
       trackOAuthStep('browser_callback', { provider, path: 'browser' });
       return browserResult.url;
     }
@@ -122,6 +127,7 @@ async function openOAuthBrowser(
       endOAuthCallbackWait();
       if (linkedUrl) {
         trackOAuthStep('browser_callback', { provider, path: 'browser' });
+        await dismissOAuthBrowserIfOpen();
         return linkedUrl;
       }
       throw new OAuthFlowError('sign_in_oauth_cancelled', { step: 'browser_callback', path: 'browser' });

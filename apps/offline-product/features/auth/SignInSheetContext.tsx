@@ -86,6 +86,8 @@ import {
   shouldDeferAuthRefreshForCreateAccountWizard,
   shouldSkipDeepLinkAuthSurfaceClose,
 } from '@/features/auth/signInAuthRefreshPolicy';
+import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
+import type { CreateAccountOAuthResume } from '@/components/auth/CreateAccountWizard';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -224,6 +226,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   const [authReady, setAuthReady] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(false);
   const [createWizardVisible, setCreateWizardVisible] = useState(false);
+  const [createWizardOAuthResume, setCreateWizardOAuthResume] =
+    useState<CreateAccountOAuthResume | null>(null);
   const [backupModalVisible, setBackupModalVisible] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupPlotCount, setBackupPlotCount] = useState(0);
@@ -630,7 +634,21 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         });
         if (outcome.status === 'already_signed_in' || outcome.status === 'completed') {
           if (!hasSyncAuthSession()) return;
+          await dismissOAuthBrowserIfOpen();
           if (shouldSkipDeepLinkAuthSurfaceClose(createWizardVisibleRef.current)) {
+            if (outcome.status === 'completed' && outcome.result.ok) {
+              if (outcome.result.missingName && !outcome.result.existingAccount) {
+                setCreateWizardOAuthResume({
+                  nonce: Date.now(),
+                  missingName: true,
+                  existingAccount: false,
+                });
+              } else {
+                void finishSuccessfulSignUp({ existingAccount: outcome.result.existingAccount });
+              }
+            } else {
+              void finishSuccessfulSignUp({ existingAccount: true });
+            }
             return;
           }
           trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'oauth', source: 'deep_link' });
@@ -646,7 +664,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       })();
     });
     return () => sub.remove();
-  }, [closeAllAuthSurfaces, farmer?.id, plots, syncLocalFarmerFromAuth, t]);
+  }, [closeAllAuthSurfaces, farmer?.id, finishSuccessfulSignUp, plots, syncLocalFarmerFromAuth, t]);
 
   const signOutOnDevice = useCallback(async () => {
     await unregisterFarmerPushToken().catch(() => undefined);
@@ -910,8 +928,13 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         visible={createWizardVisible}
         farmerId={farmer?.id}
         localPlots={plots}
-        onClose={() => setCreateWizardVisible(false)}
+        oauthResume={createWizardOAuthResume}
+        onClose={() => {
+          setCreateWizardOAuthResume(null);
+          setCreateWizardVisible(false);
+        }}
         onSuccess={(options) => {
+          setCreateWizardOAuthResume(null);
           void finishSuccessfulSignUp(options);
         }}
         onSignInInstead={() => {

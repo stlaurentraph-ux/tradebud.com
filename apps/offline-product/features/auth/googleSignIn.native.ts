@@ -10,6 +10,7 @@ import type { Session } from '@supabase/supabase-js';
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
 import { OAuthFlowError } from '@/features/auth/oauthFlowError';
 import { getGoogleOAuthClientIds, getGoogleOAuthRedirectUri } from '@/features/auth/googleOAuthConfig';
+import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
 import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -112,5 +113,6 @@ export async function signInWithGoogleNative(): Promise<Session> {
   }
 
   trackOAuthStep('supabase_id_token', { provider: 'google', path: 'native' });
+  await dismissOAuthBrowserIfOpen();
   return data.session;
 }

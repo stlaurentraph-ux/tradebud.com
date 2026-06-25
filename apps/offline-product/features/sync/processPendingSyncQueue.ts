@@ -98,6 +98,44 @@ export async function processPendingSyncQueue(params: {
     }
   }
 
+  const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync', 'audit_sync'];
+  const allowedActionTypeSet = new Set<PendingSyncAction['actionType']>(allowedActionTypes);
+  const attemptScope = params.attemptScope ?? 'all';
+  const ignoreBackoff = params.ignoreBackoff === true;
+  const nowMs = Date.now();
+  const scopedActions = (await loadPendingSyncActions())
+    .filter((row) => allowedActionTypeSet.has(row.actionType))
+    .filter((row) => {
+      if (attemptScope === 'retrying_only') return (row.attempts ?? 0) > 0;
+      if (attemptScope === 'first_attempt_only') return (row.attempts ?? 0) === 0;
+      return true;
+    })
+    .filter((row) => ignoreBackoff || isEligibleForRetry(row, nowMs))
+    .sort(comparePendingSyncActionsForDrain);
+  const maxActions =
+    params.maxActions != null && Number.isFinite(params.maxActions)
+      ? Math.max(0, Math.floor(params.maxActions))
+      : null;
+  let auditBudget = MAX_AUDIT_SYNC_ACTIONS_PER_PASS;
+  const cappedActions: PendingSyncAction[] = [];
+  for (const row of scopedActions) {
+    if (row.actionType === 'audit_sync') {
+      if (auditBudget <= 0) continue;
+      auditBudget -= 1;
+    }
+    cappedActions.push(row);
+    if (maxActions != null && cappedActions.length >= maxActions) break;
+  }
+
+  if (cappedActions.length === 0) {
+    return {
+      completed: 0,
+      failedActions: 0,
+      droppedInvalid: 0,
+      fetchFailed: false,
+    };
+  }
+
   let backendRows: unknown[] = [];
   let plotServerLinks: Record<string, string> = {};
   let plotListFetchFailed = false;
@@ -185,34 +223,6 @@ export async function processPendingSyncQueue(params: {
   let firstFailedActionType: PendingSyncAction['actionType'] | undefined;
   let firstSyncFailure: SyncFailure | undefined;
 
-  const allowedActionTypes = params.actionTypes ?? ['harvest', 'photos_sync', 'evidence_sync', 'audit_sync'];
-  const allowedActionTypeSet = new Set<PendingSyncAction['actionType']>(allowedActionTypes);
-  const attemptScope = params.attemptScope ?? 'all';
-  const ignoreBackoff = params.ignoreBackoff === true;
-  const nowMs = Date.now();
-  const scopedActions = (await loadPendingSyncActions())
-    .filter((row) => allowedActionTypeSet.has(row.actionType))
-    .filter((row) => {
-      if (attemptScope === 'retrying_only') return (row.attempts ?? 0) > 0;
-      if (attemptScope === 'first_attempt_only') return (row.attempts ?? 0) === 0;
-      return true;
-    })
-    .filter((row) => ignoreBackoff || isEligibleForRetry(row, nowMs))
-    .sort(comparePendingSyncActionsForDrain);
-  const maxActions =
-    params.maxActions != null && Number.isFinite(params.maxActions)
-      ? Math.max(0, Math.floor(params.maxActions))
-      : null;
-  let auditBudget = MAX_AUDIT_SYNC_ACTIONS_PER_PASS;
-  const cappedActions: PendingSyncAction[] = [];
-  for (const row of scopedActions) {
-    if (row.actionType === 'audit_sync') {
-      if (auditBudget <= 0) continue;
-      auditBudget -= 1;
-    }
-    cappedActions.push(row);
-    if (maxActions != null && cappedActions.length >= maxActions) break;
-  }
   const uploadActions = cappedActions.filter((row) => row.actionType !== 'audit_sync');
   const auditActions = cappedActions.filter((row) => row.actionType === 'audit_sync');
   for (const a of uploadActions) {

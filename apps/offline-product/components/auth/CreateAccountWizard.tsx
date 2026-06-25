@@ -29,9 +29,16 @@ import {
   signUpWithOAuthAndSyncPlots,
 } from '@/features/auth/farmerSignUp';
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
+import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
 import type { Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
+
+export type CreateAccountOAuthResume = {
+  nonce: number;
+  missingName: boolean;
+  existingAccount?: boolean;
+};
 
 type WizardStep = 'method' | 'email' | 'name';
 
@@ -39,6 +46,7 @@ type CreateAccountWizardProps = {
   visible: boolean;
   farmerId?: string;
   localPlots?: Plot[];
+  oauthResume?: CreateAccountOAuthResume | null;
   onClose: () => void;
   onSuccess: (options?: { existingAccount?: boolean }) => void;
   onSignInInstead: () => void;
@@ -48,6 +56,7 @@ export function CreateAccountWizard({
   visible,
   farmerId,
   localPlots,
+  oauthResume,
   onClose,
   onSuccess,
   onSignInInstead,
@@ -83,6 +92,24 @@ export function CreateAccountWizard({
     }
   }, [visible, reset]);
 
+  const finishSuccess = useCallback((options?: { existingAccount?: boolean }) => {
+    onClose();
+    onSuccess(options);
+  }, [onClose, onSuccess]);
+
+  useEffect(() => {
+    if (!visible || !oauthResume) return;
+    oauthInFlightRef.current = false;
+    setOauthBusy(null);
+    setHint(null);
+    if (oauthResume.missingName) {
+      setPendingExistingAccount(oauthResume.existingAccount === true);
+      setStep('name');
+      return;
+    }
+    finishSuccess({ existingAccount: oauthResume.existingAccount });
+  }, [oauthResume, visible, finishSuccess]);
+
   const resolveMessage = (code: string): string => {
     if (code === 'farmer_signup_name_required') return t('farmer_signup_name_required');
     if (code === 'farmer_signup_confirm_email') return t('farmer_signup_confirm_email');
@@ -92,11 +119,6 @@ export function CreateAccountWizard({
     if (code === 'sign_in_apple_not_completed') return t('sign_in_apple_not_completed');
     if (code === 'sign_in_oauth_failed') return t('sign_in_oauth_failed');
     return formatSignInErrorMessage(t, code);
-  };
-
-  const finishSuccess = (options?: { existingAccount?: boolean }) => {
-    onClose();
-    onSuccess(options);
   };
 
   const handleEmailSignUp = async () => {
@@ -164,6 +186,7 @@ export function CreateAccountWizard({
     } finally {
       oauthInFlightRef.current = false;
       setOauthBusy(null);
+      void dismissOAuthBrowserIfOpen();
     }
   };
 

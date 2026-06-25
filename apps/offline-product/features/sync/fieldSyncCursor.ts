@@ -72,7 +72,14 @@ export async function persistFieldSyncCursorFromDelta(delta: FieldSyncDeltaRespo
   await saveFieldSyncCursorSnapshot(buildFieldSyncCursorSnapshot(delta));
 }
 
-export async function persistFieldSyncCursorAfterPipeline(accessToken: string): Promise<void> {
+export async function persistFieldSyncCursorAfterPipeline(
+  accessToken: string,
+  knownDelta?: FieldSyncDeltaResponse | null,
+): Promise<void> {
+  if (knownDelta) {
+    await persistFieldSyncCursorFromDelta(knownDelta);
+    return;
+  }
   const snapshot = await loadFieldSyncCursorSnapshot();
   const delta = await fetchFieldSyncDelta(snapshot?.cursorMs, accessToken);
   await persistFieldSyncCursorFromDelta(delta);
