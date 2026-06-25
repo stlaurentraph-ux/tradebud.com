@@ -280,6 +280,55 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/BadRequest"
+  /v1/public/requests/campaigns/{id}/invite:
+    get:
+      tags: [Requests Public]
+      operationId: getCampaignInvitePublicPreview
+      summary: Validate campaign invite token for field-auth landing
+      description: Returns campaign preview when the signed claim token is valid. No auth required.
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/IdPath"
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Campaign invite preview
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [preview]
+                properties:
+                  preview:
+                    type: object
+                    required:
+                      [campaignId, title, fromOrg, senderTenantId, deliveryChannel, recipientLabel]
+                    properties:
+                      campaignId:
+                        type: string
+                      title:
+                        type: string
+                      fromOrg:
+                        type: string
+                      dueAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      senderTenantId:
+                        type: string
+                      deliveryChannel:
+                        type: string
+                        enum: [email, whatsapp, desk_only]
+                      recipientLabel:
+                        type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Campaign invite not found
   /v1/public/requests/campaigns/{id}/preview:
     get:
       tags: [Requests Public]

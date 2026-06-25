@@ -1,4 +1,4 @@
--- Mirror: tracebud-backend/sql/tb_v16_065_tenant_import_signing_keys.sql
+-- Mirror: tracebud-backend/sql/tb_v16_069_tenant_import_signing_keys.sql
 
 BEGIN;
 

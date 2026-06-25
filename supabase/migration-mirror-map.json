@@ -148,8 +148,8 @@
       "purpose": "campaign_contact_targets"
     },
     {
-      "supabase": "20260624200000_bulk_import_jobs.sql",
-      "backend": "tb_v16_064_bulk_import_jobs.sql",
+      "supabase": "20260624240000_bulk_import_jobs.sql",
+      "backend": "tb_v16_068_bulk_import_jobs.sql",
       "purpose": "bulk_import_jobs"
     },
     {
@@ -158,8 +158,8 @@
       "purpose": "campaign_invite_claim_tokens"
     },
     {
-      "supabase": "20260624210000_tenant_import_signing_keys.sql",
-      "backend": "tb_v16_065_tenant_import_signing_keys.sql",
+      "supabase": "20260624250000_tenant_import_signing_keys.sql",
+      "backend": "tb_v16_069_tenant_import_signing_keys.sql",
       "purpose": "tenant_import_signing_keys"
     },
     {
@@ -168,8 +168,8 @@
       "purpose": "campaign_fulfillment_provenance"
     },
     {
-      "supabase": "20260624220000_bulk_import_policy_integrator_keys.sql",
-      "backend": "tb_v16_066_bulk_import_policy_integrator_keys.sql",
+      "supabase": "20260624260000_bulk_import_policy_integrator_keys.sql",
+      "backend": "tb_v16_070_bulk_import_policy_integrator_keys.sql",
       "purpose": "bulk_import_policy_integrator_keys"
     },
     {

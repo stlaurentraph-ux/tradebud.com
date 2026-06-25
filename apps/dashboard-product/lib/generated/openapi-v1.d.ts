@@ -140,6 +140,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/public/requests/campaigns/{id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Validate campaign invite token for field-auth landing
+         * @description Returns campaign preview when the signed claim token is valid. No auth required.
+         */
+        get: operations["getCampaignInvitePublicPreview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/public/requests/campaigns/{id}/preview": {
         parameters: {
             query?: never;
@@ -3433,6 +3453,50 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Unauthorized"];
             404: components["responses"]["BadRequest"];
+        };
+    };
+    getCampaignInvitePublicPreview: {
+        parameters: {
+            query: {
+                token: string;
+            };
+            header?: never;
+            path: {
+                id: components["parameters"]["IdPath"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Campaign invite preview */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        preview: {
+                            campaignId: string;
+                            title: string;
+                            fromOrg: string;
+                            /** Format: date-time */
+                            dueAt?: string | null;
+                            senderTenantId: string;
+                            /** @enum {string} */
+                            deliveryChannel: "email" | "whatsapp" | "desk_only";
+                            recipientLabel: string;
+                        };
+                    };
+                };
+            };
+            400: components["responses"]["BadRequest"];
+            /** @description Campaign invite not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     getCampaignPublicPreview: {
