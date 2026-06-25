@@ -77,12 +77,31 @@ function main() {
   if (!signInSheet.includes('completeOAuthFromDeepLink')) {
     issues.push('SignInSheetContext must use completeOAuthFromDeepLink for warm deep links');
   }
+  if (!signInSheet.includes('isGoogleNativeOAuthRedirectUrl')) {
+    issues.push('SignInSheetContext must dismiss browser on Google native oauth2redirect deep links');
+  }
   if (signInSheet.includes('sessionFromOAuthCallbackUrl')) {
     issues.push('SignInSheetContext must not call sessionFromOAuthCallbackUrl directly');
   }
 
   if (!callback.includes('runOAuthColdStartCallback')) {
     issues.push('auth/callback.tsx must use runOAuthColdStartCallback');
+  }
+  if (!fs.existsSync(path.join(root, 'features/auth/oauthColdStartLaunch.ts'))) {
+    issues.push('missing features/auth/oauthColdStartLaunch.ts');
+  }
+  if (!callback.includes('shouldExitOAuthIntermediaryScreen')) {
+    issues.push('auth/callback.tsx must exit intermediary screen via oauthColdStartLaunch');
+  }
+
+  if (!orchestrator.includes('getOAuthBrowserSessionOptions')) {
+    issues.push('oauthOrchestrator.ts must use getOAuthBrowserSessionOptions for browser OAuth');
+  }
+  if (!fs.existsSync(path.join(root, 'features/auth/oauthBrowserSessionOptions.ts'))) {
+    issues.push('missing features/auth/oauthBrowserSessionOptions.ts');
+  }
+  if (!fs.existsSync(path.join(root, 'features/auth/googleNativeOAuthRedirect.ts'))) {
+    issues.push('missing features/auth/googleNativeOAuthRedirect.ts');
   }
 
   if (!syncAuth.includes('clearOAuthOrchestratorState')) {

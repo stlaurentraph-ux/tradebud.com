@@ -9,7 +9,9 @@ import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
 import { OAuthFlowError } from '@/features/auth/oauthFlowError';
+import { getOAuthBrowserSessionOptions } from '@/features/auth/oauthBrowserSessionOptions';
 import { getGoogleOAuthClientIds, getGoogleOAuthRedirectUri } from '@/features/auth/googleOAuthConfig';
+import { captureGoogleNativeOAuthCode } from '@/features/auth/googleNativeOAuthRedirect';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
 import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 
@@ -46,9 +48,26 @@ export async function signInWithGoogleNative(): Promise<Session> {
     extraParams: { nonce: hashedNonce },
   });
 
+  const redirectCapture = captureGoogleNativeOAuthCode();
   trackOAuthStep('native_prompt', { provider: 'google', path: 'native' });
-  const result = await request.promptAsync(GOOGLE_DISCOVERY);
-  if (result.type !== 'success' || !result.params.code) {
+  let result;
+  try {
+    result = await request.promptAsync(GOOGLE_DISCOVERY, getOAuthBrowserSessionOptions());
+  } finally {
+    await dismissOAuthBrowserIfOpen();
+  }
+
+  let authCode =
+    result.type === 'success' && typeof result.params.code === 'string'
+      ? result.params.code
+      : null;
+
+  if (!authCode) {
+    authCode = await redirectCapture.waitForCode();
+  }
+  redirectCapture.cancel();
+
+  if (!authCode) {
     if (result.type === 'cancel' || result.type === 'dismiss') {
       throw new OAuthFlowError('sign_in_oauth_cancelled', { step: 'native_prompt', path: 'native' });
     }
@@ -65,7 +84,7 @@ export async function signInWithGoogleNative(): Promise<Session> {
     tokenResult = await exchangeCodeAsync(
       {
         clientId: ids.clientId,
-        code: result.params.code,
+        code: authCode,
         redirectUri,
         extraParams: {
           code_verifier: request.codeVerifier ?? '',

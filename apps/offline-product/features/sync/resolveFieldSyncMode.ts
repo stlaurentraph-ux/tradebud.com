@@ -18,9 +18,11 @@ export type ResolveFieldSyncModeInput = {
   hasFieldSyncCursor?: boolean;
   /**
    * Delta probe result: false = server has nothing new to pull.
-   * Omit when the probe failed — stay conservative (full).
+   * Omit when the probe failed — use deltaProbeFailed instead.
    */
   cloudDeltaHasInboundChanges?: boolean;
+  /** Delta probe failed — stay on push_only when cursor exists and nothing local is pending. */
+  deltaProbeFailed?: boolean;
 };
 
 /**
@@ -35,6 +37,21 @@ export function resolveFieldSyncMode(input: ResolveFieldSyncModeInput): FieldSyn
   if ((input.blockedPlotCount ?? 0) > 0) return 'full';
   if ((input.queuePendingCount ?? 0) > 0) return 'push_only';
   if (input.cloudDeltaHasInboundChanges === true) return 'full';
+
+  const nothingLocalPending =
+    (input.unsyncedPlotCount ?? 0) === 0 &&
+    (input.blockedPlotCount ?? 0) === 0 &&
+    (input.queuePendingCount ?? 0) === 0;
+
+  if (
+    nothingLocalPending &&
+    input.hasFieldSyncCursor === true &&
+    input.needsCloudRestore !== true &&
+    (input.cloudDeltaHasInboundChanges === false || input.deltaProbeFailed === true)
+  ) {
+    return 'push_only';
+  }
+
   if (
     input.hasFieldSyncCursor === true &&
     input.cloudDeltaHasInboundChanges === false &&

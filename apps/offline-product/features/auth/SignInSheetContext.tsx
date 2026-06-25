@@ -87,6 +87,7 @@ import {
   shouldSkipDeepLinkAuthSurfaceClose,
 } from '@/features/auth/signInAuthRefreshPolicy';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
+import { isGoogleNativeOAuthRedirectUrl } from '@/features/auth/oauthCallbackUrlPolicy';
 import type { CreateAccountOAuthResume } from '@/components/auth/CreateAccountWizard';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
@@ -623,6 +624,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const sub = Linking.addEventListener('url', (event) => {
       if (handleCampaignInviteDeepLink(event.url)) return;
+      if (isGoogleNativeOAuthRedirectUrl(event.url)) {
+        void dismissOAuthBrowserIfOpen();
+        return;
+      }
       if (!isOAuthCallbackUrl(event.url)) return;
       if (deliverOAuthDeepLink(event.url)) return;
 
@@ -818,6 +823,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     } finally {
       oauthSignInInFlightRef.current = false;
       setOauthLoading(null);
+      void dismissOAuthBrowserIfOpen();
     }
   };
 

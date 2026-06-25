@@ -14,9 +14,9 @@ const t = (key: string, params?: Record<string, string | number>) =>
   params ? `${key}:${JSON.stringify(params)}` : key;
 
 describe('formatSyncNowUserMessage', () => {
-  it('returns complete when nothing remains pending', () => {
+  it('returns backed up when nothing remains pending and plots already synced', () => {
     expect(formatSyncNowUserMessage({ plotsAlreadySynced: true, remainingPending: 0 }, t)).toBe(
-      'sync_result_complete',
+      'backup_up_to_date',
     );
   });
 

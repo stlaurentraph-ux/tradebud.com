@@ -66,6 +66,32 @@ export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
   };
 }
 
+/** Plot/receipt/media gaps need full inbound restore; declaration-only gaps use push_only hydration. */
+export function parityNeedsFullInboundRestore(
+  summary: Pick<
+    CloudParitySummary,
+    'plotGap' | 'receiptGap' | 'mediaGap' | 'declarationGap' | 'profilePhotoGap' | 'walkDraftGap'
+  >,
+): boolean {
+  if (summary.plotGap > 0 || summary.receiptGap > 0 || summary.mediaGap > 0) return true;
+  if (summary.profilePhotoGap || summary.walkDraftGap) return true;
+  return false;
+}
+
+export function effectiveCloudParityNeedsRestore(input: {
+  flagged: boolean;
+  summary?: Pick<CloudParitySummary, 'declarationGap'> & Parameters<typeof parityNeedsFullInboundRestore>[0] | null;
+  localDeclarationsComplete: boolean;
+}): boolean {
+  if (!input.flagged) return false;
+  if (!input.summary) {
+    return !input.localDeclarationsComplete;
+  }
+  if (parityNeedsFullInboundRestore(input.summary)) return true;
+  if (input.summary.declarationGap > 0 && !input.localDeclarationsComplete) return true;
+  return false;
+}
+
 /** @deprecated Use ExtendedCloudParityCounts — kept for backward-compatible imports. */
 export type CloudParityCounts = {
   localPlotCount: number;
