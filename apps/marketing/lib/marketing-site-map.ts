@@ -280,6 +280,22 @@ export const marketingSiteMap: SiteMapEntry[] = [
     v0Notes: 'Absorbs former smallholder livelihoods page.',
   },
   {
+    id: 'impact-market-access',
+    label: 'Improved market access',
+    href: '/impact/market-access',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-market-access',
+  },
+  {
+    id: 'impact-inclusivity',
+    label: 'Inclusivity',
+    href: '/impact/inclusivity',
+    section: 'impact',
+    status: 'draft-needs-style',
+    routeId: 'impact-inclusivity',
+  },
+  {
     id: 'impact-climate-biodiversity',
     label: 'Nature-positive & climate',
     href: '/impact/climate-biodiversity',
