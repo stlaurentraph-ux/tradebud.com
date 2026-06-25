@@ -4,14 +4,15 @@ import { IntegrationsController } from './integrations.controller';
 import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
 const testDbUrl = requireTestDatabaseUrl();
+const describeIfDb = testDbUrl ? describe : describe.skip;
+const schema = `tb_integrations_controller_int_test_${process.pid}_${Date.now().toString(36)}`;
 
-const schema = 'tb_integrations_controller_test';
-
-function withSearchPath(connectionString: string, _targetSchema: string) {
-  return connectionString;
+function withSearchPath(connectionString: string, targetSchema: string): string {
+  const separator = connectionString.includes('?') ? '&' : '?';
+  return `${connectionString}${separator}options=-csearch_path%3D${targetSchema}%2Cpublic`;
 }
 
-describe('IntegrationsController integration', () => {
+describeIfDb('IntegrationsController integration', () => {
   let pool: Pool;
   let controller: IntegrationsController;
 

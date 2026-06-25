@@ -1,3 +1,11 @@
+### 2026-06-24 (Lane 2 fix — bulk-plot-import CI regressions on PR #267)
+- **Failing checks**: Backend build (TS2307 missing `field-enumeration.service`) and Dashboard typecheck/build (5 TypeScript errors in bulk import parsers) — both PR-caused by Phases D–F commits.
+- **Root causes fixed by prior agents**: `plots.module.ts` restored correct imports; dashboard `bulk-plot-import-{csv,geojson,kml,package}.ts` corrected `string|null → string|undefined` and `ParentNode → Element|Document` type errors.
+- **Remaining failures exposed**: Integration tests `ownership-scope.int.spec.ts` and `integrations.controller.int.spec.ts` used no-op `withSearchPath` (same pattern fixed for inbox tests in 1ec3983b), causing search_path leakage between pool connections.
+- **Fix applied (this session)**: Applied identical `withSearchPath` connection-string search_path isolation + dynamic schema names to both failing tests.
+- **Verify**: `npm run lint -w tracebud-backend && npm run build -w tracebud-backend` pass; `npm run typecheck -w dashboard-product` passes.
+- **Status**: Dashboard CI check passing; backend lint/build/unit tests passing; integration test fix pushed as `f291e0ca`. Human merge remains blocked pending CI green.
+
 ### 2026-06-24 (supplier campaign onboarding — ops hardening, branch `feature/backend-supplier-campaign-onboarding`)
 
 - **Deploy smoke** — public preview probes for delivery receipt + campaign invite (`backend-deploy-smoke.json`, `run-backend-deploy-smoke.mjs`).

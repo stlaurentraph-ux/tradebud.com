@@ -1,47 +1,58 @@
 import { Controller, ForbiddenException, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { deriveRoleFromSupabaseUser } from '../auth/roles';
+import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service';
 
-const CADASTRAL_LOOKUP_ROLES = new Set([
-  'exporter',
-  'compliance_manager',
-  'cooperative',
-  'admin',
-  'agent',
-  'country_reviewer',
+const CADASTRAL_LOOKUP_ROLES = [
   'farmer',
-]);
+  'agent',
+  'exporter',
+  'cooperative',
+  'compliance_manager',
+  'admin',
+  'country_reviewer',
+] as const;
 
 @ApiTags('Cadastral')
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
-@Controller('v1/cadastral/parcels')
+@Controller()
 export class CadastralParcelController {
   constructor(private readonly lookupService: CadastralParcelLookupService) {}
 
-  private enforceCadastralLookupRole(req: any) {
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (!role || !CADASTRAL_LOOKUP_ROLES.has(role)) {
-      throw new ForbiddenException('Not allowed to query cadastral parcel fixtures');
+  private assertCadastralLookupRole(req: any): void {
+    const role = deriveRoleFromSupabaseUser(req?.user);
+    if (!role || !(CADASTRAL_LOOKUP_ROLES as readonly string[]).includes(role)) {
+      throw new ForbiddenException('This role cannot look up cadastral parcels.');
     }
   }
 
-  @Get('lookup')
+  @Get('v1/cadastral/parcels/lookup')
   @ApiOperation({
-    summary: 'Lookup demo cadastral parcel geometry (HN/GT fixtures)',
+    summary: 'Look up parcel boundary geometry by cadastral reference',
     description:
-      'Returns fixture polygon metadata for desk mapping cross-check. Production registry integrations land in a later slice.',
+      'Returns registry polygon when available. Demo deployments ship fixture parcels only; live country adapters plug in behind the same contract.',
   })
-  @ApiQuery({ name: 'countryIso', required: true })
-  @ApiQuery({ name: 'cadastralKey', required: true })
-  lookup(
-    @Query('countryIso') countryIso: string,
-    @Query('cadastralKey') cadastralKey: string,
-    @Req() req: any,
+  @ApiQuery({ name: 'countryCode', required: false, example: 'HN' })
+  @ApiQuery({ name: 'countryIso', required: false, example: 'HN' })
+  @ApiQuery({ name: 'cadastralKey', required: true, example: '012-345-678-9' })
+  async lookupParcel(
+    @Query('countryCode') countryCode: string | undefined,
+    @Query('countryIso') countryIso: string | undefined,
+    @Query('cadastralKey') cadastralKey: string | undefined,
+    @Req() req: unknown,
   ) {
-    this.enforceCadastralLookupRole(req);
-    return this.lookupService.lookup(countryIso, cadastralKey);
+    this.assertCadastralLookupRole(req);
+    const country = (countryCode ?? countryIso)?.trim();
+    const key = cadastralKey?.trim();
+    if (!country || !key) {
+      return {
+        found: false as const,
+        code: 'CADASTRAL_PARCEL_NOT_FOUND' as const,
+        message: 'countryCode (or countryIso) and cadastralKey are required.',
+      };
+    }
+    return this.lookupService.lookup({ countryCode: country, cadastralKey: key });
   }
 }

@@ -52,6 +52,17 @@ export const DASHBOARD_EVENTS = {
   CAMPAIGN_RECIPIENT_LINK_COPIED: 'dashboard_campaign_recipient_link_copied',
   CAMPAIGN_RECIPIENT_INVITE_RESENT: 'dashboard_campaign_recipient_invite_resent',
   CAMPAIGN_RECIPIENT_INVITE_RESEND_FAILURE: 'dashboard_campaign_recipient_invite_resend_failure',
+  BULK_PLOT_IMPORT_PREVIEW: 'dashboard_bulk_plot_import_preview',
+  BULK_PLOT_IMPORT_SUCCESS: 'dashboard_bulk_plot_import_success',
+  BULK_PLOT_IMPORT_FAILURE: 'dashboard_bulk_plot_import_failure',
+  BULK_PLOT_IMPORT_JOB_QUEUED: 'dashboard_bulk_plot_import_job_queued',
+  BULK_PLOT_IMPORT_JOB_COMPLETED: 'dashboard_bulk_plot_import_job_completed',
+  BULK_PLOT_IMPORT_EVIDENCE_SUCCESS: 'dashboard_bulk_plot_import_evidence_success',
+  BULK_PLOT_IMPORT_EVIDENCE_FAILURE: 'dashboard_bulk_plot_import_evidence_failure',
+  BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_VERIFIED: 'dashboard_bulk_plot_import_package_signature_verified',
+  BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_FAILED: 'dashboard_bulk_plot_import_package_signature_failed',
+  BULK_PLOT_IMPORT_PACKAGE_UNSIGNED: 'dashboard_bulk_plot_import_package_unsigned',
+  BULK_PLOT_IMPORT_POLICY_UPDATED: 'dashboard_bulk_plot_import_policy_updated',
 } as const;
 
 export type DashboardEventName = (typeof DASHBOARD_EVENTS)[keyof typeof DASHBOARD_EVENTS];
@@ -72,6 +83,9 @@ const FAILURE_EVENTS = new Set<DashboardEventName>([
   DASHBOARD_EVENTS.CONTACT_CREATE_FAILURE,
   DASHBOARD_EVENTS.ISSUE_STATUS_CHANGE_FAILURE,
   DASHBOARD_EVENTS.CAMPAIGN_RECIPIENT_INVITE_RESEND_FAILURE,
+  DASHBOARD_EVENTS.BULK_PLOT_IMPORT_FAILURE,
+  DASHBOARD_EVENTS.BULK_PLOT_IMPORT_EVIDENCE_FAILURE,
+  DASHBOARD_EVENTS.BULK_PLOT_IMPORT_PACKAGE_SIGNATURE_FAILED,
 ]);
 
 function compactProps(properties?: DashboardEventProps): Record<string, string | number | boolean> {

@@ -1,6 +1,19 @@
 {
   "schemaVersion": 1,
+  "generatedAt": "2026-06-25T07:25:32.087Z",
+  "canonicalEventCount": 59,
   "canonicalEvents": [
+    "dashboard_bulk_plot_import_evidence_failure",
+    "dashboard_bulk_plot_import_evidence_success",
+    "dashboard_bulk_plot_import_failure",
+    "dashboard_bulk_plot_import_job_completed",
+    "dashboard_bulk_plot_import_job_queued",
+    "dashboard_bulk_plot_import_package_signature_failed",
+    "dashboard_bulk_plot_import_package_signature_verified",
+    "dashboard_bulk_plot_import_package_unsigned",
+    "dashboard_bulk_plot_import_policy_updated",
+    "dashboard_bulk_plot_import_preview",
+    "dashboard_bulk_plot_import_success",
     "dashboard_campaign_archive_failure",
     "dashboard_campaign_archive_success",
     "dashboard_campaign_create_failure",
@@ -51,6 +64,14 @@
     "plot_geometry_revision_applied"
   ],
   "trackUsageEventKeys": [
+    "BULK_PLOT_IMPORT_EVIDENCE_FAILURE",
+    "BULK_PLOT_IMPORT_EVIDENCE_SUCCESS",
+    "BULK_PLOT_IMPORT_FAILURE",
+    "BULK_PLOT_IMPORT_JOB_COMPLETED",
+    "BULK_PLOT_IMPORT_JOB_QUEUED",
+    "BULK_PLOT_IMPORT_POLICY_UPDATED",
+    "BULK_PLOT_IMPORT_PREVIEW",
+    "BULK_PLOT_IMPORT_SUCCESS",
     "CAMPAIGN_ARCHIVE_FAILURE",
     "CAMPAIGN_ARCHIVE_SUCCESS",
     "CAMPAIGN_CREATE_FAILURE",
@@ -94,6 +115,14 @@
     "UPSTREAM_BLOCKER_ALERT_CLICKED"
   ],
   "trackUsageEvents": [
+    "dashboard_bulk_plot_import_evidence_failure",
+    "dashboard_bulk_plot_import_evidence_success",
+    "dashboard_bulk_plot_import_failure",
+    "dashboard_bulk_plot_import_job_completed",
+    "dashboard_bulk_plot_import_job_queued",
+    "dashboard_bulk_plot_import_policy_updated",
+    "dashboard_bulk_plot_import_preview",
+    "dashboard_bulk_plot_import_success",
     "dashboard_campaign_archive_failure",
     "dashboard_campaign_archive_success",
     "dashboard_campaign_create_failure",
@@ -135,7 +164,5 @@
     "delivery_qr_preview_viewed",
     "plot_geometry_approved",
     "plot_geometry_revision_applied"
-  ],
-  "canonicalEventCount": 48,
-  "generatedAt": "2026-06-24T16:35:00.000Z"
+  ]
 }

@@ -1,18 +1,21 @@
-export type GeoJSONPolygon = {
-  type: 'Polygon';
-  coordinates: number[][][];
-};
+import type { GeoJSONPolygon } from './cadastral-parcel-fixtures';
 
-export type CadastralParcelLookupResult = {
-  countryIso: string;
+export type CadastralParcelLookupFound = {
+  found: true;
+  source: 'fixture' | 'registry';
+  countryCode: string;
   cadastralKey: string;
+  normalizedCadastralKey: string;
   label: string;
   areaHa: number;
   geometry: GeoJSONPolygon;
   registryAttribution: string;
 };
 
-export type CadastralParcelLookupMiss = {
-  code: 'NOT_FOUND' | 'INVALID_KEY' | 'UNSUPPORTED_COUNTRY';
-  message: string;
-};
+export type CadastralParcelLookupResponse =
+  | CadastralParcelLookupFound
+  | {
+      found: false;
+      code: string;
+      message: string;
+    };

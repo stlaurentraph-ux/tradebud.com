@@ -6,14 +6,15 @@ import { PlotsService } from '../plots/plots.service';
 import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
 const testDbUrl = requireTestDatabaseUrl();
+const describeIfDb = testDbUrl ? describe : describe.skip;
+const schema = `tb_scope_test_${process.pid}_${Date.now().toString(36)}`;
 
-const schema = 'tb_scope_test';
-
-function withSearchPath(connectionString: string, _targetSchema: string) {
-  return connectionString;
+function withSearchPath(connectionString: string, targetSchema: string): string {
+  const separator = connectionString.includes('?') ? '&' : '?';
+  return `${connectionString}${separator}options=-csearch_path%3D${targetSchema}%2Cpublic`;
 }
 
-describe('Ownership scope integration: farmer/profile joins', () => {
+describeIfDb('Ownership scope integration: farmer/profile joins', () => {
   let pool: Pool;
   let harvestService: HarvestService;
   let plotsService: PlotsService;

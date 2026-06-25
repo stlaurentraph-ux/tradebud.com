@@ -9,8 +9,9 @@ const testDbUrl = requireTestDatabaseUrl();
 
 const schema = `tb_inbox_controller_int_test_${process.pid}_${Date.now().toString(36)}`;
 
-function withSearchPath(connectionString: string, _targetSchema: string) {
-  return connectionString;
+function withSearchPath(connectionString: string, targetSchema: string): string {
+  const separator = connectionString.includes('?') ? '&' : '?';
+  return `${connectionString}${separator}options=-csearch_path%3D${targetSchema}%2Cpublic`;
 }
 
 describe('InboxController integration: tenant claim + role policy', () => {

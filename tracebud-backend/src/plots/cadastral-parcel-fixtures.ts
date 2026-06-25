@@ -1,24 +1,55 @@
-import type { CadastralParcelLookupResult } from './cadastral-parcel.types';
+export type GeoJSONPolygon = {
+  type: 'Polygon';
+  coordinates: [number, number][][];
+};
 
-export const CADASTRAL_PARCEL_FIXTURES: Readonly<Record<string, CadastralParcelLookupResult>> = {
-  'HN:012-345-678-9': {
+export type CadastralParcelFixture = {
+  countryIso: string;
+  cadastralKey: string;
+  label: string;
+  areaHa: number;
+  geometry: GeoJSONPolygon;
+  registryAttribution: string;
+};
+
+/** Demo registry parcels for bulk import and field cadastral lookup QA. */
+export const CADASTRAL_PARCEL_FIXTURES: CadastralParcelFixture[] = [
+  {
     countryIso: 'HN',
     cadastralKey: '012-345-678-9',
-    label: 'Demo parcel — Tegucigalpa sector',
-    areaHa: 0.42,
-    geometry: {"type": "Polygon", "coordinates": [[[-87.1928, 14.0723], [-87.191, 14.0723], [-87.191, 14.0735], [-87.1928, 14.0735], [-87.1928, 14.0723]]]} as CadastralParcelLookupResult['geometry'],
-    registryAttribution: 'Tracebud demo fixture (HN clave catastral)',
+    label: 'Demo parcel — Copán corridor',
+    areaHa: 1.82,
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-88.95, 14.82],
+          [-88.9492, 14.82],
+          [-88.9492, 14.8192],
+          [-88.95, 14.8192],
+          [-88.95, 14.82],
+        ],
+      ],
+    },
+    registryAttribution: 'Tracebud demo cadastral fixture (HN)',
   },
-  'GT:123-456-7890': {
+  {
     countryIso: 'GT',
     cadastralKey: '123-456-7890',
     label: 'Demo parcel — Guatemala matrícula',
     areaHa: 0.38,
-    geometry: {"type": "Polygon", "coordinates": [[[-90.515, 14.634], [-90.5135, 14.634], [-90.5135, 14.6352], [-90.515, 14.6352], [-90.515, 14.634]]]} as CadastralParcelLookupResult['geometry'],
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        [
+          [-90.515, 14.634],
+          [-90.5135, 14.634],
+          [-90.5135, 14.6352],
+          [-90.515, 14.6352],
+          [-90.515, 14.634],
+        ],
+      ],
+    },
     registryAttribution: 'Tracebud demo fixture (GT matrícula)',
   },
-};
-
-export function cadastralFixtureKey(countryIso: string, normalizedKey: string): string {
-  return `${countryIso.toUpperCase()}:${normalizedKey}`;
-}
+];

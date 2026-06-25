@@ -1,0 +1,25 @@
+{
+  "format_version": "tracebud_import_v1",
+  "source_system": "legacy_gis_export",
+  "exported_at": "2026-06-24T10:00:00.000Z",
+  "producers": [
+    {
+      "producer_ref": "P1",
+      "full_name": "Maria",
+      "country_iso": "HN"
+    }
+  ],
+  "plots": [
+    {
+      "client_plot_id": "PLOT-1",
+      "producer_ref": "P1",
+      "country_iso": "HN",
+      "geolocation_mode": "POINT",
+      "declared_area_ha": 1,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-87.1, 14.1]
+      }
+    }
+  ]
+}

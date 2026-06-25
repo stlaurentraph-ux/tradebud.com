@@ -86,10 +86,16 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
     note: 'POST approve-geometry',
   },
   {
+    id: 'bulk_plot_import',
+    file: 'plots/bulk-plot-import.controller.ts',
+    roles: ['cooperative', 'exporter', 'admin', 'compliance_manager'],
+    note: 'POST preview + execute + async jobs + evidence ZIP + package signature verify for bulk plot import',
+  },
+  {
     id: 'cadastral_parcel_lookup',
     file: 'plots/cadastral-parcel.controller.ts',
-    roles: ['exporter', 'cooperative', 'compliance_manager', 'country_reviewer', 'admin', 'agent'],
-    note: 'GET lookup demo fixtures',
+    roles: ['farmer', 'agent', 'exporter', 'cooperative', 'compliance_manager', 'admin', 'country_reviewer'],
+    note: 'GET cadastral parcel lookup',
   },
 ] as const;
 

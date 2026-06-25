@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-24T13:08:37.062Z",
+  "generatedAt": "2026-06-25T07:25:23.385Z",
   "openapiPinnedBackendPaths": [
     "/v1/audit/gated-entry",
     "/v1/audit/gated-entry/actors",
@@ -35,6 +35,7 @@
     "/v1/plots/{id}/deforestation-decision-history",
     "/v1/plots/{id}/geometry-history",
     "/v1/requests/campaigns",
+    "/v1/requests/campaigns/{id}/recipients/{contactId}/desk-claim-link",
     "/v1/shipment-headers",
     "/v1/shipment-headers/{id}/seal",
     "/v1/webhooks"
@@ -391,6 +392,86 @@
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/harvest/vouchers/handoff-confirm"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/evidence",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/evidence"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/integrator-keys",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/integrator-keys"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/jobs",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/jobs"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/jobs/[id]",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/jobs/{id}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/packages/verify",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/packages/verify"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/policy",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/preview",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/preview"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/signing-keys",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots{pathSuffix}"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/imports/plots/signing-keys/[id]/revoke",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/imports/plots/signing-keys/{id}/revoke"
       ],
       "failClosed": true
     },
@@ -753,18 +834,18 @@
       "failClosed": true
     },
     {
-      "dashboardPath": "/api/requests/campaigns/[id]/send",
-      "category": "backend-proxy",
-      "backendPaths": [
-        "/v1/requests/campaigns/{id}/send"
-      ],
-      "failClosed": true
-    },
-    {
       "dashboardPath": "/api/requests/campaigns/[id]/recipients/resend",
       "category": "backend-proxy",
       "backendPaths": [
         "/v1/requests/campaigns/{id}/recipients/resend"
+      ],
+      "failClosed": true
+    },
+    {
+      "dashboardPath": "/api/requests/campaigns/[id]/send",
+      "category": "backend-proxy",
+      "backendPaths": [
+        "/v1/requests/campaigns/{id}/send"
       ],
       "failClosed": true
     },

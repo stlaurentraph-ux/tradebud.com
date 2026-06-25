@@ -10,7 +10,8 @@
     "apps/field-auth",
     "tracebud-backend",
     "packages/tsconfig",
-    "packages/eslint-config"
+    "packages/eslint-config",
+    "packages/tracebud-import-v1-canonical"
   ],
   "scripts": {
     "lint": "eslint . --max-warnings 0",
