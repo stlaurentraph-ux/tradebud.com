@@ -1,0 +1,26 @@
+Subject: Reminder: delivery from {{producerLabel}} is still waiting
+Preheader: Claim it on Tracebud — free, about 5 minutes
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+A delivery from {{producerLabel}} is still waiting.
+
+Tracebud is the platform {{producerLabel}} used to log this shipment. Claim it to see
+origin data and keep your records in one place.
+
+Delivery record
+  From         : {{producerLabel}}
+  Amount       : {{deliveryKgLabel}}
+  Date         : {{deliveryDateLabel}}
+  Ref          : {{tripRefLabel}}
+
+View delivery (sign up with {{recipientEmail}})
+  {{signupUrl}}
+
+Sign in: {{loginUrl}}
+What is Tracebud? {{learnMoreUrl}}
+
+{{producerLabel}} may also share a QR code on the receipt. If unexpected, ignore this email.
+
+© {{year}} Tracebud

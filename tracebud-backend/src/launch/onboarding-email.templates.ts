@@ -6,14 +6,18 @@ export type OnboardingEmailTemplateId =
   | 'farmer-welcome'
   | 'resume-nudge-first'
   | 'resume-nudge-final'
-  | 'delivery-buyer-invite';
+  | 'delivery-buyer-invite'
+  | 'delivery-buyer-invite-reminder'
+  | 'delivery-buyer-invite-reminder-final';
 
 export const ONBOARDING_EMAIL_SUBJECTS: Record<OnboardingEmailTemplateId, string> = {
   welcome: 'Welcome to Tracebud — your workspace is ready',
   'farmer-welcome': 'Welcome to Tracebud — your farmer account is ready',
   'resume-nudge-first': 'Finish setting up your Tracebud workspace',
   'resume-nudge-final': 'Reminder: your Tracebud workspace is almost ready',
-  'delivery-buyer-invite': 'A producer logged a delivery for you on Tracebud',
+  'delivery-buyer-invite': 'A producer shared a delivery record with you',
+  'delivery-buyer-invite-reminder': 'Reminder: a delivery is still waiting for you',
+  'delivery-buyer-invite-reminder-final': 'Last reminder: claim your delivery on Tracebud',
 };
 
 export interface OnboardingEmailTemplateVars {
@@ -28,6 +32,10 @@ export interface OnboardingEmailTemplateVars {
   unsubscribeUrl?: string;
   recipientEmail?: string;
   producerLabel?: string;
+  deliveryKgLabel?: string;
+  deliveryDateLabel?: string;
+  tripRefLabel?: string;
+  learnMoreUrl?: string;
   year: string;
 }
 
@@ -117,6 +125,10 @@ export function applyTemplatePlaceholders(
     unsubscribeUrl: vars.unsubscribeUrl ?? '',
     recipientEmail: vars.recipientEmail ?? '',
     producerLabel: vars.producerLabel ?? '',
+    deliveryKgLabel: vars.deliveryKgLabel ?? '',
+    deliveryDateLabel: vars.deliveryDateLabel ?? '',
+    tripRefLabel: vars.tripRefLabel ?? '',
+    learnMoreUrl: vars.learnMoreUrl ?? '',
     year: vars.year,
   };
 
@@ -188,22 +200,83 @@ export function buildFarmerWelcomeTemplateVars(input: {
   };
 }
 
+function firstNameFromRecipientEmail(recipientEmail: string): string {
+  const local = recipientEmail.split('@')[0] ?? '';
+  const token = local.split(/[._+-]/)[0] ?? local;
+  return token.length > 0 ? token.charAt(0).toUpperCase() + token.slice(1) : 'there';
+}
+
+function formatDeliveryKgLabel(kg: number | null | undefined): string {
+  if (kg == null || !Number.isFinite(kg)) {
+    return '—';
+  }
+  const rounded = Math.round(kg * 10) / 10;
+  const display = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return `${display} kg`;
+}
+
+function formatDeliveryDateLabel(harvestDate: string | Date | null | undefined): string {
+  const fallback = new Date();
+  const parsed =
+    harvestDate instanceof Date
+      ? harvestDate
+      : typeof harvestDate === 'string' && harvestDate.trim().length > 0
+        ? new Date(harvestDate)
+        : fallback;
+  const date = Number.isNaN(parsed.getTime()) ? fallback : parsed;
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function buildTripRefLabel(tripRef: string | null | undefined): string {
+  const label = tripRef?.trim().toUpperCase() ?? '';
+  return label || '—';
+}
+
+export function buildDeliveryBuyerInviteSubject(producerLabel?: string | null): string {
+  const label = producerLabel?.trim() || 'A Tracebud producer';
+  return `${label} shared a delivery record with you`;
+}
+
+export function getDeliveryBuyerInviteReminderTemplateId(
+  reminderNudgeCount: number,
+): 'delivery-buyer-invite-reminder' | 'delivery-buyer-invite-reminder-final' {
+  return reminderNudgeCount >= 1 ? 'delivery-buyer-invite-reminder-final' : 'delivery-buyer-invite-reminder';
+}
+
+export function buildDeliveryBuyerInviteReminderSubject(
+  producerLabel: string | null | undefined,
+  reminderNudgeCount: number,
+): string {
+  const label = producerLabel?.trim() || 'A Tracebud producer';
+  if (reminderNudgeCount >= 1) {
+    return `Last reminder: delivery from ${label} is waiting`;
+  }
+  return `Reminder: delivery from ${label} is still waiting`;
+}
+
 export function buildDeliveryBuyerInviteTemplateVars(input: {
   recipientEmail: string;
   producerLabel?: string | null;
   dashboardBaseUrl?: string;
+  deliveryKg?: number | null;
+  deliveryDate?: string | Date | null;
+  tripRef?: string | null;
 }): OnboardingEmailTemplateVars {
   const dashboardBase = (input.dashboardBaseUrl ?? 'https://dashboard.tracebud.com').replace(/\/$/, '');
   const recipientEmail = input.recipientEmail.trim().toLowerCase();
-  const local = recipientEmail.split('@')[0] ?? '';
-  const token = local.split(/[._+-]/)[0] ?? local;
-  const firstName = token.length > 0 ? token.charAt(0).toUpperCase() + token.slice(1) : 'there';
+  const producerLabel = input.producerLabel?.trim() || 'A Tracebud producer';
+  const learnMoreUrl =
+    process.env.TRACEBUD_MARKETING_PUBLIC_URL?.trim()?.replace(/\/$/, '') || 'https://tracebud.com';
   return {
-    firstName,
+    firstName: firstNameFromRecipientEmail(recipientEmail),
     recipientEmail,
-    producerLabel: input.producerLabel?.trim() || 'A Tracebud producer',
+    producerLabel,
+    deliveryKgLabel: formatDeliveryKgLabel(input.deliveryKg),
+    deliveryDateLabel: formatDeliveryDateLabel(input.deliveryDate),
+    tripRefLabel: buildTripRefLabel(input.tripRef),
     signupUrl: `${dashboardBase}/signup`,
     loginUrl: `${dashboardBase}/login`,
+    learnMoreUrl,
     unsubscribeUrl:
       process.env.TRACEBUD_ONBOARDING_UNSUBSCRIBE_URL?.trim() || `${dashboardBase}/settings`,
     year: String(new Date().getFullYear()),

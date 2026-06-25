@@ -5,6 +5,10 @@ import { AppRole, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
 import { linkPendingNetworkInvitesOnSignup } from '../network/link-pending-network-invites-on-signup';
+import {
+  remindUnclaimedDeliveryBuyerInvites,
+  type RemindUnclaimedDeliveryInvitesResult,
+} from '../harvest/delivery-buyer-invite';
 import { OnboardingEmailService, RemindIncompleteResult } from './onboarding-email.service';
 
 export type TrialLifecycleStatus = 'trial_active' | 'trial_expired' | 'paid_active' | 'suspended';
@@ -750,6 +754,10 @@ export class LaunchService {
 
   async remindIncompleteOnboarding(): Promise<RemindIncompleteResult> {
     return this.onboardingEmailService.remindIncompleteSignups();
+  }
+
+  async remindUnclaimedDeliveryBuyerInvites(): Promise<RemindUnclaimedDeliveryInvitesResult> {
+    return remindUnclaimedDeliveryBuyerInvites(this.pool);
   }
 
   async saveWorkspaceSetup(input: {

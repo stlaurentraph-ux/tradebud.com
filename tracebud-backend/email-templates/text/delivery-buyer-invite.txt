@@ -1,30 +1,43 @@
-Subject: A producer logged a delivery for you on Tracebud
-Preheader: Create your dashboard account to receive this delivery
+Subject: {{producerLabel}} shared a delivery record with you
+Preheader: View it on Tracebud — supply chain traceability for farmers and buyers
 ──────────────────────────────────────────────────────
 
 Hi {{firstName}},
 
-A producer logged a delivery for your email on Tracebud.
+{{producerLabel}} shared a delivery record with you.
 
-  Delivery for : {{recipientEmail}}
-  Logged by    : {{producerLabel}}
+{{producerLabel}} logged a delivery for {{recipientEmail}} on Tracebud — a platform
+farmers, cooperatives, and buyers use to track where products come from and meet
+EU deforestation rules (EUDR).
 
-Create your Tracebud dashboard account to receive directed deliveries, manage
-data-sharing consent, and prepare EUDR compliance paperwork.
+Delivery record
+  From         : {{producerLabel}}
+  Amount       : {{deliveryKgLabel}}
+  Date         : {{deliveryDateLabel}}
+  Ref          : {{tripRefLabel}}
 
-  Create your Tracebud account
+Why claim it?
+  • See the delivery and linked origin data in one place
+  • Confirm what was sent without chasing the farmer by phone
+  • Reuse records for compliance if you sell to EU markets
+
+View delivery (free — about 5 minutes; sign up with {{recipientEmail}})
   {{signupUrl}}
 
 Already on Tracebud? Sign in with this email:
   {{loginUrl}}
 
+What is Tracebud?
+  {{learnMoreUrl}}
+
+{{producerLabel}} may also share a QR code on the physical receipt — either path works.
+
 ──────────────────────────────────────────────────────
-Tracebud · EUDR compliance workspace
+Tracebud · Supply chain traceability
 dashboard.tracebud.com | tracebud.com
 
-Manage account: {{loginUrl}}
+You received this because a producer entered your email when logging a delivery on
+Tracebud. No account is created unless you sign up. If this wasn't expected, you
+can safely ignore this email.
 
 © {{year}} Tracebud. All rights reserved.
-
-You received this because a producer entered your email when logging a
-delivery on Tracebud. If this wasn't expected, you can safely ignore this email.

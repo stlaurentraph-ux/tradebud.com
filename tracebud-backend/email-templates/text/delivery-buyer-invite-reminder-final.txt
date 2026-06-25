@@ -1,0 +1,27 @@
+Subject: Last reminder: delivery from {{producerLabel}} is waiting
+Preheader: Final reminder — claim your delivery or use the farmer's QR receipt
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+Last reminder: claim your delivery from {{producerLabel}}.
+
+This is our final email about this delivery. Tracebud helps farmers and buyers share
+origin records for EU deforestation compliance (EUDR).
+
+Delivery record
+  From         : {{producerLabel}}
+  Amount       : {{deliveryKgLabel}}
+  Date         : {{deliveryDateLabel}}
+  Ref          : {{tripRefLabel}}
+
+View delivery
+  {{signupUrl}}
+
+Sign in: {{loginUrl}}
+What is Tracebud? {{learnMoreUrl}}
+
+Prefer not to join? Ask {{producerLabel}} for the QR code on the physical receipt instead.
+We won't email you about this delivery again.
+
+© {{year}} Tracebud

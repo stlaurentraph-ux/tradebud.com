@@ -142,9 +142,11 @@ cd tracebud-backend
 # DATABASE_URL = Supabase pooler URL in .env.local
 npm run db:apply:voucher-buyer-invites
 npm run db:verify:voucher-buyer-invites
+npm run db:apply:voucher-buyer-invite-reminders
+npm run db:verify:voucher-buyer-invite-reminders
 ```
 
-Supabase CLI alternative: `supabase/migrations/20260623120000_voucher_buyer_invites.sql`.
+Supabase CLI alternative: `supabase/migrations/20260623120000_voucher_buyer_invites.sql` + `sql/tb_v16_055_voucher_buyer_invite_reminders.sql`.
 
 **2. Railway env** (transactional email)
 
@@ -165,7 +167,8 @@ Redeploy backend after env + migration.
 **3. Smoke**
 
 - Field app: deliver to a fresh email → invite alert on device.
-- Resend dashboard: `delivery-buyer-invite` received.
+- Resend dashboard: `delivery-buyer-invite` received (subject leads with producer name).
+- Cron: `POST /api/v1/launch/delivery-invites/remind-unclaimed` with `x-tracebud-launch-cron-token`.
 - Dashboard: sign up with that email → delivery appears in buyer vouchers (`voucher_buyer_invites.status = claimed`).
 
 Device checklist: `apps/offline-product/DEVICE_SMOKE_CHECKLIST.md` §5a.

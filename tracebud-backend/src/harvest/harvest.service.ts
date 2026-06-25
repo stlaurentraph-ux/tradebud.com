@@ -415,6 +415,9 @@ export class HarvestService {
         farmerId: effectiveFarmerId,
         recipientEmail: deliveryRecipient.intendedRecipientEmail,
         actorUserId: userId,
+        deliveryKg: kg,
+        deliveryDate: tx.harvest_date ?? harvestDate ?? null,
+        tripRef: normalizedTripRef,
       });
     }
 

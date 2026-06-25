@@ -124,6 +124,8 @@ describe('Network routing — delivery to buyer tenant integration', () => {
         status TEXT NOT NULL DEFAULT 'pending',
         sent_at TIMESTAMPTZ NULL,
         claimed_tenant_id TEXT NULL,
+        reminder_nudge_sent_at TIMESTAMPTZ NULL,
+        reminder_nudge_count INT NOT NULL DEFAULT 0,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         UNIQUE (voucher_id, recipient_email)
       );

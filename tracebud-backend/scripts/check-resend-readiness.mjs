@@ -71,6 +71,10 @@ if (!env.TRACEBUD_DASHBOARD_PUBLIC_URL?.trim()) {
 for (const file of [
   'email-templates/html/delivery-buyer-invite.html',
   'email-templates/text/delivery-buyer-invite.txt',
+  'email-templates/html/delivery-buyer-invite-reminder.html',
+  'email-templates/text/delivery-buyer-invite-reminder.txt',
+  'email-templates/html/delivery-buyer-invite-reminder-final.html',
+  'email-templates/text/delivery-buyer-invite-reminder-final.txt',
   'email-templates/html/welcome.html',
 ]) {
   const full = resolve(process.cwd(), file);
@@ -86,5 +90,5 @@ if (failed) {
 }
 
 console.log('\nResend readiness: OK');
-console.log('Delivery buyer invites use template delivery-buyer-invite (adapted from welcome.html).');
+console.log('Delivery buyer invites: delivery-buyer-invite + reminder templates (D/D2/D3).');
 console.log('Configure RESEND_* on Railway and verify your sending domain at resend.com.');

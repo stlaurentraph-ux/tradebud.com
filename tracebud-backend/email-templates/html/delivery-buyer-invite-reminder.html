@@ -1,0 +1,80 @@
+<!--
+  Email D2 — Delivery buyer invite reminder #1 (+72h, unclaimed)
+  Subject : Reminder: delivery from {{producerLabel}} is still waiting
+  Preheader: Claim it on Tracebud — free, about 5 minutes
+-->
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Delivery still waiting on Tracebud</title>
+  <style type="text/css">
+    body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+    @media only screen and (max-width:600px){
+      .email-container{width:100%!important}
+      .content-cell{padding:28px 20px!important}
+      .cta-btn{width:100%!important;display:block!important;box-sizing:border-box!important}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#F0FDF4;">
+  <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;color:#F0FDF4;">
+    Claim it on Tracebud &mdash; free, about 5 minutes &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+  </div>
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F0FDF4;">
+    <tr>
+      <td align="center" style="padding:32px 16px 48px;">
+        <table class="email-container" role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="max-width:600px;width:100%;">
+          <tr>
+            <td class="content-cell" style="background-color:#FFFFFF;border:1px solid #D1FAE5;border-radius:8px;padding:36px;font-family:Arial,Helvetica,sans-serif;font-size:16px;line-height:1.6;color:#022C22;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:16px;">
+                <tr>
+                  <td style="background-color:#FEF3C7;border:1.5px solid #FCD34D;border-radius:20px;padding:5px 13px;font-size:12px;font-weight:700;color:#92400E;letter-spacing:0.04em;">REMINDER</td>
+                </tr>
+              </table>
+              <p style="margin:0 0 6px;font-size:15px;color:#374151;">Hi {{firstName}},</p>
+              <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;line-height:1.3;color:#022C22;">
+                A delivery from {{producerLabel}} is still waiting.
+              </h1>
+              <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.7;">
+                <strong>Tracebud</strong> is the platform {{producerLabel}} used to log this shipment.
+                Claim it to see origin data and keep your records in one place.
+              </p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;border:1px solid #D1FAE5;border-radius:8px;background-color:#F9FAFB;">
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <p style="margin:0 0 10px;font-size:13px;font-weight:700;color:#065F46;text-transform:uppercase;">Delivery record</p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;width:72px;">From</td><td style="padding:4px 0;font-size:14px;font-weight:600;color:#022C22;">{{producerLabel}}</td></tr>
+                      <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;">Amount</td><td style="padding:4px 0;font-size:14px;font-weight:600;color:#022C22;">{{deliveryKgLabel}}</td></tr>
+                      <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;">Date</td><td style="padding:4px 0;font-size:14px;font-weight:600;color:#022C22;">{{deliveryDateLabel}}</td></tr>
+                      <tr><td style="padding:4px 0;font-size:14px;color:#6B7280;">Ref</td><td style="padding:4px 0;font-size:14px;font-weight:600;color:#022C22;">{{tripRefLabel}}</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:12px;">
+                <tr>
+                  <td align="center" style="border-radius:6px;background-color:#16A34A;">
+                    <a class="cta-btn" href="{{signupUrl}}" target="_blank" style="display:inline-block;background-color:#16A34A;color:#FFFFFF;font-size:14px;font-weight:700;text-decoration:none;padding:11px 28px;border-radius:6px;">View delivery</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:0 0 24px;font-size:13px;color:#6B7280;">
+                Sign up with <strong>{{recipientEmail}}</strong> &middot;
+                <a href="{{loginUrl}}" style="color:#064E3B;">Sign in</a> &middot;
+                <a href="{{learnMoreUrl}}" style="color:#064E3B;">What is Tracebud?</a>
+              </p>
+              <p style="margin:0;font-size:12px;color:#9CA3AF;line-height:1.6;">
+                {{producerLabel}} may also share a QR code on the receipt. If unexpected, ignore this email.
+              </p>
+            </td>
+          </tr>
+          <tr><td style="padding:16px 0 0;font-family:Arial,sans-serif;font-size:11px;color:#9CA3AF;text-align:center;">&copy; {{year}} Tracebud</td></tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

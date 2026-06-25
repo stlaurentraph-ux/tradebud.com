@@ -18,6 +18,14 @@ export function formatResendFromAddress(): string {
   return `${senderName} <${senderEmail}>`;
 }
 
+/** Cold-invite sender line: human producer as trust anchor (Resend display name). */
+export function formatResendFromAddressOnBehalf(producerLabel: string): string {
+  const senderEmail = process.env.RESEND_FROM_EMAIL?.trim() ?? '';
+  const label = producerLabel.trim() || 'A Tracebud producer';
+  const displayName = `${label} via Tracebud`;
+  return `${displayName} <${senderEmail}>`;
+}
+
 export function getResendReplyTo(from: string): string {
   return process.env.RESEND_REPLY_TO_EMAIL?.trim() || from.match(/<([^>]+)>/)?.[1] || from;
 }

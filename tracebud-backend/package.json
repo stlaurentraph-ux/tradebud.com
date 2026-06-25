@@ -94,6 +94,8 @@
     "db:verify:voucher-delivery-routing": "node scripts/apply-voucher-delivery-routing-migration.mjs --verify-only",
     "db:apply:voucher-buyer-invites": "node scripts/apply-voucher-buyer-invites-migration.mjs",
     "db:verify:voucher-buyer-invites": "node scripts/apply-voucher-buyer-invites-migration.mjs --verify-only",
+    "db:apply:voucher-buyer-invite-reminders": "node scripts/apply-voucher-buyer-invite-reminders-migration.mjs",
+    "db:verify:voucher-buyer-invite-reminders": "node scripts/apply-voucher-buyer-invite-reminders-migration.mjs --verify-only",
     "db:apply:harvest-transaction-created-by": "node scripts/apply-harvest-transaction-created-by-migration.mjs",
     "db:verify:harvest-transaction-created-by": "node scripts/apply-harvest-transaction-created-by-migration.mjs --verify-only",
     "railway:preflight:local": "node scripts/railway-local-preflight.mjs",

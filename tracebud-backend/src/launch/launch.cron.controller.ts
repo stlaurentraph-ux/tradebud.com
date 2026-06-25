@@ -36,4 +36,16 @@ export class LaunchCronController {
     this.assertCronToken(cronToken);
     return this.launchService.remindIncompleteOnboarding();
   }
+
+  @Post('delivery-invites/remind-unclaimed')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Send reminder emails for unclaimed delivery buyer invites (cron)',
+  })
+  async remindUnclaimedDeliveryInvites(
+    @Headers('x-tracebud-launch-cron-token') cronToken: string | undefined,
+  ) {
+    this.assertCronToken(cronToken);
+    return this.launchService.remindUnclaimedDeliveryBuyerInvites();
+  }
 }

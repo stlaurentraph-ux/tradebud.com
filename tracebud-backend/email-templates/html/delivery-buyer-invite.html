@@ -2,13 +2,12 @@
   Email D — Delivery buyer invite (field app → unknown dashboard email)
   ────────────────────────────────────────────────────────────────
   Trigger : Farmer harvest submit with email not linked to a workspace tenant
-  Subject : A producer logged a delivery for you on Tracebud
-  Preheader: Create your dashboard account to receive this delivery
+  Subject : {{producerLabel}} shared a delivery record with you
+  Preheader: View it on Tracebud — supply chain traceability for farmers and buyers
 
   Merge tags: {{firstName}}, {{recipientEmail}}, {{producerLabel}},
-              {{signupUrl}}, {{loginUrl}}, {{unsubscribeUrl}}, {{year}}
-
-  Layout adapted from welcome.html (Email A).
+              {{deliveryKgLabel}}, {{deliveryDateLabel}}, {{tripRefLabel}},
+              {{signupUrl}}, {{loginUrl}}, {{learnMoreUrl}}, {{unsubscribeUrl}}, {{year}}
   ────────────────────────────────────────────────────────────────
 -->
 <!DOCTYPE html>
@@ -21,7 +20,7 @@
   <!--[if mso]>
   <noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
   <![endif]-->
-  <title>Delivery waiting on Tracebud</title>
+  <title>Delivery shared with you on Tracebud</title>
   <style type="text/css">
     body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
     table,td{mso-table-lspace:0pt;mso-table-rspace:0pt}
@@ -38,7 +37,7 @@
 <body style="margin:0;padding:0;background-color:#F0FDF4;word-spacing:normal;">
 
   <div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#F0FDF4;">
-    Create your dashboard account to receive this delivery &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
+    View it on Tracebud &mdash; supply chain traceability for farmers and buyers &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;
   </div>
 
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#F0FDF4;">
@@ -90,32 +89,68 @@
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:20px;">
                 <tr>
                   <td style="background-color:#ECFDF5;border:1.5px solid #6EE7B7;border-radius:20px;padding:5px 13px;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;color:#065F46;letter-spacing:0.04em;white-space:nowrap;">
-                    DELIVERY WAITING
+                    DELIVERY SHARED WITH YOU
                   </td>
                 </tr>
               </table>
 
               <p style="margin:0 0 6px;font-size:15px;color:#374151;">Hi {{firstName}},</p>
               <h1 style="margin:0 0 18px;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;line-height:1.25;color:#022C22;">
-                A producer logged a delivery for you.
+                {{producerLabel}} shared a delivery record with you.
               </h1>
 
-              <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
-                {{producerLabel}} entered your email when recording a delivery on Tracebud.
-                Create your dashboard account to receive directed deliveries, manage data-sharing consent,
-                and prepare EUDR due-diligence records &mdash; the same workspace experience as our welcome onboarding.
+              <p style="margin:0 0 20px;font-size:15px;color:#374151;line-height:1.7;">
+                <strong>{{producerLabel}}</strong> logged a delivery for <strong>{{recipientEmail}}</strong> on
+                <strong>Tracebud</strong> &mdash; a platform farmers, cooperatives, and buyers use to track where
+                products come from and meet EU deforestation rules (EUDR).
               </p>
 
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:32px;border-left:3px solid #16A34A;border-radius:0 6px 6px 0;background-color:#F0FDF4;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:24px;border:1px solid #D1FAE5;border-radius:8px;background-color:#F9FAFB;">
                 <tr>
-                  <td style="padding:14px 18px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#022C22;">
-                    <strong style="display:block;font-size:15px;color:#022C22;">Delivery for {{recipientEmail}}</strong>
-                    <span style="color:#6B7280;font-size:13px;">Logged by {{producerLabel}}</span>
+                  <td style="padding:16px 18px;">
+                    <p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:700;color:#065F46;letter-spacing:0.03em;text-transform:uppercase;">Delivery record</p>
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+                      <tr>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6B7280;width:72px;vertical-align:top;">From</td>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#022C22;font-weight:600;">{{producerLabel}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6B7280;vertical-align:top;">Amount</td>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#022C22;font-weight:600;">{{deliveryKgLabel}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6B7280;vertical-align:top;">Date</td>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#022C22;font-weight:600;">{{deliveryDateLabel}}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#6B7280;vertical-align:top;">Ref</td>
+                        <td style="padding:4px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#022C22;font-weight:600;">{{tripRefLabel}}</td>
+                      </tr>
+                    </table>
                   </td>
                 </tr>
               </table>
 
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;">
+              <p style="margin:0 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:700;color:#022C22;">Why claim it?</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:28px;">
+                <tr>
+                  <td style="padding:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#374151;">
+                    &#8226;&nbsp; See the delivery and linked origin data in one place
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#374151;">
+                    &#8226;&nbsp; Confirm what was sent without chasing the farmer by phone
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:#374151;">
+                    &#8226;&nbsp; Reuse records for compliance if you sell to EU markets
+                  </td>
+                </tr>
+              </table>
+
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
                 <tr>
                   <td align="center" style="border-radius:6px;background-color:#16A34A;">
                     <!--[if mso]>
@@ -126,29 +161,38 @@
                       stroke="f"
                       fillcolor="#16A34A">
                       <w:anchorlock/>
-                      <center style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">Create your Tracebud account</center>
+                      <center style="color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:bold;">View delivery</center>
                     </v:roundrect>
                     <![endif]-->
                     <a class="cta-btn" href="{{signupUrl}}" target="_blank"
                       style="display:inline-block;background-color:#16A34A;color:#FFFFFF;font-family:Arial,Helvetica,sans-serif;font-size:14px;font-weight:700;text-decoration:none;padding:11px 28px;border-radius:6px;line-height:1.4;mso-hide:all;">
-                      Create your Tracebud account
+                      View delivery
                     </a>
                   </td>
                 </tr>
               </table>
 
-              <p style="margin:0 0 36px;font-size:13px;color:#6B7280;">
-                Already on Tracebud? <a href="{{loginUrl}}" target="_blank" style="color:#064E3B;text-decoration:underline;">Sign in with this email</a> instead.
+              <p style="margin:0 0 28px;font-size:13px;color:#6B7280;line-height:1.6;">
+                Free &mdash; about 5 minutes to set up. Sign up with <strong>{{recipientEmail}}</strong> to claim this delivery.
+              </p>
+
+              <p style="margin:0 0 36px;font-size:13px;color:#6B7280;line-height:1.6;">
+                Already on Tracebud? <a href="{{loginUrl}}" target="_blank" style="color:#064E3B;text-decoration:underline;">Sign in with this email</a>
+                &nbsp;&middot;&nbsp;
+                <a href="{{learnMoreUrl}}" target="_blank" style="color:#064E3B;text-decoration:underline;">What is Tracebud?</a>
               </p>
 
               <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px;">
                 <tr><td style="background-color:#E5E7EB;height:1px;font-size:0;line-height:0;"></td></tr>
               </table>
 
+              <p style="margin:0 0 12px;font-size:12px;color:#9CA3AF;line-height:1.6;">
+                {{producerLabel}} may also share a QR code on the physical receipt &mdash; either path works.
+              </p>
               <p style="margin:0;font-size:12px;color:#9CA3AF;line-height:1.6;">
-                You received this because a producer entered your email when logging a delivery on
-                <a href="https://dashboard.tracebud.com" target="_blank" style="color:#064E3B;text-decoration:underline;">dashboard.tracebud.com</a>.
-                If this wasn&apos;t expected, you can safely ignore this email.
+                You received this because a producer entered your email when logging a delivery on Tracebud.
+                No account is created unless you sign up. If this wasn&apos;t expected, you can safely ignore this email.
+                <a href="https://tracebud.com/privacy" target="_blank" style="color:#064E3B;text-decoration:underline;">Privacy policy</a>
               </p>
 
             </td>

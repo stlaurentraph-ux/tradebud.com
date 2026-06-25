@@ -1,7 +1,9 @@
 import {
   applyTemplatePlaceholders,
+  buildDeliveryBuyerInviteSubject,
   buildDeliveryBuyerInviteTemplateVars,
   escapeHtml,
+  getDeliveryBuyerInviteReminderTemplateId,
   getResumeNudgeTemplateId,
   renderOnboardingEmailHtml,
   renderOnboardingEmailText,
@@ -53,19 +55,43 @@ describe('onboarding-email.templates', () => {
     expect(text).not.toContain('{{appUrl}}');
   });
 
-  it('renders delivery buyer invite template adapted from welcome layout', () => {
+  it('renders delivery buyer invite for cold recipients with delivery preview', () => {
     const vars = buildDeliveryBuyerInviteTemplateVars({
       recipientEmail: 'buyer@coop.example',
       producerLabel: 'Maria N.',
       dashboardBaseUrl: 'https://dashboard.tracebud.com',
+      deliveryKg: 120,
+      deliveryDate: '2026-06-25',
+      tripRef: 'trip-abc',
     });
+    expect(buildDeliveryBuyerInviteSubject('Maria N.')).toBe(
+      'Maria N. shared a delivery record with you',
+    );
     const html = renderOnboardingEmailHtml('delivery-buyer-invite', vars);
-    expect(html).toContain('DELIVERY WAITING');
+    expect(html).toContain('DELIVERY SHARED WITH YOU');
     expect(html).toContain('buyer@coop.example');
-    expect(html).toContain('Create your Tracebud account');
+    expect(html).toContain('View delivery');
     expect(html).toContain('Maria N.');
+    expect(html).toContain('120 kg');
+    expect(html).toContain('TRIP-ABC');
+    expect(html).toContain('What is Tracebud?');
     const text = renderOnboardingEmailText('delivery-buyer-invite', vars);
     expect(text).toContain('buyer@coop.example');
+    expect(text).toContain('tracebud.com');
+  });
+
+  it('renders delivery buyer invite reminder variants', () => {
+    const vars = buildDeliveryBuyerInviteTemplateVars({
+      recipientEmail: 'buyer@coop.example',
+      producerLabel: 'Maria N.',
+      deliveryKg: 50,
+    });
+    expect(getDeliveryBuyerInviteReminderTemplateId(0)).toBe('delivery-buyer-invite-reminder');
+    expect(getDeliveryBuyerInviteReminderTemplateId(1)).toBe('delivery-buyer-invite-reminder-final');
+    expect(renderOnboardingEmailHtml('delivery-buyer-invite-reminder', vars)).toContain('REMINDER');
+    expect(renderOnboardingEmailHtml('delivery-buyer-invite-reminder-final', vars)).toContain(
+      'LAST REMINDER',
+    );
   });
 
   it('renders resume nudge variants', () => {
