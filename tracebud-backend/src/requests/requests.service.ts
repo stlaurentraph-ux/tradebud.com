@@ -13,6 +13,12 @@ import { Resend } from 'resend';
 import { ConsentService } from '../consent/consent.service';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
+import {
+  dispatchCampaignRequestEmails,
+  remindUnclaimedCampaignRecipientInvites,
+  resolveCampaignRecipientContactTypes,
+  resolveSenderPrimaryRole,
+} from './campaign-request-email';
 import { queueCampaignRecipientInvites } from './campaign-recipient-invite';
 import {
   resolveCampaignTargetFields,
@@ -321,9 +327,10 @@ export class RequestsService {
           full_name: string;
           email: string | null;
           phone: string | null;
+          contact_type: string | null;
         }>(
           `
-            SELECT id, full_name, email, phone
+            SELECT id, full_name, email, phone, contact_type
             FROM crm_contacts
             WHERE tenant_id = $1
               AND id = ANY($2::text[])
@@ -410,113 +417,86 @@ export class RequestsService {
       };
     }
     const resend = this.getResendClient();
-    const senderEmail = this.getResendSender();
-    const senderName = this.getResendSenderName();
-    const from = `${senderName} <${senderEmail}>`;
-    const replyTo = this.getResendReplyTo(from);
     const requestingOrganization = await this.getRequestingOrganizationLabel(campaign);
+    const senderRole = await resolveSenderPrimaryRole(this.pool, campaign.tenant_id);
     const dashboardBaseUrl = this.getDashboardBaseUrl();
     const docsBaseUrl = this.getDocsBaseUrl();
-    const dueDateLabel = new Date(campaign.due_at).toLocaleDateString();
-    const subject = `Request from ${requestingOrganization}: ${campaign.title}`;
     const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
-    const contactTypes = await this.resolveDeliveryContactTypes(campaign.tenant_id, emailDeliveries);
-
-    const deliveries = await Promise.allSettled(
-      emailDeliveries.map(async (delivery) => {
-        const recipient = delivery.email;
-        if (!recipient) {
-          throw new Error('Missing email for email-channel delivery.');
-        }
-        const normalizedRecipient = recipient.trim().toLowerCase();
-        const isFarmerRecipient =
-          contactTypes.get(delivery.contact_id) === 'farmer' ||
-          contactTypes.get(normalizedRecipient) === 'farmer';
-        const acceptUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaign.id)}&decision=accept`;
-        const decisionToken = this.signDecisionToken(campaign.id, recipient);
-        const refuseUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaign.id)}&decision=refuse`;
-        const connectUrl = isFarmerRecipient
-          ? `${fieldAuthBaseUrl}/campaign?campaign=${encodeURIComponent(campaign.id)}`
-          : `${dashboardBaseUrl}/create-account?campaign=${encodeURIComponent(campaign.id)}`;
-        const connectLabel = isFarmerRecipient
-          ? 'Open Tracebud field app'
-          : 'Connect and start your compliance journey';
-        const docsUrl = `${docsBaseUrl}/getting-started/compliance-requests`;
-        const acceptUrlWithToken = `${acceptUrl}&recipient=${encodeURIComponent(recipient)}&token=${decisionToken}`;
-        const refuseUrlWithToken = `${refuseUrl}&recipient=${encodeURIComponent(recipient)}&token=${decisionToken}`;
-        const result = await resend.emails.send({
-          from,
-          to: recipient,
-          replyTo,
-          subject,
-          html: `
-            <div style="font-family:Arial,sans-serif;line-height:1.5;max-width:640px">
-              <h2 style="margin-bottom:8px;">Evidence request from ${requestingOrganization}</h2>
-              <p style="margin:0 0 12px 0;">
-                ${campaign.description || 'To stay compliant and continue business flows, your organization has been asked to provide supply-chain evidence through Tracebud.'}
-              </p>
-              <p style="margin:0 0 12px 0;">
-                <strong>Request:</strong> ${campaign.title}<br />
-                <strong>Due date:</strong> ${dueDateLabel}
-              </p>
-              <p style="margin:0 0 12px 0;">
-                You can connect to Tracebud, open an account, and start with a free 1-month trial to upload the required evidence and document formats.
-              </p>
-              <p style="margin:0 0 12px 0;">
-                If this request is from an importer to an exporter, the exporter can then continue the evidence chain by requesting the required documents from farmers/cooperatives inside Tracebud.
-              </p>
-              <div style="margin:16px 0;display:flex;gap:8px;flex-wrap:wrap">
-                <a
-                  href="${acceptUrlWithToken}"
-                  style="display:inline-block;background:#16a34a;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600"
-                >
-                  Accept
-                </a>
-                <a
-                  href="${refuseUrlWithToken}"
-                  style="display:inline-block;background:#dc2626;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600"
-                >
-                  Refuse
-                </a>
-                <a
-                  href="${connectUrl}"
-                  style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600"
-                >
-                  ${connectLabel}
-                </a>
-              </div>
-              <p style="margin:0 0 8px 0;">
-                Need help? Read the setup guide:
-                <a href="${docsUrl}" style="color:#1d4ed8">Tracebud documentation</a>.
-              </p>
-              <p style="margin:0;color:#4b5563;font-size:12px">
-                If buttons do not open directly, copy this link into your browser: ${connectUrl}
-              </p>
-            </div>
-          `,
-        });
-        if (result.error) {
-          throw new Error(`Resend rejected ${recipient}: ${result.error.message}`);
-        }
-        if (!result.data?.id) {
-          throw new Error(`Resend did not return message id for ${recipient}.`);
-        }
-        return result.data.id;
-      }),
+    const contactTypes = await resolveCampaignRecipientContactTypes(
+      this.pool,
+      campaign.tenant_id,
+      emailDeliveries,
     );
 
-    const sentDeliveries = deliveries
-      .map((entry, index) => (entry.status === 'fulfilled' ? emailDeliveries[index] ?? null : null))
-      .filter((delivery): delivery is CampaignDeliveryRecipient => Boolean(delivery));
-    const sentEmails = sentDeliveries
-      .map((delivery) => delivery.email?.trim().toLowerCase() ?? '')
-      .filter((email) => email.length > 0);
-    const sentCount = sentEmails.length;
-    const failedCount = deliveries.length - sentCount;
-    const failureMessages = deliveries
-      .filter((entry): entry is PromiseRejectedResult => entry.status === 'rejected')
-      .map((entry) => (entry.reason instanceof Error ? entry.reason.message : String(entry.reason)));
-    return { sentCount, failedCount, failureMessages, sentEmails, sentDeliveries };
+    return dispatchCampaignRequestEmails({
+      resend,
+      fromEmail: this.getResendSender(),
+      senderOrgLabel: requestingOrganization,
+      senderRole,
+      campaign: {
+        id: campaign.id,
+        tenant_id: campaign.tenant_id,
+        title: campaign.title,
+        description: campaign.description,
+        request_type: campaign.request_type,
+        due_at: campaign.due_at,
+      },
+      emailDeliveries,
+      contactTypes,
+      dashboardBaseUrl,
+      docsBaseUrl,
+      fieldAuthBaseUrl,
+      buildUrls: ({ campaignId, recipientEmail, isFarmerRecipient }) => {
+        const acceptUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=accept`;
+        const refuseUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=refuse`;
+        const decisionToken = this.signDecisionToken(campaignId, recipientEmail);
+        const connectUrl = isFarmerRecipient
+          ? `${fieldAuthBaseUrl}/campaign?campaign=${encodeURIComponent(campaignId)}`
+          : `${dashboardBaseUrl}/create-account?campaign=${encodeURIComponent(campaignId)}`;
+        return {
+          connectUrl,
+          acceptUrl: `${acceptUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
+          refuseUrl: `${refuseUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
+        };
+      },
+    });
+  }
+
+  async remindUnclaimedCampaignRecipientInvites(): Promise<
+    import('./campaign-request-email').RemindUnclaimedCampaignInvitesResult
+  > {
+    try {
+      const resend = this.getResendClient();
+      const dashboardBaseUrl = this.getDashboardBaseUrl();
+      const docsBaseUrl = this.getDocsBaseUrl();
+      const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
+      return remindUnclaimedCampaignRecipientInvites(this.pool, {
+        resend,
+        dashboardBaseUrl,
+        docsBaseUrl,
+        fieldAuthBaseUrl,
+        resolveSenderOrgLabel: (row) =>
+          this.getRequestingOrganizationLabel(row as RequestCampaignRecord),
+        buildUrls: ({ campaignId, recipientEmail, isFarmerRecipient }) => {
+          const acceptUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=accept`;
+          const refuseUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaignId)}&decision=refuse`;
+          const decisionToken = this.signDecisionToken(campaignId, recipientEmail);
+          const connectUrl = isFarmerRecipient
+            ? `${fieldAuthBaseUrl}/campaign?campaign=${encodeURIComponent(campaignId)}`
+            : `${dashboardBaseUrl}/create-account?campaign=${encodeURIComponent(campaignId)}`;
+          return {
+            connectUrl,
+            acceptUrl: `${acceptUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
+            refuseUrl: `${refuseUrl}&recipient=${encodeURIComponent(recipientEmail)}&token=${decisionToken}`,
+          };
+        },
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        return { scanned: 0, sent: 0, skipped: 0, failures: [] };
+      }
+      throw error;
+    }
   }
 
   private async dispatchCampaignWhatsApp(
@@ -588,6 +568,7 @@ export class RequestsService {
           campaignTitle: campaign.title,
           fromOrg,
           claimUrl,
+          recipientContactType: delivery.contact_type,
         });
         if (smsResult.sent) {
           deliveryChannel = 'sms';

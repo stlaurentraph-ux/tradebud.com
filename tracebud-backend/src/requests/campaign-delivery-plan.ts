@@ -7,6 +7,7 @@ export type CampaignDeliveryRecipient = {
   full_name: string;
   email: string | null;
   phone: string | null;
+  contact_type?: string | null;
   delivery_channel: CampaignDeliveryChannel;
   delivery_address: string | null;
 };
@@ -16,6 +17,7 @@ export type CampaignCrmContactRow = {
   full_name: string;
   email: string | null;
   phone: string | null;
+  contact_type?: string | null;
 };
 
 export function planCampaignDeliveries(
@@ -31,6 +33,7 @@ export function planCampaignDeliveries(
       full_name: contact.full_name.trim() || contact.id,
       email: hasEmail ? email : null,
       phone,
+      contact_type: contact.contact_type ?? null,
       delivery_channel: hasEmail ? 'email' : phone ? 'whatsapp' : 'desk_only',
       delivery_address: hasEmail ? email : phone,
     };

@@ -1,3 +1,8 @@
+import {
+  buildCampaignSmsBody,
+  normalizeCampaignRecipientAudience,
+} from '../common/cold-recipient-email-copy';
+
 export type SmsCampaignDeliveryResult = {
   sent: boolean;
   messageId: string | null;
@@ -9,6 +14,7 @@ type SmsTemplatePayload = {
   campaignTitle: string;
   fromOrg: string;
   claimUrl: string;
+  recipientContactType?: string | null;
 };
 
 function isSmsConfigured(): boolean {
@@ -42,7 +48,13 @@ export async function sendCampaignSmsInvite(
   const authToken = process.env.TWILIO_AUTH_TOKEN?.trim() ?? '';
   const from = process.env.TWILIO_CAMPAIGN_SMS_FROM?.trim() ?? '';
   const to = normalizeSmsPhone(input.toPhoneE164);
-  const body = `${input.fromOrg} invited you to complete "${input.campaignTitle}" on Tracebud: ${input.claimUrl}`;
+  const audience = normalizeCampaignRecipientAudience(input.recipientContactType);
+  const body = buildCampaignSmsBody({
+    senderOrg: input.fromOrg,
+    campaignTitle: input.campaignTitle,
+    claimUrl: input.claimUrl,
+    audience,
+  });
 
   const params = new URLSearchParams({
     To: to,

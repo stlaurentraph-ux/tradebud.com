@@ -13,6 +13,9 @@ The Supabase confirm template is pasted directly into the Supabase Dashboard and
 | D        | Farmer delivery to unknown dashboard email       | {{producerLabel}} shared a delivery record with you  |
 | D2       | Cron: invite +72h, delivery unclaimed             | Reminder: delivery from {{producerLabel}} is still waiting |
 | D3       | Cron: +96h after D2 (max 2 reminders total)      | Last reminder: delivery from {{producerLabel}} is waiting |
+| E        | Campaign evidence request to cold recipient      | {{senderOrgLabel}} sent you a compliance request on Tracebud |
+| E2       | Cron: invite +72h, campaign unclaimed            | Reminder: a compliance request is still waiting |
+| E3       | Cron: +96h after E2 (max 2 reminders total)      | Last reminder: respond to your Tracebud request |
 | B        | Cron: signup +24 h, workspace incomplete         | Finish setting up your Tracebud workspace            |
 | C        | Cron: +48 h after B (max 2 nudges total)         | Reminder: your Tracebud workspace is almost ready    |
 | Supabase | Supabase Auth confirm signup                     | Confirm your Tracebud account                        |
@@ -29,6 +32,9 @@ email-templates/
     delivery-buyer-invite.html Email D — Delivery buyer invite (cold recipient)
     delivery-buyer-invite-reminder.html Email D2 — Unclaimed delivery reminder #1
     delivery-buyer-invite-reminder-final.html Email D3 — Final unclaimed reminder
+    campaign-request-invite.html Email E — Campaign request invite (cold recipient)
+    campaign-request-invite-reminder.html Email E2 — Unclaimed campaign reminder #1
+    campaign-request-invite-reminder-final.html Email E3 — Final unclaimed campaign reminder
     resume-nudge-first.html    Email B — Resume nudge #1
     resume-nudge-final.html    Email C — Final reminder
     supabase-confirm-email.html Bonus — Supabase Auth confirm (paste into Supabase Dashboard)
@@ -37,6 +43,9 @@ email-templates/
     delivery-buyer-invite.txt  Email D plain text
     delivery-buyer-invite-reminder.txt  Email D2 plain text
     delivery-buyer-invite-reminder-final.txt  Email D3 plain text
+    campaign-request-invite.txt  Email E plain text
+    campaign-request-invite-reminder.txt  Email E2 plain text
+    campaign-request-invite-reminder-final.txt  Email E3 plain text
     resume-nudge-first.txt     Email B plain text
     resume-nudge-final.txt     Email C plain text
   DESIGN_TOKENS.md             Full color, type, spacing, and merge-tag reference
@@ -67,6 +76,8 @@ email-templates/
 - **Welcome** → after wizard step 2 (`saveWorkspaceSetup`)
 - **Delivery buyer invite** → farmer harvest with unknown buyer email (`delivery-buyer-invite.ts`)
 - **Delivery invite reminders D2/D3** → cron `POST /api/v1/launch/delivery-invites/remind-unclaimed`
+- **Campaign request invite** → evidence request dispatch (`campaign-request-email.ts`)
+- **Campaign invite reminders E2/E3** → cron `POST /api/v1/launch/campaign-invites/remind-unclaimed`
 - **Resume #1 / #2** → cron `POST /api/v1/launch/onboarding/remind-incomplete` (second send uses `resume-nudge-final.html`)
 
 Docker/Railway must include the `email-templates/` folder (see `Dockerfile`).

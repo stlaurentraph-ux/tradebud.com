@@ -7,12 +7,16 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { RequestsService } from '../requests/requests.service';
 import { LaunchService } from './launch.service';
 
 @ApiTags('Launch')
 @Controller('v1/launch')
 export class LaunchCronController {
-  constructor(private readonly launchService: LaunchService) {}
+  constructor(
+    private readonly launchService: LaunchService,
+    private readonly requestsService: RequestsService,
+  ) {}
 
   private assertCronToken(tokenRaw: string | undefined): void {
     const expected = process.env.LAUNCH_ONBOARDING_CRON_TOKEN?.trim() ?? '';
@@ -47,5 +51,17 @@ export class LaunchCronController {
   ) {
     this.assertCronToken(cronToken);
     return this.launchService.remindUnclaimedDeliveryBuyerInvites();
+  }
+
+  @Post('campaign-invites/remind-unclaimed')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Send reminder emails for unclaimed campaign recipient invites (cron)',
+  })
+  async remindUnclaimedCampaignInvites(
+    @Headers('x-tracebud-launch-cron-token') cronToken: string | undefined,
+  ) {
+    this.assertCronToken(cronToken);
+    return this.requestsService.remindUnclaimedCampaignRecipientInvites();
   }
 }

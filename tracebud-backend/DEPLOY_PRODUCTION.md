@@ -173,7 +173,31 @@ Redeploy backend after env + migration.
 
 Device checklist: `apps/offline-product/DEVICE_SMOKE_CHECKLIST.md` §5a.
 
-### 2e. Postgres connection hygiene (Supabase)
+### 2e. Campaign request invites (cold recipients → Resend → accept/refuse/claim)
+
+Required for dashboard **Send request** campaigns when recipients are not yet on Tracebud.
+
+**1. Database**
+
+```bash
+cd tracebud-backend
+npm run db:apply:campaign-recipient-invite-reminders
+npm run db:verify:campaign-recipient-invite-reminders
+```
+
+SQL: `sql/tb_v16_068_campaign_recipient_invite_reminders.sql`.
+
+**2. Railway env**
+
+Same Resend + dashboard URLs as §2d (`npm run check:resend` verifies E/E2/E3 templates).
+
+**3. Smoke**
+
+- Dashboard: send a campaign to a fresh email → `campaign-request-invite` received (role-aware copy for farmer/cooperative/exporter/importer).
+- Cron: `POST /api/v1/launch/campaign-invites/remind-unclaimed` with `x-tracebud-launch-cron-token`.
+- Recipient accepts/refuses via intent links or claims via dashboard/field app.
+
+### 2f. Postgres connection hygiene (Supabase)
 
 Before scaling Railway replicas or running many local migration scripts:
 

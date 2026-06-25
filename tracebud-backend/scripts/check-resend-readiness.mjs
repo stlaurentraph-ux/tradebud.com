@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Verify Resend is configured for onboarding welcome + delivery buyer invites.
+ * Verify Resend is configured for onboarding welcome + delivery buyer + campaign request invites.
  *
  * Usage:
  *   npm run check:resend
@@ -75,6 +75,12 @@ for (const file of [
   'email-templates/text/delivery-buyer-invite-reminder.txt',
   'email-templates/html/delivery-buyer-invite-reminder-final.html',
   'email-templates/text/delivery-buyer-invite-reminder-final.txt',
+  'email-templates/html/campaign-request-invite.html',
+  'email-templates/text/campaign-request-invite.txt',
+  'email-templates/html/campaign-request-invite-reminder.html',
+  'email-templates/text/campaign-request-invite-reminder.txt',
+  'email-templates/html/campaign-request-invite-reminder-final.html',
+  'email-templates/text/campaign-request-invite-reminder-final.txt',
   'email-templates/html/welcome.html',
 ]) {
   const full = resolve(process.cwd(), file);
@@ -91,4 +97,5 @@ if (failed) {
 
 console.log('\nResend readiness: OK');
 console.log('Delivery buyer invites: delivery-buyer-invite + reminder templates (D/D2/D3).');
+console.log('Campaign request invites: campaign-request-invite + reminder templates (E/E2/E3).');
 console.log('Configure RESEND_* on Railway and verify your sending domain at resend.com.');

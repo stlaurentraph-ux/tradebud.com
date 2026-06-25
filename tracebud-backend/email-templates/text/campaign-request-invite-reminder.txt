@@ -1,0 +1,23 @@
+Subject: Reminder: {{senderOrgLabel}} is waiting for your compliance response
+Preheader: Please review and respond to the Tracebud request
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+{{senderOrgLabel}} is still waiting for your response.
+
+Request: {{campaignTitle}}
+Due date: {{dueDateLabel}}
+
+{{connectLabel}}
+  {{connectUrl}}
+
+Accept request
+  {{acceptUrl}}
+
+Decline request
+  {{refuseUrl}}
+
+Guide: {{docsUrl}}
+
+© {{year}} Tracebud

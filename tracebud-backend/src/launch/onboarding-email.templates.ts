@@ -8,7 +8,10 @@ export type OnboardingEmailTemplateId =
   | 'resume-nudge-final'
   | 'delivery-buyer-invite'
   | 'delivery-buyer-invite-reminder'
-  | 'delivery-buyer-invite-reminder-final';
+  | 'delivery-buyer-invite-reminder-final'
+  | 'campaign-request-invite'
+  | 'campaign-request-invite-reminder'
+  | 'campaign-request-invite-reminder-final';
 
 export const ONBOARDING_EMAIL_SUBJECTS: Record<OnboardingEmailTemplateId, string> = {
   welcome: 'Welcome to Tracebud — your workspace is ready',
@@ -18,6 +21,9 @@ export const ONBOARDING_EMAIL_SUBJECTS: Record<OnboardingEmailTemplateId, string
   'delivery-buyer-invite': 'A producer shared a delivery record with you',
   'delivery-buyer-invite-reminder': 'Reminder: a delivery is still waiting for you',
   'delivery-buyer-invite-reminder-final': 'Last reminder: claim your delivery on Tracebud',
+  'campaign-request-invite': 'A compliance request was sent to you on Tracebud',
+  'campaign-request-invite-reminder': 'Reminder: a compliance request is still waiting',
+  'campaign-request-invite-reminder-final': 'Last reminder: respond to your Tracebud request',
 };
 
 export interface OnboardingEmailTemplateVars {
@@ -36,6 +42,21 @@ export interface OnboardingEmailTemplateVars {
   deliveryDateLabel?: string;
   tripRefLabel?: string;
   learnMoreUrl?: string;
+  senderOrgLabel?: string;
+  senderContextLine?: string;
+  recipientRoleLabel?: string;
+  campaignTitle?: string;
+  campaignDescription?: string;
+  dueDateLabel?: string;
+  requestTypeLabel?: string;
+  connectUrl?: string;
+  connectLabel?: string;
+  acceptUrl?: string;
+  refuseUrl?: string;
+  docsUrl?: string;
+  tracebudExplainer?: string;
+  whyRespondBulletsHtml?: string;
+  whyRespondBulletsText?: string;
   year: string;
 }
 
@@ -129,12 +150,31 @@ export function applyTemplatePlaceholders(
     deliveryDateLabel: vars.deliveryDateLabel ?? '',
     tripRefLabel: vars.tripRefLabel ?? '',
     learnMoreUrl: vars.learnMoreUrl ?? '',
+    senderOrgLabel: vars.senderOrgLabel ?? '',
+    senderContextLine: vars.senderContextLine ?? '',
+    recipientRoleLabel: vars.recipientRoleLabel ?? '',
+    campaignTitle: vars.campaignTitle ?? '',
+    campaignDescription: vars.campaignDescription ?? '',
+    dueDateLabel: vars.dueDateLabel ?? '',
+    requestTypeLabel: vars.requestTypeLabel ?? '',
+    connectUrl: vars.connectUrl ?? '',
+    connectLabel: vars.connectLabel ?? '',
+    acceptUrl: vars.acceptUrl ?? '',
+    refuseUrl: vars.refuseUrl ?? '',
+    docsUrl: vars.docsUrl ?? '',
+    tracebudExplainer: vars.tracebudExplainer ?? '',
+    whyRespondBulletsHtml: vars.whyRespondBulletsHtml ?? '',
+    whyRespondBulletsText: vars.whyRespondBulletsText ?? '',
     year: vars.year,
   };
 
   return template.replace(/\{\{(\w+)\}\}/g, (_match, key: string) => {
     const raw = entries[key] ?? '';
-    return escape ? escapeHtml(raw) : raw;
+    const rawHtmlKeys = new Set(['whyRespondBulletsHtml']);
+    if (escape && !rawHtmlKeys.has(key)) {
+      return escapeHtml(raw);
+    }
+    return raw;
   });
 }
 
@@ -200,7 +240,7 @@ export function buildFarmerWelcomeTemplateVars(input: {
   };
 }
 
-function firstNameFromRecipientEmail(recipientEmail: string): string {
+export function firstNameFromRecipientEmail(recipientEmail: string): string {
   const local = recipientEmail.split('@')[0] ?? '';
   const token = local.split(/[._+-]/)[0] ?? local;
   return token.length > 0 ? token.charAt(0).toUpperCase() + token.slice(1) : 'there';

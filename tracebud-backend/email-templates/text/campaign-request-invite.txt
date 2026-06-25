@@ -1,0 +1,38 @@
+Subject: {{senderOrgLabel}} sent you a compliance request
+Preheader: Review the request, then connect, accept, or decline on Tracebud
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+{{senderOrgLabel}} sent you a Tracebud request.
+
+{{senderContextLine}}
+{{tracebudExplainer}}
+
+Request preview
+  From         : {{senderOrgLabel}}
+  For          : {{recipientRoleLabel}}
+  Title        : {{campaignTitle}}
+  Type         : {{requestTypeLabel}}
+  Due date     : {{dueDateLabel}}
+
+{{campaignDescription}}
+
+Why respond now
+{{whyRespondBulletsText}}
+
+{{connectLabel}}
+  {{connectUrl}}
+
+Accept request
+  {{acceptUrl}}
+
+Decline request
+  {{refuseUrl}}
+
+Guide: {{docsUrl}}
+
+This message was sent to {{recipientEmail}} because a partner included this address
+in a compliance request on Tracebud.
+
+© {{year}} Tracebud

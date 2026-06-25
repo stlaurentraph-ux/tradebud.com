@@ -1,0 +1,23 @@
+Subject: Last reminder: {{senderOrgLabel}} is waiting for your compliance response
+Preheader: Final reminder to respond on Tracebud
+──────────────────────────────────────────────────────
+
+Hi {{firstName}},
+
+Final reminder from {{senderOrgLabel}}.
+
+Request: {{campaignTitle}}
+Due date: {{dueDateLabel}}
+
+{{connectLabel}}
+  {{connectUrl}}
+
+Accept request
+  {{acceptUrl}}
+
+Decline request
+  {{refuseUrl}}
+
+We will stop sending reminder emails for this request after this message.
+
+© {{year}} Tracebud
