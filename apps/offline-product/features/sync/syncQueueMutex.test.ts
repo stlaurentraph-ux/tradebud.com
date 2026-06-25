@@ -5,6 +5,7 @@ import {
 } from './syncProgressCaption';
 import {
   getSyncQueueLockSnapshot,
+  releaseStaleSyncQueueLockIfNeeded,
   resetSyncQueueLockForTests,
   setSyncQueuePhase,
   SyncQueueLockTimeoutError,
@@ -61,6 +62,73 @@ describe('withSyncQueueLock', () => {
 
     releaseFirst?.();
     await first;
+  });
+
+  it('releases a stale lock before granting a new holder', async () => {
+    resetSyncQueueLockForTests();
+    void withSyncQueueLock(async () => {
+      await new Promise(() => undefined);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(getSyncQueueLockSnapshot().locked).toBe(true);
+
+    const snap = getSyncQueueLockSnapshot();
+    expect(releaseStaleSyncQueueLockIfNeeded((snap.lockStartedAt ?? 0) + 200_000)).toBe(true);
+    expect(getSyncQueueLockSnapshot().locked).toBe(false);
+
+    await expect(withSyncQueueLock(async () => 'recovered', { waitMs: 30 })).resolves.toBe(
+      'recovered',
+    );
+  });
+
+  it('a force-released stale holder does not clobber the lock of the new holder', async () => {
+    resetSyncQueueLockForTests();
+
+    // Holder A acquires and hangs.
+    let releaseA: (() => void) | undefined;
+    const aHeld = new Promise<void>((resolve) => {
+      releaseA = resolve;
+    });
+    const aRun = withSyncQueueLock(async () => {
+      await aHeld;
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Operator/recovery force-releases A as stale.
+    const snap = getSyncQueueLockSnapshot();
+    expect(releaseStaleSyncQueueLockIfNeeded((snap.lockStartedAt ?? 0) + 200_000)).toBe(true);
+
+    // Holder B acquires the freed lock and starts running.
+    let releaseB: (() => void) | undefined;
+    const bHeld = new Promise<void>((resolve) => {
+      releaseB = resolve;
+    });
+    const bRun = withSyncQueueLock(async () => {
+      await bHeld;
+    }, { waitMs: 30 });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(getSyncQueueLockSnapshot().locked).toBe(true);
+
+    // A finally completes. Its finally must be a no-op (stale token) — B must keep the lock.
+    releaseA?.();
+    await aRun;
+    await new Promise((r) => setTimeout(r, 0));
+    expect(getSyncQueueLockSnapshot().locked).toBe(true);
+
+    // A third caller must still have to wait for B (not slip in due to a corrupted lock).
+    let cRan = false;
+    const cRun = withSyncQueueLock(async () => {
+      cRan = true;
+    }, { waitMs: 'never' });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(cRan).toBe(false);
+
+    // Once B releases, C proceeds and the lock fully clears.
+    releaseB?.();
+    await bRun;
+    await cRun;
+    expect(cRan).toBe(true);
+    expect(getSyncQueueLockSnapshot().locked).toBe(false);
   });
 
   it('waits indefinitely when waitMs is never', async () => {
