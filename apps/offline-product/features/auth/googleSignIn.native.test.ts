@@ -40,6 +40,14 @@ vi.mock('@/features/auth/oauthBrowserSessionOptions', () => ({
   getOAuthBrowserSessionOptions: () => ({ createTask: false, showInRecents: false }),
 }));
 
+vi.mock('@/features/auth/promptAsyncWithTimeout', () => ({
+  promptAsyncWithTimeout: (
+    request: { promptAsync: typeof mocks.promptAsync },
+    discovery: unknown,
+    options: unknown,
+  ) => request.promptAsync(discovery, options),
+}));
+
 vi.mock('@/features/auth/googleNativeOAuthRedirect', () => ({
   captureGoogleNativeOAuthCode: mocks.captureGoogleNativeOAuthCode,
 }));

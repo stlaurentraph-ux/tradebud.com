@@ -13,6 +13,7 @@ import { getOAuthBrowserSessionOptions } from '@/features/auth/oauthBrowserSessi
 import { getGoogleOAuthClientIds, getGoogleOAuthRedirectUri } from '@/features/auth/googleOAuthConfig';
 import { captureGoogleNativeOAuthCode } from '@/features/auth/googleNativeOAuthRedirect';
 import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
+import { promptAsyncWithTimeout } from '@/features/auth/promptAsyncWithTimeout';
 import { trackOAuthStep } from '@/features/auth/oauthTelemetry';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -52,7 +53,7 @@ export async function signInWithGoogleNative(): Promise<Session> {
   trackOAuthStep('native_prompt', { provider: 'google', path: 'native' });
   let result;
   try {
-    result = await request.promptAsync(GOOGLE_DISCOVERY, getOAuthBrowserSessionOptions());
+    result = await promptAsyncWithTimeout(request, GOOGLE_DISCOVERY, getOAuthBrowserSessionOptions());
   } finally {
     await dismissOAuthBrowserIfOpen();
   }

@@ -637,6 +637,18 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           farmerId: farmer?.id,
           localPlots: plots,
         });
+        if (outcome.status === 'failed') {
+          oauthSignInInFlightRef.current = false;
+          setOauthLoading(null);
+          const message = formatSignInErrorMessage(t, outcome.message);
+          setHint(message);
+          trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+            method: 'oauth',
+            source: 'deep_link',
+            reason: outcome.message,
+          });
+          return;
+        }
         if (outcome.status === 'already_signed_in' || outcome.status === 'completed') {
           if (!hasSyncAuthSession()) return;
           await dismissOAuthBrowserIfOpen();

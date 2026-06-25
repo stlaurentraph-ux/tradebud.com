@@ -12,6 +12,7 @@ import {
   shouldExitOAuthIntermediaryScreen,
 } from '@/features/auth/oauthColdStartLaunch';
 import { runOAuthColdStartCallback } from '@/features/auth/oauthOrchestrator';
+import { resolveOAuthColdStartUrl } from '@/features/auth/resolveOAuthColdStartUrl';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -58,8 +59,7 @@ export default function AuthCallbackScreen() {
     trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_STARTED, { source: 'cold_start' });
 
     try {
-      const { getInitialURL } = await import('expo-linking');
-      const url = await getInitialURL();
+      const url = await resolveOAuthColdStartUrl();
       if (runId !== runIdRef.current) return;
 
       const outcome = await runOAuthColdStartCallback({
