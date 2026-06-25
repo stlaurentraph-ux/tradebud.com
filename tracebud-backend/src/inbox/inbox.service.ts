@@ -200,33 +200,50 @@ export class InboxService {
   }
 
   private async ensureInboxTables(): Promise<void> {
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS inbox_requests (
-        id TEXT PRIMARY KEY,
-        campaign_id TEXT NOT NULL,
-        title TEXT NOT NULL,
-        request_type TEXT NOT NULL CHECK (
-          request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')
-        ),
-        due_at TIMESTAMPTZ NOT NULL,
-        from_org TEXT NOT NULL,
-        sender_tenant_id TEXT NOT NULL,
-        recipient_tenant_id TEXT NOT NULL,
-        status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
-        created_at TIMESTAMPTZ NOT NULL,
-        updated_at TIMESTAMPTZ NOT NULL
-      )
-    `);
-    await this.pool.query(`
-      CREATE TABLE IF NOT EXISTS inbox_request_events (
-        id BIGSERIAL PRIMARY KEY,
-        request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
-        event_type TEXT NOT NULL,
-        actor_tenant_id TEXT NULL,
-        payload JSONB NOT NULL DEFAULT '{}'::jsonb,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-      )
-    `);
+    try {
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS inbox_requests (
+          id TEXT PRIMARY KEY,
+          campaign_id TEXT NOT NULL,
+          title TEXT NOT NULL,
+          request_type TEXT NOT NULL CHECK (
+            request_type IN ('MISSING_PLOT_GEOMETRY', 'GENERAL_EVIDENCE', 'CONSENT_GRANT')
+          ),
+          due_at TIMESTAMPTZ NOT NULL,
+          from_org TEXT NOT NULL,
+          sender_tenant_id TEXT NOT NULL,
+          recipient_tenant_id TEXT NOT NULL,
+          status TEXT NOT NULL CHECK (status IN ('PENDING', 'RESPONDED')),
+          created_at TIMESTAMPTZ NOT NULL,
+          updated_at TIMESTAMPTZ NOT NULL
+        )
+      `);
+      await this.pool.query(`
+        CREATE TABLE IF NOT EXISTS inbox_request_events (
+          id BIGSERIAL PRIMARY KEY,
+          request_id TEXT NOT NULL REFERENCES inbox_requests(id) ON DELETE CASCADE,
+          event_type TEXT NOT NULL,
+          actor_tenant_id TEXT NULL,
+          payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+    } catch (error: any) {
+      // Two concurrent CI runs can both detect the table missing and race to CREATE TABLE,
+      // colliding on the pg_type composite-type row (error code 23505,
+      // constraint pg_type_typname_nsp_index). If the table now exists we can proceed.
+      if (error?.code === '23505') {
+        const exists = await this.pool
+          .query(
+            `SELECT 1 FROM information_schema.tables
+             WHERE table_schema = current_schema() AND table_name = 'inbox_requests'`,
+          )
+          .then((r) => r.rows.length > 0)
+          .catch(() => false);
+        if (exists) return;
+      }
+      throw error;
+    }
   }
 
   private async upsertRequests(requests: InboxRequestRecord[], action: BootstrapAction | 'auto_init'): Promise<void> {
@@ -234,8 +251,9 @@ export class InboxService {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('DELETE FROM inbox_request_events');
-      await client.query('DELETE FROM inbox_requests');
+      // TRUNCATE acquires ACCESS EXCLUSIVE, blocking concurrent inserts for the
+      // duration of the transaction and preventing pkey collisions from parallel CI runs.
+      await client.query('TRUNCATE TABLE inbox_requests CASCADE');
 
       for (const request of requests) {
         await client.query(

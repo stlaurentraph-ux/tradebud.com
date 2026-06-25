@@ -1,6 +1,5 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Pool } from 'pg';
-import { createInboxTablesForIntTest } from '../testing/inbox-tables.fixture';
 import { InboxController } from './inbox.controller';
 import { InboxService } from './inbox.service';
 import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
@@ -51,7 +50,8 @@ describe('InboxController integration: tenant claim + role policy', () => {
   beforeEach(async () => {
     await pool.query('DROP TABLE IF EXISTS inbox_request_events CASCADE');
     await pool.query('DROP TABLE IF EXISTS inbox_requests CASCADE');
-    await createInboxTablesForIntTest(pool);
+    // service.bootstrap creates tables via ensureInboxTables then seeds via TRUNCATE+INSERT;
+    // no need to pre-create them with the fixture helper.
     await service.bootstrap('reset');
   });
 
