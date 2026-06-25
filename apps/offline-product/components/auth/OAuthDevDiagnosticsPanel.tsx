@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Pressable, ScrollView, Share, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -23,26 +23,30 @@ type OAuthDevDiagnosticsPanelProps = {
   surface: 'create_account' | 'sign_in' | 'settings';
 };
 
-export function OAuthDevDiagnosticsPanel({
+export function OAuthDevDiagnosticsPanel(props: OAuthDevDiagnosticsPanelProps) {
+  // Dev-only panel. The guard lives in this hook-free wrapper so the inner component can call its
+  // hooks unconditionally (rules-of-hooks); in production the inner never mounts.
+  if (typeof __DEV__ === 'undefined' || !__DEV__) return null;
+  return <OAuthDevDiagnosticsPanelContent {...props} />;
+}
+
+function OAuthDevDiagnosticsPanelContent({
   defaultExpanded = false,
   surface,
 }: OAuthDevDiagnosticsPanelProps) {
-  if (typeof __DEV__ === 'undefined' || !__DEV__) return null;
-
   const colors = useAppColors();
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const [tick, setTick] = useState(0);
+  const [, forceRefresh] = useState(0);
 
-  useEffect(() => {
-    return subscribeOAuthDiagnostics(() => setTick((n) => n + 1));
-  }, []);
+  useEffect(() => subscribeOAuthDiagnostics(() => forceRefresh((n) => n + 1)), []);
 
   useEffect(() => {
     if (defaultExpanded) setExpanded(true);
   }, [defaultExpanded]);
 
-  const snapshot = useMemo(() => collectOAuthRuntimeDiagnostics(), [tick]);
-  const events = useMemo(() => getOAuthDiagnosticEvents(), [tick]);
+  // Cheap, dev-only reads computed on each render; `forceRefresh` re-renders when diagnostics emit.
+  const snapshot = collectOAuthRuntimeDiagnostics();
+  const events = getOAuthDiagnosticEvents();
 
   const shareReport = useCallback(async () => {
     const message = formatOAuthDiagnosticReport(snapshotOAuthRuntimeDiagnosticsLines());
@@ -72,7 +76,7 @@ export function OAuthDevDiagnosticsPanel({
           justifyContent: 'space-between',
           paddingHorizontal: Spacing.sm,
           paddingVertical: Spacing.xs,
-          backgroundColor: colors.surfaceMuted ?? '#f4f4f5',
+          backgroundColor: colors.backgroundSecondary ?? '#f4f4f5',
           gap: Spacing.xs,
         }}
         accessibilityRole="button"

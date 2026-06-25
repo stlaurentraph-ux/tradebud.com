@@ -89,6 +89,10 @@ export default function HomeScreen() {
     setActionRequired((prev) =>
       prev?.message === message && prev?.plotId === plot.id ? prev : { message, plotId: plot.id },
     );
+    // Reads the latest plots via plotsRef.current, so `plots` itself isn't referenced; `plots.length`
+    // is kept deliberately as a trigger so this callback (and the effect depending on it) re-runs when
+    // the plot count changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendPlots, farmer, t, plots.length]);
 
   const refreshBackendPlots = useCallback(

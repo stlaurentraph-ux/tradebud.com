@@ -51,6 +51,10 @@ export default function CampaignInviteScreen() {
     return () => {
       cancelled = true;
     };
+    // claimToken is captured once for the per-campaignId bootstrap. Depending on it would re-run the
+    // whole deep-link handoff (persist + preview fetch + analytics + router.replace) if the token
+    // changed, which we intentionally do not want.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaignId]);
 
   if (!campaignId) {

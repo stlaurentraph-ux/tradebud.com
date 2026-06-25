@@ -524,6 +524,10 @@ export default function SettingsScreen() {
         sessionOpened.end();
       }
     }
+    // `t` is used only to localize plot-attention labels. It is intentionally omitted so this metrics
+    // refresher (and its dependent fetch effects) is not recreated on every language switch; labels
+    // re-localize on the next data-driven refresh.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [farmer, plots, reloadFromDisk]);
 
   const refreshCloudParity = useCallback(

@@ -43,20 +43,16 @@ export function resolveFieldSyncMode(input: ResolveFieldSyncModeInput): FieldSyn
     (input.blockedPlotCount ?? 0) === 0 &&
     (input.queuePendingCount ?? 0) === 0;
 
+  // `needsCloudRestore === true` already returned 'full' above, so it is guaranteed falsy here.
   if (
     nothingLocalPending &&
     input.hasFieldSyncCursor === true &&
-    input.needsCloudRestore !== true &&
     (input.cloudDeltaHasInboundChanges === false || input.deltaProbeFailed === true)
   ) {
     return 'push_only';
   }
 
-  if (
-    input.hasFieldSyncCursor === true &&
-    input.cloudDeltaHasInboundChanges === false &&
-    input.needsCloudRestore !== true
-  ) {
+  if (input.hasFieldSyncCursor === true && input.cloudDeltaHasInboundChanges === false) {
     return 'push_only';
   }
   return 'full';

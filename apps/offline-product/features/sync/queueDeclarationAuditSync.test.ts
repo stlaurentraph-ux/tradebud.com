@@ -163,11 +163,17 @@ describe('queueDeclarationAuditSync', () => {
     await hydrateModule.hydrateDeclarationSyncMarkersFromServer({
       apiFarmerId: 'farmer-1',
       ownedFarmerIds: [],
-      localFarmer: { id: 'farmer-1', role: 'farmer' },
+      localFarmer: { id: 'farmer-1', role: 'farmer', selfDeclared: false },
       localPlots: [
         {
           id: 'plot-1',
           farmerId: 'farmer-1',
+          name: 'Plot 1',
+          createdAt: 1,
+          areaSquareMeters: 10_000,
+          areaHectares: 1,
+          kind: 'polygon',
+          points: [],
           landTenureDeclared: true,
           noDeforestationDeclared: true,
         },
@@ -178,11 +184,17 @@ describe('queueDeclarationAuditSync', () => {
     const { enqueuePendingDeclarationAuditsForDevice } = await loadModule();
 
     const result = await enqueuePendingDeclarationAuditsForDevice({
-      farmer: { id: 'farmer-1', role: 'farmer' },
+      farmer: { id: 'farmer-1', role: 'farmer', selfDeclared: false },
       plots: [
         {
           id: 'plot-1',
           farmerId: 'farmer-1',
+          name: 'Plot 1',
+          createdAt: 1,
+          areaSquareMeters: 10_000,
+          areaHectares: 1,
+          kind: 'polygon',
+          points: [],
           landTenureDeclared: true,
           noDeforestationDeclared: true,
         },

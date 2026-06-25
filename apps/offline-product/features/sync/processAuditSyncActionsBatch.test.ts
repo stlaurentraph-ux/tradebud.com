@@ -67,6 +67,9 @@ describe('processAuditSyncActionsBatch', () => {
           }),
           hlcTimestamp: '1:1',
           createdAt: 1,
+          attempts: 0,
+          lastError: null,
+          lastAttemptAt: null,
         },
       ],
     });

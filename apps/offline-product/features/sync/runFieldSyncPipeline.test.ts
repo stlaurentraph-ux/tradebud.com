@@ -162,6 +162,7 @@ const t = (key: string) => key;
 const completeFarmer = {
   id: 'farmer-local',
   name: 'Test Farmer',
+  role: 'farmer' as const,
   selfDeclared: true,
   selfDeclaredAt: 1,
   fpicConsent: true,
@@ -171,9 +172,13 @@ const completeFarmer = {
 
 const completePlot = {
   id: 'plot-1',
+  farmerId: 'farmer-local',
   name: 'Plot 1',
+  createdAt: 1,
+  areaSquareMeters: 10_000,
   areaHectares: 1,
-  kind: 'permanent_crop' as const,
+  kind: 'polygon' as const,
+  points: [],
   landTenureDeclared: true,
   noDeforestationDeclared: true,
 };
@@ -182,13 +187,26 @@ const baseParams = {
   accessToken: 'token',
   apiFarmerId: 'farmer-api',
   farmerScopeIds: ['farmer-api'],
-  syncFarmer: { id: 'farmer-local', name: 'Test Farmer' },
-  syncPlots: [{ id: 'plot-1', name: 'Plot 1', areaHectares: 1, kind: 'permanent_crop' as const }],
+  // Intentionally NOT declaration-complete (no self-declaration / plot declaration flags) so the
+  // pipeline treats push_only as "not idle" and still pulls declarations.
+  syncFarmer: { id: 'farmer-local', name: 'Test Farmer', role: 'farmer' as const, selfDeclared: false },
+  syncPlots: [
+    {
+      id: 'plot-1',
+      farmerId: 'farmer-local',
+      name: 'Plot 1',
+      createdAt: 1,
+      areaSquareMeters: 10_000,
+      areaHectares: 1,
+      kind: 'polygon' as const,
+      points: [],
+    },
+  ],
   t,
   selectedQueueActionTypes: ['audit_sync' as const],
   allQueueActionTypes: ['audit_sync' as const],
   syncDrainActionTypes: ['audit_sync' as const],
-  consentActionTypes: [] as const,
+  consentActionTypes: [],
   isConsentQueueActionType: () => false,
 };
 

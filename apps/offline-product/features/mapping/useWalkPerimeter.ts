@@ -4,6 +4,7 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 
 import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { evaluateLocationReadiness } from '@/features/mapping/locationReadiness';
+import { WALK_CAPTURE_MAX_ACCURACY_M } from '@/features/mapping/walkCaptureCoaching';
 
 const WALK_KEEP_AWAKE_TAG = 'walk-perimeter-capture';
 
@@ -25,8 +26,6 @@ type AreaInfo = {
   squareMeters: number;
   hectares: number;
 };
-
-import { WALK_CAPTURE_MAX_ACCURACY_M } from '@/features/mapping/walkCaptureCoaching';
 
 type CaptureMode = 'walk' | 'vertex_avg' | 'manual_trace';
 
@@ -297,7 +296,7 @@ export function useWalkPerimeter(options?: {
           }
         },
       );
-    } catch (e) {
+    } catch {
       setIsRecording(false);
       setLastError('Failed to start location tracking');
     }
@@ -418,7 +417,7 @@ export function useWalkPerimeter(options?: {
     if (!isRecording) return;
     void activateKeepAwakeAsync(WALK_KEEP_AWAKE_TAG).catch(() => undefined);
     return () => {
-      void Promise.resolve(deactivateKeepAwake(WALK_KEEP_AWAKE_TAG)).catch(() => undefined);
+      void deactivateKeepAwake(WALK_KEEP_AWAKE_TAG).catch(() => undefined);
     };
   }, [isRecording]);
 

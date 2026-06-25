@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => ({
   platformOS: 'android' as 'android' | 'ios' | 'web',
-  setNotificationChannelAsync: vi.fn(async () => undefined),
+  setNotificationChannelAsync: vi.fn(
+    async (_channelId: string, _config: { importance?: number }) => undefined,
+  ),
 }));
 
 vi.mock('react-native', () => ({
@@ -33,9 +35,8 @@ describe('ensureAndroidNotificationChannel', () => {
     h.platformOS = 'android';
     await ensureAndroidNotificationChannel();
     expect(h.setNotificationChannelAsync).toHaveBeenCalledTimes(1);
-    const [channelId, config] = h.setNotificationChannelAsync.mock.calls[0];
-    expect(channelId).toBe(ANDROID_DEFAULT_CHANNEL_ID);
-    expect(config.importance).toBe(4); // AndroidImportance.HIGH
+    expect(h.setNotificationChannelAsync.mock.calls[0]?.[0]).toBe(ANDROID_DEFAULT_CHANNEL_ID);
+    expect(h.setNotificationChannelAsync.mock.calls[0]?.[1]?.importance).toBe(4); // AndroidImportance.HIGH
   });
 
   it('is a no-op on iOS (no notification channels)', async () => {

@@ -36,6 +36,7 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
     [item],
   );
   const isImage = item ? isImageDocumentUri(item.uri, item.mimeType) : false;
+  const canOpenDocument = !!item && !isImage && canOpenExternally(item.uri);
 
   const openExternally = async () => {
     if (!item) return;
@@ -91,13 +92,13 @@ export function DocumentPreviewModal({ visible, item, onClose, onDelete }: Docum
           ) : null}
         </ScrollView>
 
-        {item && canOpenExternally(item.uri) && !isImage ? (
+        {canOpenDocument ? (
           <View style={styles.footer}>
             <Button title={t('documents_preview_open')} variant="primary" onPress={() => void openExternally()} />
           </View>
         ) : null}
         {onDelete ? (
-          <View style={[styles.footer, item && canOpenExternally(item.uri) && !isImage ? styles.footerStacked : null]}>
+          <View style={[styles.footer, canOpenDocument ? styles.footerStacked : null]}>
             <Button
               title={t('delete_land_document_action')}
               variant="secondary"

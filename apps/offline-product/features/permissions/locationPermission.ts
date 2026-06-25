@@ -1,4 +1,4 @@
-import { Alert, Linking, Platform } from 'react-native';
+import { Alert, Linking, Platform, type AlertButton } from 'react-native';
 import * as Location from 'expo-location';
 
 type Translate = (key: string) => string;
@@ -10,10 +10,8 @@ export async function requestForegroundLocationPermission(): Promise<boolean> {
 
 /** Farmer-friendly alert when location is required but denied (walk plot, declaration GPS). */
 export function alertLocationPermissionDenied(t: Translate): void {
-  const buttons: Array<{ text: string; style?: 'cancel'; onPress?: () => void }> = [
-    { text: t('cancel'), style: 'cancel' },
-  ];
-  if (Platform.OS === 'ios' || Platform.OS === 'android') {
+  const buttons: AlertButton[] = [{ text: t('cancel'), style: 'cancel' }];
+  if (Platform.OS !== 'web') {
     buttons.push({
       text: t('open_settings'),
       onPress: () => {
@@ -38,22 +36,19 @@ export async function requestForegroundLocationOrAlert(t: Translate): Promise<bo
  * location source settings; on iOS it falls back to the app settings.
  */
 export function alertLocationServicesOff(t: Translate): void {
-  const buttons: Array<{ text: string; style?: 'cancel'; onPress?: () => void }> = [
-    { text: t('cancel'), style: 'cancel' },
-  ];
-  if (Platform.OS === 'android') {
+  const buttons: AlertButton[] = [{ text: t('cancel'), style: 'cancel' }];
+  if (Platform.OS !== 'web') {
     buttons.push({
       text: t('open_settings'),
       onPress: () => {
-        void Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS').catch(() => {
-          void Linking.openSettings();
-        });
-      },
-    });
-  } else if (Platform.OS === 'ios') {
-    buttons.push({
-      text: t('open_settings'),
-      onPress: () => {
+        // Android deep-links straight to the location source settings (with a settings fallback);
+        // iOS has no such screen, so open the app settings.
+        if (Platform.OS === 'android') {
+          void Linking.sendIntent('android.settings.LOCATION_SOURCE_SETTINGS').catch(() => {
+            void Linking.openSettings();
+          });
+          return;
+        }
         void Linking.openSettings();
       },
     });

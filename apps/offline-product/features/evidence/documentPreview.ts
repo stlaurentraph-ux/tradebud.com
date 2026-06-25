@@ -25,12 +25,18 @@ export function isImageDocumentUri(uri: string, mimeType: string | null): boolea
  */
 const EXTERNALLY_OPENABLE_SCHEMES = new Set(['file:', 'content:', 'https:']);
 
-export function canOpenExternally(uri: string): boolean {
-  if (typeof uri !== 'string' || uri.length === 0) return false;
-  if (uri.startsWith('text:')) return false;
+/** Returns the lowercased URI scheme including the trailing colon (e.g. `https:`), or `null`. */
+function getUriScheme(uri: string): string | null {
+  if (typeof uri !== 'string' || uri.length === 0) return null;
   const schemeMatch = /^([a-z][a-z0-9+.-]*):/i.exec(uri);
-  if (!schemeMatch) return false;
-  return EXTERNALLY_OPENABLE_SCHEMES.has(`${schemeMatch[1].toLowerCase()}:`);
+  return schemeMatch ? `${schemeMatch[1].toLowerCase()}:` : null;
+}
+
+export function canOpenExternally(uri: string): boolean {
+  if (typeof uri !== 'string') return false;
+  if (uri.startsWith('text:')) return false;
+  const scheme = getUriScheme(uri);
+  return scheme !== null && EXTERNALLY_OPENABLE_SCHEMES.has(scheme);
 }
 
 /**
@@ -46,9 +52,7 @@ export type DocumentOpenStrategy = 'browser' | 'share' | null;
 
 export function resolveDocumentOpenStrategy(uri: string): DocumentOpenStrategy {
   if (!canOpenExternally(uri)) return null;
-  const schemeMatch = /^([a-z][a-z0-9+.-]*):/i.exec(uri);
-  const scheme = schemeMatch ? `${schemeMatch[1].toLowerCase()}:` : '';
-  return scheme === 'https:' ? 'browser' : 'share';
+  return getUriScheme(uri) === 'https:' ? 'browser' : 'share';
 }
 
 export type DocumentPreviewItem = {
