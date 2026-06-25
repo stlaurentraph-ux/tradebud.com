@@ -245,8 +245,10 @@ export async function completeOAuthFromDeepLink(
       return { status: 'failed', message: 'sign_in_oauth_failed' };
     }
     return { status: 'completed', result };
-  } catch {
-    return { status: 'noop' };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : error ? String(error) : 'sign_in_oauth_failed';
+    return { status: 'failed', message };
   }
 }
 

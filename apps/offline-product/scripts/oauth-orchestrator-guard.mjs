@@ -93,6 +93,17 @@ function main() {
   if (!callback.includes('shouldExitOAuthIntermediaryScreen')) {
     issues.push('auth/callback.tsx must exit intermediary screen via oauthColdStartLaunch');
   }
+  if (!callback.includes('resolveOAuthColdStartUrl')) {
+    issues.push('auth/callback.tsx must poll for cold-start OAuth URL via resolveOAuthColdStartUrl');
+  }
+  if (!fs.existsSync(path.join(root, 'features/auth/resolveOAuthColdStartUrl.ts'))) {
+    issues.push('missing features/auth/resolveOAuthColdStartUrl.ts');
+  }
+
+  const googleNative = read('features/auth/googleSignIn.native.ts');
+  if (!googleNative.includes('promptAsyncWithTimeout')) {
+    issues.push('googleSignIn.native.ts must use promptAsyncWithTimeout to avoid hung CCT');
+  }
 
   if (!orchestrator.includes('getOAuthBrowserSessionOptions')) {
     issues.push('oauthOrchestrator.ts must use getOAuthBrowserSessionOptions for browser OAuth');
