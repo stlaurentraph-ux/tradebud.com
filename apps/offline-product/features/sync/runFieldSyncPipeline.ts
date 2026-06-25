@@ -3,6 +3,7 @@ import type { PendingSyncAction } from '@/features/state/persistence';
 import {
   loadPendingSyncActions,
   loadPlotServerLinks,
+  loadAppState,
 } from '@/features/state/persistence';
 import {
   mapPlotUploadErrorMessage,
@@ -27,6 +28,7 @@ import {
   warmPlotServerLinksForSync,
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
+import { restoreLocalDeclarationsFromServer } from '@/features/sync/restoreLocalDeclarationsFromServer';
 import { restoreLocalPlotsFromServer } from '@/features/sync/restoreLocalPlotsFromServer';
 import { pruneRedundantPendingUploadActions } from '@/features/sync/pruneRedundantPendingUploadActions';
 import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
@@ -180,6 +182,7 @@ async function runFieldSyncPipelineBody(
   const outcome: SyncNowUserOutcome = { syncMode };
   let plotUploadFirstError: string | undefined;
   let skipQueueDrain = false;
+  let activeFarmer = syncFarmer;
 
   let activePlots = syncPlots;
   let plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
@@ -245,7 +248,7 @@ async function runFieldSyncPipelineBody(
     const cloudRestoreResult = await restoreFarmerCloudState({
       apiFarmerId,
       ownedFarmerIds: farmerScopeIds,
-      localFarmer: syncFarmer,
+      localFarmer: activeFarmer,
       localPlots: activePlots,
       restoreScope,
     });
@@ -265,6 +268,9 @@ async function runFieldSyncPipelineBody(
     if (cloudRestoreResult.downloadFailed > 0) {
       outcome.evidenceDownloadFailed = cloudRestoreResult.downloadFailed;
     }
+    const diskAfterDeclarations = await loadAppState().catch(() => null);
+    if (diskAfterDeclarations?.farmer) activeFarmer = diskAfterDeclarations.farmer;
+    if (diskAfterDeclarations?.plots.length) activePlots = diskAfterDeclarations.plots;
   } else {
     setPhase('processing_queue');
     reportSyncStepStart('queue', { phase: 'push_only' });
@@ -274,12 +280,39 @@ async function runFieldSyncPipelineBody(
       localPlots: activePlots,
     }).catch(() => undefined);
     plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+
+    const declarationRestore = await restoreLocalDeclarationsFromServer({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localFarmer: activeFarmer,
+      localPlots: activePlots,
+    }).catch(() => ({
+      producerRestored: false,
+      plotsRestored: 0,
+      legalRestored: 0,
+      fetchFailed: true,
+    }));
+    if (declarationRestore.fetchFailed) {
+      outcome.declarationsFetchFailed = true;
+    } else if (
+      declarationRestore.producerRestored ||
+      declarationRestore.plotsRestored > 0 ||
+      declarationRestore.legalRestored > 0
+    ) {
+      outcome.declarationsRestored =
+        (declarationRestore.producerRestored ? 1 : 0) +
+        declarationRestore.plotsRestored +
+        declarationRestore.legalRestored;
+      const diskAfterDeclarations = await loadAppState().catch(() => null);
+      if (diskAfterDeclarations?.farmer) activeFarmer = diskAfterDeclarations.farmer;
+      if (diskAfterDeclarations?.plots.length) activePlots = diskAfterDeclarations.plots;
+    }
   }
 
   await hydrateLocalSyncMarkersFromServer({
     apiFarmerId,
     ownedFarmerIds: farmerScopeIds,
-    localFarmer: syncFarmer,
+    localFarmer: activeFarmer,
     localPlots: activePlots,
   }).catch(() => undefined);
 

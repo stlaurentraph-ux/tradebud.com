@@ -1,16 +1,16 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
-import { loadLocalDeliveryReceiptsForFarmer } from '@/features/state/persistence';
-import {
-  countServerPlotsMissingOnDeviceForRestore,
-  countServerVouchersForPostAuthRestore,
-} from '@/features/sync/postAuthSyncOffer';
+import { loadLocalDeliveryReceiptsForFarmer, loadPlotMappingDraft, loadPlotServerLinks } from '@/features/state/persistence';
 import {
   buildExtendedCountsFromAudit,
   countLocalMediaArtifacts,
   countServerEvidenceDocs,
   fetchCloudParityAuditRows,
 } from '@/features/sync/measureCloudParityArtifacts';
-import { loadPlotMappingDraft } from '@/features/state/persistence';
+import {
+  countServerPlotsMissingOnDeviceForRestore,
+  countServerVouchersForPostAuthRestore,
+} from '@/features/sync/postAuthSyncOffer';
+import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import {
   formatCloudParityHint,
   formatCloudParityHints,
@@ -50,7 +50,7 @@ export async function measureCloudParitySummary(params: {
     );
   }
 
-  const [localReceiptRows, serverPlotsMissingOnDevice, serverVoucherCount, localMedia, auditRows, localDraft] =
+  const [localReceiptRows, serverPlotsMissingOnDevice, serverVoucherCount, localMedia, auditRows, localDraft, plotServerLinks] =
     await Promise.all([
       loadLocalDeliveryReceiptsForFarmer(profileFarmerId).catch(() => []),
       countServerPlotsMissingOnDeviceForRestore({
@@ -67,6 +67,7 @@ export async function measureCloudParitySummary(params: {
         localPlots: params.localPlots,
       }),
       loadPlotMappingDraft(profileFarmerId).catch(() => null),
+      loadPlotServerLinks().catch(() => ({})),
     ]);
 
   let ownedFarmerIds: string[] = [profileFarmerId];
@@ -92,6 +93,14 @@ export async function measureCloudParitySummary(params: {
         })
       : null;
 
+  const backendPlots =
+    auditRows != null
+      ? await fetchBackendPlotsForSyncScope({
+          farmerId: profileFarmerId,
+          ownedFarmerIds,
+        }).catch(() => [])
+      : [];
+
   return summarizeCloudParityCounts(
     buildExtendedCountsFromAudit({
       auditRows,
@@ -103,6 +112,8 @@ export async function measureCloudParitySummary(params: {
       serverEvidenceDocs,
       localFarmer: params.localFarmer,
       localHasWalkDraft: localDraft != null,
+      plotServerLinks: plotServerLinks as Record<string, string>,
+      backendPlots,
     }),
   );
 }

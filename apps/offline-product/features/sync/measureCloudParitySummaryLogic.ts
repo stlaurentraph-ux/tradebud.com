@@ -18,6 +18,10 @@ export type ExtendedCloudParityCounts = {
   serverHasProducerAudit: boolean | null;
   localPlotAttestationsComplete: number;
   serverPlotAttestationAudits: number | null;
+  /** Producer attestations on server that this device can still pull down. */
+  producerAttestationMissingOnDevice: boolean;
+  /** Plot attestations on server for linked local plots not yet on device. */
+  plotAttestationsMissingOnDevice: number;
   localHasProfilePhoto: boolean;
   serverHasProfilePhoto: boolean | null;
   localHasWalkDraft: boolean;
@@ -43,15 +47,10 @@ export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
   const mediaGap = groundGap + landGap + evidenceGap;
 
   let declarationGap = 0;
-  if (counts.serverHasProducerAudit === true && !counts.localProducerComplete) {
+  if (counts.producerAttestationMissingOnDevice) {
     declarationGap += 1;
   }
-  if (counts.serverPlotAttestationAudits != null) {
-    declarationGap += gapCount(
-      counts.serverPlotAttestationAudits,
-      counts.localPlotAttestationsComplete,
-    );
-  }
+  declarationGap += Math.max(0, counts.plotAttestationsMissingOnDevice);
 
   const profilePhotoGap =
     counts.serverHasProfilePhoto === true && !counts.localHasProfilePhoto;

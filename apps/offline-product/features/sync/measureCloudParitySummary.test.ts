@@ -23,6 +23,8 @@ function baseCounts(overrides: Partial<ExtendedCloudParityCounts> = {}): Extende
     serverHasProducerAudit: null,
     localPlotAttestationsComplete: 0,
     serverPlotAttestationAudits: null,
+    producerAttestationMissingOnDevice: false,
+    plotAttestationsMissingOnDevice: 0,
     localHasProfilePhoto: false,
     serverHasProfilePhoto: null,
     localHasWalkDraft: false,
@@ -41,6 +43,29 @@ describe('extendedParityGaps', () => {
       }),
     );
     expect(gaps.mediaGap).toBe(6);
+  });
+
+  it('does not flag declaration restore when server audits exist only for plots not on device', () => {
+    const gaps = extendedParityGaps(
+      baseCounts({
+        localPlotCount: 2,
+        localPlotAttestationsComplete: 2,
+        serverPlotAttestationAudits: 5,
+        producerAttestationMissingOnDevice: false,
+        plotAttestationsMissingOnDevice: 0,
+      }),
+    );
+    expect(gaps.declarationGap).toBe(0);
+  });
+
+  it('flags declaration restore when linked local plot is missing attestations', () => {
+    const gaps = extendedParityGaps(
+      baseCounts({
+        producerAttestationMissingOnDevice: true,
+        plotAttestationsMissingOnDevice: 1,
+      }),
+    );
+    expect(gaps.declarationGap).toBe(2);
   });
 });
 

@@ -175,9 +175,19 @@ export function CreateAccountWizard({
     setBusy(true);
     setHint(null);
     try {
-      await ensureFarmerOAuthProfile(fullName.trim());
+      await ensureFarmerOAuthProfile(fullName.trim()).catch(() => undefined);
+      await hydrateSyncAuthFromSettings().catch(() => undefined);
+      if (!hasSyncAuthSession()) {
+        setHint(t('sign_in_oauth_failed'));
+        return;
+      }
       finishSuccess({ existingAccount: pendingExistingAccount });
     } catch (e) {
+      await hydrateSyncAuthFromSettings().catch(() => undefined);
+      if (hasSyncAuthSession()) {
+        finishSuccess({ existingAccount: pendingExistingAccount });
+        return;
+      }
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);

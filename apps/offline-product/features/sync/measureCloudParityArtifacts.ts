@@ -4,6 +4,7 @@ import { fetchPlotSyncedEvidence } from '@/features/api/postPlot';
 import {
   countServerDeclarationSignals,
   countServerPhotosFromAudit,
+  measureDeclarationParityMissing,
   serverHasActiveWalkDraft,
   serverHasProfilePhotoAudit,
 } from '@/features/sync/cloudParityArtifactCounts';
@@ -104,11 +105,26 @@ export function buildExtendedCountsFromAudit(params: {
   serverEvidenceDocs: number | null;
   localFarmer?: FarmerProfile;
   localHasWalkDraft: boolean;
+  plotServerLinks?: Record<string, string>;
+  backendPlots?: unknown[];
 }): ExtendedCloudParityCounts {
   const photoCounts =
     params.auditRows != null ? countServerPhotosFromAudit(params.auditRows) : null;
   const declarationSignals =
     params.auditRows != null ? countServerDeclarationSignals(params.auditRows) : null;
+  const declarationParity =
+    params.auditRows != null
+      ? measureDeclarationParityMissing({
+          auditRows: params.auditRows,
+          localPlots: params.localPlots,
+          plotServerLinks: params.plotServerLinks ?? {},
+          backendPlots: params.backendPlots,
+          localFarmer: params.localFarmer,
+        })
+      : {
+          producerMissingOnDevice: false,
+          plotAttestationsMissingOnDevice: 0,
+        };
 
   return {
     localPlotCount: params.localPlots.length,
@@ -128,6 +144,8 @@ export function buildExtendedCountsFromAudit(params: {
     serverHasProducerAudit: declarationSignals?.producerAudit ?? null,
     localPlotAttestationsComplete: countLocalPlotAttestationsComplete(params.localPlots),
     serverPlotAttestationAudits: declarationSignals?.plotAttestations ?? null,
+    producerAttestationMissingOnDevice: declarationParity.producerMissingOnDevice,
+    plotAttestationsMissingOnDevice: declarationParity.plotAttestationsMissingOnDevice,
     localHasProfilePhoto: Boolean(params.localFarmer?.profilePhotoUri?.trim()),
     serverHasProfilePhoto:
       params.auditRows != null ? serverHasProfilePhotoAudit(params.auditRows) : null,

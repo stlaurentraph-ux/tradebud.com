@@ -17,6 +17,8 @@ const restoreMocks = vi.hoisted(() => ({
   backfillServerHarvestDatesFromLocal: vi.fn(),
   restoreLinkedLocalPlotMediaFromServer: vi.fn(),
   hydrateLocalSyncMarkersFromServer: vi.fn(),
+  restoreLocalDeclarationsFromServer: vi.fn(),
+  loadAppState: vi.fn(),
 }));
 
 vi.mock('@/features/sync/processPendingSyncQueue', () => ({
@@ -94,6 +96,10 @@ vi.mock('@/features/sync/restoreLinkedLocalPlotMediaFromServer', () => ({
   restoreLinkedLocalPlotMediaFromServer: restoreMocks.restoreLinkedLocalPlotMediaFromServer,
 }));
 
+vi.mock('@/features/sync/restoreLocalDeclarationsFromServer', () => ({
+  restoreLocalDeclarationsFromServer: restoreMocks.restoreLocalDeclarationsFromServer,
+}));
+
 vi.mock('@/features/sync/hydrateLocalSyncMarkersFromServer', () => ({
   hydrateLocalSyncMarkersFromServer: restoreMocks.hydrateLocalSyncMarkersFromServer,
 }));
@@ -101,6 +107,7 @@ vi.mock('@/features/sync/hydrateLocalSyncMarkersFromServer', () => ({
 vi.mock('@/features/state/persistence', () => ({
   loadPendingSyncActions: restoreMocks.loadPendingSyncActions,
   loadPlotServerLinks: restoreMocks.loadPlotServerLinks,
+  loadAppState: restoreMocks.loadAppState,
 }));
 
 vi.mock('@/features/sync/processPendingConsentQueue', () => ({
@@ -188,9 +195,19 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
       fetchFailed: false,
       downloadFailed: 0,
     });
+    restoreMocks.restoreLocalDeclarationsFromServer.mockResolvedValue({
+      producerRestored: false,
+      plotsRestored: 0,
+      legalRestored: 0,
+      fetchFailed: false,
+    });
+    restoreMocks.loadAppState.mockResolvedValue({
+      farmer: baseParams.syncFarmer,
+      plots: baseParams.syncPlots,
+    });
   });
 
-  it('does not invoke cloud restore helpers when syncMode is push_only', async () => {
+  it('pulls declarations but skips full cloud restore when syncMode is push_only', async () => {
     const { runFieldSyncPipeline } = await import('./runFieldSyncPipeline');
 
     await runFieldSyncPipeline({
@@ -201,6 +218,7 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
     expect(restoreMocks.restoreLocalPlotsFromServer).not.toHaveBeenCalled();
     expect(restoreMocks.restoreLocalDeliveryReceiptsFromServer).not.toHaveBeenCalled();
     expect(restoreMocks.restoreFarmerCloudState).not.toHaveBeenCalled();
+    expect(restoreMocks.restoreLocalDeclarationsFromServer).toHaveBeenCalled();
     expect(restoreMocks.uploadUnsyncedPlotsForFarmer).not.toHaveBeenCalled();
     expect(restoreMocks.backfillServerHarvestDatesFromLocal).not.toHaveBeenCalled();
     expect(restoreMocks.enqueueFarmerCloudSyncActions).not.toHaveBeenCalled();

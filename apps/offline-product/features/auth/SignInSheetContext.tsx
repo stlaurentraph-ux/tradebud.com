@@ -82,6 +82,10 @@ import {
   shouldOfferPostAuthSync,
 } from '@/features/sync/postAuthSyncOffer';
 import type { OAuthProvider } from '@/features/auth/oauthOrchestrator';
+import {
+  shouldDeferAuthRefreshForCreateAccountWizard,
+  shouldSkipDeepLinkAuthSurfaceClose,
+} from '@/features/auth/signInAuthRefreshPolicy';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -460,13 +464,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       if (oauthSignInInFlightRef.current) {
         return;
       }
-      if (createWizardVisibleRef.current) {
-        if (hasSyncAuthSession()) {
-          const { email: savedEmail } = getAuthCredentials();
-          if (savedEmail) setEmail(savedEmail);
-          setIsSignedIn(true);
-          setCreateWizardVisible(false);
-        }
+      if (shouldDeferAuthRefreshForCreateAccountWizard(createWizardVisibleRef.current)) {
         return;
       }
       if (!hasSyncAuthSession()) {
@@ -632,6 +630,9 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         });
         if (outcome.status === 'already_signed_in' || outcome.status === 'completed') {
           if (!hasSyncAuthSession()) return;
+          if (shouldSkipDeepLinkAuthSurfaceClose(createWizardVisibleRef.current)) {
+            return;
+          }
           trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'oauth', source: 'deep_link' });
           const { email: signedInEmail } = getAuthCredentials();
           if (signedInEmail) setEmail(signedInEmail);

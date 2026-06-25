@@ -1274,14 +1274,12 @@ export default function SettingsScreen() {
               ownedFarmerIds: farmerScopeIds,
               plots: restoredPlots,
             });
-            const paritySummary =
-              syncMode === 'push_only'
-                ? null
-                : await measureCloudParitySummary({
-                    profileFarmerId: apiFarmerId,
-                    localPlots: restoredPlots,
-                    localFarmer: diskState.farmer ?? syncFarmer,
-                  }).catch(() => null);
+            const paritySummary = await measureCloudParitySummary({
+              profileFarmerId: apiFarmerId,
+              localPlots: restoredPlots,
+              localFarmer: diskState.farmer ?? syncFarmer,
+            }).catch(() => null);
+            setCloudParityNeedsRestore(paritySummary?.needsInboundRestore === true);
             setCloudParityHints(
               paritySummary
                 ? formatCloudParityHints(paritySummary, t, {

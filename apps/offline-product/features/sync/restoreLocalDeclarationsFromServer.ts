@@ -33,6 +33,20 @@ function parseTimestampMs(raw: unknown): number {
   return 0;
 }
 
+function pickFarmerForDeclarationRestore(params: {
+  apiFarmerId: string;
+  ownedFarmerIds: string[];
+  diskFarmer: FarmerProfile | undefined;
+  paramFarmer: FarmerProfile | undefined;
+}): FarmerProfile | undefined {
+  const allowed = new Set(
+    [params.apiFarmerId, ...params.ownedFarmerIds].map((id) => id.trim()).filter(Boolean),
+  );
+  if (params.diskFarmer?.id && allowed.has(params.diskFarmer.id)) return params.diskFarmer;
+  if (params.paramFarmer?.id && allowed.has(params.paramFarmer.id)) return params.paramFarmer;
+  return params.diskFarmer ?? params.paramFarmer;
+}
+
 /**
  * Pulls producer + plot declaration flags from server audit_log into local SQLite.
  * Never clears attestations already complete on device.
@@ -49,8 +63,12 @@ export async function restoreLocalDeclarationsFromServer(params: {
   }
 
   const diskState = await loadAppState().catch(() => ({ farmer: undefined, plots: [] as Plot[] }));
-  const localFarmer =
-    diskState.farmer?.id === apiFarmerId ? diskState.farmer : params.localFarmer;
+  const localFarmer = pickFarmerForDeclarationRestore({
+    apiFarmerId,
+    ownedFarmerIds: params.ownedFarmerIds,
+    diskFarmer: diskState.farmer,
+    paramFarmer: params.localFarmer,
+  });
   const localPlots = params.localPlots.length > 0 ? params.localPlots : diskState.plots;
 
   if (!localFarmer?.id) {
