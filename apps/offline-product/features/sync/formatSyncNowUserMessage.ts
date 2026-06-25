@@ -173,7 +173,7 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
       return t('sync_result_receipts_restored', { n: restoredReceipts });
     }
     if ((outcome.receiptsRequeued ?? 0) > 0) {
-      return t('sync_result_receipts_requeued', { n: outcome.receiptsRequeued });
+      return t('sync_result_receipts_requeued', { n: outcome.receiptsRequeued ?? 0 });
     }
     return t('sync_result_complete');
   }
