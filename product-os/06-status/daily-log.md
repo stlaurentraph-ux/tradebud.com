@@ -1,3 +1,14 @@
+### 2026-06-25 (Lane 2 fix — offline persistence write-atomicity + geo round-trip)
+- **Context**: Final extraction from the red-team branch (#298) onto `main`, re-implemented surgically against main's current file (the original commit was entangled with WIP and would not apply cleanly).
+- **Fixes**:
+  - `persistFarmer` / `persistPlots` now wrap their DELETE + reinsert in `withExclusiveTransactionAsync` (BEGIN EXCLUSIVE + rollback on throw). A crash/kill mid-write can no longer leave the farmer profile wiped or the plots table truncated.
+  - Added a `plotsDbLock` (mirroring the existing `farmerDbLock`) so overlapping `persistPlots` calls (local edit vs cloud restore) resolve last-call-wins by arrival order, not IO timing.
+  - **Data-fidelity bug**: `loadAppState` now reads back `declarationLatitude/Longitude/GeoCapturedAt`. These were already written by `persistFarmer` but never loaded, so a farmer's geo declaration was silently lost on every app reload.
+  - Guarded `loadAppState` plot mapping against corrupt `pointsJson` that parses to a non-array (e.g. literal `null`) — previously one bad row threw and aborted the whole load.
+  - Test mock (`expoSqliteMemoryMock`) gained `withTransactionAsync` / `withExclusiveTransactionAsync`.
+- **Verify**: `npm run typecheck` (0 errors), `npm run lint` green, `npx vitest run` → 481/481 (added a geo round-trip regression test).
+- **Status**: pushed as `fix/offline-persistence-atomicity`.
+
 ### 2026-06-25 (Lane 2 fix — offline app typecheck now clean)
 - **Context**: After merging #299 (iOS/Android platform + security hardening, clean off `main`), `tsc --noEmit` on `apps/offline-product` still failed with 3 pre-existing errors in `features/sync/`.
 - **Fixes (no behavior change except a crash repair)**:

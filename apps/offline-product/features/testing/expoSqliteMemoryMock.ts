@@ -54,6 +54,8 @@ export type ExpoSqliteMemoryMock = {
     runAsync: (sql: string, params?: unknown[]) => Promise<{ lastInsertRowId: number }>;
     getAllAsync: <T>(sql: string, params?: unknown[]) => Promise<T[]>;
     getFirstAsync: <T>(sql: string, params?: unknown[]) => Promise<T | null>;
+    withTransactionAsync: (task: () => Promise<void>) => Promise<void>;
+    withExclusiveTransactionAsync: <T>(task: (txn: unknown) => Promise<T>) => Promise<T>;
   }>;
   tables: {
     titlePhotos: TitlePhotoRow[];
@@ -100,6 +102,14 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
   });
 
   const db = {
+    // No real transaction isolation needed for the in-memory mock — run the task against the
+    // same db so the persistPlots/persistFarmer transactional wrappers behave as before.
+    withTransactionAsync: async (task: () => Promise<void>): Promise<void> => {
+      await task();
+    },
+    withExclusiveTransactionAsync: async <T>(task: (txn: unknown) => Promise<T>): Promise<T> => {
+      return task(db);
+    },
     execAsync: async (_sql: string) => {
       /* schema init no-op */
     },
