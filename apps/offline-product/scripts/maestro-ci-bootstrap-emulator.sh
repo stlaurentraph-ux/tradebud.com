@@ -40,7 +40,11 @@ export EXPO_PUBLIC_SUPABASE_URL="${EXPO_PUBLIC_SUPABASE_URL:-https://example.sup
 export EXPO_PUBLIC_OAUTH_BRIDGE_URL="${EXPO_PUBLIC_OAUTH_BRIDGE_URL:-https://app.tracebud.com/auth/callback}"
 export EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL="${EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL:-https://app.tracebud.com/auth/confirm}"
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
-npx expo run:android --device "$DEVICE_SERIAL"
+# Re-wait after uninstall — expo prebuild can take long enough for adb to look disconnected.
+adb -s "$DEVICE_SERIAL" wait-for-device
+adb -s "$DEVICE_SERIAL" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
+# ANDROID_SERIAL selects the emulator; expo `--device` expects a display name, not adb serial.
+npx expo run:android --no-bundler
 
 export MAESTRO_APP_ID="$APP_ID"
 
