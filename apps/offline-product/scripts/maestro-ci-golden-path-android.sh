@@ -16,6 +16,7 @@ if [[ ! -f "$FLOW_PATH" ]]; then
 fi
 
 echo "==> Running Maestro golden path (Android): $GOLDEN_FLOW"
-maestro test "$FLOW_PATH"
+export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
+maestro test --device "$DEVICE_SERIAL" "$FLOW_PATH"
 
 echo "Maestro Android golden path passed: $GOLDEN_FLOW"

@@ -55,10 +55,23 @@ function assertFlowsBaseline(manifest) {
 }
 
 function assertAndroidRunner(manifest) {
-  readOffline('scripts/maestro-ci-bootstrap-emulator.sh');
+  const bootstrap = readOffline('scripts/maestro-ci-bootstrap-emulator.sh');
   const androidGolden = readOffline('scripts/maestro-ci-golden-path-android.sh');
   if (!androidGolden.includes('maestro-ci-bootstrap-emulator.sh')) {
     throw new Error('Android golden path must reuse emulator bootstrap');
+  }
+  if (!bootstrap.includes('MAESTRO_DRIVER_STARTUP_TIMEOUT')) {
+    throw new Error('Android bootstrap must set MAESTRO_DRIVER_STARTUP_TIMEOUT');
+  }
+  if (!bootstrap.includes('app-debug.apk')) {
+    throw new Error('Android bootstrap must install prebuilt debug APK when present');
+  }
+  if (!androidGolden.includes('--device')) {
+    throw new Error('Android golden path must pass --device to maestro test');
+  }
+  const timeoutMs = manifest.androidEmulator?.driverStartupTimeoutMs;
+  if (!timeoutMs || timeoutMs < 180000) {
+    throw new Error('manifest androidEmulator.driverStartupTimeoutMs must be >= 180000');
   }
 }
 
@@ -78,6 +91,19 @@ function assertWorkflow(manifest) {
   }
   if (!workflow.includes('qa:maestro:golden-path:android')) {
     throw new Error(`${manifest.workflowFile} must run qa:maestro:golden-path:android`);
+  }
+  if (!workflow.includes('MAESTRO_DRIVER_STARTUP_TIMEOUT')) {
+    throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_DRIVER_STARTUP_TIMEOUT`);
+  }
+  if (!workflow.includes('emulator-options')) {
+    throw new Error(`${manifest.workflowFile} Android job must set emulator-options for software GPU`);
+  }
+  if (!workflow.includes('assembleDebug')) {
+    throw new Error(`${manifest.workflowFile} must prebuild/assembleDebug before emulator Maestro`);
+  }
+  const emulatorOptions = manifest.androidEmulator?.emulatorOptions;
+  if (!emulatorOptions || !workflow.includes('swiftshader_indirect')) {
+    throw new Error('workflow emulator-options must use swiftshader_indirect (manifest parity)');
   }
 
   const workflowBody = workflow;

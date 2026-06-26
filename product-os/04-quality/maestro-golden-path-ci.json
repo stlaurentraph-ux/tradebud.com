@@ -9,6 +9,8 @@
   "ciTriggers": ["pull_request", "push"],
   "androidEmulator": {
     "apiLevel": 34,
-    "profile": "pixel_6"
+    "profile": "pixel_6",
+    "driverStartupTimeoutMs": 300000,
+    "emulatorOptions": "-no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim"
   }
 }
