@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { setDefaultResultOrder } from 'node:dns';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
+import { resolvePgSslConfig } from './pg-ssl-config';
 import * as schema from './schema';
 
 export const DRIZZLE = Symbol('DRIZZLE');
@@ -18,11 +19,7 @@ function createPgPool(): Pool {
 
   const pool = new Pool({
     connectionString,
-    ssl: connectionString.includes('localhost')
-      ? false
-      : {
-          rejectUnauthorized: false,
-        },
+    ssl: resolvePgSslConfig(connectionString),
     max: Number(process.env.PG_POOL_MAX ?? 10),
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
