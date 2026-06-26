@@ -9,6 +9,9 @@ on:
         required: false
         type: string
 
+env:
+  DEPLOY_SMOKE_STRICT: ${{ github.event_name == 'workflow_dispatch' && '0' || '1' }}
+
 jobs:
   smoke:
     name: Marketing post-deploy smoke
@@ -31,6 +34,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Assert deploy smoke configuration
+        env:
+          MARKETING_SMOKE_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.MARKETING_SMOKE_BASE_URL }}
+        run: node scripts/assert-deploy-smoke-secrets.mjs marketing
+
       - name: Run marketing post-deploy smoke
         env:
           MARKETING_SMOKE_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.MARKETING_SMOKE_BASE_URL }}
@@ -38,8 +46,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${MARKETING_SMOKE_BASE_URL:-}" ]; then
-            echo "MARKETING_SMOKE_BASE_URL is not configured — skipping post-deploy smoke."
-            echo "Add the secret in GitHub Settings → Secrets and variables → Actions."
+            echo "No base URL configured — smoke run skipped (non-strict manual dispatch only)."
             exit 0
           fi
           node apps/marketing/scripts/marketing-post-deploy-smoke.mjs
