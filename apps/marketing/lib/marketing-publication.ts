@@ -26,6 +26,12 @@ export type MarketingRouteId =
   | 'impact-climate-biodiversity'
   | 'impact-market-access'
   | 'impact-inclusivity'
+  | 'who-we-serve'
+  | 'who-we-serve-producers'
+  | 'who-we-serve-exporters'
+  | 'who-we-serve-brands'
+  | 'who-we-serve-sponsors'
+  | 'who-we-serve-governments'
   | 'home-preview'
   | 'draft-index';
 
@@ -60,6 +66,12 @@ export const marketingRoutePublication: Record<MarketingRouteId, boolean> = {
   'impact-climate-biodiversity': false,
   'impact-market-access': false,
   'impact-inclusivity': false,
+  'who-we-serve': false,
+  'who-we-serve-producers': false,
+  'who-we-serve-exporters': false,
+  'who-we-serve-brands': false,
+  'who-we-serve-sponsors': false,
+  'who-we-serve-governments': false,
   'home-preview': false,
   'draft-index': false,
 };

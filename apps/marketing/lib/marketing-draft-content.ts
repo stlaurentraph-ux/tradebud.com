@@ -559,5 +559,226 @@ export const draftPages: Record<string, DraftPageContent> = {
   },
 };
 
+// ── Who We Serve ──────────────────────────────────────────────────────────────
+
+export const whoWeServeHub: DraftHubContent = {
+  routeId: 'who-we-serve',
+  eyebrow: 'Who We Serve',
+  title: 'Built for every actor in the supply chain.',
+  description:
+    'Tracebud is an open network. Producers, exporters, brands, network sponsors, and governments each enter independently — with a role-appropriate view and the data access they actually need.',
+  links: [
+    {
+      routeId: 'who-we-serve-producers',
+      href: '/who-we-serve/producers',
+      title: 'Producers & cooperatives',
+      description: 'Capture once, access every market — with farmer-owned data and free entry.',
+    },
+    {
+      routeId: 'who-we-serve-exporters',
+      href: '/who-we-serve/exporters',
+      title: 'Exporters & processors',
+      description: 'Manage compliance across your full supplier portfolio in one dashboard.',
+    },
+    {
+      routeId: 'who-we-serve-brands',
+      href: '/who-we-serve/brands',
+      title: 'Brands & roasters',
+      description: 'Verified, audit-ready supply chain claims without building your own infrastructure.',
+    },
+    {
+      routeId: 'who-we-serve-sponsors',
+      href: '/who-we-serve/sponsors',
+      title: 'Network sponsors',
+      description: 'Fund shared infrastructure that benefits every actor in your sourcing network.',
+    },
+    {
+      routeId: 'who-we-serve-governments',
+      href: '/who-we-serve/governments',
+      title: 'Governments',
+      description: 'National registry integration, competent-authority tooling, and compliance evidence.',
+    },
+  ],
+};
+
+export const whoWeServeDraftPages: Record<string, DraftPageContent> = {
+  'who-we-serve-producers': {
+    routeId: 'who-we-serve-producers',
+    eyebrow: 'Who We Serve',
+    title: 'Producers & cooperatives',
+    description:
+      'Tracebud removes the compliance cost barrier for smallholders and cooperatives. Capture your plots once — free, offline, on your own phone — and use that record to access every buyer relationship you build.',
+    sections: [
+      {
+        heading: 'The barrier Tracebud removes',
+        body: 'Market access increasingly requires documented origin. Most compliance tools are priced for exporters and brands — not the smallholders who bear the capture burden. Tracebud Tier 1 is permanently free for producers.',
+        bullets: [
+          'Free forever for producers — no trial, no expiry',
+          'Works offline on existing low-cost smartphones',
+          'Icon-led, low-literacy field walkthrough',
+          'Phone or magic-link onboarding — no app-store install',
+        ],
+      },
+      {
+        heading: 'Farmer-owned data',
+        body: 'Each plot and consent record belongs to the farmer. A GeoID is issued at capture time. Buyers and exporters access data through explicit grants — the farmer decides who sees what, and can revoke access at any time.',
+      },
+      {
+        heading: 'Cooperative enrollment',
+        body: 'Cooperatives can enroll members in bulk, aggregate supply, and surface collective compliance data to buyers — without forcing individual farmers into individual buyer contracts.',
+        bullets: [
+          'Bulk member enrollment via cooperative admin role',
+          'Aggregate supply and traceability reporting',
+          'Individual farmer records remain farmer-owned',
+        ],
+      },
+      {
+        heading: 'One capture, every market',
+        body: 'The same GeoID reuses across EUDR due diligence statements, ESG reporting, specialty certification channels, and the Tracebud direct-trade marketplace — eliminating repeated field work per buyer.',
+      },
+    ],
+    relatedLinks: whoWeServeHub.links.filter((l) => l.routeId !== 'who-we-serve-producers'),
+  },
+  'who-we-serve-exporters': {
+    routeId: 'who-we-serve-exporters',
+    eyebrow: 'Who We Serve',
+    title: 'Exporters & processors',
+    description:
+      'Exporters sit at the compliance choke point — responsible for due diligence across hundreds of producers they did not enroll. Tracebud gives exporters a supplier onboarding workflow, a dashboard to manage it, and one-click DDS export.',
+    sections: [
+      {
+        heading: 'Supplier portfolio management',
+        body: 'Invite suppliers directly into your Tracebud network or enroll them through cooperative channels. Each supplier relationship is request-based — you see only what has been granted to you.',
+        bullets: [
+          'Invite-based supplier onboarding via dashboard',
+          'Per-supplier compliance status at a glance',
+          'Automated plausibility checks run against every registered plot',
+          'Flag review workflow for satellite-detected anomalies',
+        ],
+      },
+      {
+        heading: 'Due diligence statement generation',
+        body: 'When a batch is ready to ship, the dashboard assembles a TRACES NT-compatible due diligence statement from verified plot records — including geolocation data, satellite check results, and operator details.',
+        bullets: [
+          'One-click EUDR DDS export per shipment',
+          'TRACES NT-compatible payload generation',
+          'Five-year immutable record retention',
+          'Competent authority inspection package on demand',
+        ],
+      },
+      {
+        heading: 'Risk-tiered supplier view',
+        body: 'Exporters operating across multiple origins and risk profiles can segment their supplier portfolio by country, certification status, or verification flag — and prioritise manual review where the risk is highest.',
+      },
+      {
+        heading: 'Open Chain option',
+        body: 'For exporters who want to go further than compliance — the Open Chain model combines shared-risk sourcing economics with LIRP premiums and 5-year MoUs that build the supply security buyers now require.',
+      },
+    ],
+    relatedLinks: whoWeServeHub.links.filter((l) => l.routeId !== 'who-we-serve-exporters'),
+  },
+  'who-we-serve-brands': {
+    routeId: 'who-we-serve-brands',
+    eyebrow: 'Who We Serve',
+    title: 'Brands & roasters',
+    description:
+      'Brands need auditable supply chain claims — without building traceability infrastructure themselves. Tracebud connects brands to verified origin data through their existing exporter relationships, or directly through the Open Chain model.',
+    sections: [
+      {
+        heading: 'Claims that survive audit',
+        body: 'Every supply chain claim a brand makes to an ESG framework, certifier, or regulator is only as strong as the underlying evidence. Tracebud provides plot-level, satellite-verified, consent-confirmed origin data — not self-reported questionnaires.',
+        bullets: [
+          'Plot-level origin evidence from verified field capture',
+          'Satellite deforestation check results per lot',
+          'Immutable five-year audit trail',
+          'EUDR-compliant, ESRS-pathway-compatible data structures',
+        ],
+      },
+      {
+        heading: 'No infrastructure to build',
+        body: 'Brands access Tracebud data through their exporters or cooperative partners — the network already exists. There is no proprietary traceability system to deploy, no supplier portal to build, and no repeat audit to commission.',
+      },
+      {
+        heading: 'Supply security through Open Chain',
+        body: 'The Open Chain model lets brands co-invest in sourcing infrastructure at origin — shared-risk economics, LIRP + 20% premiums, and forward supply agreements that reduce the single-exporter dependency that commodity markets create.',
+      },
+      {
+        heading: 'Scope 3 and ESG reporting',
+        body: 'Verified origin data feeds directly into Scope 3 reporting workflows and Cool Farm Tool integration — enabling brands to move from estimated emission factors to farm-level data without manual re-entry.',
+      },
+    ],
+    relatedLinks: whoWeServeHub.links.filter((l) => l.routeId !== 'who-we-serve-brands'),
+  },
+  'who-we-serve-sponsors': {
+    routeId: 'who-we-serve-sponsors',
+    eyebrow: 'Who We Serve',
+    title: 'Network sponsors',
+    description:
+      'Network sponsors fund the shared infrastructure that makes the whole chain work — cooperative enrollment, field capture tooling, and the open platform that removes the proprietary lock-in that currently fragments the market.',
+    sections: [
+      {
+        heading: 'What a network sponsor funds',
+        body: "Sponsor contributions cover the operational cost of Tier 1 access for producers and cooperatives in the sponsor's sourcing network — removing the cost barrier at origin without requiring individual producers to pay for compliance.",
+        bullets: [
+          'Covers Tier 1 field capture for enrolled producers',
+          'Cooperative enrollment and onboarding support',
+          'Dashboard access for the sponsor\'s supply team',
+          'Shared satellite verification coverage across the network',
+        ],
+      },
+      {
+        heading: 'Shared infrastructure, not proprietary lock-in',
+        body: "Tracebud is an open network. Sponsors fund infrastructure that benefits every actor in the chain — not a closed platform that locks producers into the sponsor's purchasing relationship. Farmer-owned GeoIDs persist beyond any single buyer relationship.",
+      },
+      {
+        heading: 'Open Chain model for deeper commitment',
+        body: 'Sponsors who want supply security alongside social impact can enter the Open Chain model — shared-risk sourcing with LIRP + 20% premiums, 5-year MoUs, and a continuous improvement programme that tracks regenerative outcomes.',
+      },
+      {
+        heading: 'Reporting and attribution',
+        body: 'Sponsors receive aggregated network-level reporting on enrollment coverage, compliance readiness, and verified outcomes — attributable to their investment and ready for corporate ESG and responsible sourcing disclosures.',
+      },
+    ],
+    relatedLinks: whoWeServeHub.links.filter((l) => l.routeId !== 'who-we-serve-sponsors'),
+  },
+  'who-we-serve-governments': {
+    routeId: 'who-we-serve-governments',
+    eyebrow: 'Who We Serve',
+    title: 'Governments',
+    description:
+      'Producing-country governments and competent authorities need reliable, machine-readable origin data to support their own regulatory obligations and export market access programmes. Tracebud integrates with national registries and provides the evidence layer regulators need.',
+    sections: [
+      {
+        heading: 'National registry integration',
+        body: 'Tracebud can ingest baseline producer and plot boundaries from national registers — such as ICF or IHCAFE in Honduras — reducing duplicate capture work and anchoring Tracebud GeoIDs to official land records where they exist.',
+        bullets: [
+          'Inbound sync from national producer registries',
+          'Baseline polygon import to reduce smallholder capture burden',
+          'GeoID anchoring to official cadastral references',
+        ],
+      },
+      {
+        heading: 'Competent authority tooling',
+        body: 'For producing-country competent authorities with obligations under EUDR Article 14, Tracebud provides an auditable, structured evidence layer — linked to individual farmer records — that supports both national compliance programmes and competent-authority inspections.',
+      },
+      {
+        heading: 'Supporting national EUDR strategies',
+        body: "Governments coordinating national EUDR readiness programmes can use Tracebud's enrollment infrastructure to build producer-level compliance coverage at scale — with open data standards that don't create dependency on a proprietary vendor.",
+        bullets: [
+          'Scalable cooperative enrollment infrastructure',
+          'Open data standards and API access',
+          'Farmer-owned records that persist beyond any programme cycle',
+          'Pilot and phased rollout support',
+        ],
+      },
+      {
+        heading: 'Data sovereignty by design',
+        body: 'Tracebud does not centralise national producer data on a proprietary platform. Each farmer owns their GeoID. National registries retain their authoritative status. Tracebud operates as a standards-compatible evidence layer, not a replacement for public infrastructure.',
+      },
+    ],
+    relatedLinks: whoWeServeHub.links.filter((l) => l.routeId !== 'who-we-serve-governments'),
+  },
+};
+
 /** @deprecated Use marketingSiteMap from lib/marketing-site-map.ts */
 export const allDraftRoutes: { routeId: MarketingRouteId; href: string; label: string }[] = [];

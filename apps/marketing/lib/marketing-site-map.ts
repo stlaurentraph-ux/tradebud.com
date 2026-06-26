@@ -13,6 +13,7 @@ export type SiteMapSectionId =
   | 'platform'
   | 'compliance'
   | 'impact'
+  | 'who-we-serve'
   | 'insights'
   | 'convert'
   | 'legal'
@@ -65,6 +66,11 @@ export const siteMapSections: SiteMapSection[] = [
     id: 'impact',
     label: 'Outcomes',
     description: 'Resilient supply chains, farmer livelihoods, and nature-positive climate.',
+  },
+  {
+    id: 'who-we-serve',
+    label: 'Who We Serve',
+    description: 'Audience segment pages — producers, exporters, brands, sponsors, governments.',
   },
   {
     id: 'insights',
@@ -303,6 +309,57 @@ export const marketingSiteMap: SiteMapEntry[] = [
     status: 'draft-needs-style',
     routeId: 'impact-climate-biodiversity',
     v0Notes: 'Absorbs former forest protection and regenerative farming pages.',
+  },
+
+  // ── Who We Serve ──────────────────────────────────────────────────────────
+  {
+    id: 'who-we-serve',
+    label: 'Who We Serve hub',
+    href: '/who-we-serve',
+    section: 'who-we-serve',
+    status: 'draft-needs-style',
+    routeId: 'who-we-serve',
+    v0Notes: 'June 2026 IA: 5-audience hub.',
+  },
+  {
+    id: 'who-we-serve-producers',
+    label: 'Producers & cooperatives',
+    href: '/who-we-serve/producers',
+    section: 'who-we-serve',
+    status: 'draft-needs-style',
+    routeId: 'who-we-serve-producers',
+  },
+  {
+    id: 'who-we-serve-exporters',
+    label: 'Exporters & processors',
+    href: '/who-we-serve/exporters',
+    section: 'who-we-serve',
+    status: 'draft-needs-style',
+    routeId: 'who-we-serve-exporters',
+  },
+  {
+    id: 'who-we-serve-brands',
+    label: 'Brands & roasters',
+    href: '/who-we-serve/brands',
+    section: 'who-we-serve',
+    status: 'draft-needs-style',
+    routeId: 'who-we-serve-brands',
+  },
+  {
+    id: 'who-we-serve-sponsors',
+    label: 'Network sponsors',
+    href: '/who-we-serve/sponsors',
+    section: 'who-we-serve',
+    status: 'draft-needs-style',
+    routeId: 'who-we-serve-sponsors',
+  },
+  {
+    id: 'who-we-serve-governments',
+    label: 'Governments',
+    href: '/who-we-serve/governments',
+    section: 'who-we-serve',
+    status: 'draft-needs-style',
+    routeId: 'who-we-serve-governments',
   },
 
   // ── Insights ──────────────────────────────────────────────────────────────

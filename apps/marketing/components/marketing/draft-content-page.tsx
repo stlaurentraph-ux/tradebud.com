@@ -17,6 +17,11 @@ const HERO_IMAGES: Record<string, string> = {
   'compliance-due-diligence': '/images/placeholders/section-paths.png',
   'compliance-guides':      '/images/placeholders/hero-insights.png',
   'compliance-security':    '/images/placeholders/hero-home.png',
+  'who-we-serve-producers':   '/images/placeholders/who-we-serve-producers.png',
+  'who-we-serve-exporters':   '/images/placeholders/who-we-serve-exporters.png',
+  'who-we-serve-brands':      '/images/placeholders/who-we-serve-brands.png',
+  'who-we-serve-sponsors':    '/images/placeholders/who-we-serve-sponsors.png',
+  'who-we-serve-governments': '/images/placeholders/who-we-serve-governments.png',
 };
 
 type DraftContentPageProps = {

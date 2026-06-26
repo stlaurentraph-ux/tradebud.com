@@ -86,12 +86,12 @@ export function SiteNavPreview({ locale }: { locale: string }) {
       sections: [
         {
           items: [
-            { label: t('whoWeServeMenu.hub'), href: p('/draft/who-we-serve') },
-            { label: t('whoWeServeMenu.producers'), href: p('/draft/who-we-serve/producers') },
-            { label: t('whoWeServeMenu.exporters'), href: p('/draft/who-we-serve/exporters') },
-            { label: t('whoWeServeMenu.brands'), href: p('/draft/who-we-serve/brands') },
-            { label: t('whoWeServeMenu.sponsors'), href: p('/draft/who-we-serve/sponsors') },
-            { label: t('whoWeServeMenu.governments'), href: p('/draft/who-we-serve/governments') },
+            { label: t('whoWeServeMenu.hub'), href: p('/who-we-serve') },
+            { label: t('whoWeServeMenu.producers'), href: p('/who-we-serve/producers') },
+            { label: t('whoWeServeMenu.exporters'), href: p('/who-we-serve/exporters') },
+            { label: t('whoWeServeMenu.brands'), href: p('/who-we-serve/brands') },
+            { label: t('whoWeServeMenu.sponsors'), href: p('/who-we-serve/sponsors') },
+            { label: t('whoWeServeMenu.governments'), href: p('/who-we-serve/governments') },
           ],
         },
       ],
