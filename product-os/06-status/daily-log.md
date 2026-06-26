@@ -1,3 +1,13 @@
+### 2026-06-26 (Lane 2 fix — offline auth telemetry sanitization, audit H14)
+- **Context**: Raw auth/OAuth/sync error text (emails, tokens) could reach Sentry via analytics breadcrumbs and auth failure events.
+- **Fixes**:
+  - `sanitizeAnalyticsProperties` (alias of `sanitizeLogContext`) applied in `trackEvent`, `reportSyncFailure`, and Sentry client breadcrumbs/signals/error context.
+  - `normalizeAuthAnalyticsReason` — stable reason codes for auth failures; raw provider messages → `auth_error_unknown`.
+  - `callback.tsx` + `SignInSheetContext` — no raw exception text in analytics payloads.
+- **Guards**: `security-preflight.mjs` asserts analytics sanitization wiring.
+- **Verify**: typecheck 0, lint 0, targeted vitest 18/18, security preflight OK.
+- **Status**: branch `fix/offline-auth-telemetry-sanitize`.
+
 ### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
 - **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
 - **Tests / collection**:

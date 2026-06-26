@@ -8,6 +8,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
+import { normalizeAuthAnalyticsReason } from '@/features/auth/authAnalyticsReason';
 import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
 import {
   hasSyncAuthSession,
@@ -94,12 +95,12 @@ export default function AuthCallbackScreen() {
         setPhase('error');
         trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
           source: 'cold_start',
-          reason: result.message,
+          reason: normalizeAuthAnalyticsReason(result.message),
         });
         trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
           method: 'oauth',
           source: 'cold_start',
-          reason: result.message,
+          reason: normalizeAuthAnalyticsReason(result.message),
         });
         return;
       }
@@ -114,13 +115,11 @@ export default function AuthCallbackScreen() {
       trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
         source: 'cold_start',
         reason: 'exception',
-        message: raw,
       });
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
         method: 'oauth',
         source: 'cold_start',
         reason: 'exception',
-        message: raw,
       });
     }
   }, [farmer?.id, finishSuccess, plots, t]);

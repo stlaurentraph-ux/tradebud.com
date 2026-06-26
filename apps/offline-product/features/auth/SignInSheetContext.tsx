@@ -55,6 +55,7 @@ import {
 } from '@/features/auth/farmerProfileBootstrap';
 import { getAuthenticatedSupabaseUserId } from '@/features/api/syncAuthSession';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
+import { normalizeAuthAnalyticsReason } from '@/features/auth/authAnalyticsReason';
 import { signInAndSyncPlots, signInWithOAuthAndSyncPlots } from '@/features/auth/signInSync';
 import { hasDataProcessingConsent } from '@/features/compliance/dataProcessingConsent';
 import { runBackupWithConsent } from '@/features/sync/backupWithConsent';
@@ -645,7 +646,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
           method: provider,
           source: 'in_app',
-          reason: result.message,
+          reason: normalizeAuthAnalyticsReason(result.message),
         });
         return;
       }
@@ -680,7 +681,6 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         method: provider,
         source: 'in_app',
         reason: 'exception',
-        message,
       });
     } finally {
       oauthSignInInFlightRef.current = false;
@@ -707,7 +707,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         setIsSignedIn(false);
         trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
           method: 'password',
-          reason: result.message,
+          reason: normalizeAuthAnalyticsReason(result.message),
         });
         return;
       }
@@ -720,7 +720,6 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
         method: 'password',
         reason: 'exception',
-        message,
       });
     } finally {
       setLoading(false);
