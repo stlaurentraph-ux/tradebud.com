@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const uploadEvidenceFileToStorage = vi.fn();
 const syncPlotPhotosToBackend = vi.fn(async () => ({}));
+const checkFieldAppPermission = vi.fn(async () => ({ allowed: true, role: 'farmer' as const }));
 
 vi.mock('@/features/evidence/uploadEvidenceToStorage', () => ({
   uploadEvidenceFileToStorage,
@@ -9,6 +10,11 @@ vi.mock('@/features/evidence/uploadEvidenceToStorage', () => ({
 
 vi.mock('@/features/api/postPlot', () => ({
   syncPlotPhotosToBackend,
+}));
+
+vi.mock('@/features/auth/fieldPermissionGate', () => ({
+  checkFieldAppPermission,
+  fieldPermissionDeniedMessage: vi.fn(() => 'permission denied'),
 }));
 
 function localPhoto(id: number, direction: 'north' | 'east' | 'south' | 'west') {

@@ -1100,6 +1100,12 @@ export default function SettingsScreen() {
               return;
             }
 
+            if (pipeline.permissionDenied) {
+              setSyncMessage(t('field_permission_denied'));
+              setSyncMessageKind('error');
+              return;
+            }
+
             const outcome = pipeline.outcome;
 
             await reloadFromDisk();

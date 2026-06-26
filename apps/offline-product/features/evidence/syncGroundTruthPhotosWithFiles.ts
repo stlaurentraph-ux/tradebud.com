@@ -8,6 +8,10 @@ import { uploadEvidenceFileToStorage } from '@/features/evidence/uploadEvidenceT
 import { syncFailureFromEvidenceUpload } from '@/features/sync/syncFailureFromEvidenceUpload';
 import { SyncFailureError } from '@/features/sync/syncFailureError';
 import type { SyncFailure } from '@/features/sync/syncFailure';
+import {
+  checkFieldAppPermission,
+  fieldPermissionDeniedMessage,
+} from '@/features/auth/fieldPermissionGate';
 
 export type GroundTruthSyncSummary = {
   uploadedCount: number;
@@ -79,6 +83,29 @@ export async function syncGroundTruthPhotosWithFiles(params: {
 }): Promise<GroundTruthSyncSummary> {
   const summary = createGroundTruthSyncSummary();
   const resolved: Array<Record<string, unknown>> = [];
+  const hasLocalUploads = params.photos.some((photo) => isLocalEvidenceUri(photo.uri));
+
+  if (hasLocalUploads) {
+    const permission = await checkFieldAppPermission('evidence:upload');
+    if (!permission.allowed) {
+      summary.failedUploadCount = params.photos.filter((photo) =>
+        isLocalEvidenceUri(photo.uri),
+      ).length;
+      summary.firstSyncFailure = {
+        step: 'photo_storage',
+        cause: 'forbidden',
+        message: fieldPermissionDeniedMessage({
+          permission: 'evidence:upload',
+          reason: permission.reason,
+          role: permission.role,
+        }),
+        actionType: 'photos_sync',
+      };
+      summary.firstUploadError = summary.firstSyncFailure.message;
+      assertGroundTruthPhotosUploaded(summary, params.photos);
+      return summary;
+    }
+  }
 
   for (const photo of params.photos) {
     if (!isLocalEvidenceUri(photo.uri)) {

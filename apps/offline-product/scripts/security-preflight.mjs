@@ -41,6 +41,9 @@ assertIncludes('features/security/syncAuthStorage.ts', 'saveOAuthSyncAuthCredent
 assertIncludes('features/security/syncAuthStorage.ts', 'migrateOrClearLegacySyncAuthOnBoot', 'legacy sync password boot migration');
 assertNotIncludes('features/security/syncAuthStorage.ts', 'saveLegacyCredentials', 'no plaintext sync password writes');
 assertIncludes('features/api/syncAuthSession.ts', 'migrateOrClearLegacySyncAuthOnBoot', 'hydrate migrates legacy sync auth');
+assertIncludes('features/auth/fieldPermissionGate.ts', 'fieldRoleHasPermission', 'field permission gate uses registry');
+assertIncludes('features/auth/fieldPermissionGate.ts', 'DASHBOARD_ROLES_BLOCKED_FROM_FIELD_APP', 'field permission gate blocks dashboard roles');
+assertIncludes('features/sync/runFieldSyncPipeline.ts', "assertFieldAppPermission('sync:manual')", 'manual sync pipeline checks permission');
 assertIncludes('features/errors/ErrorLogger.ts', 'sanitizeLogContext', 'error logger redacts sensitive context');
 assertIncludes('features/observability/analytics.ts', 'sanitizeAnalyticsProperties', 'analytics redacts before Sentry');
 assertIncludes('features/api/consentGrants.ts', '/v1/me/gdpr-erasure-request', 'GDPR erasure API wired');

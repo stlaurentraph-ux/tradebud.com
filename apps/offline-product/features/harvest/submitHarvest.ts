@@ -11,6 +11,10 @@ import {
   deliveryRecipientToApiPayload,
   type DeliveryRecipientSelection,
 } from '@/features/harvest/DeliveryRecipientFields';
+import {
+  checkFieldAppPermission,
+  fieldPermissionDeniedMessage,
+} from '@/features/auth/fieldPermissionGate';
 
 export type SubmitHarvestResult =
   | { status: 'synced'; qrCodeRef: string | null; receiptId: string }
@@ -92,6 +96,18 @@ export async function submitHarvestRecord(params: {
   };
 
   if (serverPlotId) {
+    const permission = await checkFieldAppPermission('harvest:log');
+    if (!permission.allowed && permission.reason === 'blocked_role') {
+      return {
+        status: 'error',
+        message: fieldPermissionDeniedMessage({
+          permission: 'harvest:log',
+          reason: permission.reason,
+          role: permission.role,
+        }),
+      };
+    }
+
     try {
       const response = await postHarvestToBackend({
         farmerId: params.farmerId,
