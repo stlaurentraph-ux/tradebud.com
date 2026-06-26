@@ -72,6 +72,8 @@ assertIncludes('features/i18n/messages/en.json', 'perm_location_title', 'locatio
 assertIncludes('features/permissions/locationPermission.ts', 'openSettings', 'location denied → settings');
 assertIncludes('scripts/release-preflight.mjs', 'EXPO_PUBLIC_TRACEBUD_TEST_EMAIL', 'production forbids test creds');
 assertIncludes('scripts/release-preflight.mjs', '--verify-oauth', 'oauth verify flag');
+assertIncludes('eas.json', '"environment": "production"', 'production EAS environment binding');
+assertIncludes('scripts/release-preflight.mjs', 'eas-production-env.json', 'production env manifest');
 assertIncludes('features/i18n/messages/en.json', 'perm_push_title', 'push permission i18n');
 assertIncludes('app/(tabs)/settings.tsx', 'alertOnDeny: true', 'settings push enable with deny alert');
 assertIncludes('app/(tabs)/settings.tsx', 'settings_notifications_title', 'settings notifications UI');

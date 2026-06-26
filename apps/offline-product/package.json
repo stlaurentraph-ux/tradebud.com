@@ -70,6 +70,7 @@
     "release:preflight:preview": "node ./scripts/release-preflight.mjs --profile=preview",
     "release:preflight:production": "node ./scripts/release-preflight.mjs --profile=production",
     "release:preflight:production:online": "node ./scripts/release-preflight.mjs --profile=production --verify-oauth",
+    "release:preflight:assert": "node ./scripts/release-preflight-guard.mjs",
     "release:slo:gate": "node ./scripts/release-rollout-slo-gate.mjs",
     "mobile:slo:collect": "node ./scripts/mobile-rollout-slo-collect.mjs",
     "mobile:slo:gate": "node ./scripts/release-rollout-slo-gate.mjs",

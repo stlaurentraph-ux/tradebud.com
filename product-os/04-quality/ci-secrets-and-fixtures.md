@@ -38,6 +38,10 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `FIELD_TENANT_SMOKE_FARMER_B_ID` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer B profile uuid (foreign target) |
 | `FIELD_TENANT_SMOKE_FARMER_B_PLOT_ID` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer B plot uuid for PATCH denial probe |
 | `FIELD_TENANT_SMOKE_API_URL` | 4.O.2 | Expo CI tenant isolation smoke | Optional — defaults to `https://api.tracebud.com/api` |
+| `EXPO_PUBLIC_SENTRY_DSN` | H24 | Expo CI production release preflight (**blocking**) | Mobile Sentry DSN (`tracebud/react-native`) — must match EAS production env |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | H24 | Expo CI production release preflight (**blocking**) | Google OAuth web client — same values as EAS production / `.env.local` |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | H24 | Expo CI production release preflight (**blocking**) | Google OAuth iOS client |
+| `EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID` | H24 | Expo CI production release preflight (**blocking**) | Google OAuth Android client |
 
 ### n8n Founder OS (Phase 2.O — configure in n8n host, not GitHub)
 
@@ -156,6 +160,7 @@ Slice **2.5** / **2.6** post-deploy smokes use workflow-time mint (no hourly sec
 
 - [ ] Add secrets in GitHub → Settings → Secrets and variables → Actions
 - [ ] **Field tenant smoke (4.O.2):** create golden farmer pair per `golden-field-tenant-smoke.md`; set `FIELD_TENANT_SMOKE_*` + verify `SUPABASE_URL` / `SUPABASE_ANON_KEY`
+- [ ] **Mobile production preflight (H24):** set `EXPO_PUBLIC_SENTRY_DSN` + `EXPO_PUBLIC_GOOGLE_*` in GitHub Actions (mirror EAS production environment)
 - [ ] **Turbo remote cache (1.2):** `TURBO_TOKEN` + `TURBO_TEAM` — CI uses local cache until set; `npm run turbo:cache:report` logs status in Contracts job
 - [ ] Never paste values into PRs or `daily-log.md`
 - [ ] After adding secret, move slice from **Blocked** → **Ready** in `agent-queue.md`
@@ -167,6 +172,7 @@ Slice **2.5** / **2.6** post-deploy smokes use workflow-time mint (no hourly sec
 
 | Date | Change |
 |------|--------|
+| 2026-06-26 | H24: EAS production `environment` binding + blocking `release:preflight:production` in Expo CI; new GitHub secrets for Sentry DSN + Google OAuth client ids |
 | 2026-06-22 | Slice 4.O.2: golden field tenant smoke manifest + blocking Expo CI probe; `FIELD_TENANT_SMOKE_*` secrets required |
 | 2026-06-21 | Slice 2.6: backend deploy smoke manifest, runner, workflow; reuses `UPTIME_BACKEND_BASE_URL` + optional `TRACEBUD_SMOKE_BEARER_TOKEN` |
 | 2026-06-21 | Slice 2.7: golden staging tenant manifest, runbook, bootstrap helper, CI guard |

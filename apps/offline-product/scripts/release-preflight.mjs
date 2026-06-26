@@ -16,6 +16,64 @@ const DEV_ONLY_FLAGS = [
   'EXPO_PUBLIC_ALLOW_INSECURE_API',
 ];
 
+function readEasProductionManifest(projectRoot) {
+  const manifestPath = path.join(
+    projectRoot,
+    '../../product-os/04-quality/eas-production-env.json',
+  );
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`Missing eas production manifest: ${manifestPath}`);
+  }
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
+
+function isStrictPreflight() {
+  return process.env.RELEASE_PREFLIGHT_STRICT === '1';
+}
+
+function validateGoogleClientId(name, value, issues) {
+  if (!value) return;
+  if (!/\.apps\.googleusercontent\.com$/.test(value)) {
+    issues.push(`${name} does not look like a Google OAuth client id.`);
+  }
+}
+
+function checkEasProductionManifest(eas, manifest, profile, issues) {
+  if (profile !== 'production') return;
+  const buildProfile = eas?.build?.[manifest.easBuildProfile];
+  if (!buildProfile) {
+    issues.push(`eas.json missing build profile: ${manifest.easBuildProfile}`);
+    return;
+  }
+  if (buildProfile.environment !== manifest.easEnvironment) {
+    issues.push(
+      `eas.json production profile must set environment "${manifest.easEnvironment}" so EAS injects production secrets.`,
+    );
+  }
+}
+
+function checkRequiredProductionSecrets(manifest, profile, issues) {
+  if (profile !== 'production') return;
+  for (const key of manifest.requiredEnvKeys) {
+    requireEnv(key, issues);
+  }
+  validateGoogleClientId(
+    'EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID',
+    process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim(),
+    issues,
+  );
+  validateGoogleClientId(
+    'EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID',
+    process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim(),
+    issues,
+  );
+  validateGoogleClientId(
+    'EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID',
+    process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim(),
+    issues,
+  );
+}
+
 function parseArgs(argv) {
   const profileArg = argv.find((arg) => arg.startsWith('--profile='));
   const profile = profileArg ? profileArg.split('=')[1] : 'production';
@@ -210,15 +268,26 @@ function main() {
   loadEnvFileIfPresent(path.join(projectRoot, '.env'));
 
   const eas = readEasJson(projectRoot);
+  const productionManifest = readEasProductionManifest(projectRoot);
   // eas.json profile env wins over .env.local for release checks (local may use LAN API for dev).
   loadEasProfileEnv(eas, profile, { override: true });
 
   const issues = [];
   const warnings = [];
 
-  const apiUrl = requireEnv('EXPO_PUBLIC_API_URL', issues);
-  const supabaseUrl = requireEnv('EXPO_PUBLIC_SUPABASE_URL', issues);
-  const anonKey = requireEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY', issues);
+  checkEasProductionManifest(eas, productionManifest, profile, issues);
+
+  if (profile === 'production') {
+    checkRequiredProductionSecrets(productionManifest, profile, issues);
+  } else {
+    requireEnv('EXPO_PUBLIC_API_URL', issues);
+    requireEnv('EXPO_PUBLIC_SUPABASE_URL', issues);
+    requireEnv('EXPO_PUBLIC_SUPABASE_ANON_KEY', issues);
+  }
+
+  const apiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() ?? null;
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL?.trim() ?? null;
+  const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? null;
 
   if (apiUrl) {
     let parsed;
@@ -253,11 +322,7 @@ function main() {
     if (allowInsecureApi) issues.push('Production preflight forbids EXPO_PUBLIC_ALLOW_INSECURE_API=1.');
 
     const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
-    if (!sentryDsn) {
-      issues.push(
-        'Production preflight requires EXPO_PUBLIC_SENTRY_DSN (set in .env.local or EAS production secrets).',
-      );
-    } else {
+    if (sentryDsn) {
       validateSentryDsn(sentryDsn, issues);
     }
 
@@ -293,6 +358,9 @@ function main() {
   if (issues.length > 0) {
     for (const issue of issues) {
       console.error(`[error] ${issue}`);
+    }
+    if (isStrictPreflight()) {
+      console.error('RELEASE_PREFLIGHT_STRICT=1 — configure GitHub Actions secrets and EAS production environment.');
     }
     console.error(`Preflight failed for profile "${profile}".`);
     process.exit(1);

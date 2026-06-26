@@ -19,6 +19,7 @@ const guards = [
   'state-transition-guard.mjs',
   'feature-doc-guard.mjs',
   'analytics-slice-guard.mjs',
+  'release-preflight-guard.mjs',
 ];
 
 const args = process.argv.slice(2);
