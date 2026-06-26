@@ -34,7 +34,7 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H2 | Backend | backend | Public decision-intent mutates inactive campaigns (`requests.service.ts:2089`) | Add `status IN ('RUNNING','PARTIAL')` guard | [x] |
 | H3 | Backend | backend | In-memory per-process rate limiting (`rate-limit.middleware.ts:11`) → N× budget across replicas | Redis/Upstash sliding window; stricter `/v1/public/*` | [ ] |
 | H4 | Backend | backend | DB TLS `rejectUnauthorized:false` (`pg-pool-config.ts:53`) | Pin CA, verify in prod | [ ] |
-| H5 | Backend | backend | No global `ValidationPipe`; untyped `@Body()` on public routes | `ValidationPipe({whitelist,forbidNonWhitelisted,transform})` + DTOs | [ ] |
+| H5 | Backend | backend | No global `ValidationPipe`; untyped `@Body()` on public routes | `ValidationPipe({whitelist,forbidNonWhitelisted,transform})` + DTOs | [x] PR (H5) |
 | H6 | Backend | backend | Decision-token HMAC falls back to `RESEND_API_KEY` (`requests.service.ts:247`) | Dedicated `RESEND_DECISION_SECRET`, fail closed | [x] |
 | H7 | Backend | backend | Stripe webhook lacks `event.id` dedupe ledger (`billing.service.ts:649`) | Persist processed event ids w/ unique constraint | [x] PR (H7) |
 | H8 | Backend | backend | `/v1/audit*` exempt from rate limiting (`rate-limit.middleware.ts:41`) | Remove exemption / separate low cap | [x] PR #322 |

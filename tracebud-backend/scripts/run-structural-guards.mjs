@@ -21,6 +21,7 @@ const guards = [
   ['stripe-webhook-replay-guard.mjs', []],
   ['docker-vendor-parity-guard.mjs', []],
   ['railway-build-context-guard.mjs', []],
+  ['validation-pipe-guard.mjs', []],
   ['check-tenure-parse-readiness.mjs', ['--static-only']],
 ];
 
