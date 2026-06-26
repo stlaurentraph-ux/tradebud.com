@@ -37,7 +37,7 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H5 | Backend | backend | No global `ValidationPipe`; untyped `@Body()` on public routes | `ValidationPipe({whitelist,forbidNonWhitelisted,transform})` + DTOs | [ ] |
 | H6 | Backend | backend | Decision-token HMAC falls back to `RESEND_API_KEY` (`requests.service.ts:247`) | Dedicated `RESEND_DECISION_SECRET`, fail closed | [ ] |
 | H7 | Backend | backend | Stripe webhook lacks `event.id` dedupe ledger (`billing.service.ts:649`) | Persist processed event ids w/ unique constraint | [ ] |
-| H8 | Backend | backend | `/v1/audit*` exempt from rate limiting (`rate-limit.middleware.ts:41`) | Remove exemption / separate low cap | [ ] |
+| H8 | Backend | backend | `/v1/audit*` exempt from rate limiting (`rate-limit.middleware.ts:41`) | Remove exemption / separate low cap | [x] PR `fix/backend-audit-rate-limit-h8` |
 | H9 | Offline sync | iOS/Android | Harvest queue row deleted even when receipt update fails (`processPendingSyncQueue.ts:284-288,439`) | Delete row only after receipt update succeeds | [ ] |
 | H10 | Offline sync | iOS/Android | `resolveFieldSyncMode` returns `push_only` whenever queue>0, skipping inbound restore (`resolveFieldSyncMode.ts:38`) | Return `full` when `cloudDeltaHasInboundChanges` | [ ] |
 | H11 | Offline sync | iOS/Android | Auto-backup passes stub farmer → declaration audits never enqueued in background (`runAutoBackup.ts:124`) | Load real farmer from disk before pipeline | [ ] |
