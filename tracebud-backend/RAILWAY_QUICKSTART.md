@@ -20,7 +20,7 @@ Use the **transaction** or **session** pooler URL; not the service role key in `
 1. [railway.app](https://railway.app) → **Login** (GitHub).
 2. **New Project** → **Deploy from GitHub repo** → select this repository.
 3. Click the new service → **Settings**:
-   - **Root Directory**: `.` (repo root — required so Docker can copy `packages/tracebud-import-v1-canonical`)
+   - **Root Directory**: `tracebud-backend`
    - **Watch Paths** (optional): `tracebud-backend/**`, `packages/tracebud-import-v1-canonical/**`
 4. **Variables** → add:
 

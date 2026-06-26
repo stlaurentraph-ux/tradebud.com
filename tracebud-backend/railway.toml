@@ -1,8 +1,6 @@
-# Deprecated: Railway service Root Directory must be the monorepo root (`.`).
-# Use /railway.toml at repo root with dockerfilePath = "tracebud-backend/Dockerfile".
-#
-# If Root Directory is still tracebud-backend, Docker cannot resolve
-# @tracebud/import-v1-canonical (workspace package under packages/).
+# Railway deploy config (https://railway.app)
+# Root directory for this service: tracebud-backend (set in Railway dashboard if monorepo).
+# Do not set Root Directory to repo root — Railway needs this file + Dockerfile here.
 
 [build]
 builder = "DOCKERFILE"
