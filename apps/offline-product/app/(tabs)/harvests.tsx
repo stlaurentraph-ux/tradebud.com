@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Pressable, TextInput, View, type ScrollView } from 'react-native';
+import { Alert, BackHandler, Pressable, TextInput, View, type ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -46,6 +46,7 @@ import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { deliveryReceiptHref } from '@/features/navigation/receiptRoutes';
 import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import { resolveHarvestBackTarget } from '@/features/harvest/harvestBackTarget';
 import { loadPlotServerLinks } from '@/features/state/persistence';
 
 export default function HarvestsScreen() {
@@ -403,6 +404,36 @@ export default function HarvestsScreen() {
     setShowMultiPlotDelivery(true);
   };
 
+  /** Shared by header back and Android hardware back — keeps sub-flow navigation in sync. */
+  const handleHarvestBack = useCallback((): boolean => {
+    const target = resolveHarvestBackTarget({
+      showMultiPlotDelivery,
+      showRecordWeight,
+      showNewHarvestLog,
+    });
+    if (!target) return false;
+    if (target === 'multi_plot') {
+      multiPlotBackRef.current?.();
+      return true;
+    }
+    if (target === 'record_weight') {
+      setShowRecordWeight(false);
+      return true;
+    }
+    setShowNewHarvestLog(false);
+    setDeliveryPlotSelection(new Set());
+    return true;
+  }, [showMultiPlotDelivery, showRecordWeight, showNewHarvestLog]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () =>
+        handleHarvestBack(),
+      );
+      return () => subscription.remove();
+    }, [handleHarvestBack]),
+  );
+
   const refreshVouchers = async () => {
     if (!farmer) return;
     try {
@@ -431,19 +462,7 @@ export default function HarvestsScreen() {
             {showRecordWeight || showNewHarvestLog || showMultiPlotDelivery ? (
             <Pressable
               onPress={() => {
-                if (showMultiPlotDelivery) {
-                  multiPlotBackRef.current?.();
-                  return;
-                }
-                if (showRecordWeight) {
-                  setShowRecordWeight(false);
-                  return;
-                }
-                if (showNewHarvestLog) {
-                  setShowNewHarvestLog(false);
-                  setDeliveryPlotSelection(new Set());
-                  return;
-                }
+                handleHarvestBack();
               }}
               style={styles.backButton}
             >

@@ -338,58 +338,70 @@ async function ensurePlotLegalSchemaExtras(db: SQLite.SQLiteDatabase) {
   }
 }
 
+function mapFarmerRow(farmerRow: any): FarmerProfile | undefined {
+  if (!farmerRow) return undefined;
+  const candidateId = farmerRow.id;
+  // Backend endpoints expect farmerId to be a UUID; if we stored placeholder text
+  // like "Temporary", don't load it to avoid breaking sync.
+  if (!isUuid(candidateId)) return undefined;
+  return {
+    id: candidateId,
+    name: farmerRow.name ?? undefined,
+    role: farmerRow.role,
+    selfDeclared: sqliteBoolFlag(farmerRow.selfDeclared),
+    selfDeclaredAt: farmerRow.selfDeclaredAt ?? undefined,
+    fpicConsent: sqliteBoolFlag(farmerRow.fpicConsent),
+    laborNoChildLabor: sqliteBoolFlag(farmerRow.laborNoChildLabor),
+    laborNoForcedLabor: sqliteBoolFlag(farmerRow.laborNoForcedLabor),
+    postalAddress:
+      typeof farmerRow.postalAddress === 'string' && farmerRow.postalAddress.trim()
+        ? farmerRow.postalAddress.trim()
+        : undefined,
+    commodityCode:
+      typeof farmerRow.commodityCode === 'string' && farmerRow.commodityCode.trim()
+        ? farmerRow.commodityCode.trim()
+        : undefined,
+    declarationLatitude:
+      typeof farmerRow.declarationLatitude === 'number' &&
+      Number.isFinite(farmerRow.declarationLatitude)
+        ? farmerRow.declarationLatitude
+        : undefined,
+    declarationLongitude:
+      typeof farmerRow.declarationLongitude === 'number' &&
+      Number.isFinite(farmerRow.declarationLongitude)
+        ? farmerRow.declarationLongitude
+        : undefined,
+    declarationGeoCapturedAt:
+      typeof farmerRow.declarationGeoCapturedAt === 'number'
+        ? farmerRow.declarationGeoCapturedAt
+        : undefined,
+  };
+}
+
+async function enrichFarmerWithProfilePhoto(
+  farmer: FarmerProfile | undefined,
+): Promise<FarmerProfile | undefined> {
+  if (!farmer) return undefined;
+  const photoUri = await getSetting('farmerProfilePhotoUri');
+  if (photoUri && photoUri.length > 0) {
+    return { ...farmer, profilePhotoUri: photoUri };
+  }
+  return farmer;
+}
+
+/** Load the persisted farmer profile (with attestation flags) without loading plots. */
+export async function loadFarmerProfile(): Promise<FarmerProfile | undefined> {
+  const db = await getDb();
+  const farmerRow = await db.getFirstAsync<any>('SELECT * FROM farmer LIMIT 1;');
+  return enrichFarmerWithProfilePhoto(mapFarmerRow(farmerRow));
+}
+
 export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: Plot[] }> {
   const db = await getDb();
   const farmerRow = await db.getFirstAsync<any>('SELECT * FROM farmer LIMIT 1;');
   const plotRows = await db.getAllAsync<any>('SELECT * FROM plots ORDER BY createdAt DESC;');
 
-  let farmer: FarmerProfile | undefined = farmerRow
-    ? (() => {
-        const candidateId = farmerRow.id;
-        // Backend endpoints expect farmerId to be a UUID; if we stored placeholder text
-        // like "Temporary", don't load it to avoid breaking sync.
-        if (!isUuid(candidateId)) return undefined;
-        return {
-        id: candidateId,
-        name: farmerRow.name ?? undefined,
-        role: farmerRow.role,
-        selfDeclared: sqliteBoolFlag(farmerRow.selfDeclared),
-        selfDeclaredAt: farmerRow.selfDeclaredAt ?? undefined,
-        fpicConsent: sqliteBoolFlag(farmerRow.fpicConsent),
-        laborNoChildLabor: sqliteBoolFlag(farmerRow.laborNoChildLabor),
-        laborNoForcedLabor: sqliteBoolFlag(farmerRow.laborNoForcedLabor),
-        postalAddress:
-          typeof farmerRow.postalAddress === 'string' && farmerRow.postalAddress.trim()
-            ? farmerRow.postalAddress.trim()
-            : undefined,
-        commodityCode:
-          typeof farmerRow.commodityCode === 'string' && farmerRow.commodityCode.trim()
-            ? farmerRow.commodityCode.trim()
-            : undefined,
-        declarationLatitude:
-          typeof farmerRow.declarationLatitude === 'number' &&
-          Number.isFinite(farmerRow.declarationLatitude)
-            ? farmerRow.declarationLatitude
-            : undefined,
-        declarationLongitude:
-          typeof farmerRow.declarationLongitude === 'number' &&
-          Number.isFinite(farmerRow.declarationLongitude)
-            ? farmerRow.declarationLongitude
-            : undefined,
-        declarationGeoCapturedAt:
-          typeof farmerRow.declarationGeoCapturedAt === 'number'
-            ? farmerRow.declarationGeoCapturedAt
-            : undefined,
-      };
-      })()
-    : undefined;
-
-  if (farmer) {
-    const photoUri = await getSetting('farmerProfilePhotoUri');
-    if (photoUri && photoUri.length > 0) {
-      farmer = { ...farmer, profilePhotoUri: photoUri };
-    }
-  }
+  let farmer = await enrichFarmerWithProfilePhoto(mapFarmerRow(farmerRow));
 
   let plotsNeedPersist = false;
   const plots: Plot[] = (plotRows ?? []).map((row) => {
@@ -890,17 +902,29 @@ export async function enqueuePendingSync(
      VALUES (?, ?, ?, ?, 0, ?, NULL);`,
     [action.createdAt, hlcTimestamp, action.actionType, action.payloadJson, action.lastError ?? null],
   );
-  await db.runAsync(
-    `DELETE FROM pending_sync
-     WHERE id IN (
-       SELECT id FROM pending_sync
-       ORDER BY createdAt ASC, id ASC
-       LIMIT (
-         SELECT MAX(COUNT(*) - ?, 0) FROM pending_sync
-       )
-     );`,
+  // Enforce the cap by dropping the oldest rows. This is unsynced field work being lost,
+  // so record an audit event instead of evicting silently (H12 — observable data loss).
+  const overflowRows = await db.getAllAsync<{ id: number; actionType: string }>(
+    `SELECT id, actionType FROM pending_sync
+     ORDER BY createdAt ASC, id ASC
+     LIMIT (SELECT MAX(COUNT(*) - ?, 0) FROM pending_sync);`,
     [MAX_PENDING_SYNC_ACTIONS],
   );
+  if (overflowRows.length > 0) {
+    const placeholders = overflowRows.map(() => '?').join(',');
+    await db.runAsync(
+      `DELETE FROM pending_sync WHERE id IN (${placeholders});`,
+      overflowRows.map((row) => row.id),
+    );
+    await logAuditEvent({
+      eventType: 'sync_queue_overflow_evicted',
+      payload: {
+        evictedCount: overflowRows.length,
+        cap: MAX_PENDING_SYNC_ACTIONS,
+        actionTypes: Array.from(new Set(overflowRows.map((row) => row.actionType))),
+      },
+    }).catch(() => undefined);
+  }
 }
 
 export async function loadPendingSyncActions(): Promise<PendingSyncAction[]> {
