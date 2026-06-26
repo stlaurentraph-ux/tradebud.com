@@ -37,7 +37,7 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H5 | Backend | backend | No global `ValidationPipe`; untyped `@Body()` on public routes | `ValidationPipe({whitelist,forbidNonWhitelisted,transform})` + DTOs | [ ] |
 | H6 | Backend | backend | Decision-token HMAC falls back to `RESEND_API_KEY` (`requests.service.ts:247`) | Dedicated `RESEND_DECISION_SECRET`, fail closed | [ ] |
 | H7 | Backend | backend | Stripe webhook lacks `event.id` dedupe ledger (`billing.service.ts:649`) | Persist processed event ids w/ unique constraint | [ ] |
-| H8 | Backend | backend | `/v1/audit*` exempt from rate limiting (`rate-limit.middleware.ts:41`) | Remove exemption / separate low cap | [x] PR `fix/backend-audit-rate-limit-h8` |
+| H8 | Backend | backend | `/v1/audit*` exempt from rate limiting (`rate-limit.middleware.ts:41`) | Remove exemption / separate low cap | [x] PR #322 |
 | H9 | Offline sync | iOS/Android | Harvest queue row deleted even when receipt update fails (`processPendingSyncQueue.ts:284-288,439`) | Delete row only after receipt update succeeds | [ ] |
 | H10 | Offline sync | iOS/Android | `resolveFieldSyncMode` returns `push_only` whenever queue>0, skipping inbound restore (`resolveFieldSyncMode.ts:38`) | Return `full` when `cloudDeltaHasInboundChanges` | [ ] |
 | H11 | Offline sync | iOS/Android | Auto-backup passes stub farmer → declaration audits never enqueued in background (`runAutoBackup.ts:124`) | Load real farmer from disk before pipeline | [ ] |
@@ -45,15 +45,15 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H13 | Offline sync | iOS/Android | SQLite boot failure still sets `isAppReady=true` (`AppStateContext.tsx:173`) | Error/recovery state; don't mark ready | [ ] |
 | H14 | Offline auth | all | Raw auth/OAuth/sync errors → Sentry unsanitized (`analytics.ts:88`, `callback.tsx:105`, `reportSyncFailure.ts:12`) | `sanitizeAnalyticsProperties`; stable error codes | [ ] |
 | H15 | Offline auth | iOS/Android | Production OAuth uses custom scheme, not verified App Links (`eas.json:45`) | Enable associatedDomains/App Links for prod; scheme dev-only | [ ] |
-| H16 | Offline auth | all | `fieldRoleHasPermission` defined but never enforced at runtime | `useFieldPermission` gating sync/harvest/evidence; wire blocked-roles | [x] PR `fix/offline-field-permission-h16` |
+| H16 | Offline auth | all | `fieldRoleHasPermission` defined but never enforced at runtime | `useFieldPermission` gating sync/harvest/evidence; wire blocked-roles | [x] PR #323 |
 | H17 | Offline auth | iOS/Android/web | Legacy plaintext sync password fallback in SQLite (`syncAuthStorage.ts:54-69`) | Force migrate-or-clear on boot; remove password fallback | [x] |
 | H18 | Offline auth | iOS/Android | Farmer PII unencrypted in SQLite; SQLCipher deferred | Encrypt-at-rest or formally accept + document for v1 | [ ] |
 | H19 | Offline UI | all (Android worst) | Live `MapView` per plot row (`explore.tsx:300`, `PlotMapPreview.tsx:70`) → ANR/crash | Static snapshot/SVG thumbnail or `FlatList` virtualization | [ ] |
 | H20 | Offline UI | all | Monolithic `AppStateContext` + non-memoized `SignInSheetContext` value → global re-renders | Split contexts / `useMemo` provider value | [ ] |
 | H21 | Offline UI | all | Home readiness stats stale after plot work (`index.tsx:60-94`) | `useFocusEffect(refreshPlotReadiness)` | [ ] |
-| H22 | Offline UI | Android | `androidMapsConfig` guard unused → blank maps if API key missing | Render config-missing placeholder at map mount | [x] |
-| H23 | Infra | CI | Post-deploy smokes `exit 0` when secrets unset | Fail on main-deploy when required secrets missing | [x] |
-| H24 | Infra | iOS/Android | `eas.json` prod omits anon key/Sentry DSN/Google IDs; `release:preflight` not in CI | Add preflight/secret-assertion to CI | [ ] |
+| H22 | Offline UI | Android | `androidMapsConfig` guard unused → blank maps if API key missing | Render config-missing placeholder at map mount | [x] PR #319 |
+| H23 | Infra | CI | Post-deploy smokes `exit 0` when secrets unset | Fail on main-deploy when required secrets missing | [x] PR #316 |
+| H24 | Infra | iOS/Android | `eas.json` prod omits anon key/Sentry DSN/Google IDs; `release:preflight` not in CI | Add preflight/secret-assertion to CI | [x] PR `fix/offline-release-preflight-h24` |
 | H25 | Infra | iOS/Android/CI | Maestro golden path on `push:main` only; no Android E2E | Run on PR; add Android emulator lane | [ ] |
 | H26 | Infra | iOS/Android | Sentry mobile plugin points at `sentry.io` but org is EU `de.sentry.io` (`app.config.js:17`) | Set plugin `url: https://de.sentry.io/` | [ ] |
 

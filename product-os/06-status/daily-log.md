@@ -1,8 +1,18 @@
+### 2026-06-26 (Lane 2 fix — EAS production env + release preflight in CI, audit H24)
+- **Context**: `eas.json` production profile lacked EAS environment binding for secrets (anon key, Sentry DSN, Google OAuth ids); `release:preflight:production` only ran manually before store builds.
+- **Fixes**:
+  - `eas.json` production → `"environment": "production"` (secrets live in EAS, not committed).
+  - `eas-production-env.json` manifest + extended `release-preflight.mjs` (Google client id validation, strict CI mode).
+  - Blocking Expo CI step `release:preflight:production` with `RELEASE_PREFLIGHT_STRICT=1` + GitHub secret injection.
+  - `release-preflight-guard.mjs` wired into `qa:structural`.
+- **Ops**: add `EXPO_PUBLIC_SENTRY_DSN` + `EXPO_PUBLIC_GOOGLE_*` to GitHub Actions (see `ci-secrets-and-fixtures.md`).
+- **Branch**: `fix/offline-release-preflight-h24`.
+
 ### 2026-06-26 (Lane 2 fix — backend audit POST rate cap, audit H8)
 - **Context**: `/v1/audit` POST routes were fully exempt from rate limiting — audit spam could bypass per-IP/user budgets.
 - **Fixes**: Extracted `createRateLimitMiddleware()` + observability; GET audit/restore routes stay exempt; POST `/v1/audit` and `/v1/audit/batch` use a dedicated 60 req/min cap (production).
 - **Guards**: `rate-limit.middleware.spec.ts` asserts audit POST is not exempt and returns 429 at cap.
-- **Branch**: `fix/backend-audit-rate-limit-h8`.
+- **Status**: merged via PR #322.
 
 ### 2026-06-26 (Lane 2 fix — offline field permission enforcement, audit H16)
 - **Context**: `fieldRoleHasPermission` and blocked dashboard roles were defined in the registry but never enforced at sync/harvest/evidence runtime paths.

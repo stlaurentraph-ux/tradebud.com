@@ -35,6 +35,7 @@
     "production": {
       "autoIncrement": true,
       "channel": "production",
+      "environment": "production",
       "env": {
         "EXPO_APPLE_TEAM_ID": "6RT8K5RM6Z",
         "EXPO_APPLE_TEAM_TYPE": "COMPANY_OR_ORGANIZATION",

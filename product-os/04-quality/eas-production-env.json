@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "slice": "H24",
+  "profile": "production",
+  "easBuildProfile": "production",
+  "easEnvironment": "production",
+  "requiredEnvKeys": [
+    "EXPO_PUBLIC_API_URL",
+    "EXPO_PUBLIC_SUPABASE_URL",
+    "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+    "EXPO_PUBLIC_SENTRY_DSN",
+    "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
+    "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
+    "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID"
+  ],
+  "ciEnv": {
+    "strictFlag": "RELEASE_PREFLIGHT_STRICT",
+    "strictValue": "1"
+  },
+  "ciSecretMapping": {
+    "EXPO_PUBLIC_SUPABASE_ANON_KEY": "SUPABASE_ANON_KEY",
+    "EXPO_PUBLIC_SENTRY_DSN": "EXPO_PUBLIC_SENTRY_DSN",
+    "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID": "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
+    "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID": "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
+    "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID": "EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID"
+  },
+  "preflightScript": "apps/offline-product/scripts/release-preflight.mjs",
+  "ciWorkflowFile": ".github/workflows/ci.yml",
+  "ciJobName": "Expo app lint"
+}
