@@ -22,6 +22,7 @@ const guards = [
   ['docker-vendor-parity-guard.mjs', []],
   ['railway-build-context-guard.mjs', []],
   ['validation-pipe-guard.mjs', []],
+  ['pg-ssl-config-guard.mjs', []],
   ['check-tenure-parse-readiness.mjs', ['--static-only']],
 ];
 
