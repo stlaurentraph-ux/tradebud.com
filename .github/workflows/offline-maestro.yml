@@ -133,7 +133,7 @@ jobs:
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     defaults:
       run:
         working-directory: apps/offline-product
@@ -180,6 +180,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          emulator-boot-timeout: 1200
           script: |
             cd apps/offline-product
             npm run qa:maestro:golden-path:android
