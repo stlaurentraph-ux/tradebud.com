@@ -84,9 +84,18 @@ function assertAuthProbeBody(body, manifest) {
   }
 }
 
+function requireStrictSecrets() {
+  return (
+    process.env.DEPLOY_SMOKE_STRICT === '1' || process.env.BACKEND_SMOKE_REQUIRE_SECRET === '1'
+  );
+}
+
 async function checkAuthProbe(manifest, baseUrl) {
   const bearer = process.env[manifest.authProbe.bearerEnv]?.trim();
   if (!bearer) {
+    if (requireStrictSecrets()) {
+      throw new Error(`${manifest.authProbe.bearerEnv} is required for deploy smoke on main/production`);
+    }
     console.log(`skip auth probe (${manifest.authProbe.bearerEnv} not configured)`);
     return;
   }

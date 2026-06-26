@@ -84,6 +84,15 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('smoke-bearer-ci-preflight.mjs')) {
     throw new Error(`${manifest.workflowFile} must mint smoke bearer before deploy smoke`);
   }
+  if (!workflow.includes('assert-deploy-smoke-secrets.mjs')) {
+    throw new Error(`${manifest.workflowFile} must assert deploy smoke secrets (H23)`);
+  }
+  if (!workflow.includes('DEPLOY_SMOKE_STRICT')) {
+    throw new Error(`${manifest.workflowFile} must set DEPLOY_SMOKE_STRICT for fail-closed main deploys`);
+  }
+  if (/not configured — skipping[\s\S]*exit 0/m.test(workflow)) {
+    throw new Error(`${manifest.workflowFile} must not exit 0 when deploy smoke secrets are missing on strict runs`);
+  }
   if (!workflow.includes('repository_dispatch')) {
     throw new Error(`${manifest.workflowFile} must accept repository_dispatch for Railway webhook`);
   }

@@ -21,6 +21,7 @@ const npmGuards = [
   'a11y:routes:assert',
   'lighthouse:budgets:assert',
   'seo:smoke:assert',
+  'smoke:post-deploy:assert',
   'email:templates:smoke:assert',
 ];
 

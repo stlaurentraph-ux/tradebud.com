@@ -23,6 +23,9 @@ on:
       - 'tracebud-backend/scripts/mint-smoke-bearer-token.mjs'
       - 'tracebud-backend/scripts/smoke-bearer-ci-preflight.mjs'
 
+env:
+  DEPLOY_SMOKE_STRICT: ${{ github.event_name == 'workflow_dispatch' && '0' || '1' }}
+
 jobs:
   smoke:
     name: Dashboard post-deploy smoke
@@ -55,21 +58,29 @@ jobs:
           TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
         run: node tracebud-backend/scripts/smoke-bearer-ci-preflight.mjs --github-env
 
+      - name: Assert deploy smoke configuration
+        env:
+          DASHBOARD_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.DASHBOARD_BASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TRACEBUD_SMOKE_BEARER_TOKEN: ${{ secrets.TRACEBUD_SMOKE_BEARER_TOKEN }}
+        run: node scripts/assert-deploy-smoke-secrets.mjs dashboard
+
       - name: Run dashboard post-deploy smoke
         env:
           DASHBOARD_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.base_url || secrets.DASHBOARD_BASE_URL }}
         run: |
           set -euo pipefail
           if [ -z "${DASHBOARD_BASE_URL:-}" ]; then
-            echo "DASHBOARD_BASE_URL is not configured — skipping dashboard post-deploy smoke."
-            echo "Add the secret in GitHub Settings → Secrets and variables → Actions."
+            echo "No base URL configured — smoke run skipped (non-strict manual dispatch only)."
             exit 0
           fi
           if [ -z "${TRACEBUD_SMOKE_BEARER_TOKEN:-}" ]; then
-            echo "Smoke auth not configured — skipping dashboard post-deploy smoke."
-            echo "Add SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY (or legacy TRACEBUD_SMOKE_BEARER_TOKEN)."
+            echo "Smoke auth not configured — smoke run skipped (non-strict manual dispatch only)."
             exit 0
           fi
+          export DASHBOARD_SMOKE_REQUIRE_SECRET="${DEPLOY_SMOKE_STRICT}"
           if [ "${{ github.event_name }}" = "push" ]; then
             export DASHBOARD_SMOKE_WAIT_FOR_DEPLOY=1
           elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.wait_for_deploy }}" = "true" ]; then
