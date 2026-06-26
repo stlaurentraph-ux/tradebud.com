@@ -21,6 +21,15 @@ function assertIncludes(rel, needle, label) {
   console.log(`OK: ${label}`);
 }
 
+function assertNotIncludes(rel, needle, label) {
+  const text = read(rel);
+  if (text.includes(needle)) {
+    console.error(`FAIL: ${label} — must not include "${needle}" in ${rel}`);
+    process.exit(1);
+  }
+  console.log(`OK: ${label}`);
+}
+
 console.log('Security preflight — static wiring\n');
 
 assertIncludes('features/api/postPlot.ts', "from './syncAuthSession'", 'postPlot delegates auth to syncAuthSession');
@@ -29,6 +38,9 @@ assertIncludes('features/api/plots.ts', 'Authorization: `Bearer ${accessToken}`'
 assertIncludes('features/api/harvest.ts', 'Authorization: `Bearer ${accessToken}`', 'harvest API uses bearer token');
 assertIncludes('features/security/syncAuthStorage.ts', 'SecureStore', 'sync credentials use secure storage');
 assertIncludes('features/security/syncAuthStorage.ts', 'saveOAuthSyncAuthCredentials', 'OAuth refresh token storage');
+assertIncludes('features/security/syncAuthStorage.ts', 'migrateOrClearLegacySyncAuthOnBoot', 'legacy sync password boot migration');
+assertNotIncludes('features/security/syncAuthStorage.ts', 'saveLegacyCredentials', 'no plaintext sync password writes');
+assertIncludes('features/api/syncAuthSession.ts', 'migrateOrClearLegacySyncAuthOnBoot', 'hydrate migrates legacy sync auth');
 assertIncludes('features/errors/ErrorLogger.ts', 'sanitizeLogContext', 'error logger redacts sensitive context');
 assertIncludes('features/observability/analytics.ts', 'sanitizeAnalyticsProperties', 'analytics redacts before Sentry');
 assertIncludes('features/api/consentGrants.ts', '/v1/me/gdpr-erasure-request', 'GDPR erasure API wired');

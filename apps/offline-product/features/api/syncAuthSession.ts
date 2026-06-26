@@ -8,6 +8,7 @@ import {
   clearSyncAuthCredentials,
   isSyncAuthDismissedOnDevice,
   loadSyncAuthCredentials,
+  migrateOrClearLegacySyncAuthOnBoot,
   saveOAuthSyncAuthCredentials,
   saveSyncAuthCredentials,
   saveOAuthAccessTokenCache,
@@ -431,6 +432,7 @@ export async function hydrateSyncAuthFromSettings(): Promise<void> {
         return;
       }
 
+      await migrateOrClearLegacySyncAuthOnBoot();
       const credentials = await loadSyncAuthCredentials();
       if (!credentials) {
         clearInMemorySyncAuth();

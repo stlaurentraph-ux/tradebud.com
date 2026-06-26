@@ -38,7 +38,7 @@ Production safety defaults:
 - `EXPO_PUBLIC_ALLOW_INSECURE_API` defaults to off unless explicitly set to `1`.
 - For preview/production builds, use a reachable HTTPS API URL (not localhost).
 - Sync account credentials are stored in secure platform storage (Keychain/Keystore). Legacy
-  plaintext settings are migrated automatically on first load.
+  plaintext SQLite copies are migrated or purged on boot; password auth is not persisted on web.
 
 ### 3. Local development (no OTA)
 

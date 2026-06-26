@@ -51,9 +51,23 @@ async function clearLegacyCredentials(): Promise<void> {
   await deleteSetting(LEGACY_SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
 }
 
-async function saveLegacyCredentials(email: string, password: string): Promise<void> {
-  await setSetting(LEGACY_SYNC_AUTH_EMAIL_KEY, email.trim());
-  await setSetting(LEGACY_SYNC_AUTH_PASSWORD_KEY, password);
+/**
+ * One-time boot hygiene: migrate legacy plaintext SQLite credentials into SecureStore,
+ * or purge them when secure storage is unavailable (web / unsupported devices).
+ */
+export async function migrateOrClearLegacySyncAuthOnBoot(): Promise<void> {
+  const legacy = await loadLegacyCredentials();
+  if (!legacy) return;
+
+  if (await supportsSecureStore()) {
+    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'password');
+    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY, legacy.email);
+    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY, legacy.password);
+    await clearLegacyCredentials();
+    return;
+  }
+
+  await clearLegacyCredentials();
 }
 
 async function markSyncAuthDismissedOnDevice(): Promise<void> {
@@ -118,16 +132,18 @@ export async function loadSyncAuthCredentials(): Promise<SyncAuthCredentials | n
   }
 
   const legacy = await loadLegacyCredentials();
-  if (!legacy) return null;
-
-  if (canUseSecureStore) {
-    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'password');
-    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY, legacy.email);
-    await SecureStore.setItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY, legacy.password);
+  if (legacy) {
+    if (canUseSecureStore) {
+      await SecureStore.setItemAsync(SECURE_SYNC_AUTH_METHOD_KEY, 'password');
+      await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY, legacy.email);
+      await SecureStore.setItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY, legacy.password);
+      await clearLegacyCredentials();
+      return { method: 'password', email: legacy.email, password: legacy.password };
+    }
     await clearLegacyCredentials();
   }
 
-  return legacy;
+  return null;
 }
 
 export async function saveSyncAuthCredentials(email: string, password: string): Promise<void> {
@@ -148,7 +164,7 @@ export async function saveSyncAuthCredentials(email: string, password: string): 
     return;
   }
 
-  await saveLegacyCredentials(normalizedEmail, password);
+  throw new Error('Password sync credentials require secure storage on this device.');
 }
 
 export async function saveOAuthSyncAuthCredentials(

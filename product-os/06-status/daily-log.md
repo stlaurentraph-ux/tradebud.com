@@ -1,3 +1,12 @@
+### 2026-06-26 (Lane 2 fix — purge legacy plaintext sync passwords, audit H17)
+- **Context**: `syncAuthStorage` still read/wrote farmer passwords in SQLite settings when SecureStore was unavailable (web) or before migration.
+- **Fixes**:
+  - `migrateOrClearLegacySyncAuthOnBoot()` — migrate to SecureStore on native, purge on web.
+  - `saveSyncAuthCredentials` no longer writes plaintext passwords; requires SecureStore.
+  - `hydrateSyncAuthFromSettings` runs boot migration before credential load.
+- **Guards**: `security-preflight.mjs` asserts migration wiring and no `saveLegacyCredentials`.
+- **Status**: PR pending.
+
 ### 2026-06-26 (Lane 2 fix — post-deploy smoke fail-closed on main, audit H23)
 - **Context**: Backend/dashboard/marketing deploy smoke workflows `exit 0` when required GitHub secrets were unset — giving false confidence after production deploys.
 - **Fix**: Shared `scripts/assert-deploy-smoke-secrets.mjs` + workflow-level `DEPLOY_SMOKE_STRICT=1` on `push`/`repository_dispatch`/`deployment_status` (manual `workflow_dispatch` stays skippable). `smoke-bearer-ci-preflight` and backend auth probe also fail closed under strict mode.
