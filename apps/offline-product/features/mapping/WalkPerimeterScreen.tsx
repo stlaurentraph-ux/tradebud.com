@@ -58,6 +58,7 @@ import {
 import { listOfflineTilePacks } from '@/features/offlineTiles/offlineTiles';
 import { pingFieldMapImagery } from '@/features/network/pingFieldMapImagery';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
+import { FieldMapMountGate } from '@/components/plot-map/FieldMapMountGate';
 import { PlotBoundaryOverlays } from '@/components/plot-map/PlotBoundaryOverlays';
 import { fieldMapUsesCustomTiles, FIELD_MAP_CAPTURE_UI_PROPS, resolveFieldMapTileMode } from '@/features/mapping/fieldMapTiles';
 import { regionFromCoordinates, type MapCoordinate } from '@/features/mapping/fieldMapRegion';
@@ -2508,28 +2509,33 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
-                    ref={walkMapRef}
-                    style={[styles.walkMap, { height: walkMapHeight - 8 }]}
-                    initialRegion={mapAnchorRegion}
-                    {...FIELD_MAP_CAPTURE_UI_PROPS}
-                    mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
-                  >
-                    <FieldMapLayers
-                      lowDataMap={walkMapTileMode === 'none'}
-                      offlineTilesEnabled={walkMapTileMode === 'offline'}
-                      offlineTilesPackId={activeMapPackId}
-                    />
-                    <PlotBoundaryOverlays
-                      vertices={points}
-                      liveTrail={liveWalkTrail}
-                      userPosition={previewPosition}
-                      isRecording={isRecording}
-                      showYouMarker
-                      showStartMarker={points.length > 0}
-                      youMarkerFollowsPosition={isRecording}
-                    />
-                  </MapView>
+                  <FieldMapMountGate
+                    blockedStyle={[styles.walkMap, { height: walkMapHeight - 8 }]}
+                    mapView={
+                      <MapView
+                        ref={walkMapRef}
+                        style={[styles.walkMap, { height: walkMapHeight - 8 }]}
+                        initialRegion={mapAnchorRegion}
+                        {...FIELD_MAP_CAPTURE_UI_PROPS}
+                        mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
+                      >
+                        <FieldMapLayers
+                          lowDataMap={walkMapTileMode === 'none'}
+                          offlineTilesEnabled={walkMapTileMode === 'offline'}
+                          offlineTilesPackId={activeMapPackId}
+                        />
+                        <PlotBoundaryOverlays
+                          vertices={points}
+                          liveTrail={liveWalkTrail}
+                          userPosition={previewPosition}
+                          isRecording={isRecording}
+                          showYouMarker
+                          showStartMarker={points.length > 0}
+                          youMarkerFollowsPosition={isRecording}
+                        />
+                      </MapView>
+                    }
+                  />
                   {isRecording ? (
                     <View style={styles.recordingMapBadge} pointerEvents="none">
                       <Animated.View
@@ -2596,37 +2602,42 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
-                    ref={drawMapRef}
-                    style={[styles.walkMap, { height: drawMapHeight - 8 }]}
-                    initialRegion={mapAnchorRegion}
-                    {...FIELD_MAP_CAPTURE_UI_PROPS}
-                    mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
-                    moveOnMarkerPress={false}
-                    onPress={(e) => {
-                      if (!drawTracingActive) return;
-                      const c = e.nativeEvent.coordinate;
-                      addManualVertex(c.latitude, c.longitude);
-                    }}
-                  >
-                    <FieldMapLayers
-                      lowDataMap={walkMapTileMode === 'none'}
-                      offlineTilesEnabled={walkMapTileMode === 'offline'}
-                      offlineTilesPackId={activeMapPackId}
-                    />
-                    {!suppressBoundaryOverlays ? (
-                      <PlotBoundaryOverlays
-                        key={`draw-boundary-${boundaryOverlayEpoch}`}
-                        vertices={points}
-                        userPosition={previewPosition}
-                        showYouMarker={!drawTracingActive}
-                        showStartMarker={points.length > 0}
-                        showVertexMarkers={drawTracingActive}
-                        strokeOnlyBoundary={drawTracingActive}
-                        closeStrokeRing={false}
-                      />
-                    ) : null}
-                  </MapView>
+                  <FieldMapMountGate
+                    blockedStyle={[styles.walkMap, { height: drawMapHeight - 8 }]}
+                    mapView={
+                      <MapView
+                        ref={drawMapRef}
+                        style={[styles.walkMap, { height: drawMapHeight - 8 }]}
+                        initialRegion={mapAnchorRegion}
+                        {...FIELD_MAP_CAPTURE_UI_PROPS}
+                        mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
+                        moveOnMarkerPress={false}
+                        onPress={(e) => {
+                          if (!drawTracingActive) return;
+                          const c = e.nativeEvent.coordinate;
+                          addManualVertex(c.latitude, c.longitude);
+                        }}
+                      >
+                        <FieldMapLayers
+                          lowDataMap={walkMapTileMode === 'none'}
+                          offlineTilesEnabled={walkMapTileMode === 'offline'}
+                          offlineTilesPackId={activeMapPackId}
+                        />
+                        {!suppressBoundaryOverlays ? (
+                          <PlotBoundaryOverlays
+                            key={`draw-boundary-${boundaryOverlayEpoch}`}
+                            vertices={points}
+                            userPosition={previewPosition}
+                            showYouMarker={!drawTracingActive}
+                            showStartMarker={points.length > 0}
+                            showVertexMarkers={drawTracingActive}
+                            strokeOnlyBoundary={drawTracingActive}
+                            closeStrokeRing={false}
+                          />
+                        ) : null}
+                      </MapView>
+                    }
+                  />
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
@@ -2649,24 +2660,29 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
-                    style={[styles.walkMap, { height: pinMapHeight - 8 }]}
-                    initialRegion={mapAnchorRegion}
-                    {...FIELD_MAP_CAPTURE_UI_PROPS}
-                    mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
-                  >
-                    <FieldMapLayers
-                      lowDataMap={walkMapTileMode === 'none'}
-                      offlineTilesEnabled={walkMapTileMode === 'offline'}
-                      offlineTilesPackId={activeMapPackId}
-                    />
-                    <PlotBoundaryOverlays
-                      vertices={points}
-                      userPosition={previewPosition}
-                      showYouMarker
-                      showStartMarker={points.length > 0}
-                    />
-                  </MapView>
+                  <FieldMapMountGate
+                    blockedStyle={[styles.walkMap, { height: pinMapHeight - 8 }]}
+                    mapView={
+                      <MapView
+                        style={[styles.walkMap, { height: pinMapHeight - 8 }]}
+                        initialRegion={mapAnchorRegion}
+                        {...FIELD_MAP_CAPTURE_UI_PROPS}
+                        mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
+                      >
+                        <FieldMapLayers
+                          lowDataMap={walkMapTileMode === 'none'}
+                          offlineTilesEnabled={walkMapTileMode === 'offline'}
+                          offlineTilesPackId={activeMapPackId}
+                        />
+                        <PlotBoundaryOverlays
+                          vertices={points}
+                          userPosition={previewPosition}
+                          showYouMarker
+                          showStartMarker={points.length > 0}
+                        />
+                      </MapView>
+                    }
+                  />
                   <View style={styles.mapGpsPill} pointerEvents="none">
                     <View style={[styles.mapGpsDot, { backgroundColor: gpsStrengthColor }]} />
                     <ThemedText type="caption" style={styles.mapGpsPillText}>
@@ -2714,37 +2730,42 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                   onTouchEnd={() => setMapScrollLock(false)}
                   onTouchCancel={() => setMapScrollLock(false)}
                 >
-                  <MapView
-                    style={[styles.walkMap, { height: Math.max(200, cornerMapHeight - 8) }]}
-                    initialRegion={mapAnchorRegion}
-                    {...FIELD_MAP_CAPTURE_UI_PROPS}
-                    mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
-                    moveOnMarkerPress={false}
-                    onPress={() => {
-                      if (!cornerSaveReady) return;
-                      handleSaveCorner();
-                    }}
-                  >
-                    <FieldMapLayers
-                      lowDataMap={walkMapTileMode === 'none'}
-                      offlineTilesEnabled={walkMapTileMode === 'offline'}
-                      offlineTilesPackId={activeMapPackId}
-                    />
-                    {!suppressBoundaryOverlays ? (
-                      <PlotBoundaryOverlays
-                        key={`centroid-boundary-${boundaryOverlayEpoch}`}
-                        vertices={points}
-                        userPosition={userMapPosition}
-                        isRecording={isRecording}
-                        showYouMarker
-                        youMarkerFollowsPosition={isRecording}
-                        showStartMarker={false}
-                        showVertexMarkers
-                        strokeOnlyBoundary
-                        closeStrokeRing={false}
-                      />
-                    ) : null}
-                  </MapView>
+                  <FieldMapMountGate
+                    blockedStyle={[styles.walkMap, { height: Math.max(200, cornerMapHeight - 8) }]}
+                    mapView={
+                      <MapView
+                        style={[styles.walkMap, { height: Math.max(200, cornerMapHeight - 8) }]}
+                        initialRegion={mapAnchorRegion}
+                        {...FIELD_MAP_CAPTURE_UI_PROPS}
+                        mapType={fieldMapUsesCustomTiles(walkMapTileMode) ? 'none' : 'standard'}
+                        moveOnMarkerPress={false}
+                        onPress={() => {
+                          if (!cornerSaveReady) return;
+                          handleSaveCorner();
+                        }}
+                      >
+                        <FieldMapLayers
+                          lowDataMap={walkMapTileMode === 'none'}
+                          offlineTilesEnabled={walkMapTileMode === 'offline'}
+                          offlineTilesPackId={activeMapPackId}
+                        />
+                        {!suppressBoundaryOverlays ? (
+                          <PlotBoundaryOverlays
+                            key={`centroid-boundary-${boundaryOverlayEpoch}`}
+                            vertices={points}
+                            userPosition={userMapPosition}
+                            isRecording={isRecording}
+                            showYouMarker
+                            youMarkerFollowsPosition={isRecording}
+                            showStartMarker={false}
+                            showVertexMarkers
+                            strokeOnlyBoundary
+                            closeStrokeRing={false}
+                          />
+                        ) : null}
+                      </MapView>
+                    }
+                  />
                   {isRecording ? (
                     <View style={styles.recordingMapBadge} pointerEvents="none">
                       <Animated.View

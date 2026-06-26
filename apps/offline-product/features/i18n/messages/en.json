@@ -649,6 +649,7 @@
   "plot_hectares_gps": "GPS — {n} ha",
   "plot_kg_max": "Max {n} kg",
   "plot_map_pending": "No map yet",
+  "plot_map_android_unavailable": "Map unavailable on this build. Contact support if this persists.",
   "plot_map_view_boundary": "Tap to view or edit boundary",
   "plot_land_documents": "Land documents",
   "plot_municipal_upload": "Upload municipal certificate",

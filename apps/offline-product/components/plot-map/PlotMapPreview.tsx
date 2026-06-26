@@ -11,7 +11,9 @@ import {
   FIELD_MAP_VIEW_UI_PROPS,
   resolveFieldMapTileMode,
 } from '@/features/mapping/fieldMapTiles';
+import { shouldBlockNativeMapView } from '@/features/mapping/androidMapsConfig';
 import { useLanguage } from '@/features/state/LanguageContext';
+import { AndroidMapsUnavailablePlaceholder } from '@/components/plot-map/AndroidMapsUnavailablePlaceholder';
 
 export type PlotMapPreviewProps = {
   plot: Plot;
@@ -56,6 +58,19 @@ export function PlotMapPreview({
           {t('plot_map_pending')}
         </ThemedText>
       </View>
+    );
+  }
+
+  if (shouldBlockNativeMapView()) {
+    return (
+      <AndroidMapsUnavailablePlaceholder
+        style={[
+          styles.placeholder,
+          { width, height, borderRadius },
+          style,
+        ]}
+        iconSize={height >= 120 ? 36 : 28}
+      />
     );
   }
 

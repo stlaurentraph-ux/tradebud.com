@@ -5,14 +5,19 @@
   - `saveSyncAuthCredentials` no longer writes plaintext passwords; requires SecureStore.
   - `hydrateSyncAuthFromSettings` runs boot migration before credential load.
 - **Guards**: `security-preflight.mjs` asserts migration wiring and no `saveLegacyCredentials`.
-- **Status**: PR pending.
+- **Status**: PR #320.
+
+### 2026-06-26 (Lane 2 fix — Android maps config-missing placeholder, audit H22)
+- **Context**: `isAndroidGoogleMapsConfigured()` existed but was unused — Android builds without `GOOGLE_MAPS_API_KEY` showed blank `MapView` panels.
+- **Fixes**: `FieldMapMountGate` at all native map mounts; `app.config.js` wires Google Maps API key.
+- **Status**: merged via PR #319.
 
 ### 2026-06-26 (Lane 2 fix — post-deploy smoke fail-closed on main, audit H23)
 - **Context**: Backend/dashboard/marketing deploy smoke workflows `exit 0` when required GitHub secrets were unset — giving false confidence after production deploys.
 - **Fix**: Shared `scripts/assert-deploy-smoke-secrets.mjs` + workflow-level `DEPLOY_SMOKE_STRICT=1` on `push`/`repository_dispatch`/`deployment_status` (manual `workflow_dispatch` stays skippable). `smoke-bearer-ci-preflight` and backend auth probe also fail closed under strict mode.
 - **Guards**: backend/dashboard deploy-smoke guards + new `marketing-post-deploy-smoke-guard.mjs`; unit test `assert-deploy-smoke-secrets.test.mjs`.
 - **Verify**: guards OK; assert script tests pass.
-- **Status**: branch `fix/deploy-smoke-secrets-h23`.
+- **Status**: merged via PR #316.
 
 ### 2026-06-26 (Lane 2 fix — Sentry EU plugin URL for offline builds, audit H26)
 - **Context**: `@sentry/react-native/expo` plugin pointed at `https://sentry.io/` but Tracebud's org is on **de.sentry.io** — source map uploads could fail or land on the wrong region.
