@@ -856,7 +856,6 @@ jobs:
         run: npm ci
 
       - name: Lint, typecheck, and test
-        continue-on-error: true
         run: npx turbo run lint typecheck test --filter=dashboard-product
 
       - name: Build dashboard product
@@ -1364,3 +1363,38 @@ jobs:
             apps/offline-product/queue-i18n-baseline-metadata.json
             apps/offline-product/queue-i18n-report.json
             docs/openapi/queue-i18n-report.schema.json
+
+  ci-path-filter-gate:
+    name: Path-filter CI gate (PR)
+    needs:
+      - changes
+      - contracts
+      - workspace-root
+      - backend
+      - dashboard-product
+      - field-auth
+      - marketing
+      - app
+    if: always() && github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require matching app CI jobs to succeed (not skip/fail)
+        run: |
+          set -euo pipefail
+          require_success() {
+            local flag="$1"
+            local job="$2"
+            local result="$3"
+            if [ "$flag" = "true" ] && [ "$result" != "success" ]; then
+              echo "::error::Required CI job '$job' result was '$result' but this PR touched matching paths."
+              exit 1
+            fi
+          }
+          require_success "${{ needs.changes.outputs.contracts }}" "contracts" "${{ needs.contracts.result }}"
+          require_success "${{ needs.changes.outputs.workspace_root }}" "workspace-root" "${{ needs.workspace-root.result }}"
+          require_success "${{ needs.changes.outputs.backend }}" "backend" "${{ needs.backend.result }}"
+          require_success "${{ needs.changes.outputs.dashboard }}" "dashboard-product" "${{ needs.dashboard-product.result }}"
+          require_success "${{ needs.changes.outputs.field_auth }}" "field-auth" "${{ needs['field-auth'].result }}"
+          require_success "${{ needs.changes.outputs.marketing }}" "marketing" "${{ needs.marketing.result }}"
+          require_success "${{ needs.changes.outputs.offline }}" "app" "${{ needs.app.result }}"
+          echo "Path-filter CI gate: all required jobs succeeded for changed paths."

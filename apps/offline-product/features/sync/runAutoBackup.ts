@@ -1,5 +1,5 @@
-import type { Plot } from '@/features/state/AppStateContext';
-import type { PendingSyncAction } from '@/features/state/persistence';
+import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
+import { loadFarmerProfile, type PendingSyncAction } from '@/features/state/persistence';
 import {
   type ProcessPendingSyncQueueResult,
 } from '@/features/sync/processPendingSyncQueue';
@@ -92,16 +92,20 @@ export async function runAutoBackup(params: {
             ? [...CONSENT_ACTION_TYPES]
             : [...ALL_AUTO_BACKUP_ACTION_TYPES];
 
+          // Load the authoritative persisted farmer (with attestation flags) so background
+          // auto-backup can backfill producer declaration audits. A stub farmer would have
+          // selfDeclared=false and never satisfy hasProducerAttestationsComplete.
+          const persistedFarmer = await loadFarmerProfile().catch(() => undefined);
+          const syncFarmer: FarmerProfile =
+            persistedFarmer && persistedFarmer.id === farmerId
+              ? { ...persistedFarmer, name: persistedFarmer.name ?? params.farmerDisplayName }
+              : { id: farmerId, role: 'farmer', selfDeclared: false, name: params.farmerDisplayName };
+
           const pipeline = await runFieldSyncPipeline({
             accessToken: sessionOpened.session.accessToken,
             apiFarmerId: farmerId,
             farmerScopeIds: syncContext.ownedFarmerIds,
-            syncFarmer: {
-              id: farmerId,
-              role: 'farmer',
-              selfDeclared: false,
-              name: params.farmerDisplayName,
-            },
+            syncFarmer,
             syncPlots: params.localPlots,
             t: noopTranslate,
             selectedQueueActionTypes,
