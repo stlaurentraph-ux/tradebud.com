@@ -1,3 +1,13 @@
+### 2026-06-26 (Lane 2 fix — offline My Plots tiles + Android harvest back + home readiness, audit B5/B6/H21)
+- **Context**: Next offline tier from the 2026-06-26 production-readiness audit (functional blockers + one HIGH UI item).
+- **Fixes**:
+  - **B5** — `explore.tsx` (My Plots) now reads `getSetting('offlineTilesActivePackId')` instead of the stale `offlineTilesPackId` key used everywhere else → plot list thumbnails resolve the correct offline basemap when offline tiles are enabled.
+  - **B6** — `harvests.tsx` wires Android `BackHandler` through `resolveHarvestBackTarget` (same logic as header back) so hardware back steps through multi-plot wizard / record-weight / plot-selector sub-flows instead of exiting the tab.
+  - **H21** — Home tab `useFocusEffect` now calls `refreshPlotReadiness()` on focus so compliant/pending stats and the action-required card update after plot work.
+- **Guards**: `device-qa-preflight.mjs` asserts explore active-pack key + harvest BackHandler wiring.
+- **Verify**: typecheck 0, lint 0, `harvestBackTarget.test.ts` 4/4, device-qa-preflight OK.
+- **Status**: branch `fix/offline-b5-b6`.
+
 ### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
 - **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
 - **Tests / collection**:
