@@ -173,6 +173,7 @@ describe('RequestsService', () => {
     const pool = {
       query: jest
         .fn()
+        .mockResolvedValueOnce({ rows: [{ id: 'camp_1' }] })
         .mockResolvedValueOnce({ rows: [{ campaign_id: 'camp_1' }] })
         .mockResolvedValueOnce({ rows: [campaignRow] }),
     };
@@ -196,46 +197,24 @@ describe('RequestsService', () => {
     delete process.env.RESEND_DECISION_SECRET;
   });
 
-  it('does not ensure inbox row when public email CTA refuse is recorded', async () => {
+  it('rejects public email CTA when campaign is not active', async () => {
     process.env.RESEND_DECISION_SECRET = 'test-decision-secret';
-    const campaignRow = {
-      id: 'camp_1',
-      tenant_id: 'tenant_importer',
-      title: 'Evidence request',
-      description: '',
-      request_type: 'GENERAL_EVIDENCE',
-      status: 'EXPIRED',
-      target_organization_ids: [],
-      target_farmer_ids: [],
-      target_plot_ids: [],
-      target_contact_emails: ['exporter@tracebud.test'],
-      due_at: '2026-05-01T00:00:00.000Z',
-      reminder_sent_at: null,
-      accepted_count: 0,
-      pending_count: 0,
-      expired_count: 1,
-      created_by: 'user_1',
-      idempotency_key: null,
-      created_at: '2026-04-01T00:00:00.000Z',
-      updated_at: '2026-04-22T12:00:00.000Z',
-    };
     const pool = {
-      query: jest
-        .fn()
-        .mockResolvedValueOnce({ rows: [{ campaign_id: 'camp_1' }] })
-        .mockResolvedValueOnce({ rows: [campaignRow] }),
+      query: jest.fn().mockResolvedValueOnce({ rows: [] }),
     };
     const { service, inboxService } = createRequestsService(pool);
     const token = createHmac('sha256', 'test-decision-secret')
       .update('camp_1:exporter@tracebud.test')
       .digest('hex');
 
-    await service.recordDecisionIntentPublic({
-      campaignId: 'camp_1',
-      recipientEmail: 'exporter@tracebud.test',
-      decision: 'refuse',
-      token,
-    });
+    await expect(
+      service.recordDecisionIntentPublic({
+        campaignId: 'camp_1',
+        recipientEmail: 'exporter@tracebud.test',
+        decision: 'refuse',
+        token,
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(inboxService.ensureInboxFromEmailCtaAccept).not.toHaveBeenCalled();
     delete process.env.RESEND_DECISION_SECRET;
@@ -268,6 +247,7 @@ describe('RequestsService', () => {
     const pool = {
       query: jest
         .fn()
+        .mockResolvedValueOnce({ rows: [{ id: 'camp_1' }] })
         .mockResolvedValueOnce({ rows: [{ campaign_id: 'camp_1' }] })
         .mockResolvedValueOnce({ rows: [campaignRow] }),
     };
