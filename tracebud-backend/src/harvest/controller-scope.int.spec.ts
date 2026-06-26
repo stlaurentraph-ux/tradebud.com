@@ -348,6 +348,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
   });
 
   it('enforces tenant claim and exporter role for package submit endpoint', async () => {
+    jest.spyOn(harvestService, 'canReadPackageForTenant').mockResolvedValue(true);
     const submitSpy = jest.spyOn(harvestService, 'submitDdsPackage').mockResolvedValue({
       packageId: 'pkg_1',
       status: 'submitted',
@@ -406,6 +407,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
   });
 
   it('persists risk-score audit lifecycle events on exporter risk-score checks', async () => {
+    jest.spyOn(harvestService, 'canReadPackageForTenant').mockResolvedValue(true);
     jest.spyOn(harvestService, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_risk_1' },
       vouchers: [
@@ -427,6 +429,7 @@ describeIfDb('Controller scope integration: farmer ownership enforcement', () =>
   });
 
   it('persists filing preflight lifecycle events on exporter preflight checks', async () => {
+    jest.spyOn(harvestService, 'canReadPackageForTenant').mockResolvedValue(true);
     jest.spyOn(harvestService, 'getDdsPackageDetail').mockResolvedValue({
       package: { id: 'pkg_file_1' },
       vouchers: [],
