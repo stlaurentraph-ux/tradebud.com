@@ -20,6 +20,7 @@ const guards = [
   'feature-doc-guard.mjs',
   'analytics-slice-guard.mjs',
   'release-preflight-guard.mjs',
+  'plot-list-thumbnail-guard.mjs',
 ];
 
 const args = process.argv.slice(2);

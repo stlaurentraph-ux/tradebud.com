@@ -1,31 +1,19 @@
 import type { Plot } from '@/features/state/AppStateContext';
-import { computeRegionFromPlot } from '@/features/mapping/plotMapRegion';
-import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
+import { PlotBoundaryThumbnail } from '@/components/plot-map/PlotBoundaryThumbnail';
 
 export const PLOT_LIST_THUMB_SIZE = 88;
 
 type PlotListThumbnailProps = {
   plot: Plot;
-  offlineTilesEnabled: boolean;
-  offlineTilesPackId: string | null;
 };
 
-/** Esri satellite tile + boundary overlay in the My Plots list square. */
-export function PlotListThumbnail({
-  plot,
-  offlineTilesEnabled,
-  offlineTilesPackId,
-}: PlotListThumbnailProps) {
+/** Static SVG boundary thumbnail for My Plots list rows (no native MapView). */
+export function PlotListThumbnail({ plot }: PlotListThumbnailProps) {
   return (
-    <PlotMapPreview
+    <PlotBoundaryThumbnail
       plot={plot}
-      region={computeRegionFromPlot(plot)}
-      offlineTilesEnabled={offlineTilesEnabled}
-      offlineTilesPackId={offlineTilesPackId}
-      width={PLOT_LIST_THUMB_SIZE}
-      height={PLOT_LIST_THUMB_SIZE}
+      size={PLOT_LIST_THUMB_SIZE}
       borderRadius={12}
-      showAttribution={false}
     />
   );
 }
