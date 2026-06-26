@@ -77,19 +77,22 @@ export class HarvestController {
     return tenantId;
   }
 
-  private async enforcePackageReadAccess(packageId: string, req: any): Promise<void> {
+  private async assertPackageTenantScope(packageId: string, req: any): Promise<void> {
     const tenantId = this.getTenantId(req);
-    const role = deriveRoleFromSupabaseUser(req.user);
-    if (!['exporter', 'cooperative', 'admin', 'compliance_manager'].includes(role)) {
-      throw new ForbiddenException('Only organisation operators can view DDS package details');
-    }
-    if (role === 'admin') {
-      return;
-    }
     const allowed = await this.harvestService.canReadPackageForTenant(packageId, tenantId);
     if (!allowed) {
       throw new ForbiddenException('Package scope violation');
     }
+  }
+
+  private async enforcePackageReadAccess(packageId: string, req: any): Promise<void> {
+    const role = deriveRoleFromSupabaseUser(req.user);
+    if (!['exporter', 'cooperative', 'admin', 'compliance_manager'].includes(role)) {
+      throw new ForbiddenException('Only organisation operators can view DDS package details');
+    }
+    // No role is exempt from tenant scope: an `admin` JWT is still tenant-scoped.
+    // Platform-wide access must be granted through a dedicated internal path, not the dashboard admin role.
+    await this.assertPackageTenantScope(packageId, req);
   }
 
   @Post()
@@ -405,6 +408,7 @@ export class HarvestController {
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can evaluate DDS package risk score');
     }
+    await this.assertPackageTenantScope(id, req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.evaluateDdsPackageRiskScore(id, {
       tenantId,
@@ -427,6 +431,7 @@ export class HarvestController {
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can evaluate filing pre-flight');
     }
+    await this.assertPackageTenantScope(id, req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.evaluateDdsPackageFilingPreflight(id, {
       tenantId,
@@ -449,6 +454,7 @@ export class HarvestController {
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can export TRACES JSON');
     }
+    await this.assertPackageTenantScope(id, req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_exports');
     return this.harvestService.getDdsPackageTracesJson(id);
   }
@@ -465,6 +471,7 @@ export class HarvestController {
     if (role !== 'exporter') {
       throw new ForbiddenException('Only exporters can generate DDS package filing artifacts');
     }
+    await this.assertPackageTenantScope(id, req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.generateDdsPackageArtifacts(id, {
       tenantId,
@@ -484,6 +491,7 @@ export class HarvestController {
     if (!destinationRoles.has(role) && !originRoles.has(role)) {
       throw new ForbiddenException('Insufficient permissions to submit DDS packages');
     }
+    await this.assertPackageTenantScope(id, req);
     await this.launchService.requireFeatureAccess(tenantId, 'dashboard_compliance');
     return this.harvestService.submitDdsPackage(
       id,
