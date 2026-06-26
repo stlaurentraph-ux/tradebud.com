@@ -1,3 +1,12 @@
+### 2026-06-26 (Lane 3 integration — #264 campaign-delivery onto main, PR #307, branch `intake-264-integration`)
+
+- **Merge** — integrated the #264 campaign-delivery feature stack onto current `main`; resolved 33 conflicts (ours for #264 features, theirs for landed security/#302, union for analytics baselines). No unmerged paths; JSON baselines valid.
+- **Real-code fixes surfaced by merge** — OAuth callback / Android cold-start, campaign invite preview, SetPassword, harvest multi-plot delivery, sync pipeline, WalkPerimeter.
+- **Offline Vitest harness (test-infra only, not CI-weakening)** — new `test/setup-expo.ts` polyfills `globalThis.expo` for the Node env; `test/stubs/*` stub `react-native`, `expo`, `expo-sqlite`, `expo-notifications`, `@sentry/react-native`, and native OAuth sign-in; `vitest.config.ts` wires `setupFiles` + `resolve.alias` + targeted `server.deps.inline`. Unblocks the 3 previously harness-blocked offline test files; corrected an incomplete WIP fixture in `runFieldSyncPipeline.test.ts` (push-only drain).
+- **Verify** — offline 625/625, dashboard 616/616, backend 523/523; offline typecheck 0, lint 0; structural guards green (offline/dashboard/backend). All GitHub Actions CI lanes green on PR #307.
+- **Known non-blocking** — `tradebud-com` Vercel preview deploy fails on a pre-existing project output-directory misconfig (every recent deploy incl. production on `main` is already `ERROR`); unrelated to this PR. Not changed (Vercel config requires explicit user request).
+- **Status** — pushed for review; no merge without human approval.
+
 ### 2026-06-24 (Lane 2 fix — bulk-plot-import CI regressions on PR #267)
 - **Failing checks**: Backend build (TS2307 missing `field-enumeration.service`) and Dashboard typecheck/build (5 TypeScript errors in bulk import parsers) — both PR-caused by Phases D–F commits.
 - **Root causes fixed by prior agents**: `plots.module.ts` restored correct imports; dashboard `bulk-plot-import-{csv,geojson,kml,package}.ts` corrected `string|null → string|undefined` and `ParentNode → Element|Document` type errors.
