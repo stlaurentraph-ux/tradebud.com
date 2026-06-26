@@ -1,21 +1,25 @@
 import type { NextFunction, Request, Response } from 'express';
 import { recordRateLimit429 } from './rate-limit-observability';
+import { getRateLimitStore, resetRateLimitStoreForTests } from './rate-limit-store';
 
-const WINDOW_MS = 60_000;
-const MAX_REQUESTS_ANON = 120;
-const MAX_REQUESTS_AUTH_PRODUCTION = 240;
-const MAX_REQUESTS_AUDIT_WRITE_PRODUCTION = 60;
-type Bucket = { count: number; resetAt: number };
-const buckets = new Map<string, Bucket>();
+export const WINDOW_MS = 60_000;
+export const MAX_REQUESTS_ANON = 120;
+export const MAX_REQUESTS_AUTH_PRODUCTION = 240;
+export const MAX_REQUESTS_AUDIT_WRITE_PRODUCTION = 60;
+export const MAX_REQUESTS_PUBLIC_PRODUCTION = 30;
 
 function readRequestUrl(req: Request): string {
   return String(req.originalUrl ?? req.url ?? '');
 }
 
-function isAuditWriteRequest(req: Request): boolean {
+export function isAuditWriteRequest(req: Request): boolean {
   const url = readRequestUrl(req);
   const method = req.method?.toUpperCase() ?? 'GET';
   return method === 'POST' && (url.includes('/v1/audit/batch') || /\/v1\/audit(?:\/|$|\?)/.test(url));
+}
+
+export function isPublicRoute(req: Request): boolean {
+  return readRequestUrl(req).includes('/v1/public/');
 }
 
 export function isRateLimitExempt(req: Request): boolean {
@@ -69,14 +73,39 @@ export function resolveRateLimitKey(req: Request): string {
   return sub ? `user:${sub}` : `ip:${readClientIp(req)}`;
 }
 
-function resolveMaxRequests(req: Request): number {
-  if (isAuditWriteRequest(req)) {
-    return process.env.NODE_ENV === 'production'
-      ? MAX_REQUESTS_AUDIT_WRITE_PRODUCTION
-      : Math.max(MAX_REQUESTS_AUDIT_WRITE_PRODUCTION, 300);
+export function resolveRateLimitPolicy(req: Request): {
+  namespace: string;
+  limit: number;
+  windowMs: number;
+} {
+  if (isPublicRoute(req)) {
+    return {
+      namespace: 'public',
+      limit:
+        process.env.NODE_ENV === 'production'
+          ? MAX_REQUESTS_PUBLIC_PRODUCTION
+          : Math.max(MAX_REQUESTS_PUBLIC_PRODUCTION, 120),
+      windowMs: WINDOW_MS,
+    };
   }
-  if (process.env.NODE_ENV !== 'production') return Math.max(MAX_REQUESTS_ANON, 600);
-  return req.headers.authorization ? MAX_REQUESTS_AUTH_PRODUCTION : MAX_REQUESTS_ANON;
+  if (isAuditWriteRequest(req)) {
+    return {
+      namespace: 'audit-write',
+      limit:
+        process.env.NODE_ENV === 'production'
+          ? MAX_REQUESTS_AUDIT_WRITE_PRODUCTION
+          : Math.max(MAX_REQUESTS_AUDIT_WRITE_PRODUCTION, 300),
+      windowMs: WINDOW_MS,
+    };
+  }
+  if (process.env.NODE_ENV !== 'production') {
+    return { namespace: 'default', limit: Math.max(MAX_REQUESTS_ANON, 600), windowMs: WINDOW_MS };
+  }
+  return {
+    namespace: 'default',
+    limit: req.headers.authorization ? MAX_REQUESTS_AUTH_PRODUCTION : MAX_REQUESTS_ANON,
+    windowMs: WINDOW_MS,
+  };
 }
 
 export function createRateLimitMiddleware(): (
@@ -89,24 +118,24 @@ export function createRateLimitMiddleware(): (
       next();
       return;
     }
-    const key = resolveRateLimitKey(req);
-    const now = Date.now();
-    const bucket = buckets.get(key) ?? { count: 0, resetAt: now + WINDOW_MS };
-    if (now > bucket.resetAt) {
-      bucket.count = 0;
-      bucket.resetAt = now + WINDOW_MS;
-    }
-    bucket.count += 1;
-    buckets.set(key, bucket);
-    if (bucket.count > resolveMaxRequests(req)) {
-      recordRateLimit429(req);
-      res.status(429).json({ message: 'Too many requests, please slow down.' });
-      return;
-    }
-    next();
+
+    void (async () => {
+      const policy = resolveRateLimitPolicy(req);
+      const storeKey = `${policy.namespace}:${resolveRateLimitKey(req)}`;
+      const result = await getRateLimitStore().consume(storeKey, policy.limit, policy.windowMs);
+      if (!result.allowed) {
+        recordRateLimit429(req);
+        res.status(429).json({ message: 'Too many requests, please slow down.' });
+        return;
+      }
+      next();
+    })().catch((error) => {
+      console.error('[rate-limit] store error', error);
+      next();
+    });
   };
 }
 
 export function resetRateLimitBucketsForTests(): void {
-  buckets.clear();
+  resetRateLimitStoreForTests();
 }
