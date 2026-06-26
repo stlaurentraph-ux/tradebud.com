@@ -1,3 +1,10 @@
+### 2026-06-26 (Lane 2 fix — Stripe webhook event.id dedupe, audit H7)
+- **Context**: Stripe at-least-once delivery could replay `invoice.paid` / `invoice.payment_failed` and re-run reconciliation queries without an event ledger.
+- **Fixes**: `stripe_webhook_events` table + `claimStripeWebhookEvent()` before `handleStripeWebhookEvent` side effects; duplicate deliveries return `{ duplicate: true }` without touching invoices.
+- **Guards**: `stripe-webhook-replay-guard.mjs` asserts ledger wiring; replay spec expects second delivery skips invoice UPDATE.
+- **Ops**: apply `tb_v16_067_stripe_webhook_event_ledger.sql` (or Supabase migration `20260626180000`) on production DB before deploy.
+- **Branch**: `fix/backend-stripe-webhook-dedupe-h7`.
+
 ### 2026-06-26 (Lane 2 fix — EAS production env + release preflight in CI, audit H24)
 - **Context**: `eas.json` production profile lacked EAS environment binding for secrets (anon key, Sentry DSN, Google OAuth ids); `release:preflight:production` only ran manually before store builds.
 - **Fixes**:
