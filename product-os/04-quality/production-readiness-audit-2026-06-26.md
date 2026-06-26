@@ -49,8 +49,8 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H17 | Offline auth | iOS/Android/web | Legacy plaintext sync password fallback in SQLite (`syncAuthStorage.ts:54-69`) | Force migrate-or-clear on boot; remove password fallback | [x] |
 | H18 | Offline auth | iOS/Android | Farmer PII unencrypted in SQLite; SQLCipher deferred | Encrypt-at-rest or formally accept + document for v1 | [ ] |
 | H19 | Offline UI | all (Android worst) | Live `MapView` per plot row (`explore.tsx:300`, `PlotMapPreview.tsx:70`) → ANR/crash | Static snapshot/SVG thumbnail or `FlatList` virtualization | [ ] |
-| H20 | Offline UI | all | Monolithic `AppStateContext` + non-memoized `SignInSheetContext` value → global re-renders | Split contexts / `useMemo` provider value | [ ] |
-| H21 | Offline UI | all | Home readiness stats stale after plot work (`index.tsx:60-94`) | `useFocusEffect(refreshPlotReadiness)` | [ ] |
+| H20 | Offline UI | all | Monolithic `AppStateContext` + non-memoized `SignInSheetContext` value → global re-renders | Split contexts / `useMemo` provider value | [x] PR pending |
+| H21 | Offline UI | all | Home readiness stats stale after plot work (`index.tsx:60-94`) | `useFocusEffect(refreshPlotReadiness)` | [x] already wired |
 | H22 | Offline UI | Android | `androidMapsConfig` guard unused → blank maps if API key missing | Render config-missing placeholder at map mount | [x] PR #319 |
 | H23 | Infra | CI | Post-deploy smokes `exit 0` when secrets unset | Fail on main-deploy when required secrets missing | [x] PR #316 |
 | H24 | Infra | iOS/Android | `eas.json` prod omits anon key/Sentry DSN/Google IDs; `release:preflight` not in CI | Add preflight/secret-assertion to CI | [x] PR `fix/offline-release-preflight-h24` |
