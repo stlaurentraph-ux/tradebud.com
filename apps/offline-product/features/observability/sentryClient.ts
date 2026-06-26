@@ -1,6 +1,8 @@
 import * as Sentry from '@sentry/react-native';
 import Constants from 'expo-constants';
 
+import { sanitizeAnalyticsProperties } from '@/features/security/sanitizeLogContext';
+
 let initialized = false;
 
 function resolveDsn(): string | undefined {
@@ -58,9 +60,10 @@ export function reportErrorToSentry(
   if (!initialized) return;
 
   Sentry.withScope((scope) => {
-    if (context) {
-      scope.setContext('error_logger', context);
-      for (const [key, value] of Object.entries(context)) {
+    const safeContext = sanitizeAnalyticsProperties(context);
+    if (safeContext) {
+      scope.setContext('error_logger', safeContext);
+      for (const [key, value] of Object.entries(safeContext)) {
         scope.setTag(key, String(value));
       }
     }
@@ -78,10 +81,11 @@ export function addSentryBreadcrumb(
   level: Sentry.SeverityLevel = 'info',
 ): void {
   if (!initialized) return;
+  const safeData = sanitizeAnalyticsProperties(data);
   Sentry.addBreadcrumb({
     category: 'analytics',
     message,
-    data,
+    data: safeData,
     level,
   });
 }
@@ -92,9 +96,10 @@ export function captureAnalyticsSignal(
   level: Sentry.SeverityLevel = 'info',
 ): void {
   if (!initialized) return;
-  addSentryBreadcrumb(eventName, properties, level);
+  const safeProperties = sanitizeAnalyticsProperties(properties);
+  addSentryBreadcrumb(eventName, safeProperties, level);
   if (level === 'warning' || level === 'error') {
-    Sentry.captureMessage(`analytics:${eventName}`, { level, extra: properties });
+    Sentry.captureMessage(`analytics:${eventName}`, { level, extra: safeProperties });
   }
 }
 

@@ -1,5 +1,6 @@
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { addSentryBreadcrumb } from '@/features/observability/sentryClient';
+import { sanitizeAnalyticsProperties } from '@/features/security/sanitizeLogContext';
 import type { SyncFailure, SyncFailureStep } from '@/features/sync/syncFailure';
 
 function breadcrumbLevel(failure: SyncFailure): 'info' | 'warning' | 'error' {
@@ -13,13 +14,16 @@ export function reportSyncFailure(
   failure: SyncFailure,
   context?: Record<string, unknown>,
 ): void {
-  const payload = {
+  const payload = sanitizeAnalyticsProperties({
     step: failure.step,
     cause: failure.cause,
     actionType: failure.actionType ?? null,
     httpStatus: failure.httpStatus ?? null,
     message: failure.message,
     ...context,
+  }) ?? {
+    step: failure.step,
+    cause: failure.cause,
   };
 
   addSentryBreadcrumb(`sync:${failure.step}`, payload, breadcrumbLevel(failure));

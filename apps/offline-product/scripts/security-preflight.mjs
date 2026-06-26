@@ -30,6 +30,7 @@ assertIncludes('features/api/harvest.ts', 'Authorization: `Bearer ${accessToken}
 assertIncludes('features/security/syncAuthStorage.ts', 'SecureStore', 'sync credentials use secure storage');
 assertIncludes('features/security/syncAuthStorage.ts', 'saveOAuthSyncAuthCredentials', 'OAuth refresh token storage');
 assertIncludes('features/errors/ErrorLogger.ts', 'sanitizeLogContext', 'error logger redacts sensitive context');
+assertIncludes('features/observability/analytics.ts', 'sanitizeAnalyticsProperties', 'analytics redacts before Sentry');
 assertIncludes('features/api/consentGrants.ts', '/v1/me/gdpr-erasure-request', 'GDPR erasure API wired');
 assertIncludes('app/data-sharing.tsx', 'requestGdprErasure', 'GDPR erasure UI wired');
 assertIncludes('app.json', 'NSUserNotificationsUsageDescription', 'iOS push usage string');

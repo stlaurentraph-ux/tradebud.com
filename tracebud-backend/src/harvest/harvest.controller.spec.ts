@@ -345,6 +345,90 @@ describe('HarvestController scope and role boundaries', () => {
     ).resolves.toEqual(expect.objectContaining({ packageId: 'pkg_1', status: 'submitted' }));
   });
 
+  describe('cross-tenant package scope enforcement', () => {
+    const exporterOtherTenant = {
+      user: {
+        id: 'user_attacker',
+        email: 'exporter+other@tracebud.com',
+        app_metadata: { tenant_id: 'tenant_2', role: 'exporter' },
+      },
+    };
+
+    it('denies risk-score for a package outside the caller tenant', async () => {
+      const service = makeServiceMock();
+      service.canReadPackageForTenant.mockResolvedValue(false);
+      const controller = makeController(service);
+
+      await expect(controller.getPackageRiskScore('pkg_tenant_1', exporterOtherTenant)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(service.canReadPackageForTenant).toHaveBeenCalledWith('pkg_tenant_1', 'tenant_2');
+      expect(service.evaluateDdsPackageRiskScore).not.toHaveBeenCalled();
+    });
+
+    it('denies filing-preflight for a package outside the caller tenant', async () => {
+      const service = makeServiceMock();
+      service.canReadPackageForTenant.mockResolvedValue(false);
+      const controller = makeController(service);
+
+      await expect(
+        controller.getPackageFilingPreflight('pkg_tenant_1', exporterOtherTenant),
+      ).rejects.toThrow(ForbiddenException);
+      expect(service.evaluateDdsPackageFilingPreflight).not.toHaveBeenCalled();
+    });
+
+    it('denies TRACES JSON export for a package outside the caller tenant', async () => {
+      const service = makeServiceMock();
+      service.canReadPackageForTenant.mockResolvedValue(false);
+      const controller = makeController(service);
+
+      await expect(controller.getPackageTracesJson('pkg_tenant_1', exporterOtherTenant)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(service.getDdsPackageTracesJson).not.toHaveBeenCalled();
+    });
+
+    it('denies package generation for a package outside the caller tenant', async () => {
+      const service = makeServiceMock();
+      service.canReadPackageForTenant.mockResolvedValue(false);
+      const controller = makeController(service);
+
+      await expect(controller.generatePackage('pkg_tenant_1', exporterOtherTenant)).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(service.generateDdsPackageArtifacts).not.toHaveBeenCalled();
+    });
+
+    it('denies submit for a package outside the caller tenant', async () => {
+      const service = makeServiceMock();
+      service.canReadPackageForTenant.mockResolvedValue(false);
+      const controller = makeController(service);
+
+      await expect(
+        controller.submitPackage('pkg_tenant_1', { idempotencyKey: 'idem-x' } as any, exporterOtherTenant),
+      ).rejects.toThrow(ForbiddenException);
+      expect(service.submitDdsPackage).not.toHaveBeenCalled();
+    });
+
+    it('does not exempt the admin role from tenant scope', async () => {
+      const service = makeServiceMock();
+      service.canReadPackageForTenant.mockResolvedValue(false);
+      const controller = makeController(service);
+
+      await expect(
+        controller.getPackage('pkg_tenant_1', {
+          user: {
+            id: 'admin_user',
+            email: 'admin@tracebud.com',
+            app_metadata: { tenant_id: 'tenant_2', role: 'admin' },
+          },
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(service.canReadPackageForTenant).toHaveBeenCalledWith('pkg_tenant_1', 'tenant_2');
+      expect(service.getDdsPackageDetail).not.toHaveBeenCalled();
+    });
+  });
+
   it('returns tenant vouchers for cooperative role', async () => {
     const service = makeServiceMock();
     service.listVouchersForTenant.mockResolvedValue([{ id: 'v_1', qr_code_ref: 'V-ABC12345' }] as any);

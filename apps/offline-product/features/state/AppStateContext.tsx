@@ -113,6 +113,10 @@ type AppStateContextValue = {
   updateFarmerProfilePhoto: (uri: string | null) => void;
   /** Reload farmer + plots from SQLite. */
   reloadFromDisk: () => Promise<void>;
+  /** True when SQLite init / first disk load failed — state may be incomplete; do not treat as a fresh install. */
+  bootError: boolean;
+  /** Re-attempt the SQLite boot sequence after a {@link bootError}. */
+  retryBoot: () => void;
 };
 
 const AppStateContext = createContext<AppStateContextValue | undefined>(undefined);
@@ -135,7 +139,15 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   const [farmer, setFarmerState] = useState<FarmerProfile | undefined>(undefined);
   const [plots, setPlots] = useState<Plot[]>([]);
   const [isAppReady, setIsAppReady] = useState(false);
+  const [bootError, setBootError] = useState(false);
+  const [bootNonce, setBootNonce] = useState(0);
   const reloadGenerationRef = useRef(0);
+
+  const retryBoot = useCallback(() => {
+    setBootError(false);
+    setIsAppReady(false);
+    setBootNonce((nonce) => nonce + 1);
+  }, []);
   const displayNameByFarmerIdRef = useRef<Map<string, string>>(new Map());
 
   const farmerDisplayName = useMemo(() => {
@@ -169,11 +181,20 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
             });
           }
           if (loaded.plots.length > 0) setPlots(loaded.plots);
+          setBootError(false);
         }
       } catch (error) {
+        // A boot failure must not masquerade as a fresh install: surface it so the UI can
+        // offer recovery instead of presenting empty state that could overwrite real data.
+        if (!cancelled) {
+          setBootError(true);
+        }
         if (__DEV__) {
           console.warn('[AppState] boot failed', error);
         }
+        void import('@/features/observability/sentryClient')
+          .then((module) => module.reportErrorToSentry(error, { scope: 'app_state_boot' }))
+          .catch(() => undefined);
       } finally {
         if (!cancelled) {
           setIsAppReady(true);
@@ -183,7 +204,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [bootNonce]);
 
   const persistMergedFarmer = useCallback((merged: FarmerProfile) => {
     persistFarmer(merged).catch(() => undefined);
@@ -371,6 +392,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removePlot,
       updateFarmerProfilePhoto,
       reloadFromDisk,
+      bootError,
+      retryBoot,
     }),
     [
       farmer,
@@ -385,6 +408,8 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       removePlot,
       updateFarmerProfilePhoto,
       reloadFromDisk,
+      bootError,
+      retryBoot,
     ],
   );
 

@@ -46,3 +46,6 @@ export function sanitizeLogContext(
   }
   return out;
 }
+
+/** Alias for analytics / Sentry breadcrumb payloads (same redaction rules as log context). */
+export const sanitizeAnalyticsProperties = sanitizeLogContext;

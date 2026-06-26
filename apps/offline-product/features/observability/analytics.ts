@@ -4,6 +4,7 @@ import {
   isSentryEnabled,
   setSentryUser,
 } from './sentryClient';
+import { sanitizeAnalyticsProperties } from '@/features/security/sanitizeLogContext';
 
 export const ANALYTICS_EVENTS = {
   SESSION_START: 'session_start',
@@ -69,10 +70,11 @@ export function trackEvent(
 
   if (!isSentryEnabled()) return;
 
+  const safeProperties = sanitizeAnalyticsProperties(properties);
   const level = FAILURE_EVENTS.has(name) ? 'warning' : 'info';
-  addSentryBreadcrumb(name, properties, level);
+  addSentryBreadcrumb(name, safeProperties, level);
   if (FAILURE_EVENTS.has(name)) {
-    captureAnalyticsSignal(name, properties, 'warning');
+    captureAnalyticsSignal(name, safeProperties, 'warning');
   }
 }
 
