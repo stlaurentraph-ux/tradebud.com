@@ -83,6 +83,12 @@ function assertBillingServiceHandlers(manifest) {
   if (!billingService.includes('applyStripeInvoicePaymentFailed')) {
     throw new Error(`${manifest.billingServiceModule} must reconcile failed invoices`);
   }
+  if (!billingService.includes('stripe_webhook_events')) {
+    throw new Error(`${manifest.billingServiceModule} must persist Stripe webhook event ids for dedupe`);
+  }
+  if (!billingService.includes('ON CONFLICT (stripe_event_id) DO NOTHING')) {
+    throw new Error(`${manifest.billingServiceModule} must dedupe Stripe webhook replays by event id`);
+  }
   if (!billingService.includes('invoice_status <> $3')) {
     throw new Error(`${manifest.billingServiceModule} must not downgrade paid invoices on payment_failed`);
   }

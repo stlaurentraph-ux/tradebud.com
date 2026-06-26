@@ -646,10 +646,46 @@ export class BillingService {
     }
   }
 
+  /**
+   * Claims a Stripe webhook event id before reconciliation so at-least-once retries
+   * do not re-run side effects. Returns true when this delivery owns processing.
+   */
+  private async claimStripeWebhookEvent(eventId: string, eventType: string): Promise<boolean> {
+    try {
+      const res = await this.pool.query<{ stripe_event_id: string }>(
+        `
+          INSERT INTO stripe_webhook_events (stripe_event_id, event_type)
+          VALUES ($1, $2)
+          ON CONFLICT (stripe_event_id) DO NOTHING
+          RETURNING stripe_event_id
+        `,
+        [eventId, eventType],
+      );
+      return res.rowCount != null && res.rowCount > 0;
+    } catch (error) {
+      if (this.isBillingSchemaMissing(error)) {
+        // Pre-migration deploys: reconcile without ledger rather than dropping webhooks.
+        return true;
+      }
+      throw error;
+    }
+  }
+
   async handleStripeWebhookEvent(event: {
+    id?: string;
     type: string;
     data: { object: { id?: string; metadata?: Record<string, string>; status_transitions?: { paid_at?: number } } };
-  }): Promise<{ handled: boolean; invoiceId?: string; eventType: string }> {
+  }): Promise<{ handled: boolean; invoiceId?: string; eventType: string; duplicate?: boolean }> {
+    const stripeEventId = event.id?.trim();
+    if (!stripeEventId) {
+      return { handled: false, eventType: event.type };
+    }
+
+    const claimed = await this.claimStripeWebhookEvent(stripeEventId, event.type);
+    if (!claimed) {
+      return { handled: true, duplicate: true, eventType: event.type };
+    }
+
     const stripeInvoiceId = event.data.object.id?.trim();
     if (!stripeInvoiceId) {
       return { handled: false, eventType: event.type };
