@@ -111,10 +111,20 @@ describe('Billing Stripe webhook replay', () => {
     expect(verified.type).toBe('invoice.paid');
 
     const pool = {
-      query: jest.fn().mockResolvedValue({
-        rowCount: 1,
-        rows: [paidInvoiceRow(stripeInvoiceId)],
-      }),
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ stripe_event_id: 'evt_replay_paid_001' }],
+        })
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [paidInvoiceRow(stripeInvoiceId)],
+        })
+        .mockResolvedValueOnce({
+          rowCount: 0,
+          rows: [],
+        }),
     };
     const billingService = makeBillingService(pool);
 
@@ -128,10 +138,10 @@ describe('Billing Stripe webhook replay', () => {
     });
     expect(second).toEqual({
       handled: true,
-      invoiceId: 'inv_paid_1',
+      duplicate: true,
       eventType: 'invoice.paid',
     });
-    expect(pool.query).toHaveBeenCalledTimes(2);
+    expect(pool.query).toHaveBeenCalledTimes(3);
   });
 
   it('replays signed invoice.payment_failed webhook idempotently', async () => {
@@ -155,10 +165,20 @@ describe('Billing Stripe webhook replay', () => {
     };
 
     const pool = {
-      query: jest.fn().mockResolvedValue({
-        rowCount: 1,
-        rows: [failedRow],
-      }),
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ stripe_event_id: 'evt_replay_failed_001' }],
+        })
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [failedRow],
+        })
+        .mockResolvedValueOnce({
+          rowCount: 0,
+          rows: [],
+        }),
     };
     const billingService = makeBillingService(pool);
 
@@ -167,8 +187,12 @@ describe('Billing Stripe webhook replay', () => {
 
     expect(first.handled).toBe(true);
     expect(first.eventType).toBe('invoice.payment_failed');
-    expect(second.handled).toBe(true);
-    expect(pool.query).toHaveBeenCalledTimes(2);
+    expect(second).toEqual({
+      handled: true,
+      duplicate: true,
+      eventType: 'invoice.payment_failed',
+    });
+    expect(pool.query).toHaveBeenCalledTimes(3);
   });
 
   it('does not downgrade a paid invoice on payment_failed replay', async () => {
@@ -180,10 +204,16 @@ describe('Billing Stripe webhook replay', () => {
     });
 
     const pool = {
-      query: jest.fn().mockResolvedValue({
-        rowCount: 0,
-        rows: [],
-      }),
+      query: jest
+        .fn()
+        .mockResolvedValueOnce({
+          rowCount: 1,
+          rows: [{ stripe_event_id: 'evt_replay_failed_001' }],
+        })
+        .mockResolvedValueOnce({
+          rowCount: 0,
+          rows: [],
+        }),
     };
     const billingService = makeBillingService(pool);
 
@@ -193,13 +223,20 @@ describe('Billing Stripe webhook replay', () => {
       handled: false,
       eventType: 'invoice.payment_failed',
     });
-    expect(pool.query).toHaveBeenCalledTimes(1);
+    expect(pool.query).toHaveBeenCalledTimes(2);
   });
 
   it('returns handled=false for unsupported Stripe event types', async () => {
-    const billingService = makeBillingService({ query: jest.fn() });
+    const pool = {
+      query: jest.fn().mockResolvedValueOnce({
+        rowCount: 1,
+        rows: [{ stripe_event_id: 'evt_unsupported_001' }],
+      }),
+    };
+    const billingService = makeBillingService(pool);
 
     const result = await billingService.handleStripeWebhookEvent({
+      id: 'evt_unsupported_001',
       type: 'customer.subscription.updated',
       data: { object: { id: 'sub_123' } },
     });
@@ -207,6 +244,21 @@ describe('Billing Stripe webhook replay', () => {
     expect(result).toEqual({
       handled: false,
       eventType: 'customer.subscription.updated',
+    });
+    expect(pool.query).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns handled=false when Stripe event id is missing', async () => {
+    const billingService = makeBillingService({ query: jest.fn() });
+
+    const result = await billingService.handleStripeWebhookEvent({
+      type: 'invoice.paid',
+      data: { object: { id: 'in_missing_event_id' } },
+    });
+
+    expect(result).toEqual({
+      handled: false,
+      eventType: 'invoice.paid',
     });
   });
 });
