@@ -20,6 +20,11 @@ export async function resolveFarmerIdsForTenant(pool: Pool, tenantId: string): P
           FROM crm_contacts cc
           WHERE cc.tenant_id = $1
             AND cc.farmer_profile_id IS NOT NULL
+          UNION
+          SELECT cg.farmer_id
+          FROM consent_grants cg
+          WHERE cg.grantee_tenant_id = $1
+            AND cg.status = 'active'
         ) scoped
         WHERE farmer_id IS NOT NULL
       `,

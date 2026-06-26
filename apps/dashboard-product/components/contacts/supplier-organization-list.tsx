@@ -3,13 +3,13 @@
 import { useContext, useMemo } from 'react';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
+import { ContactStatusPipeline } from '@/components/contacts/contact-status-pipeline';
 import { LocaleContext } from '@/lib/locale-context';
 import { buildOrganizationHref, groupContactsByOrganization } from '@/lib/contact-directory';
-import type { ContactRecord, ContactStatus } from '@/lib/contact-service';
+import type { ContactRecord } from '@/lib/contact-service';
 import type { User } from '@/types';
 import {
   getContactActivityDisplayLabel,
-  getContactStatusLabel,
   getContactsOrgCopy,
   getContactsTableColumnLabel,
   getProducerDetailHref,
@@ -18,15 +18,6 @@ import {
 interface SupplierOrganizationListProps {
   contacts: ContactRecord[];
   role?: User['active_role'];
-}
-
-function statusBadgeVariant(
-  status: ContactStatus,
-): 'default' | 'secondary' | 'outline' | 'destructive' {
-  if (status === 'blocked') return 'destructive';
-  if (status === 'inactive') return 'secondary';
-  if (['invited', 'engaged', 'submitted'].includes(status)) return 'default';
-  return 'outline';
 }
 
 export function SupplierOrganizationList({ contacts, role }: SupplierOrganizationListProps) {
@@ -114,9 +105,7 @@ export function SupplierOrganizationList({ contacts, role }: SupplierOrganizatio
                 </td>
                 <td className="px-3 py-2.5 text-muted-foreground">{contact.email}</td>
                 <td className="px-3 py-2.5">
-                  <Badge variant={statusBadgeVariant(contact.status)}>
-                    {getContactStatusLabel(contact.status, t)}
-                  </Badge>
+                  <ContactStatusPipeline status={contact.status} t={t} />
                 </td>
               </tr>
             )),
@@ -142,9 +131,7 @@ export function SupplierOrganizationList({ contacts, role }: SupplierOrganizatio
                   </td>
                   <td className="px-3 py-2.5 text-muted-foreground">{contact.email}</td>
                   <td className="px-3 py-2.5">
-                    <Badge variant={statusBadgeVariant(contact.status)}>
-                      {getContactStatusLabel(contact.status, t)}
-                    </Badge>
+                    <ContactStatusPipeline status={contact.status} t={t} />
                   </td>
                 </tr>
               ))}

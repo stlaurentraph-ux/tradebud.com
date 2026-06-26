@@ -22,9 +22,9 @@ Contacts, farmers, campaigns, and inbox requests were implemented across multipl
 
 | Track | Why separate |
 |-------|----------------|
-| Field app / offline structural work | Different app (`apps/offline-product`), offline sync registries, Maestro device smoke |
-| Operational issues (`/compliance/issues`) | Compliance ops domain — issue state machine, not CRM/outreach |
-| Full exporter critical-path QA | Manual staging checklist for lineage → seal → handoff, not structural guards |
+| Field app / offline structural work | **Done on main** — separate app; device QA remains manual |
+| Operational issues (`/compliance/issues`) | **Shipped** — see `FEAT-dashboard-compliance-issues.md` |
+| Full exporter critical-path QA | **Structural slice shipped** — manual staging sign-off in `exporter-critical-path-qa.md` |
 
 ## Permissions
 

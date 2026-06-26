@@ -3,6 +3,7 @@ import type { PendingSyncAction } from '@/features/state/persistence';
 import {
   loadPendingSyncActions,
   loadPlotServerLinks,
+  loadAppState,
 } from '@/features/state/persistence';
 import {
   mapPlotUploadErrorMessage,
@@ -27,7 +28,9 @@ import {
   warmPlotServerLinksForSync,
   type UploadUnsyncedPlotsResult,
 } from '@/features/sync/plotServerSync';
+import { restoreLocalDeclarationsFromServer } from '@/features/sync/restoreLocalDeclarationsFromServer';
 import { restoreLocalPlotsFromServer } from '@/features/sync/restoreLocalPlotsFromServer';
+import { pruneRedundantPendingUploadActions } from '@/features/sync/pruneRedundantPendingUploadActions';
 import { restoreLocalDeliveryReceiptsFromServer } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
 import { restoreFarmerCloudState } from '@/features/sync/restoreFarmerCloudState';
 import { reconcileUnuploadedLocalDeliveryReceipts } from '@/features/harvest/reconcileUnuploadedLocalDeliveryReceipts';
@@ -40,6 +43,25 @@ import { classifyPlotListFailure, classifySyncFailure } from '@/features/sync/sy
 import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabilityMessage';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
+import { restoreLinkedLocalPlotMediaFromServer } from '@/features/sync/restoreLinkedLocalPlotMediaFromServer';
+import { hydrateLocalSyncMarkersFromServer } from '@/features/sync/hydrateLocalSyncMarkersFromServer';
+import type { FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import {
+  beginSyncPipelineHttpTelemetry,
+  endSyncPipelineHttpTelemetry,
+  type SyncRunHttpSummary,
+} from '@/features/sync/syncRunHttpTelemetry';
+import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
+import { persistFieldSyncCursorAfterPipeline, persistFieldSyncCursorFromDelta } from '@/features/sync/fieldSyncCursor';
+import type { FieldSyncRestoreScope } from '@/features/sync/fieldSyncRestoreScope';
+import type { FieldSyncDeltaResponse } from '@/features/api/fieldSyncDelta';
+import {
+  allLocalPlotsLinked,
+  countQueueActionsForTypes,
+  localDeclarationsComplete,
+  shouldSkipPushOnlyInboundHydration,
+} from '@/features/sync/pushOnlyIdleSyncPolicy';
+import { areLinkedPlotMediaScopesHydrated } from '@/features/sync/pushOnlyInboundMarkerState';
 
 export type FieldSyncPipelineParams = {
   accessToken: string;
@@ -48,6 +70,15 @@ export type FieldSyncPipelineParams = {
   syncFarmer: FarmerProfile;
   syncPlots: Plot[];
   t: TranslateFn;
+  /**
+   * full: pull from cloud then push pending work (sign-in, parity restore, empty refresh).
+   * push_only: incremental upload — warm links, prune, enqueue, drain queue only.
+   */
+  syncMode?: FieldSyncMode;
+  /** Skip cloud pull phase (delta gate / push-only sync). */
+  skipInboundRestore?: boolean;
+  /** Incremental restore scope when delta reports partial inbound changes. */
+  restoreScope?: FieldSyncRestoreScope;
   /** When empty, all queue action types are considered selected. */
   selectedQueueActionTypes: PendingSyncAction['actionType'][];
   allQueueActionTypes: PendingSyncAction['actionType'][];
@@ -58,6 +89,8 @@ export type FieldSyncPipelineParams = {
   queueSmartSweepCap?: number;
   /** Manual sync uses 4 passes; conservative auto-backup uses 2. */
   maxQueuePasses?: number;
+  /** Reuse Settings delta probe — avoids a second /field-sync/delta round trip. */
+  fieldSyncDelta?: FieldSyncDeltaResponse | null;
   onPhase?: (phase: SyncQueuePhase) => void;
 };
 
@@ -72,6 +105,8 @@ export type FieldSyncPipelineResult = {
   stoppedForAuth?: boolean;
   /** Plots merged from server during restore — caller should reload local state when > 0. */
   plotsRestored?: number;
+  /** Dev-only: Tracebud API calls during pipeline execution only. */
+  httpSummary?: SyncRunHttpSummary | null;
 };
 
 function mergeQueueResult(
@@ -117,6 +152,19 @@ function reportPlotUploadFailure(
 export async function runFieldSyncPipeline(
   params: FieldSyncPipelineParams,
 ): Promise<FieldSyncPipelineResult> {
+  beginSyncPipelineHttpTelemetry();
+  try {
+    const result = await runFieldSyncPipelineBody(params);
+    return { ...result, httpSummary: endSyncPipelineHttpTelemetry() };
+  } catch (error) {
+    endSyncPipelineHttpTelemetry();
+    throw error;
+  }
+}
+
+async function runFieldSyncPipelineBody(
+  params: FieldSyncPipelineParams,
+): Promise<FieldSyncPipelineResult> {
   const {
     accessToken,
     apiFarmerId,
@@ -132,95 +180,195 @@ export async function runFieldSyncPipeline(
     queueSmartSweepCap = 100,
     maxQueuePasses = 4,
     onPhase,
+    syncMode = 'full',
+    skipInboundRestore = false,
+    restoreScope,
+    fieldSyncDelta = null,
   } = params;
 
   const setPhase = (phase: SyncQueuePhase) => {
     onPhase?.(phase);
   };
 
-  const outcome: SyncNowUserOutcome = {};
+  const outcome: SyncNowUserOutcome = { syncMode };
   let plotUploadFirstError: string | undefined;
   let skipQueueDrain = false;
+  let activeFarmer = syncFarmer;
 
-  setPhase('restoring_plots');
-  reportSyncStepStart('plot_list', { phase: 'restore', plotCount: syncPlots.length });
   let activePlots = syncPlots;
-  const restoreResult = await restoreLocalPlotsFromServer({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: syncPlots,
-  });
-  if (restoreResult.restoredCount > 0) {
-    activePlots = restoreResult.mergedPlots;
-    outcome.plotsRestored = restoreResult.restoredCount;
-    invalidateServerPlotListCache();
-  }
-  if (restoreResult.fetchFailed && activePlots.length === 0) {
-    outcome.plotsFetchFailed = true;
+  let plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+  let backendPlotsForReceipts: unknown[] = [];
+
+  if (syncMode === 'full' && !skipInboundRestore) {
+    setPhase('restoring_plots');
+    reportSyncStepStart('plot_list', { phase: 'restore', plotCount: syncPlots.length });
+    const restoreResult = await restoreLocalPlotsFromServer({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: syncPlots,
+      serverPlotIdsScope: restoreScope?.serverPlotIds,
+    });
+    if (restoreResult.restoredCount > 0) {
+      activePlots = restoreResult.mergedPlots;
+      outcome.plotsRestored = restoreResult.restoredCount;
+      invalidateServerPlotListCache();
+    }
+    if (restoreResult.fetchFailed) {
+      outcome.plotsFetchFailed = true;
+    }
+
+    // Reconcile local↔server plot ids before pulling receipts, evidence, or declarations.
+    await warmPlotServerLinksForSync({
+      farmerId: apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: activePlots,
+    });
+
+    const receiptRestoreResult =
+      restoreScope && !restoreScope.restoreVouchers
+        ? { restoredCount: 0, fetchFailed: false, vouchers: [] as unknown[] }
+        : await restoreLocalDeliveryReceiptsFromServer({
+            apiFarmerId,
+            profileFarmerId: syncFarmer.id,
+            ownedFarmerIds: farmerScopeIds,
+            localPlots: activePlots,
+          });
+    if (receiptRestoreResult.restoredCount > 0) {
+      outcome.receiptsRestored = receiptRestoreResult.restoredCount;
+    }
+    if (receiptRestoreResult.fetchFailed) {
+      outcome.plotsFetchFailed = true;
+    }
+
+    plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+    backendPlotsForReceipts = await fetchBackendPlotsForSyncScope({
+      farmerId: apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+    }).catch(() => []);
+    const receiptReconcileResult = await reconcileUnuploadedLocalDeliveryReceipts({
+      farmerId: syncFarmer.id,
+      localPlots: activePlots,
+      backendPlots: backendPlotsForReceipts,
+      plotServerLinks,
+      vouchers: receiptRestoreResult.fetchFailed ? undefined : receiptRestoreResult.vouchers,
+    }).catch(() => ({ requeuedCount: 0, unmatchedCount: 0, fetchFailed: true }));
+    if (receiptReconcileResult.requeuedCount > 0) {
+      outcome.receiptsRequeued = receiptReconcileResult.requeuedCount;
+    }
+
+    const cloudRestoreResult = await restoreFarmerCloudState({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localFarmer: activeFarmer,
+      localPlots: activePlots,
+      restoreScope,
+    });
+    if (cloudRestoreResult.declarationsRestored > 0) {
+      outcome.declarationsRestored = cloudRestoreResult.declarationsRestored;
+    }
+    if (cloudRestoreResult.groundTruthRestored > 0) {
+      outcome.groundTruthPhotosRestored = cloudRestoreResult.groundTruthRestored;
+    }
+    if (cloudRestoreResult.evidenceRestored > 0) {
+      outcome.evidenceRestored = cloudRestoreResult.evidenceRestored;
+    }
+    if (cloudRestoreResult.fetchFailed) {
+      outcome.evidenceFetchFailed = true;
+      outcome.declarationsFetchFailed = true;
+    }
+    if (cloudRestoreResult.downloadFailed > 0) {
+      outcome.evidenceDownloadFailed = cloudRestoreResult.downloadFailed;
+    }
+    const diskAfterDeclarations = await loadAppState().catch(() => null);
+    if (diskAfterDeclarations?.farmer) activeFarmer = diskAfterDeclarations.farmer;
+    if (diskAfterDeclarations?.plots.length) activePlots = diskAfterDeclarations.plots;
+
+    await hydrateLocalSyncMarkersFromServer({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localFarmer: activeFarmer,
+      localPlots: activePlots,
+    }).catch(() => undefined);
+  } else {
+    setPhase('processing_queue');
+    reportSyncStepStart('queue', { phase: 'push_only' });
+
+    const pendingRows = await loadPendingSyncActions().catch(() => []);
+    const queueDrainTypesPreview =
+      (selectedQueueActionTypes.length > 0 ? selectedQueueActionTypes : allQueueActionTypes).filter(
+        (actionType) => syncDrainActionTypes.includes(actionType),
+      );
+    const queuePendingCount = countQueueActionsForTypes(pendingRows, queueDrainTypesPreview);
+    const declarationsComplete = localDeclarationsComplete(activeFarmer, activePlots);
+    const plotMediaHydrated = await areLinkedPlotMediaScopesHydrated(activePlots, plotServerLinks);
+    const skipInboundHydration = shouldSkipPushOnlyInboundHydration({
+      queuePendingCount,
+      declarationsComplete,
+      plotMediaHydrated,
+    });
+
+    if (!skipInboundHydration || !allLocalPlotsLinked(activePlots, plotServerLinks)) {
+      await warmPlotServerLinksForSync({
+        farmerId: apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localPlots: activePlots,
+      }).catch(() => undefined);
+      plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+    }
+
+    if (!skipInboundHydration && !declarationsComplete) {
+      const declarationRestore = await restoreLocalDeclarationsFromServer({
+        apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localFarmer: activeFarmer,
+        localPlots: activePlots,
+      }).catch(() => ({
+        producerRestored: false,
+        plotsRestored: 0,
+        legalRestored: 0,
+        fetchFailed: true,
+      }));
+      if (declarationRestore.fetchFailed) {
+        outcome.declarationsFetchFailed = true;
+      } else if (
+        declarationRestore.producerRestored ||
+        declarationRestore.plotsRestored > 0 ||
+        declarationRestore.legalRestored > 0
+      ) {
+        outcome.declarationsRestored =
+          (declarationRestore.producerRestored ? 1 : 0) +
+          declarationRestore.plotsRestored +
+          declarationRestore.legalRestored;
+        const diskAfterDeclarations = await loadAppState().catch(() => null);
+        if (diskAfterDeclarations?.farmer) activeFarmer = diskAfterDeclarations.farmer;
+        if (diskAfterDeclarations?.plots.length) activePlots = diskAfterDeclarations.plots;
+      }
+    }
+
+    if (!skipInboundHydration) {
+      await hydrateLocalSyncMarkersFromServer({
+        apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localFarmer: activeFarmer,
+        localPlots: activePlots,
+      }).catch(() => undefined);
+    }
   }
 
-  // Reconcile local↔server plot ids before pulling receipts, evidence, or declarations.
-  await warmPlotServerLinksForSync({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
-
-  const receiptRestoreResult = await restoreLocalDeliveryReceiptsFromServer({
-    apiFarmerId,
-    profileFarmerId: syncFarmer.id,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
-  if (receiptRestoreResult.restoredCount > 0) {
-    outcome.receiptsRestored = receiptRestoreResult.restoredCount;
-  }
-
-  const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
-  const backendPlotsForReceipts = await fetchBackendPlotsForSyncScope({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-  }).catch(() => []);
-  const receiptReconcileResult = await reconcileUnuploadedLocalDeliveryReceipts({
-    farmerId: syncFarmer.id,
-    localPlots: activePlots,
-    backendPlots: backendPlotsForReceipts,
-    plotServerLinks,
-    vouchers: receiptRestoreResult.fetchFailed ? undefined : receiptRestoreResult.vouchers,
-  }).catch(() => ({ requeuedCount: 0, unmatchedCount: 0, fetchFailed: true }));
-  if (receiptReconcileResult.requeuedCount > 0) {
-    outcome.receiptsRequeued = receiptReconcileResult.requeuedCount;
-  }
-
-  const cloudRestoreResult = await restoreFarmerCloudState({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localFarmer: syncFarmer,
-    localPlots: activePlots,
-  });
-  if (cloudRestoreResult.declarationsRestored > 0) {
-    outcome.declarationsRestored = cloudRestoreResult.declarationsRestored;
-  }
-  if (cloudRestoreResult.groundTruthRestored > 0) {
-    outcome.groundTruthPhotosRestored = cloudRestoreResult.groundTruthRestored;
-  }
-  if (cloudRestoreResult.evidenceRestored > 0) {
-    outcome.evidenceRestored = cloudRestoreResult.evidenceRestored;
-  }
-  if (cloudRestoreResult.fetchFailed) {
-    outcome.evidenceFetchFailed = true;
-    outcome.declarationsFetchFailed = true;
-  }
-  if (cloudRestoreResult.downloadFailed > 0) {
-    outcome.evidenceDownloadFailed = cloudRestoreResult.downloadFailed;
-  }
+  await pruneRedundantPendingUploadActions({ farmerId: apiFarmerId }).catch(() => 0);
 
   reportSyncStepStart('plot_upload', { plotCount: activePlots.length });
-  await warmPlotServerLinksForSync({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
+  if (
+    syncMode !== 'push_only' ||
+    !allLocalPlotsLinked(activePlots, plotServerLinks)
+  ) {
+    await warmPlotServerLinksForSync({
+      farmerId: apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: activePlots,
+    }).catch(() => undefined);
+    plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
+  }
 
   const selectedTypes =
     selectedQueueActionTypes.length > 0 ? selectedQueueActionTypes : allQueueActionTypes;
@@ -232,7 +380,9 @@ export async function runFieldSyncPipeline(
   setPhase(activePlots.length > 0 ? 'uploading_plots' : 'processing_queue');
 
   let lastPlotUploadResult: UploadUnsyncedPlotsResult | null = null;
-  if (activePlots.length === 0) {
+  if (syncMode === 'push_only') {
+    outcome.plotsAlreadySynced = true;
+  } else if (activePlots.length === 0) {
     outcome.plotsNone = true;
   } else {
     let syncRes = await uploadUnsyncedPlotsForFarmer({
@@ -319,8 +469,6 @@ export async function runFieldSyncPipeline(
     }).catch(() => undefined);
   }
 
-  await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
-
   let queueFirstError: string | undefined;
 
   if (shouldProcessConsent) {
@@ -332,6 +480,9 @@ export async function runFieldSyncPipeline(
   }
 
   if (queueDrainTypes.length > 0 && !skipQueueDrain) {
+    const queueRowsForDrain = await loadPendingSyncActions().catch(() => []);
+    const queueDrainPendingCount = countQueueActionsForTypes(queueRowsForDrain, queueDrainTypes);
+    if (queueDrainPendingCount > 0) {
     setPhase('processing_queue');
     reportSyncStepStart('queue', { actionTypes: queueDrainTypes.join(',') });
     if (__DEV__ && queueSmartSweepEnabled) {
@@ -377,16 +528,61 @@ export async function runFieldSyncPipeline(
       mergeQueueResult(outcome, queueRes);
       if (queueRes.firstError) queueFirstError = queueRes.firstError;
     }
+    }
   }
 
-  const dateBackfillResult = await backfillServerHarvestDatesFromLocal({
-    farmerId: syncFarmer.id,
-    localPlots: activePlots,
-    backendPlots: backendPlotsForReceipts,
-    plotServerLinks,
-  }).catch(() => ({ updatedCount: 0, vouchers: [] as unknown[] }));
-  if (dateBackfillResult.updatedCount > 0) {
-    outcome.receiptsRestored = (outcome.receiptsRestored ?? 0) + dateBackfillResult.updatedCount;
+  if (syncMode !== 'push_only') {
+    await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
+  }
+
+  if (syncMode === 'push_only' && activePlots.length > 0) {
+    const linkedMediaHydrated = await areLinkedPlotMediaScopesHydrated(activePlots, plotServerLinks);
+    if (!linkedMediaHydrated) {
+    setPhase('restoring_plots');
+    reportSyncStepStart('plot_list', {
+      phase: 'linked_media_restore',
+      plotCount: activePlots.length,
+    });
+    const mediaRestore = await restoreLinkedLocalPlotMediaFromServer({
+      apiFarmerId,
+      ownedFarmerIds: farmerScopeIds,
+      localPlots: activePlots,
+      includeAuditPhotos: false,
+    }).catch(() => ({
+      evidenceRestored: 0,
+      groundTruthRestored: 0,
+      landTitleRestored: 0,
+      fetchFailed: true,
+      downloadFailed: 0,
+    }));
+    if (mediaRestore.groundTruthRestored > 0) {
+      outcome.groundTruthPhotosRestored =
+        (outcome.groundTruthPhotosRestored ?? 0) + mediaRestore.groundTruthRestored;
+    }
+    const evidencePullCount = mediaRestore.evidenceRestored + mediaRestore.landTitleRestored;
+    if (evidencePullCount > 0) {
+      outcome.evidenceRestored = (outcome.evidenceRestored ?? 0) + evidencePullCount;
+    }
+    if (mediaRestore.fetchFailed) {
+      outcome.evidenceFetchFailed = true;
+    }
+    if (mediaRestore.downloadFailed > 0) {
+      outcome.evidenceDownloadFailed =
+        (outcome.evidenceDownloadFailed ?? 0) + mediaRestore.downloadFailed;
+    }
+    }
+  }
+
+  if (syncMode === 'full') {
+    const dateBackfillResult = await backfillServerHarvestDatesFromLocal({
+      farmerId: syncFarmer.id,
+      localPlots: activePlots,
+      backendPlots: backendPlotsForReceipts,
+      plotServerLinks,
+    }).catch(() => ({ updatedCount: 0, vouchers: [] as unknown[] }));
+    if (dateBackfillResult.updatedCount > 0) {
+      outcome.receiptsRestored = (outcome.receiptsRestored ?? 0) + dateBackfillResult.updatedCount;
+    }
   }
 
   invalidateServerPlotListCache();
@@ -395,7 +591,7 @@ export async function runFieldSyncPipeline(
     ownedFarmerIds: farmerScopeIds,
     plots: activePlots,
     isSignedIn: true,
-    forcePlotFetch: true,
+    forcePlotFetch: syncMode === 'full',
   });
   outcome.remainingPending = pendingAfter.total;
   outcome.unsyncedPlotCount = pendingAfter.unsyncedPlotCount;
@@ -463,6 +659,25 @@ export async function runFieldSyncPipeline(
   }
 
   const syncResultMessage = formatSyncNowUserMessage(outcome, t);
+
+  trackEvent(ANALYTICS_EVENTS.SYNC_RUN_COMPLETED, {
+    syncMode,
+    queueCompleted: outcome.queueCompleted ?? 0,
+    queueFailed: outcome.queueFailed ?? 0,
+    remainingPending: outcome.remainingPending ?? 0,
+    plotsRestored: outcome.plotsRestored ?? 0,
+    skipQueueDrain,
+    skipInboundRestore,
+    incrementalRestore: restoreScope != null,
+  });
+
+  if (!outcome.plotsFetchFailed && !outcome.queueFetchFailed) {
+    if (fieldSyncDelta) {
+      await persistFieldSyncCursorFromDelta(fieldSyncDelta).catch(() => undefined);
+    } else {
+      await persistFieldSyncCursorAfterPipeline(params.accessToken).catch(() => undefined);
+    }
+  }
 
   // Refresh Harvests / My Plots after every completed sync, including restore-only runs.
   emitServerPlotSyncChanged();

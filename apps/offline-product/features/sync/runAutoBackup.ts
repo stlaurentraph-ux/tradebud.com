@@ -1,5 +1,6 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import type { PendingSyncAction } from '@/features/state/persistence';
+import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
 import {
   type ProcessPendingSyncQueueResult,
 } from '@/features/sync/processPendingSyncQueue';
@@ -7,6 +8,9 @@ import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
 import { type UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
 import { openFieldSyncSession } from '@/features/sync/runFieldSyncSession';
 import { runFieldSyncPipeline } from '@/features/sync/runFieldSyncPipeline';
+import { probeFieldSyncInboundChanges } from '@/features/sync/fieldSyncCursor';
+import { resolveFieldSyncMode, type FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
+import { measureTotalSyncPending } from '@/features/sync/measureTotalSyncPending';
 import {
   evaluateConservativeAutoBackup,
   recordAutoBackupAttempt,
@@ -16,6 +20,7 @@ import {
 import { withSyncQueueLock, setSyncQueuePhase } from '@/features/sync/syncQueueMutex';
 import {
   SYNC_BACKGROUND_OPERATION_MS,
+  SYNC_LOCK_WAIT_MS,
   SyncOperationTimeoutError,
   withSyncOperationTimeout,
 } from '@/features/sync/syncOperationLimits';
@@ -34,6 +39,8 @@ const ALL_AUTO_BACKUP_ACTION_TYPES: PendingSyncAction['actionType'][] = [
 ];
 
 const noopTranslate: TranslateFn = (key) => key;
+
+const inFlightAutoBackupByFarmer = new Map<string, Promise<RunAutoBackupResult>>();
 
 function isConsentQueueActionType(actionType: PendingSyncAction['actionType']): boolean {
   return CONSENT_ACTION_TYPES.includes(actionType);
@@ -66,9 +73,27 @@ export async function runAutoBackup(params: {
   farmerDisplayName?: string;
   /** When true, uploads plots + consent only — skips harvest/photo/evidence queue drain. */
   skipQueueDrain?: boolean;
+  syncMode?: FieldSyncMode;
 }): Promise<RunAutoBackupResult> {
-  try {
-    return await withSyncQueueLock(async () => {
+  if (!hasSyncAuthSession()) {
+    return {
+      plotResult: null,
+      queueResult: emptyQueueResult({
+        fetchFailed: true,
+        firstError: 'not_signed_in',
+      }),
+    };
+  }
+
+  const existing = inFlightAutoBackupByFarmer.get(params.farmerId);
+  if (existing) {
+    return existing;
+  }
+
+  const run = (async (): Promise<RunAutoBackupResult> => {
+    try {
+      return await withSyncQueueLock(
+        async () => {
       const work = (async () => {
         const sessionOpened = await openFieldSyncSession();
         if (!sessionOpened.ok) {
@@ -103,6 +128,7 @@ export async function runAutoBackup(params: {
               name: params.farmerDisplayName,
             },
             syncPlots: params.localPlots,
+            syncMode: params.syncMode ?? 'full',
             t: noopTranslate,
             selectedQueueActionTypes,
             allQueueActionTypes: ALL_AUTO_BACKUP_ACTION_TYPES,
@@ -135,12 +161,24 @@ export async function runAutoBackup(params: {
         }
       })();
       return withSyncOperationTimeout(work, SYNC_BACKGROUND_OPERATION_MS);
-    });
-  } catch (e) {
-    if (e instanceof SyncOperationTimeoutError) {
-      emitSyncOperationOutcome({ kind: 'timeout', source: 'background' });
+        },
+        { waitMs: SYNC_LOCK_WAIT_MS },
+      );
+    } catch (e) {
+      if (e instanceof SyncOperationTimeoutError) {
+        emitSyncOperationOutcome({ kind: 'timeout', source: 'background' });
+      }
+      throw e;
     }
-    throw e;
+  })();
+
+  inFlightAutoBackupByFarmer.set(params.farmerId, run);
+  try {
+    return await run;
+  } finally {
+    if (inFlightAutoBackupByFarmer.get(params.farmerId) === run) {
+      inFlightAutoBackupByFarmer.delete(params.farmerId);
+    }
   }
 }
 
@@ -161,10 +199,35 @@ export async function runConservativeAutoBackup(params: {
 
   recordAutoBackupAttempt();
   try {
+    const prePending = await measureTotalSyncPending({
+      farmerId: params.farmerId,
+      plots: params.localPlots,
+      isSignedIn: true,
+    }).catch(() => null);
+    const deltaProbe = await probeFieldSyncInboundChanges().catch(() => ({
+      hasInboundChanges: true,
+      hasCursor: false,
+      delta: null,
+      snapshot: null,
+      changeSet: null,
+      probeFailed: true,
+    }));
+    const syncMode = resolveFieldSyncMode({
+      unsyncedPlotCount: prePending?.unsyncedPlotCount ?? 0,
+      blockedPlotCount: prePending?.blockedPlotCount ?? 0,
+      queuePendingCount: prePending?.queuePendingCount ?? 0,
+      plotsFetchFailed: prePending?.plotsFetchFailed === true,
+      hasFieldSyncCursor: deltaProbe.hasCursor,
+      cloudDeltaHasInboundChanges: deltaProbe.probeFailed
+        ? undefined
+        : deltaProbe.hasInboundChanges,
+    });
+
     const result = await runAutoBackup({
       farmerId: params.farmerId,
       localPlots: params.localPlots,
       skipQueueDrain,
+      syncMode,
     });
     const plotFailed =
       (result.plotResult?.failed ?? 0) > 0 ||

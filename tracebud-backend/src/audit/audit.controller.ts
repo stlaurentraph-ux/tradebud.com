@@ -20,13 +20,18 @@ import { assertTenantClaimOrFieldActor } from '../auth/field-app-auth';
 import { isFarmerProfileOwnedByUser } from '../auth/farmer-ownership';
 import { deriveRoleFromSupabaseUser, deriveTenantIdFromSupabaseUser } from '../auth/roles';
 import { CreateAuditEventDto } from './dto/create-audit-event.dto';
+import { CreateAuditBatchDto } from './dto/create-audit-batch.dto';
+import { AuditWriteService } from './audit-write.service';
 
 @ApiTags('Audit')
 @ApiBearerAuth()
 @UseGuards(SupabaseAuthGuard)
 @Controller('v1/audit')
 export class AuditController {
-  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    private readonly auditWriteService: AuditWriteService,
+  ) {}
 
   private async appendGatedEntryExportAuditEvent(params: {
     userId: string | null;
@@ -140,64 +145,17 @@ export class AuditController {
       'Field app and agents can record declaration snapshots, device metadata, and other events into the central audit_log.',
   })
   async create(@Body() dto: CreateAuditEventDto, @Req() req: any) {
-    await assertTenantClaimOrFieldActor(this.pool, req.user);
-    const tenantId = this.resolveCreateTenantId(req, dto);
-    const role = deriveRoleFromSupabaseUser(req.user);
-    const eventType = dto.eventType?.trim() ?? '';
-    const isDashboardEvent = eventType.startsWith('dashboard_');
-    if (eventType === 'offline_declaration_bundle' && role !== 'farmer') {
-      throw new ForbiddenException(
-        'Producer declaration bundles may only be submitted by the farmer app account',
-      );
-    }
-    const payloadSchema =
-      typeof dto.payload?.schema === 'string' ? dto.payload.schema.trim() : '';
-    if (
-      payloadSchema === 'tracebud.offline.declaration_bundle.v1' &&
-      role !== 'farmer'
-    ) {
-      throw new ForbiddenException(
-        'Personal portability exports cannot be ingested by organisations; use consent grants and plot sync',
-      );
-    }
-    if (
-      !isDashboardEvent &&
-      role !== 'farmer' &&
-      role !== 'agent' &&
-      role !== 'exporter'
-    ) {
-      throw new ForbiddenException('Only farmers, agents, or exporters can append audit events');
-    }
-    if (!eventType || typeof dto.payload !== 'object' || dto.payload === null) {
-      throw new BadRequestException('eventType and payload are required');
-    }
-    const userId = req.user?.id as string | undefined;
-    const payload = {
-      ...dto.payload,
-      tenantId: typeof dto.payload.tenantId === 'string' ? dto.payload.tenantId : tenantId,
-    };
-    try {
-      const res = await this.pool.query(
-        `
-          INSERT INTO audit_log (user_id, device_id, event_type, payload)
-          VALUES ($1, $2, $3, $4::jsonb)
-          RETURNING id, timestamp
-        `,
-        [
-          userId ?? null,
-          dto.deviceId?.trim() || null,
-          eventType,
-          JSON.stringify(payload),
-        ],
-      );
-      return res.rows[0] ?? { ok: true };
-    } catch (e) {
-      const err = e as { code?: string };
-      if (err?.code === '42P01') {
-        throw new BadRequestException('audit_log table is not available on this server');
-      }
-      throw e;
-    }
+    return this.auditWriteService.appendEvent({ dto, user: req.user });
+  }
+
+  @Post('batch')
+  @ApiOperation({
+    summary: 'Append multiple audit events in one request',
+    description:
+      'Field sync batch drain: up to 20 idempotent audit events per call (clientEventId dedupes retries).',
+  })
+  async createBatch(@Body() dto: CreateAuditBatchDto, @Req() req: any) {
+    return this.auditWriteService.appendBatch({ events: dto.events, user: req.user });
   }
 
   @Get()

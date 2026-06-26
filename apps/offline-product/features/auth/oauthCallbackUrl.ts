@@ -7,6 +7,8 @@ import {
 } from '@/features/api/syncAuthSession';
 import { loadSyncAuthCredentials } from '@/features/security/syncAuthStorage';
 
+export { isOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrlPolicy';
+
 export function parseOAuthCallbackUrl(input: string): {
   errorCode: string | null;
   params: Record<string, string>;
@@ -143,14 +145,4 @@ export async function sessionFromOAuthCallbackUrl(url: string): Promise<Session>
 export function clearOAuthCallbackDedupState(): void {
   consumedCallbackKeys.clear();
   exchangeChain = Promise.resolve();
-}
-
-export function isOAuthCallbackUrl(url: string): boolean {
-  return (
-    url.includes('auth/callback') ||
-    url.includes('app.tracebud.com/auth/') ||
-    url.includes('code=') ||
-    url.includes('access_token=') ||
-    url.includes('error=')
-  );
 }

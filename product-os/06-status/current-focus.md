@@ -6,6 +6,7 @@
 |----|--------|-------|-------|-------------|--------|------------|
 | IF-001 | — | — | — | — | — | — |
 | IF-002 | `feature/founder-os-app` | cursor | Lane 3 — Founder OS standalone ops app | `FEAT-founder-os-app.md` | in_progress | PR #141 merge + Vercel deploy |
+| IF-003 | `intake-264-integration` | cursor | Lane 3 — #264 campaign-delivery integration onto main + offline Vitest harness | — | review (PR #307, CI green) | human review/merge |
 
 Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an `in_progress` row.
 

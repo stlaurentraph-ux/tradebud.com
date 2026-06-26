@@ -34,6 +34,16 @@ vi.mock('@/features/state/persistence', () => ({
   loadPendingSyncActions,
   isPlotTitlePhotoPendingUpload: (photo: { storagePath?: string | null }) =>
     !photo.storagePath?.trim(),
+  isPlotGroundPhotoPendingUpload: (photo: { uri: string; storagePath?: string | null }) =>
+    !photo.storagePath?.trim() &&
+    (photo.uri.startsWith('file://') || photo.uri.startsWith('content://')),
+  isPlotEvidencePendingUpload: (item: { uri: string; storagePath?: string | null }) =>
+    !item.storagePath?.trim() &&
+    (item.uri.startsWith('file://') || item.uri.startsWith('content://')),
+  isLocalDeliveryReceiptPendingUpload: (receipt: {
+    pendingSync: boolean;
+    qrCodeRef?: string | null;
+  }) => receipt.pendingSync && !receipt.qrCodeRef?.trim(),
 }));
 
 describe('enqueuePlotDependentSyncActions', () => {
@@ -155,6 +165,56 @@ describe('enqueuePlotDependentSyncActions', () => {
     });
 
     expect(result.landTitle).toBe(false);
+    expect(enqueuePendingSync).not.toHaveBeenCalled();
+  });
+
+  it('skips evidence queue when items already uploaded to storage', async () => {
+    loadEvidenceForPlot.mockResolvedValueOnce([
+      {
+        id: 3,
+        plotId: 'local-1',
+        kind: 'tenure_evidence',
+        uri: 'file:///doc.pdf',
+        mimeType: 'application/pdf',
+        label: 'Title deed',
+        takenAt: 3,
+        storagePath: 'user/plot/tenure/doc.pdf',
+      },
+    ]);
+
+    const { enqueuePlotDependentSyncActions } = await import('./enqueuePlotDependentSyncActions');
+    const result = await enqueuePlotDependentSyncActions({
+      localPlotId: 'local-1',
+      farmerId: 'farmer-1',
+    });
+
+    expect(result.evidence).toBe(false);
+    expect(enqueuePendingSync).not.toHaveBeenCalled();
+  });
+
+  it('skips harvest queue when receipt already synced with qr ref', async () => {
+    loadLocalDeliveryReceiptsForFarmer.mockResolvedValueOnce([
+      {
+        id: 'harvest-local-1-99',
+        farmerId: 'farmer-1',
+        localPlotId: 'local-1',
+        serverPlotId: 'server-1',
+        kg: 120,
+        recordedAt: 99,
+        qrCodeRef: 'QR-123',
+        pendingSync: false,
+        buyerLabel: 'Buyer',
+        plotName: 'Plot 1',
+      },
+    ]);
+
+    const { enqueuePlotDependentSyncActions } = await import('./enqueuePlotDependentSyncActions');
+    const result = await enqueuePlotDependentSyncActions({
+      localPlotId: 'local-1',
+      farmerId: 'farmer-1',
+    });
+
+    expect(result.harvests).toBe(0);
     expect(enqueuePendingSync).not.toHaveBeenCalled();
   });
 });

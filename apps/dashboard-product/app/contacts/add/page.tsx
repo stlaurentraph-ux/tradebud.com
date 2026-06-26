@@ -235,10 +235,14 @@ function AddContactPageContent() {
           row.contact_type || row.activity_type,
           row.processing_subtype,
         );
+        const rawEmail = (row.email || row.primary_email || '').trim();
+        const rawPhone = (row.phone || row.primary_phone || '').trim() || null;
+        const isFarmer = classification.contact_type === 'farmer';
         await createContact({
           full_name: row.full_name || row.name || '',
-          email: row.email || row.primary_email || '',
-          phone: row.phone || row.primary_phone || null,
+          email: rawEmail || null,
+          phone: rawPhone,
+          phone_only: isFarmer && !rawEmail && Boolean(rawPhone),
           organization: row.organization || row.name || null,
           contact_type: classification.contact_type,
           processing_subtype: classification.processing_subtype,

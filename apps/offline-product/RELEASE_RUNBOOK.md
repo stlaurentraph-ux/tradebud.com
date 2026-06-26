@@ -63,7 +63,7 @@ npm run update:production:safe
 npm run update:production
 ```
 
-`update:preview:safe` runs unit tests, field regression guard, and **device sign-off assert** (requires `DEVICE_SMOKE_SIGNOFF.json` at current `git HEAD`). Emergency skip: `DEVICE_SMOKE_SIGNOFF_SKIP=1` (log in `daily-log.md`).
+`update:preview:safe` runs `ota:preview:preflight` (unit tests, field regression guard, `oauth:verify`, SSO health check, **device sign-off assert** at current `git HEAD`) then publishes the OTA. Emergency skip: `DEVICE_SMOKE_SIGNOFF_SKIP=1` (log in `daily-log.md`).
 
 ## Pre-release gates (must pass)
 

@@ -57,6 +57,9 @@ export function isLocalPlotConfirmedOnServer(
 
   const ids = localPlotIds ?? new Set([localPlot.id]);
   const persisted = plotServerLinks?.[localPlot.id]?.trim();
+  if (persisted && backendPlots.length === 0) {
+    return true;
+  }
   if (!persisted || backendPlots.length === 0) {
     return false;
   }
@@ -179,4 +182,23 @@ export function listUnsyncedLocalPlots(
   plotServerLinks?: Record<string, string> | null,
 ): Plot[] {
   return listPlotsNeedingServerUpload(localPlots, backendPlots, plotServerLinks);
+}
+
+/** Settings/home chip before server list settles — honour saved device links offline. */
+export function estimatePlotSyncAttention(params: {
+  localPlots: Plot[];
+  backendPlots: unknown[];
+  plotServerLinks?: Record<string, string> | null;
+  t: TranslateFn;
+}) {
+  const backendPlots = params.backendPlots ?? [];
+  return summarizePlotSyncPending(
+    classifyLocalPlotSyncPending({
+      localPlots: params.localPlots,
+      backendPlots,
+      plotServerLinks: params.plotServerLinks,
+      t: params.t,
+      trustPersistedLinksWithoutServer: backendPlots.length === 0,
+    }),
+  );
 }

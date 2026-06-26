@@ -21,7 +21,7 @@ export function getLinkedOAuthProviders(user: User | null | undefined): OAuthPro
 
 export function shouldOfferSetPassword(params: {
   signedIn: boolean;
-  authMethod: 'password' | 'oauth' | null;
+  authMethod: 'password' | 'oauth' | 'phone_otp' | null;
   user: User | null;
   hasPasswordCredential?: boolean;
 }): boolean {
@@ -36,7 +36,7 @@ export function shouldOfferSetPassword(params: {
 export function shouldOfferChangePassword(params: {
   signedIn: boolean;
   user: User | null;
-  authMethod?: 'password' | 'oauth' | null;
+  authMethod?: 'password' | 'oauth' | 'phone_otp' | null;
   hasPasswordCredential?: boolean;
 }): boolean {
   if (!params.signedIn || !params.user) return false;

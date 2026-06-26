@@ -76,6 +76,7 @@ function checkSmokeChecklistCoversRegressionLedger() {
     'auto-upload',
     'Mark corners',
     'ground-truth photo',
+    'buyer invite',
   ];
   const maestroFlows = [
     'land-title-photo.yaml',

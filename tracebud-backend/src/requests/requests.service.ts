@@ -4,6 +4,7 @@ import {
   Inject,
   Injectable,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { createSupabaseServerClient } from '../auth/supabase-server.client';
 import { createHmac, timingSafeEqual } from 'node:crypto';
@@ -12,6 +13,47 @@ import { Resend } from 'resend';
 import { ConsentService } from '../consent/consent.service';
 import { PG_POOL } from '../db/db.module';
 import { InboxService } from '../inbox/inbox.service';
+import { queueCampaignRecipientInvites } from './campaign-recipient-invite';
+import {
+  resolveCampaignTargetFields,
+  type CampaignTargetInput,
+} from './campaign-contact-targets';
+import {
+  countDeliverableRecipients,
+  legacyEmailDeliveryRecipients,
+  planCampaignDeliveries,
+  type CampaignDeliveryChannel,
+  type CampaignDeliveryRecipient,
+} from './campaign-delivery-plan';
+import {
+  buildCampaignRecipientTimeline,
+  type CampaignRecipientStatusCounts,
+  type CampaignRecipientTimelineEntry,
+} from './campaign-recipient-timeline';
+import {
+  buildRecipientStatusCountsForCampaign,
+  isCampaignEligibleForRecipientFunnel,
+} from './campaign-recipient-list-funnel';
+import {
+  enrichCampaignRecipientForSender,
+  isFarmerCampaignRecipient,
+  canResendCampaignRecipientInvite,
+} from './campaign-recipient-sender-actions';
+import {
+  buildCampaignClaimUrl,
+  defaultCampaignClaimExpiresAt,
+  generateCampaignClaimToken,
+  hashCampaignClaimToken,
+  verifyCampaignClaimToken,
+} from './campaign-claim-token';
+import { sendCampaignWhatsAppInvite } from './campaign-whatsapp-delivery';
+import { sendCampaignSmsInvite } from './campaign-sms-delivery';
+import {
+  issueCampaignDeskClaimLink as issueCampaignDeskClaimLinkHelper,
+  type IssueCampaignDeskClaimLinkResult,
+} from './issue-campaign-desk-claim-link';
+import { recordCampaignDeliveryAttempt } from './record-campaign-delivery-attempt';
+import type { CampaignInvitePublicPreview, CampaignPublicPreview } from './campaign-public-preview';
 
 export type RequestType =
   | 'MISSING_PRODUCER_PROFILE'
@@ -35,6 +77,7 @@ export interface RequestCampaignRecord {
   target_farmer_ids: string[];
   target_plot_ids: string[];
   target_contact_emails: string[];
+  target_contact_ids: string[];
   due_at: string;
   reminder_sent_at: string | null;
   accepted_count: number;
@@ -114,6 +157,11 @@ export class RequestsService {
         'Request campaign tables are not available. Apply TB-V16-025 migration first.',
       );
     }
+    if (pgError?.code === '42703' && message.includes('target_contact_ids')) {
+      throw new BadRequestException(
+        'Request campaign contact id column is missing. Apply TB-V16-064 migration first.',
+      );
+    }
     if (pgError?.code === '42703' && message.includes('target_contact_emails')) {
       throw new BadRequestException(
         'Request campaign contact email column is missing. Apply TB-V16-026 migration first.',
@@ -130,6 +178,7 @@ export class RequestsService {
   private mapRow(row: RequestCampaignRecord): RequestCampaignRecord {
     return {
       ...row,
+      target_contact_ids: row.target_contact_ids ?? [],
       due_at: new Date(row.due_at).toISOString(),
       reminder_sent_at: row.reminder_sent_at ? new Date(row.reminder_sent_at).toISOString() : null,
       created_at: new Date(row.created_at).toISOString(),
@@ -225,14 +274,140 @@ export class RequestsService {
     return process.env.RESEND_REPLY_TO_EMAIL?.trim() || defaultSender;
   }
 
-  private async dispatchCampaignEmails(campaign: RequestCampaignRecord): Promise<{
+  private getFieldAuthPublicUrl(): string {
+    return (process.env.FIELD_AUTH_PUBLIC_URL ?? 'https://app.tracebud.com').replace(/\/$/, '');
+  }
+
+  private async resolveRecipientContactTypes(
+    tenantId: string,
+    emails: string[],
+  ): Promise<Map<string, 'farmer' | 'other'>> {
+    const normalized = emails.map((email) => email.trim().toLowerCase()).filter(Boolean);
+    const result = new Map<string, 'farmer' | 'other'>();
+    if (normalized.length === 0) {
+      return result;
+    }
+    try {
+      const res = await this.pool.query<{ email: string; contact_type: string }>(
+        `
+          SELECT lower(email) AS email, contact_type
+          FROM crm_contacts
+          WHERE tenant_id = $1
+            AND lower(email) = ANY($2::text[])
+        `,
+        [tenantId, normalized],
+      );
+      for (const row of res.rows) {
+        result.set(row.email, row.contact_type === 'farmer' ? 'farmer' : 'other');
+      }
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code !== '42P01') {
+        throw error;
+      }
+    }
+    return result;
+  }
+
+  private async loadCampaignDeliveryRecipients(
+    tenantId: string,
+    campaign: RequestCampaignRecord,
+  ): Promise<CampaignDeliveryRecipient[]> {
+    const contactIds = campaign.target_contact_ids ?? [];
+    if (contactIds.length > 0) {
+      try {
+        const result = await this.pool.query<{
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+        }>(
+          `
+            SELECT id, full_name, email, phone
+            FROM crm_contacts
+            WHERE tenant_id = $1
+              AND id = ANY($2::text[])
+          `,
+          [tenantId, contactIds],
+        );
+        return planCampaignDeliveries(result.rows);
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code === '42P01') {
+          return legacyEmailDeliveryRecipients(campaign.target_contact_emails ?? []);
+        }
+        throw error;
+      }
+    }
+
+    return legacyEmailDeliveryRecipients(campaign.target_contact_emails ?? []);
+  }
+
+  private async resolveDeliveryContactTypes(
+    tenantId: string,
+    deliveries: readonly CampaignDeliveryRecipient[],
+  ): Promise<Map<string, 'farmer' | 'other'>> {
+    const result = new Map<string, 'farmer' | 'other'>();
+    const contactIds = deliveries
+      .map((delivery) => delivery.contact_id)
+      .filter((contactId) => contactId && !contactId.startsWith('legacy:'));
+
+    if (contactIds.length > 0) {
+      try {
+        const res = await this.pool.query<{ id: string; contact_type: string }>(
+          `
+            SELECT id, contact_type
+            FROM crm_contacts
+            WHERE tenant_id = $1
+              AND id = ANY($2::text[])
+          `,
+          [tenantId, contactIds],
+        );
+        for (const row of res.rows) {
+          result.set(row.id, row.contact_type === 'farmer' ? 'farmer' : 'other');
+        }
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01') {
+          throw error;
+        }
+      }
+    }
+
+    const emailTypes = await this.resolveRecipientContactTypes(
+      tenantId,
+      deliveries
+        .map((delivery) => delivery.email)
+        .filter((email): email is string => Boolean(email)),
+    );
+    for (const [email, type] of emailTypes.entries()) {
+      result.set(email, type);
+    }
+
+    return result;
+  }
+
+  private async dispatchCampaignEmails(
+    campaign: RequestCampaignRecord,
+    emailDeliveries: readonly CampaignDeliveryRecipient[],
+  ): Promise<{
     sentCount: number;
     failedCount: number;
     failureMessages: string[];
+    sentEmails: string[];
+    sentDeliveries: CampaignDeliveryRecipient[];
   }> {
-    const recipients = campaign.target_contact_emails ?? [];
+    const recipients = emailDeliveries
+      .map((delivery) => delivery.email)
+      .filter((email): email is string => Boolean(email));
     if (recipients.length === 0) {
-      throw new BadRequestException('Draft campaign has no contact emails to send.');
+      return {
+        sentCount: 0,
+        failedCount: 0,
+        failureMessages: [],
+        sentEmails: [],
+        sentDeliveries: [],
+      };
     }
     const resend = this.getResendClient();
     const senderEmail = this.getResendSender();
@@ -244,13 +419,28 @@ export class RequestsService {
     const docsBaseUrl = this.getDocsBaseUrl();
     const dueDateLabel = new Date(campaign.due_at).toLocaleDateString();
     const subject = `Request from ${requestingOrganization}: ${campaign.title}`;
+    const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
+    const contactTypes = await this.resolveDeliveryContactTypes(campaign.tenant_id, emailDeliveries);
 
     const deliveries = await Promise.allSettled(
-      recipients.map(async (recipient) => {
+      emailDeliveries.map(async (delivery) => {
+        const recipient = delivery.email;
+        if (!recipient) {
+          throw new Error('Missing email for email-channel delivery.');
+        }
+        const normalizedRecipient = recipient.trim().toLowerCase();
+        const isFarmerRecipient =
+          contactTypes.get(delivery.contact_id) === 'farmer' ||
+          contactTypes.get(normalizedRecipient) === 'farmer';
         const acceptUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaign.id)}&decision=accept`;
         const decisionToken = this.signDecisionToken(campaign.id, recipient);
         const refuseUrl = `${dashboardBaseUrl}/requests/intent?campaign=${encodeURIComponent(campaign.id)}&decision=refuse`;
-        const connectUrl = `${dashboardBaseUrl}/login?next=/requests&campaign=${encodeURIComponent(campaign.id)}`;
+        const connectUrl = isFarmerRecipient
+          ? `${fieldAuthBaseUrl}/campaign?campaign=${encodeURIComponent(campaign.id)}`
+          : `${dashboardBaseUrl}/create-account?campaign=${encodeURIComponent(campaign.id)}`;
+        const connectLabel = isFarmerRecipient
+          ? 'Open Tracebud field app'
+          : 'Connect and start your compliance journey';
         const docsUrl = `${docsBaseUrl}/getting-started/compliance-requests`;
         const acceptUrlWithToken = `${acceptUrl}&recipient=${encodeURIComponent(recipient)}&token=${decisionToken}`;
         const refuseUrlWithToken = `${refuseUrl}&recipient=${encodeURIComponent(recipient)}&token=${decisionToken}`;
@@ -292,7 +482,7 @@ export class RequestsService {
                   href="${connectUrl}"
                   style="display:inline-block;background:#1d4ed8;color:#ffffff;text-decoration:none;padding:10px 14px;border-radius:6px;font-weight:600"
                 >
-                  Connect and start your compliance journey
+                  ${connectLabel}
                 </a>
               </div>
               <p style="margin:0 0 8px 0;">
@@ -315,23 +505,230 @@ export class RequestsService {
       }),
     );
 
-    const sentCount = deliveries.filter((entry) => entry.status === 'fulfilled').length;
+    const sentDeliveries = deliveries
+      .map((entry, index) => (entry.status === 'fulfilled' ? emailDeliveries[index] ?? null : null))
+      .filter((delivery): delivery is CampaignDeliveryRecipient => Boolean(delivery));
+    const sentEmails = sentDeliveries
+      .map((delivery) => delivery.email?.trim().toLowerCase() ?? '')
+      .filter((email) => email.length > 0);
+    const sentCount = sentEmails.length;
     const failedCount = deliveries.length - sentCount;
     const failureMessages = deliveries
       .filter((entry): entry is PromiseRejectedResult => entry.status === 'rejected')
       .map((entry) => (entry.reason instanceof Error ? entry.reason.message : String(entry.reason)));
-    return { sentCount, failedCount, failureMessages };
+    return { sentCount, failedCount, failureMessages, sentEmails, sentDeliveries };
+  }
+
+  private async dispatchCampaignWhatsApp(
+    campaign: RequestCampaignRecord,
+    whatsappDeliveries: readonly CampaignDeliveryRecipient[],
+  ): Promise<{
+    sentCount: number;
+    skippedCount: number;
+    inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'whatsapp' | 'sms';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+      claim_token: string;
+    }>;
+  }> {
+    if (whatsappDeliveries.length === 0) {
+      return { sentCount: 0, skippedCount: 0, inviteDeliveries: [] };
+    }
+
+    const fromOrg = await this.getRequestingOrganizationLabel(campaign);
+    const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
+    const inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'whatsapp' | 'sms';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+      claim_token: string;
+    }> = [];
+    let sentCount = 0;
+    let skippedCount = 0;
+
+    for (const delivery of whatsappDeliveries) {
+      const phone = delivery.delivery_address ?? delivery.phone;
+      if (!phone) {
+        skippedCount += 1;
+        continue;
+      }
+      const { token, tokenHash } = generateCampaignClaimToken();
+      const claimExpiresAt = defaultCampaignClaimExpiresAt();
+      const claimUrl = buildCampaignClaimUrl(fieldAuthBaseUrl, campaign.id, token);
+      const result = await sendCampaignWhatsAppInvite({
+        toPhoneE164: phone,
+        campaignTitle: campaign.title,
+        fromOrg,
+        claimUrl,
+      });
+      let deliveryChannel: 'whatsapp' | 'sms' = 'whatsapp';
+      if (result.sent) {
+        sentCount += 1;
+        await recordCampaignDeliveryAttempt(this.pool, {
+          campaignId: campaign.id,
+          senderTenantId: campaign.tenant_id,
+          contactId: delivery.contact_id,
+          deliveryChannel: 'whatsapp',
+          deliveryAddress: phone,
+          status: 'sent',
+          provider: 'whatsapp',
+          providerMessageId: result.messageId,
+          claimTokenHash: tokenHash,
+        });
+      } else {
+        const smsResult = await sendCampaignSmsInvite({
+          toPhoneE164: phone,
+          campaignTitle: campaign.title,
+          fromOrg,
+          claimUrl,
+        });
+        if (smsResult.sent) {
+          deliveryChannel = 'sms';
+          sentCount += 1;
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'whatsapp',
+            deliveryAddress: phone,
+            status: 'skipped',
+            provider: 'whatsapp',
+            skipReason: result.skippedReason,
+            claimTokenHash: tokenHash,
+          });
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'sms',
+            deliveryAddress: phone,
+            status: 'sent',
+            provider: 'twilio',
+            providerMessageId: smsResult.messageId,
+            claimTokenHash: tokenHash,
+          });
+        } else {
+          skippedCount += 1;
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'whatsapp',
+            deliveryAddress: phone,
+            status: 'failed',
+            provider: 'whatsapp',
+            skipReason: result.skippedReason,
+            claimTokenHash: tokenHash,
+          });
+          await recordCampaignDeliveryAttempt(this.pool, {
+            campaignId: campaign.id,
+            senderTenantId: campaign.tenant_id,
+            contactId: delivery.contact_id,
+            deliveryChannel: 'sms',
+            deliveryAddress: phone,
+            status: 'skipped',
+            provider: 'twilio',
+            skipReason: smsResult.skippedReason,
+            claimTokenHash: tokenHash,
+          });
+        }
+      }
+      inviteDeliveries.push({
+        contact_id: delivery.contact_id,
+        delivery_channel: deliveryChannel,
+        delivery_address: phone,
+        recipient_email: null,
+        claim_token_hash: tokenHash,
+        claim_expires_at: claimExpiresAt,
+        claim_token: token,
+      });
+    }
+
+    return { sentCount, skippedCount, inviteDeliveries };
+  }
+
+  private async dispatchCampaignDesk(
+    campaign: RequestCampaignRecord,
+    deskDeliveries: readonly CampaignDeliveryRecipient[],
+  ): Promise<{
+    inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'desk_only';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+    }>;
+  }> {
+    if (deskDeliveries.length === 0) {
+      return { inviteDeliveries: [] };
+    }
+
+    const inviteDeliveries: Array<{
+      contact_id: string;
+      delivery_channel: 'desk_only';
+      delivery_address: string | null;
+      recipient_email: string | null;
+      claim_token_hash: string;
+      claim_expires_at: string;
+    }> = [];
+
+    for (const delivery of deskDeliveries) {
+      const { tokenHash } = generateCampaignClaimToken();
+      const claimExpiresAt = defaultCampaignClaimExpiresAt();
+      inviteDeliveries.push({
+        contact_id: delivery.contact_id,
+        delivery_channel: 'desk_only',
+        delivery_address: delivery.delivery_address ?? delivery.phone ?? delivery.full_name,
+        recipient_email: delivery.email,
+        claim_token_hash: tokenHash,
+        claim_expires_at: claimExpiresAt,
+      });
+      await recordCampaignDeliveryAttempt(this.pool, {
+        campaignId: campaign.id,
+        senderTenantId: campaign.tenant_id,
+        contactId: delivery.contact_id,
+        deliveryChannel: 'desk_only',
+        deliveryAddress: delivery.delivery_address ?? delivery.phone ?? delivery.full_name,
+        status: 'queued',
+        provider: 'desk_qr',
+        claimTokenHash: tokenHash,
+      });
+    }
+
+    return { inviteDeliveries };
+  }
+
+  async issueCampaignDeskClaimLink(
+    tenantId: string,
+    campaignId: string,
+    contactId: string,
+  ): Promise<IssueCampaignDeskClaimLinkResult> {
+    try {
+      return await issueCampaignDeskClaimLinkHelper(this.pool, {
+        tenantId,
+        campaignId,
+        contactId,
+        fieldAuthBaseUrl: this.getFieldAuthPublicUrl(),
+      });
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof ForbiddenException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
   }
 
   private async syncTargetsToContacts(
     tenantId: string,
-    targets: Array<{
-      email?: string | null;
-      full_name?: string | null;
-      organization?: string | null;
-      farmer_id?: string | null;
-      plot_id?: string | null;
-    }>,
+    targets: Array<CampaignTargetInput>,
   ): Promise<void> {
     const uniqueByEmail = new Map<
       string,
@@ -344,6 +741,9 @@ export class RequestsService {
     >();
 
     for (const target of targets) {
+      if (target.contact_id?.trim()) {
+        continue;
+      }
       const email = target.email?.trim().toLowerCase();
       const fullName = target.full_name?.trim();
       if (!email || !fullName) continue;
@@ -404,7 +804,9 @@ export class RequestsService {
     }
   }
 
-  async list(tenantId: string): Promise<RequestCampaignRecord[]> {
+  async list(
+    tenantId: string,
+  ): Promise<Array<RequestCampaignRecord & { recipient_status_counts?: CampaignRecipientStatusCounts }>> {
     try {
       const result = await this.pool.query<RequestCampaignRecord>(
         `
@@ -415,8 +817,287 @@ export class RequestsService {
         `,
         [tenantId],
       );
-      return result.rows.map((row) => this.mapRow(row));
+      const campaigns = result.rows.map((row) => this.mapRow(row));
+      return await this.enrichCampaignsWithRecipientFunnel(tenantId, campaigns);
     } catch (error) {
+      this.mapDatabaseError(error);
+    }
+  }
+
+  private async enrichCampaignsWithRecipientFunnel(
+    tenantId: string,
+    campaigns: RequestCampaignRecord[],
+  ): Promise<Array<RequestCampaignRecord & { recipient_status_counts?: CampaignRecipientStatusCounts }>> {
+    const eligible = campaigns.filter((campaign) =>
+      isCampaignEligibleForRecipientFunnel(campaign.status),
+    );
+    if (eligible.length === 0) {
+      return campaigns;
+    }
+
+    const campaignIds = eligible.map((campaign) => campaign.id);
+    const contactIds = Array.from(
+      new Set(
+        eligible.flatMap((campaign) => campaign.target_contact_ids ?? []).filter((id) => id.length > 0),
+      ),
+    );
+
+    const contactsById = new Map<
+      string,
+      { contact_id: string; full_name: string; email: string | null; phone: string | null }
+    >();
+    if (contactIds.length > 0) {
+      try {
+        const contactsResult = await this.pool.query<{
+          id: string;
+          full_name: string;
+          email: string | null;
+          phone: string | null;
+        }>(
+          `
+            SELECT id, full_name, email, phone
+            FROM crm_contacts
+            WHERE tenant_id = $1
+              AND id = ANY($2::text[])
+          `,
+          [tenantId, contactIds],
+        );
+        for (const row of contactsResult.rows) {
+          contactsById.set(row.id, {
+            contact_id: row.id,
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone,
+          });
+        }
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01') {
+          throw error;
+        }
+      }
+    }
+
+    const invitesByCampaign = new Map<
+      string,
+      Array<{
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_channel: string | null;
+        status: string;
+        claimed_tenant_id: string | null;
+        claimed_farmer_profile_id: string | null;
+        sent_at: string | null;
+      }>
+    >();
+    try {
+      const inviteResult = await this.pool.query<{
+        campaign_id: string;
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_channel: string | null;
+        status: string;
+        claimed_tenant_id: string | null;
+        claimed_farmer_profile_id: string | null;
+        sent_at: string | null;
+      }>(
+        `
+          SELECT
+            campaign_id,
+            contact_id,
+            LOWER(recipient_email) AS recipient_email,
+            delivery_channel,
+            status,
+            claimed_tenant_id,
+            claimed_farmer_profile_id,
+            sent_at
+          FROM campaign_recipient_invites
+          WHERE sender_tenant_id = $1
+            AND campaign_id = ANY($2::text[])
+        `,
+        [tenantId, campaignIds],
+      );
+      for (const row of inviteResult.rows) {
+        const bucket = invitesByCampaign.get(row.campaign_id) ?? [];
+        bucket.push(row);
+        invitesByCampaign.set(row.campaign_id, bucket);
+      }
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code !== '42P01' && code !== '42703') {
+        throw error;
+      }
+    }
+
+    const decisionsByCampaign = new Map<
+      string,
+      Array<{
+        recipient_email: string;
+        decision: 'accept' | 'refuse';
+        source: string;
+        fulfillment_source: string | null;
+        contact_id: string | null;
+        decided_at: string;
+      }>
+    >();
+    const decisionsResult = await this.pool.query<{
+      campaign_id: string;
+      recipient_email: string;
+      decision: 'accept' | 'refuse';
+      source: string;
+      fulfillment_source: string | null;
+      contact_id: string | null;
+      decided_at: string;
+    }>(
+      `
+        SELECT
+          decision.campaign_id,
+          decision.recipient_email,
+          decision.decision,
+          decision.source,
+          decision.fulfillment_source,
+          decision.contact_id,
+          decision.decided_at
+        FROM request_campaign_recipient_decisions decision
+        INNER JOIN request_campaigns campaign
+          ON campaign.id = decision.campaign_id
+        WHERE campaign.tenant_id = $1
+          AND decision.campaign_id = ANY($2::text[])
+      `,
+      [tenantId, campaignIds],
+    );
+    for (const row of decisionsResult.rows) {
+      const bucket = decisionsByCampaign.get(row.campaign_id) ?? [];
+      bucket.push({
+        recipient_email: row.recipient_email,
+        decision: row.decision,
+        source: row.source,
+        fulfillment_source: row.fulfillment_source,
+        contact_id: row.contact_id,
+        decided_at: new Date(row.decided_at).toISOString(),
+      });
+      decisionsByCampaign.set(row.campaign_id, bucket);
+    }
+
+    const funnelByCampaignId = new Map<string, CampaignRecipientStatusCounts>();
+    for (const campaign of eligible) {
+      const targetContacts = (campaign.target_contact_ids ?? [])
+        .map((contactId) => contactsById.get(contactId))
+        .filter((contact): contact is NonNullable<typeof contact> => Boolean(contact));
+      funnelByCampaignId.set(
+        campaign.id,
+        buildRecipientStatusCountsForCampaign({
+          campaign,
+          targetContacts,
+          invites: invitesByCampaign.get(campaign.id) ?? [],
+          decisions: decisionsByCampaign.get(campaign.id) ?? [],
+        }),
+      );
+    }
+
+    return campaigns.map((campaign) => {
+      const recipient_status_counts = funnelByCampaignId.get(campaign.id);
+      return recipient_status_counts ? { ...campaign, recipient_status_counts } : campaign;
+    });
+  }
+
+  /**
+   * Non-sensitive campaign summary for field-app / marketing smart links.
+   * Does not expose recipient emails or internal tenant metadata beyond org label.
+   */
+  async getCampaignPublicPreview(campaignId: string): Promise<CampaignPublicPreview> {
+    const normalizedId = campaignId?.trim();
+    if (!normalizedId) {
+      throw new NotFoundException('Campaign not found');
+    }
+    try {
+      const result = await this.pool.query<RequestCampaignRecord>(
+        `
+          SELECT *
+          FROM request_campaigns
+          WHERE id = $1
+            AND status NOT IN ('DRAFT', 'QUEUED', 'CANCELLED')
+          LIMIT 1
+        `,
+        [normalizedId],
+      );
+      const row = result.rows[0];
+      if (!row) {
+        throw new NotFoundException('Campaign not found');
+      }
+      const campaign = this.mapRow(row);
+      const fromOrg = await this.getRequestingOrganizationLabel(campaign);
+      return {
+        campaignId: campaign.id,
+        title: campaign.title?.trim() || 'Farm data request',
+        fromOrg,
+        dueAt: campaign.due_at ?? null,
+        senderTenantId: campaign.tenant_id,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
+  }
+
+  async getCampaignInvitePublicPreview(
+    campaignId: string,
+    token: string,
+  ): Promise<CampaignInvitePublicPreview> {
+    const normalizedId = campaignId?.trim();
+    const normalizedToken = token?.trim();
+    if (!normalizedId || !normalizedToken) {
+      throw new NotFoundException('Campaign invite not found');
+    }
+
+    const tokenHash = hashCampaignClaimToken(normalizedToken);
+    try {
+      const inviteResult = await this.pool.query<{
+        campaign_id: string;
+        delivery_channel: string;
+        delivery_address: string | null;
+        claim_token_hash: string | null;
+        claim_expires_at: string | null;
+      }>(
+        `
+          SELECT
+            campaign_id,
+            delivery_channel,
+            delivery_address,
+            claim_token_hash,
+            claim_expires_at
+          FROM campaign_recipient_invites
+          WHERE campaign_id = $1
+            AND claim_token_hash = $2
+          LIMIT 1
+        `,
+        [normalizedId, tokenHash],
+      );
+      const invite = inviteResult.rows[0];
+      if (!invite?.claim_token_hash || !verifyCampaignClaimToken(normalizedToken, invite.claim_token_hash)) {
+        throw new NotFoundException('Campaign invite not found');
+      }
+      if (invite.claim_expires_at && new Date(invite.claim_expires_at).getTime() < Date.now()) {
+        throw new NotFoundException('Campaign invite has expired');
+      }
+
+      const preview = await this.getCampaignPublicPreview(normalizedId);
+      return {
+        ...preview,
+        deliveryChannel:
+          invite.delivery_channel === 'whatsapp' ||
+          invite.delivery_channel === 'desk_only' ||
+          invite.delivery_channel === 'email'
+            ? invite.delivery_channel
+            : 'whatsapp',
+        recipientLabel: invite.delivery_address?.trim() || 'Recipient',
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       this.mapDatabaseError(error);
     }
   }
@@ -439,6 +1120,8 @@ export class RequestsService {
       accept: number;
       refuse: number;
     };
+    recipients: CampaignRecipientTimelineEntry[];
+    recipient_status_counts: CampaignRecipientStatusCounts;
     pagination: {
       decision: DecisionFilter;
       limit: number;
@@ -452,9 +1135,16 @@ export class RequestsService {
         options?.decision === 'accept' || options?.decision === 'refuse' ? options.decision : 'all';
       const limit = Math.min(Math.max(options?.limit ?? 20, 1), 100);
       const offset = Math.max(options?.offset ?? 0, 0);
-      const campaignResult = await this.pool.query<{ id: string; tenant_id: string }>(
+      const campaignResult = await this.pool.query<{
+        id: string;
+        tenant_id: string;
+        status: RequestCampaignRecord['status'];
+        target_contact_emails: string[] | null;
+        target_contact_ids: string[] | null;
+        require_farmer_app_confirmation: boolean;
+      }>(
         `
-          SELECT id, tenant_id
+          SELECT id, tenant_id, status, target_contact_emails, target_contact_ids, require_farmer_app_confirmation
           FROM request_campaigns
           WHERE tenant_id = $1
             AND id = $2
@@ -464,6 +1154,45 @@ export class RequestsService {
       );
       if (!campaignResult.rows[0]) {
         throw new BadRequestException('Campaign not found.');
+      }
+      const targetContactEmails = campaignResult.rows[0].target_contact_emails ?? [];
+      const targetContactIds = campaignResult.rows[0].target_contact_ids ?? [];
+      const requireFarmerAppConfirmation =
+        campaignResult.rows[0].require_farmer_app_confirmation ?? false;
+      let targetContacts: Array<{
+        contact_id: string;
+        full_name: string;
+        email: string | null;
+        phone: string | null;
+      }> = [];
+      if (targetContactIds.length > 0) {
+        try {
+          const contactsResult = await this.pool.query<{
+            id: string;
+            full_name: string;
+            email: string | null;
+            phone: string | null;
+          }>(
+            `
+              SELECT id, full_name, email, phone
+              FROM crm_contacts
+              WHERE tenant_id = $1
+                AND id = ANY($2::text[])
+            `,
+            [tenantId, targetContactIds],
+          );
+          targetContacts = contactsResult.rows.map((row) => ({
+            contact_id: row.id,
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone,
+          }));
+        } catch (error) {
+          const code = (error as { code?: string } | null)?.code;
+          if (code !== '42P01') {
+            throw error;
+          }
+        }
       }
 
       const countResult = await this.pool.query<{
@@ -489,6 +1218,121 @@ export class RequestsService {
         accept: Number(countResult.rows[0]?.accept_count ?? 0),
         refuse: Number(countResult.rows[0]?.refuse_count ?? 0),
       };
+
+      const timelineDecisionsResult = await this.pool.query<RequestCampaignDecisionRecord & {
+        fulfillment_source: string | null;
+        contact_id: string | null;
+      }>(
+        `
+          SELECT
+            decision.recipient_email,
+            decision.decision,
+            decision.decided_at,
+            decision.source,
+            decision.fulfillment_source,
+            decision.contact_id
+          FROM request_campaign_recipient_decisions decision
+          INNER JOIN request_campaigns campaign
+            ON campaign.id = decision.campaign_id
+          WHERE campaign.tenant_id = $1
+            AND decision.campaign_id = $2
+        `,
+        [tenantId, campaignId],
+      );
+
+      let inviteRows: Array<{
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_channel: string | null;
+        status: string;
+        claimed_tenant_id: string | null;
+        claimed_farmer_profile_id: string | null;
+        sent_at: string | null;
+      }> = [];
+      try {
+        const inviteResult = await this.pool.query<{
+          contact_id: string | null;
+          recipient_email: string | null;
+          delivery_channel: string | null;
+          status: string;
+          claimed_tenant_id: string | null;
+          claimed_farmer_profile_id: string | null;
+          sent_at: string | null;
+        }>(
+          `
+            SELECT
+              contact_id,
+              LOWER(recipient_email) AS recipient_email,
+              delivery_channel,
+              status,
+              claimed_tenant_id,
+              claimed_farmer_profile_id,
+              sent_at
+            FROM campaign_recipient_invites
+            WHERE campaign_id = $1
+              AND sender_tenant_id = $2
+          `,
+          [campaignId, tenantId],
+        );
+        inviteRows = inviteResult.rows;
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code === '42P01' || code === '42703') {
+          try {
+            const legacyInviteResult = await this.pool.query<{
+              recipient_email: string;
+              status: string;
+              claimed_tenant_id: string | null;
+              claimed_farmer_profile_id: string | null;
+              sent_at: string | null;
+            }>(
+              `
+                SELECT
+                  LOWER(recipient_email) AS recipient_email,
+                  status,
+                  claimed_tenant_id,
+                  claimed_farmer_profile_id,
+                  sent_at
+                FROM campaign_recipient_invites
+                WHERE campaign_id = $1
+                  AND sender_tenant_id = $2
+              `,
+              [campaignId, tenantId],
+            );
+            inviteRows = legacyInviteResult.rows.map((row) => ({
+              contact_id: null,
+              recipient_email: row.recipient_email,
+              delivery_channel: 'email',
+              status: row.status,
+              claimed_tenant_id: row.claimed_tenant_id,
+              claimed_farmer_profile_id: row.claimed_farmer_profile_id,
+              sent_at: row.sent_at,
+            }));
+          } catch (legacyError) {
+            const legacyCode = (legacyError as { code?: string } | null)?.code;
+            if (legacyCode !== '42P01') {
+              throw legacyError;
+            }
+          }
+        } else {
+          throw error;
+        }
+      }
+
+      const timeline = buildCampaignRecipientTimeline({
+        targetEmails: targetContacts.length > 0 ? undefined : targetContactEmails,
+        targetContacts: targetContacts.length > 0 ? targetContacts : undefined,
+        invites: inviteRows,
+        decisions: timelineDecisionsResult.rows.map((row) => ({
+          recipient_email: row.recipient_email,
+          decision: row.decision,
+          source: row.source,
+          fulfillment_source: row.fulfillment_source,
+          contact_id: row.contact_id,
+          decided_at: new Date(row.decided_at).toISOString(),
+        })),
+        requireFarmerAppConfirmation: requireFarmerAppConfirmation,
+      });
 
       const hasDecisionFilter = decisionFilter !== 'all';
       const decisionResult = await this.pool.query<RequestCampaignDecisionRecord>(
@@ -526,12 +1370,44 @@ export class RequestsService {
             : counts.all;
       const hasMore = offset + decisions.length < totalForFilter;
 
+      const deliveryRecipients: CampaignDeliveryRecipient[] = timeline.recipients.map((recipient) => {
+        const channel: CampaignDeliveryChannel =
+          recipient.delivery_channel === 'whatsapp' ||
+          recipient.delivery_channel === 'desk_only' ||
+          recipient.delivery_channel === 'email'
+            ? recipient.delivery_channel
+            : 'email';
+        return {
+          contact_id: recipient.contact_id ?? `legacy:${recipient.recipient_email ?? 'unknown'}`,
+          full_name: recipient.recipient_label,
+          email: recipient.recipient_email,
+          phone: null,
+          delivery_channel: channel,
+          delivery_address: recipient.recipient_email,
+        };
+      });
+      const contactTypes = await this.resolveDeliveryContactTypes(tenantId, deliveryRecipients);
+      const dashboardBaseUrl = this.getDashboardBaseUrl();
+      const fieldAuthBaseUrl = this.getFieldAuthPublicUrl();
+      const campaignStatus = campaignResult.rows[0].status;
+      const enrichedRecipients = timeline.recipients.map((recipient) =>
+        enrichCampaignRecipientForSender(recipient, {
+          campaignId,
+          campaignStatus,
+          dashboardBaseUrl,
+          fieldAuthBaseUrl,
+          isFarmerRecipient: isFarmerCampaignRecipient(recipient, contactTypes),
+        }),
+      );
+
       return {
         campaign_id: campaignId,
         tenant_id: tenantId,
         last_synced_at: decisions[0]?.decided_at ?? null,
         decisions,
         counts,
+        recipients: enrichedRecipients,
+        recipient_status_counts: timeline.status_counts,
         pagination: {
           decision: decisionFilter,
           limit,
@@ -548,6 +1424,205 @@ export class RequestsService {
     }
   }
 
+  async resendCampaignRecipientInvite(
+    tenantId: string,
+    campaignId: string,
+    recipientEmail: string,
+    actorUserId?: string | null,
+  ): Promise<{ ok: true; recipient_email: string }> {
+    const normalizedEmail = recipientEmail.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      throw new BadRequestException('recipient_email must be a valid email address.');
+    }
+
+    try {
+      const campaignResult = await this.pool.query<RequestCampaignRecord>(
+        `
+          SELECT *
+          FROM request_campaigns
+          WHERE tenant_id = $1
+            AND id = $2
+          LIMIT 1
+        `,
+        [tenantId, campaignId],
+      );
+      const campaignRow = campaignResult.rows[0];
+      if (!campaignRow) {
+        throw new BadRequestException('Campaign not found.');
+      }
+      const campaign = this.mapRow(campaignRow);
+
+      const decisionsResult = await this.pool.query<{
+        recipient_email: string;
+        decision: 'accept' | 'refuse';
+        source: string;
+        fulfillment_source: string | null;
+        contact_id: string | null;
+        decided_at: string;
+      }>(
+        `
+          SELECT recipient_email, decision, source, fulfillment_source, contact_id, decided_at
+          FROM request_campaign_recipient_decisions
+          WHERE campaign_id = $1
+            AND LOWER(recipient_email) = $2
+          LIMIT 1
+        `,
+        [campaignId, normalizedEmail],
+      );
+
+      let inviteRow: {
+        contact_id: string | null;
+        recipient_email: string | null;
+        delivery_channel: string | null;
+        status: string;
+        claimed_tenant_id: string | null;
+        claimed_farmer_profile_id: string | null;
+        sent_at: string | null;
+      } | null = null;
+      try {
+        const inviteResult = await this.pool.query<{
+          contact_id: string | null;
+          recipient_email: string | null;
+          delivery_channel: string | null;
+          status: string;
+          claimed_tenant_id: string | null;
+          claimed_farmer_profile_id: string | null;
+          sent_at: string | null;
+        }>(
+          `
+            SELECT
+              contact_id,
+              LOWER(recipient_email) AS recipient_email,
+              delivery_channel,
+              status,
+              claimed_tenant_id,
+              claimed_farmer_profile_id,
+              sent_at
+            FROM campaign_recipient_invites
+            WHERE campaign_id = $1
+              AND sender_tenant_id = $2
+              AND LOWER(recipient_email) = $3
+            LIMIT 1
+          `,
+          [campaignId, tenantId, normalizedEmail],
+        );
+        inviteRow = inviteResult.rows[0] ?? null;
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01' && code !== '42703') {
+          throw error;
+        }
+      }
+
+      const timeline = buildCampaignRecipientTimeline({
+        targetEmails: [normalizedEmail],
+        invites: inviteRow ? [inviteRow] : [],
+        decisions: decisionsResult.rows.map((row) => ({
+          recipient_email: row.recipient_email,
+          decision: row.decision,
+          source: row.source,
+          fulfillment_source: row.fulfillment_source,
+          contact_id: row.contact_id,
+          decided_at: new Date(row.decided_at).toISOString(),
+        })),
+      });
+      const recipient = timeline.recipients[0];
+      if (!recipient) {
+        throw new BadRequestException('Recipient not found on this campaign.');
+      }
+
+      if (
+        !canResendCampaignRecipientInvite({
+          onboardingStatus: recipient.onboarding_status,
+          campaignStatus: campaign.status,
+          recipientEmail: recipient.recipient_email,
+          deliveryChannel: recipient.delivery_channel,
+        })
+      ) {
+        throw new BadRequestException('This recipient is not eligible for invite resend.');
+      }
+
+      const plannedDeliveries = await this.loadCampaignDeliveryRecipients(tenantId, campaign);
+      const delivery =
+        plannedDeliveries.find(
+          (entry) => entry.email?.trim().toLowerCase() === normalizedEmail,
+        ) ??
+        plannedDeliveries.find(
+          (entry) =>
+            inviteRow?.contact_id &&
+            entry.contact_id === inviteRow.contact_id,
+        );
+      if (!delivery) {
+        throw new BadRequestException('Recipient delivery channel could not be resolved.');
+      }
+
+      if (delivery.delivery_channel === 'email') {
+        const emailDelivery = await this.dispatchCampaignEmails(campaign, [delivery]);
+        if (emailDelivery.sentCount === 0) {
+          const reason = emailDelivery.failureMessages[0];
+          throw new BadRequestException(
+            reason ? `Invite resend failed. ${reason}` : 'Invite resend failed.',
+          );
+        }
+      } else if (delivery.delivery_channel === 'whatsapp') {
+        const whatsappDelivery = await this.dispatchCampaignWhatsApp(campaign, [delivery]);
+        if (whatsappDelivery.sentCount === 0) {
+          throw new BadRequestException('WhatsApp invite resend failed.');
+        }
+      } else {
+        throw new BadRequestException('Desk-only recipients cannot receive automated resends.');
+      }
+
+      try {
+        await this.pool.query(
+          `
+            UPDATE campaign_recipient_invites
+            SET sent_at = NOW()
+            WHERE campaign_id = $1
+              AND sender_tenant_id = $2
+              AND LOWER(recipient_email) = $3
+          `,
+          [campaignId, tenantId, normalizedEmail],
+        );
+      } catch (error) {
+        const code = (error as { code?: string } | null)?.code;
+        if (code !== '42P01') {
+          throw error;
+        }
+      }
+
+      await this.emitCampaignAudit('campaign_recipient_invite_resent', {
+        campaign_id: campaignId,
+        tenant_id: tenantId,
+        recipient_email: normalizedEmail,
+        actor_user_id: actorUserId ?? null,
+        delivery_channel: delivery.delivery_channel,
+      });
+
+      return { ok: true, recipient_email: normalizedEmail };
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+      this.mapDatabaseError(error);
+    }
+  }
+
+  private async emitCampaignAudit(eventType: string, payload: Record<string, unknown>): Promise<void> {
+    try {
+      await this.pool.query(`INSERT INTO audit_log (event_type, payload) VALUES ($1, $2::jsonb)`, [
+        eventType,
+        JSON.stringify(payload),
+      ]);
+    } catch (error) {
+      const code = (error as { code?: string } | null)?.code;
+      if (code === '42P01') {
+        return;
+      }
+      throw error;
+    }
+  }
+
   async create(
     tenantId: string,
     actorUserId: string,
@@ -557,13 +1632,7 @@ export class RequestsService {
       campaign_name?: string;
       description_template?: string;
       due_date?: string;
-      targets?: Array<{
-        email?: string | null;
-        full_name?: string | null;
-        organization?: string | null;
-        farmer_id?: string | null;
-        plot_id?: string | null;
-      }>;
+      targets?: Array<CampaignTargetInput>;
     },
   ): Promise<{ campaign_id: string; campaign: RequestCampaignRecord }> {
     const campaignName = input.campaign_name?.trim();
@@ -582,9 +1651,8 @@ export class RequestsService {
     const targetPlotIds = targets
       .map((target) => target.plot_id?.trim())
       .filter((value): value is string => Boolean(value));
-    const targetContactEmails = targets
-      .map((target) => target.email?.trim().toLowerCase() ?? '')
-      .filter((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));
+    const { target_contact_ids: targetContactIds, target_contact_emails: targetContactEmails } =
+      resolveCampaignTargetFields(targets);
 
     try {
       if (idempotencyKey) {
@@ -616,6 +1684,7 @@ export class RequestsService {
             target_farmer_ids,
             target_plot_ids,
             target_contact_emails,
+            target_contact_ids,
             due_at,
             reminder_sent_at,
             accepted_count,
@@ -625,7 +1694,7 @@ export class RequestsService {
             idempotency_key
           )
           VALUES (
-            $1, $2, $3, $4, $5, 'DRAFT', $6::text[], $7::text[], $8::text[], $9::text[], $10::timestamptz, NULL, 0, 0, 0, $11, $12
+            $1, $2, $3, $4, $5, 'DRAFT', $6::text[], $7::text[], $8::text[], $9::text[], $10::text[], $11::timestamptz, NULL, 0, 0, 0, $12, $13
           )
           RETURNING *
         `,
@@ -639,6 +1708,7 @@ export class RequestsService {
           targetFarmerIds,
           targetPlotIds,
           targetContactEmails,
+          targetContactIds,
           dueDate,
           actorUserId,
           idempotencyKey,
@@ -661,13 +1731,7 @@ export class RequestsService {
       campaign_name?: string;
       description_template?: string;
       due_date?: string;
-      targets?: Array<{
-        email?: string | null;
-        full_name?: string | null;
-        organization?: string | null;
-        farmer_id?: string | null;
-        plot_id?: string | null;
-      }>;
+      targets?: Array<CampaignTargetInput>;
     },
   ): Promise<{ campaign_id: string; campaign: RequestCampaignRecord }> {
     const campaignName = input.campaign_name?.trim();
@@ -686,9 +1750,8 @@ export class RequestsService {
     const targetPlotIds = targets
       .map((target) => target.plot_id?.trim())
       .filter((value): value is string => Boolean(value));
-    const targetContactEmails = targets
-      .map((target) => target.email?.trim().toLowerCase() ?? '')
-      .filter((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value));
+    const { target_contact_ids: targetContactIds, target_contact_emails: targetContactEmails } =
+      resolveCampaignTargetFields(targets);
 
     try {
       const result = await this.pool.query<RequestCampaignRecord>(
@@ -702,10 +1765,11 @@ export class RequestsService {
             target_farmer_ids = $5::text[],
             target_plot_ids = $6::text[],
             target_contact_emails = $7::text[],
-            due_at = $8::timestamptz,
+            target_contact_ids = $8::text[],
+            due_at = $9::timestamptz,
             updated_at = NOW()
-          WHERE tenant_id = $9
-            AND id = $10
+          WHERE tenant_id = $10
+            AND id = $11
             AND status = 'DRAFT'
           RETURNING *
         `,
@@ -717,6 +1781,7 @@ export class RequestsService {
           targetFarmerIds,
           targetPlotIds,
           targetContactEmails,
+          targetContactIds,
           dueDate,
           tenantId,
           campaignId,
@@ -739,6 +1804,7 @@ export class RequestsService {
   async sendDraft(
     tenantId: string,
     campaignId: string,
+    actorUserId?: string | null,
   ): Promise<{ campaign_id: string; campaign: RequestCampaignRecord }> {
     try {
       const currentResult = await this.pool.query<RequestCampaignRecord>(
@@ -752,26 +1818,44 @@ export class RequestsService {
         `,
         [tenantId, campaignId],
       );
-      const current = currentResult.rows[0];
-      if (!current) {
+      const currentRow = currentResult.rows[0];
+      if (!currentRow) {
         throw new BadRequestException('Draft campaign not found or already sent.');
       }
-      const recipientCount = current.target_contact_emails?.length ?? 0;
-      if (recipientCount === 0) {
+      const current = this.mapRow(currentRow);
+      const plannedDeliveries = await this.loadCampaignDeliveryRecipients(tenantId, current);
+      const deliverable = countDeliverableRecipients(plannedDeliveries);
+      if (deliverable.total === 0) {
         throw new BadRequestException(
-          'This campaign has no recipient emails. Edit the draft and add at least one contact email before sending.',
+          'This campaign has no deliverable recipients. Edit the draft and add contacts with email or phone before sending.',
         );
       }
-      const delivery = await this.dispatchCampaignEmails(current);
-      if (delivery.sentCount === 0) {
+      const emailDeliveries = plannedDeliveries.filter(
+        (delivery) => delivery.delivery_channel === 'email',
+      );
+      const whatsappDeliveries = plannedDeliveries.filter(
+        (delivery) => delivery.delivery_channel === 'whatsapp',
+      );
+      const deskDeliveries = plannedDeliveries.filter(
+        (delivery) => delivery.delivery_channel === 'desk_only',
+      );
+      const delivery = await this.dispatchCampaignEmails(current, emailDeliveries);
+      const whatsappDelivery = await this.dispatchCampaignWhatsApp(current, whatsappDeliveries);
+      const deskDelivery = await this.dispatchCampaignDesk(current, deskDeliveries);
+      if (
+        delivery.sentCount === 0 &&
+        whatsappDelivery.sentCount === 0 &&
+        deskDeliveries.length === 0
+      ) {
         const reason = delivery.failureMessages[0];
         throw new BadRequestException(
           reason
-            ? `No campaign emails were delivered. ${reason}`
-            : 'No campaign emails were delivered. Check recipient addresses and Resend setup.',
+            ? `No campaign outreach was delivered. ${reason}`
+            : 'No campaign outreach was delivered. Check recipient addresses and Resend setup.',
         );
       }
-      const nextPendingCount = delivery.sentCount;
+      const nextPendingCount =
+        delivery.sentCount + whatsappDelivery.inviteDeliveries.length + deskDeliveries.length;
       const result = await this.pool.query<RequestCampaignRecord>(
         `
           UPDATE request_campaigns
@@ -807,6 +1891,60 @@ export class RequestsService {
                 senderTenantId: tenantId,
                 message:
                   fanoutError instanceof Error ? fanoutError.message : 'Inbox fan-out failed after campaign send.',
+              }),
+            ],
+          );
+        } catch {
+          // Campaign send already succeeded; do not fail the API response.
+        }
+      }
+      try {
+        const inviteDeliveries = [
+          ...delivery.sentDeliveries.map((row) => ({
+            contact_id: row.contact_id,
+            delivery_channel: 'email' as const,
+            delivery_address: row.email,
+            recipient_email: row.email,
+          })),
+          ...whatsappDelivery.inviteDeliveries.map((row) => ({
+            contact_id: row.contact_id,
+            delivery_channel: 'whatsapp' as const,
+            delivery_address: row.delivery_address,
+            recipient_email: row.recipient_email,
+            claim_token_hash: row.claim_token_hash,
+            claim_expires_at: row.claim_expires_at,
+          })),
+          ...deskDelivery.inviteDeliveries.map((row) => ({
+            contact_id: row.contact_id,
+            delivery_channel: 'desk_only' as const,
+            delivery_address: row.delivery_address,
+            recipient_email: row.recipient_email,
+            claim_token_hash: row.claim_token_hash,
+            claim_expires_at: row.claim_expires_at,
+          })),
+        ];
+        await queueCampaignRecipientInvites(this.pool, {
+          campaignId: campaign.id,
+          senderTenantId: tenantId,
+          deliveries: inviteDeliveries,
+          actorUserId: actorUserId ?? null,
+        });
+      } catch (inviteError) {
+        try {
+          await this.pool.query(
+            `
+              INSERT INTO audit_log (event_type, payload)
+              VALUES ($1, $2::jsonb)
+            `,
+            [
+              'campaign_recipient_invites_queue_failed',
+              JSON.stringify({
+                campaignId: campaign.id,
+                senderTenantId: tenantId,
+                message:
+                  inviteError instanceof Error
+                    ? inviteError.message
+                    : 'Campaign recipient invite queue failed after campaign send.',
               }),
             ],
           );

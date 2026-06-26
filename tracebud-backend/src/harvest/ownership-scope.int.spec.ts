@@ -3,8 +3,9 @@ import { createBillingServiceMock } from '../testing/billing-service.mock';
 import { createPlotsServiceForIntTest } from '../testing/plots-service.mock';
 import { HarvestService } from './harvest.service';
 import { PlotsService } from '../plots/plots.service';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
+const testDbUrl = requireTestDatabaseUrl();
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = `tb_scope_test_${process.pid}_${Date.now().toString(36)}`;
 

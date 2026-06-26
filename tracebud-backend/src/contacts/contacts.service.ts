@@ -8,6 +8,10 @@ import {
 import { Pool } from 'pg';
 import { BillingSubscriptionBandService } from '../billing/billing-subscription-band.service';
 import { MANAGED_CONTACT_ACTIVE_STATUSES } from '../billing/billing-subscription-pricing';
+import {
+  assertFarmerReachability,
+  assertNonFarmerEmail,
+} from './crm-contact-reachability';
 import { PG_POOL } from '../db/db.module';
 
 export type ContactStatus = 'new' | 'invited' | 'engaged' | 'submitted' | 'inactive' | 'blocked';
@@ -33,7 +37,7 @@ export interface ContactRecord {
   id: string;
   tenant_id: string;
   full_name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   organization: string | null;
   contact_type: ContactType;
@@ -78,6 +82,12 @@ export class ContactsService {
       throw new BadRequestException(`Contact data failed validation: ${message}`);
     }
     if (pgError?.code === '23505') {
+      const constraint = pgError.constraint ?? '';
+      if (constraint.includes('farmer_phone') || message.includes('idx_crm_contacts_tenant_farmer_phone_unique')) {
+        throw new BadRequestException(
+          'A farmer with this phone number already exists in your directory.',
+        );
+      }
       throw new BadRequestException('A contact with this email already exists in your directory.');
     }
 
@@ -204,7 +214,9 @@ export class ContactsService {
     if (contact.farmer_profile_id) {
       return contact;
     }
-    const farmerProfileId = await this.resolveFarmerProfileId(tenantId, contact.email);
+    const farmerProfileId = contact.email
+      ? await this.resolveFarmerProfileId(tenantId, contact.email)
+      : null;
     if (!farmerProfileId) {
       return contact;
     }
@@ -278,8 +290,9 @@ export class ContactsService {
     tenantId: string,
     input: {
       full_name?: string;
-      email?: string;
+      email?: string | null;
       phone?: string | null;
+      phone_only?: boolean;
       organization?: string | null;
       contact_type?: LegacyContactTypeInput;
       processing_subtype?: ProcessingFacilitySubtype | null;
@@ -289,40 +302,83 @@ export class ContactsService {
     },
   ): Promise<ContactRecord> {
     const fullName = input.full_name?.trim();
-    const email = input.email?.trim().toLowerCase();
-    if (!fullName || !email) {
-      throw new BadRequestException('full_name and email are required');
+    if (!fullName) {
+      throw new BadRequestException('full_name is required');
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      throw new BadRequestException('Invalid email format');
+
+    const classification = this.resolveContactClassification(
+      input.contact_type,
+      input.processing_subtype,
+    );
+
+    let email: string | null;
+    let phone: string | null;
+    if (classification.contact_type === 'farmer') {
+      try {
+        const reachability = assertFarmerReachability({
+          email: input.email,
+          phone: input.phone,
+          phone_only: input.phone_only,
+        });
+        email = reachability.email;
+        phone = reachability.phone;
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'Invalid farmer contact reachability.',
+        );
+      }
+    } else {
+      try {
+        email = assertNonFarmerEmail(input.email);
+      } catch (error) {
+        throw new BadRequestException(
+          error instanceof Error ? error.message : 'Email is required for this contact type.',
+        );
+      }
+      phone = input.phone?.trim() || null;
     }
 
     try {
-      const existingRes = await this.pool.query<Pick<ContactRecord, 'status'>>(
-        `
-          SELECT status
-          FROM crm_contacts
-          WHERE tenant_id = $1
-            AND email = $2
-          LIMIT 1
-        `,
-        [tenantId, email],
-      );
-      const existingStatus = existingRes.rows[0]?.status;
-      const existingCounts =
-        existingStatus != null &&
-        (MANAGED_CONTACT_ACTIVE_STATUSES as readonly string[]).includes(existingStatus);
-      if (!existingCounts) {
+      if (email) {
+        const existingRes = await this.pool.query<Pick<ContactRecord, 'status'>>(
+          `
+            SELECT status
+            FROM crm_contacts
+            WHERE tenant_id = $1
+              AND lower(email) = $2
+            LIMIT 1
+          `,
+          [tenantId, email],
+        );
+        const existingStatus = existingRes.rows[0]?.status;
+        const existingCounts =
+          existingStatus != null &&
+          (MANAGED_CONTACT_ACTIVE_STATUSES as readonly string[]).includes(existingStatus);
+        if (!existingCounts) {
+          await this.subscriptionBandService.assertCanAddContacts(tenantId, 1);
+        }
+      } else if (phone) {
+        const duplicatePhone = await this.pool.query<{ id: string }>(
+          `
+            SELECT id
+            FROM crm_contacts
+            WHERE tenant_id = $1
+              AND contact_type = 'farmer'
+              AND phone = $2
+            LIMIT 1
+          `,
+          [tenantId, phone],
+        );
+        if (duplicatePhone.rows[0]) {
+          throw new BadRequestException(
+            'A farmer with this phone number already exists in your directory.',
+          );
+        }
         await this.subscriptionBandService.assertCanAddContacts(tenantId, 1);
       }
 
-      const classification = this.resolveContactClassification(
-        input.contact_type,
-        input.processing_subtype,
-      );
-
-      const result = await this.pool.query<ContactRecord>(
-        `
+      const insertSql = email
+        ? `
           INSERT INTO crm_contacts (
             id, tenant_id, full_name, email, phone, organization, contact_type, processing_subtype, status, country, tags, consent_status
           )
@@ -339,31 +395,57 @@ export class ContactsService {
             consent_status = EXCLUDED.consent_status,
             updated_at = NOW()
           RETURNING *
-        `,
-        [
-          `contact_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-          tenantId,
-          fullName,
-          email,
-          input.phone?.trim() || null,
-          input.organization?.trim() || null,
-          classification.contact_type,
-          classification.processing_subtype,
-          input.country?.trim().toUpperCase() || null,
-          (input.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
-          input.consent_status ?? 'unknown',
-        ],
-      );
+        `
+        : `
+          INSERT INTO crm_contacts (
+            id, tenant_id, full_name, email, phone, organization, contact_type, processing_subtype, status, country, tags, consent_status
+          )
+          VALUES ($1, $2, $3, NULL, $4, $5, $6, $7, 'new', $8, $9::text[], $10)
+          RETURNING *
+        `;
+
+      const insertParams = email
+        ? [
+            `contact_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            tenantId,
+            fullName,
+            email,
+            phone,
+            input.organization?.trim() || null,
+            classification.contact_type,
+            classification.processing_subtype,
+            input.country?.trim().toUpperCase() || null,
+            (input.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
+            input.consent_status ?? 'unknown',
+          ]
+        : [
+            `contact_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+            tenantId,
+            fullName,
+            phone,
+            input.organization?.trim() || null,
+            classification.contact_type,
+            classification.processing_subtype,
+            input.country?.trim().toUpperCase() || null,
+            (input.tags ?? []).map((tag) => tag.trim()).filter(Boolean),
+            input.consent_status ?? 'unknown',
+          ];
+
+      const result = await this.pool.query<ContactRecord>(insertSql, insertParams);
       let contact = this.mapRow(result.rows[0]);
       contact = await this.ensureFarmerProfileLink(tenantId, contact);
       await this.emitAudit('contact_created_or_updated', {
         tenantId,
         contactId: contact.id,
         email: contact.email,
+        phone: contact.phone,
         status: contact.status,
       });
       return contact;
     } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       this.mapDatabaseError(error);
     }
   }
@@ -373,8 +455,9 @@ export class ContactsService {
     contactId: string,
     input: {
       full_name?: string;
-      email?: string;
+      email?: string | null;
       phone?: string | null;
+      phone_only?: boolean;
       organization?: string | null;
       contact_type?: LegacyContactTypeInput;
       processing_subtype?: ProcessingFacilitySubtype | null;
@@ -394,23 +477,8 @@ export class ContactsService {
       }
 
       const fullName = input.full_name !== undefined ? input.full_name.trim() : current.full_name;
-      const email =
-        input.email !== undefined ? input.email.trim().toLowerCase() : current.email.toLowerCase();
       if (!fullName) {
         throw new BadRequestException('full_name cannot be empty.');
-      }
-      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        throw new BadRequestException('Invalid email format');
-      }
-
-      if (email !== current.email.toLowerCase()) {
-        const duplicateRes = await this.pool.query<{ id: string }>(
-          `SELECT id FROM crm_contacts WHERE tenant_id = $1 AND lower(email) = $2 AND id <> $3 LIMIT 1`,
-          [tenantId, email, contactId],
-        );
-        if (duplicateRes.rows[0]) {
-          throw new BadRequestException('A contact with this email already exists in your directory.');
-        }
       }
 
       const contactTypeInput =
@@ -421,8 +489,63 @@ export class ContactsService {
           : current.processing_subtype;
       const classification = this.resolveContactClassification(contactTypeInput, processingSubtypeInput);
 
-      const phone =
-        input.phone !== undefined ? input.phone?.trim() || null : current.phone;
+      let email: string | null;
+      let phone: string | null;
+      if (classification.contact_type === 'farmer') {
+        try {
+          const reachability = assertFarmerReachability({
+            email: input.email !== undefined ? input.email : current.email,
+            phone: input.phone !== undefined ? input.phone : current.phone,
+            phone_only: input.phone_only ?? !current.email,
+          });
+          email = reachability.email;
+          phone = reachability.phone;
+        } catch (error) {
+          throw new BadRequestException(
+            error instanceof Error ? error.message : 'Invalid farmer contact reachability.',
+          );
+        }
+      } else {
+        try {
+          email = assertNonFarmerEmail(input.email !== undefined ? input.email : current.email);
+        } catch (error) {
+          throw new BadRequestException(
+            error instanceof Error ? error.message : 'Email is required for this contact type.',
+          );
+        }
+        phone = input.phone !== undefined ? input.phone?.trim() || null : current.phone;
+      }
+
+      if (email && email !== (current.email?.toLowerCase() ?? null)) {
+        const duplicateRes = await this.pool.query<{ id: string }>(
+          `SELECT id FROM crm_contacts WHERE tenant_id = $1 AND lower(email) = $2 AND id <> $3 LIMIT 1`,
+          [tenantId, email, contactId],
+        );
+        if (duplicateRes.rows[0]) {
+          throw new BadRequestException('A contact with this email already exists in your directory.');
+        }
+      }
+
+      if (!email && phone && phone !== current.phone) {
+        const duplicatePhone = await this.pool.query<{ id: string }>(
+          `
+            SELECT id
+            FROM crm_contacts
+            WHERE tenant_id = $1
+              AND contact_type = 'farmer'
+              AND phone = $2
+              AND id <> $3
+            LIMIT 1
+          `,
+          [tenantId, phone, contactId],
+        );
+        if (duplicatePhone.rows[0]) {
+          throw new BadRequestException(
+            'A farmer with this phone number already exists in your directory.',
+          );
+        }
+      }
+
       const organization =
         input.organization !== undefined ? input.organization?.trim() || null : current.organization;
       const country =

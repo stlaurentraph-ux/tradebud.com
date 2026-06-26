@@ -21,6 +21,10 @@ vi.mock('@/features/observability/analytics', () => ({
   trackEvent: vi.fn(),
 }));
 
+vi.mock('@/features/harvest/buildDeliveryQrUrl', () => ({
+  generateDeliveryTripRef: vi.fn(() => 'T-TEST'),
+}));
+
 import { submitHarvestRecord } from '@/features/harvest/submitHarvest';
 
 const plot: HarvestPlotOption = { id: 'plot_a', name: 'Block A', area_ha: 2 };
@@ -125,12 +129,21 @@ describe('multiPlotDeliverySession', () => {
 
     expect(submitHarvestRecord).toHaveBeenCalledTimes(2);
     expect(results).toEqual([
-      { plotId: 'plot_a', plotName: 'A', kg: 100, status: 'synced', qrCodeRef: 'V-AAA' },
+      {
+        plotId: 'plot_a',
+        plotName: 'A',
+        kg: 100,
+        status: 'synced',
+        qrCodeRef: 'V-AAA',
+        deliveryTripRef: 'T-TEST',
+        buyerInvitePending: false,
+      },
       {
         plotId: 'plot_b',
         plotName: 'B',
         kg: 80,
         status: 'queued',
+        deliveryTripRef: 'T-TEST',
         messageKey: 'harvest_queued_offline',
       },
     ]);

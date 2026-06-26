@@ -6,6 +6,7 @@ import { getPlotById } from '@/lib/mocks/plots';
 import { normalizePlotKind, type PlotKind } from '@/lib/plot-inventory';
 import type { PlotGroundTruthPhotoSummary } from '@/lib/plot-eudr-readiness';
 import { defaultGroundTruthPhotoSummary, normalizeGroundTruthPhotoSummary } from '@/lib/plot-eudr-readiness';
+
 export type PlotMapPreviewRecord = {
   id: string;
   name: string;
@@ -17,6 +18,7 @@ export type PlotMapPreviewRecord = {
   geometry: Record<string, unknown> | null;
   ground_truth_photos?: PlotGroundTruthPhotoSummary | Record<string, unknown> | null;
   geometry_capture?: Record<string, unknown> | null;
+  geometry_approved_at?: string | null;
 };
 
 const DEMO_GEOMETRIES: Record<string, Record<string, unknown>> = {
@@ -93,6 +95,8 @@ function normalizePreview(payload: unknown): PlotMapPreviewRecord | null {
     geometry_capture: row.geometry_capture
       ? (row.geometry_capture as Record<string, unknown>)
       : null,
+    geometry_approved_at:
+      typeof row.geometry_approved_at === 'string' ? row.geometry_approved_at : null,
   };
 }
 
@@ -103,7 +107,7 @@ export function usePlotMapPreview(plotId: string, options?: { enabled?: boolean 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const reload = useCallback(() => {
+  const reload = useCallback(async () => {
     if (!plotId || !enabled) return;
     setIsLoading(true);
     setError(null);
@@ -114,43 +118,31 @@ export function usePlotMapPreview(plotId: string, options?: { enabled?: boolean 
       return;
     }
 
-    fetch(`/api/plots/${encodeURIComponent(plotId)}/map-preview`, {
-      cache: 'no-store',
-      headers: getAuthHeaders(),
-    })
-      .then(async (response) => {
-        const body = (await response.json().catch(() => ({}))) as { error?: string };
-        if (!response.ok) {
-          throw new Error(body.error ?? 'Plot map preview unavailable.');
-        }
-        const normalized = normalizePreview(body);
-        if (!normalized) {
-          throw new Error('Plot map preview response was invalid.');
-        }
-        setPreview(normalized);
-      })
-      .catch((loadError) => {
-        setPreview(null);
-        setError(loadError instanceof Error ? loadError.message : 'Plot map preview unavailable.');
-      })
-      .finally(() => {
-        setIsLoading(false);
+    try {
+      const response = await fetch(`/api/plots/${encodeURIComponent(plotId)}/map-preview`, {
+        cache: 'no-store',
+        headers: getAuthHeaders(),
       });
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(body.error ?? 'Plot map preview unavailable.');
+      }
+      const normalized = normalizePreview(body);
+      if (!normalized) {
+        throw new Error('Plot map preview response was invalid.');
+      }
+      setPreview(normalized);
+    } catch (loadError) {
+      setPreview(null);
+      setError(loadError instanceof Error ? loadError.message : 'Plot map preview unavailable.');
+    } finally {
+      setIsLoading(false);
+    }
   }, [plotId, demoDataEnabled, enabled]);
 
   useEffect(() => {
-    if (!plotId || !enabled) {
-      if (!enabled) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
-        setIsLoading(false);
-      } else {
-        setPreview(null);
-        setError(null);
-        setIsLoading(false);
-      }
-      return;
-    }
-    reload();
+    if (!plotId || !enabled) return;
+    void reload();
   }, [plotId, reload, enabled]);
 
   return { preview, isLoading, error, reload };

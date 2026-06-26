@@ -6,22 +6,22 @@ import {
   type Locale,
 } from '@/lib/locale-policy';
 import type { TenantRole } from '@/types';
-import enTranslations from '../../locales/en.json';
-import frOverlay from '../../locales/fr.json';
-import esOverlay from '../../locales/es.json';
-import deOverlay from '../../locales/overlays/de.json';
-import itOverlay from '../../locales/overlays/it.json';
-import nlOverlay from '../../locales/overlays/nl.json';
-import ptOverlay from '../../locales/overlays/pt.json';
-import noOverlay from '../../locales/overlays/no.json';
-import swOverlay from '../../locales/overlays/sw.json';
-import rwOverlay from '../../locales/overlays/rw.json';
-import lgOverlay from '../../locales/overlays/lg.json';
-import amOverlay from '../../locales/overlays/am.json';
-import idOverlay from '../../locales/overlays/id.json';
-import viOverlay from '../../locales/overlays/vi.json';
-import hiOverlay from '../../locales/overlays/hi.json';
-import arOverlay from '../../locales/overlays/ar.json';
+import enRaw from '../../locales/en.json';
+import frRaw from '../../locales/fr.json';
+import esRaw from '../../locales/es.json';
+import deRaw from '../../locales/overlays/de.json';
+import itRaw from '../../locales/overlays/it.json';
+import nlRaw from '../../locales/overlays/nl.json';
+import ptRaw from '../../locales/overlays/pt.json';
+import noRaw from '../../locales/overlays/no.json';
+import swRaw from '../../locales/overlays/sw.json';
+import rwRaw from '../../locales/overlays/rw.json';
+import lgRaw from '../../locales/overlays/lg.json';
+import amRaw from '../../locales/overlays/am.json';
+import idRaw from '../../locales/overlays/id.json';
+import viRaw from '../../locales/overlays/vi.json';
+import hiRaw from '../../locales/overlays/hi.json';
+import arRaw from '../../locales/overlays/ar.json';
 
 export type { Locale };
 export {
@@ -37,24 +37,24 @@ export type DashboardTimezone = 'UTC' | 'Europe/Paris' | 'Africa/Kigali' | 'Amer
 const LOCALE_STORAGE_KEY = 'tracebud_locale';
 const TIMEZONE_STORAGE_KEY = 'tracebud_timezone';
 
-const EN_TRANSLATIONS: Record<string, string> = enTranslations;
+const EN_TRANSLATIONS: Record<string, string> = enRaw as Record<string, string>;
 
 const LOCALE_OVERLAYS: Partial<Record<Locale, Record<string, string>>> = {
-  fr: frOverlay,
-  es: esOverlay,
-  de: deOverlay,
-  it: itOverlay,
-  nl: nlOverlay,
-  pt: ptOverlay,
-  no: noOverlay,
-  sw: swOverlay,
-  rw: rwOverlay,
-  lg: lgOverlay,
-  am: amOverlay,
-  id: idOverlay,
-  vi: viOverlay,
-  hi: hiOverlay,
-  ar: arOverlay,
+  fr: frRaw as Record<string, string>,
+  es: esRaw as Record<string, string>,
+  de: deRaw as Record<string, string>,
+  it: itRaw as Record<string, string>,
+  nl: nlRaw as Record<string, string>,
+  pt: ptRaw as Record<string, string>,
+  no: noRaw as Record<string, string>,
+  sw: swRaw as Record<string, string>,
+  rw: rwRaw as Record<string, string>,
+  lg: lgRaw as Record<string, string>,
+  am: amRaw as Record<string, string>,
+  id: idRaw as Record<string, string>,
+  vi: viRaw as Record<string, string>,
+  hi: hiRaw as Record<string, string>,
+  ar: arRaw as Record<string, string>,
 };
 
 const MERGED_TRANSLATIONS: Record<Locale, Record<string, string>> = ALL_LOCALES.reduce(

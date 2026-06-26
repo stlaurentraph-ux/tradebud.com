@@ -14,7 +14,7 @@ import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { getPlotUploadGeometryBlock } from '@/features/sync/plotSyncPending';
-import { subscribeServerPlotSyncChanged } from '@/features/sync/plotServerSync';
+import { useFocusCloudPull, useReloadOnServerPlotSyncChanged } from '@/features/sync/useFocusCloudPull';
 import { buildDeliveryReceiptCatalog } from '@/features/harvest/buildDeliveryReceiptCatalog';
 import {
   countDeliveryReceiptsForPlots,
@@ -214,14 +214,6 @@ export default function PlotsScreen() {
     void refreshPlotDeliveryData(false);
   }, [farmer?.id, refreshPlotDeliveryData]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (farmer?.id) {
-        void refreshPlotDeliveryData(false);
-      }
-    }, [farmer?.id, refreshPlotDeliveryData]),
-  );
-
   const refreshPlotChecklists = useCallback(async () => {
     if (plots.length === 0) {
       setPhotoCountByPlotId({});
@@ -237,17 +229,24 @@ export default function PlotsScreen() {
     void refreshPlotChecklists();
   }, [refreshPlotChecklists]);
 
-  useEffect(() => {
-    return subscribeServerPlotSyncChanged(() => {
-      void reloadFromDisk().then(() => refreshPlotDeliveryData(true));
-    });
-  }, [reloadFromDisk, refreshPlotDeliveryData]);
+  const refreshAfterCloudPull = useCallback(async () => {
+    if (farmer?.id) {
+      await refreshPlotDeliveryData(true);
+    }
+    await refreshPlotChecklists();
+  }, [farmer?.id, refreshPlotChecklists, refreshPlotDeliveryData]);
 
-  useFocusEffect(
-    useCallback(() => {
-      void refreshPlotChecklists();
-    }, [refreshPlotChecklists]),
-  );
+  useFocusCloudPull({
+    isSignedIn,
+    reloadFromDisk,
+    onPullComplete: refreshAfterCloudPull,
+    enabled: Boolean(farmer?.id),
+  });
+
+  useReloadOnServerPlotSyncChanged({
+    reloadFromDisk,
+    onSyncChanged: refreshAfterCloudPull,
+  });
 
   const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' =>
     plotChecklistDoneByPlotId[plot.id] === true ? 'Compliant' : 'Action Needed';

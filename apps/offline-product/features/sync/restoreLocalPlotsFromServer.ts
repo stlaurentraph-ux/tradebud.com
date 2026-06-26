@@ -1,13 +1,12 @@
 import type { Plot } from '@/features/state/AppStateContext';
 import {
-  backendRowMatchesLocalClientId,
   isServerOnlyDemoPlot,
-  type BackendPlotRow,
 } from '@/features/plots/backendPlotMatch';
 import {
   mapServerPlotRowToLocalPlot,
   type ServerPlotRowForRestore,
 } from '@/features/plots/localPlotFromServerGeometry';
+import { serverPlotRowAlreadyOnDevice } from '@/features/sync/countServerPlotsMissingOnDevice';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import {
   loadPlotServerLinks,
@@ -23,22 +22,6 @@ export type RestoreLocalPlotsResult = {
   skippedMissingGeometry: number;
 };
 
-function serverRowAlreadyOnDevice(
-  row: BackendPlotRow,
-  localPlots: readonly Plot[],
-  plotServerLinks: Record<string, string>,
-): boolean {
-  const serverId = String(row.id ?? '').trim();
-  if (!serverId) return true;
-
-  for (const localPlot of localPlots) {
-    if (plotServerLinks[localPlot.id]?.trim() === serverId) return true;
-    if (backendRowMatchesLocalClientId(row, localPlot.id)) return true;
-    if (localPlot.id === serverId) return true;
-  }
-  return false;
-}
-
 /**
  * Pulls server plots missing on this device into local SQLite (Phase 1 cloud restore).
  * Never deletes or overwrites plots already stored locally.
@@ -47,6 +30,8 @@ export async function restoreLocalPlotsFromServer(params: {
   apiFarmerId: string;
   ownedFarmerIds: string[];
   localPlots: Plot[];
+  /** When set, only consider server plots in this id set (incremental restore). */
+  serverPlotIdsScope?: ReadonlySet<string>;
 }): Promise<RestoreLocalPlotsResult> {
   const localPlots = [...params.localPlots];
   let plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<
@@ -72,8 +57,12 @@ export async function restoreLocalPlotsFromServer(params: {
 
   for (const rawRow of backendPlots) {
     const row = rawRow as ServerPlotRowForRestore;
+    const serverId = String(row.id ?? '').trim();
+    if (params.serverPlotIdsScope && serverId && !params.serverPlotIdsScope.has(serverId)) {
+      continue;
+    }
     if (isServerOnlyDemoPlot(row)) continue;
-    if (serverRowAlreadyOnDevice(row, localPlots, plotServerLinks)) continue;
+    if (serverPlotRowAlreadyOnDevice(row, localPlots, plotServerLinks)) continue;
 
     const mapped = mapServerPlotRowToLocalPlot(row, params.apiFarmerId);
     if (!mapped) {
@@ -84,7 +73,6 @@ export async function restoreLocalPlotsFromServer(params: {
 
     localPlotIds.add(mapped.id);
     restoredPlots.push(mapped);
-    const serverId = String(row.id ?? '').trim();
     if (serverId) {
       plotServerLinks = { ...plotServerLinks, [mapped.id]: serverId };
     }

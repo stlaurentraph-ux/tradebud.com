@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import type { User } from '@/types';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
@@ -308,12 +309,13 @@ export function CreateAccountWizard() {
                 <label htmlFor="password" className="text-sm font-medium">
                   {getAuthCopy('field_password', t)}
                 </label>
-                <Input
+                <PasswordInput
                   id="password"
-                  type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
                   placeholder={getSignupCopy('placeholder_password_create', t)}
+                  showPasswordLabel={getAuthCopy('show_password', t)}
+                  hidePasswordLabel={getAuthCopy('hide_password', t)}
                   required
                 />
               </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -14,20 +14,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
+import { AuthMethodOrDivider } from '@/components/auth/AuthMethodOrDivider';
 import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { Brand, Spacing } from '@/constants/theme';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile } from '@/features/auth/oauthSession';
 import {
+  hasSyncAuthSession,
+  hydrateSyncAuthFromSettings,
+} from '@/features/api/syncAuthSession';
+import {
   signUpWithEmailAndSyncPlots,
   signUpWithOAuthAndSyncPlots,
 } from '@/features/auth/farmerSignUp';
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
+import { dismissOAuthBrowserIfOpen } from '@/features/auth/dismissOAuthBrowser';
 import type { Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
-import type { UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
+
+export type CreateAccountOAuthResume = {
+  nonce: number;
+  missingName: boolean;
+  existingAccount?: boolean;
+};
 
 type WizardStep = 'method' | 'email' | 'name';
 
@@ -35,8 +46,9 @@ type CreateAccountWizardProps = {
   visible: boolean;
   farmerId?: string;
   localPlots?: Plot[];
+  oauthResume?: CreateAccountOAuthResume | null;
   onClose: () => void;
-  onSuccess: (sync: UploadUnsyncedPlotsResult | null) => void;
+  onSuccess: (options?: { existingAccount?: boolean }) => void;
   onSignInInstead: () => void;
 };
 
@@ -44,6 +56,7 @@ export function CreateAccountWizard({
   visible,
   farmerId,
   localPlots,
+  oauthResume,
   onClose,
   onSuccess,
   onSignInInstead,
@@ -59,6 +72,8 @@ export function CreateAccountWizard({
   const [hint, setHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
+  const [pendingExistingAccount, setPendingExistingAccount] = useState(false);
+  const oauthInFlightRef = useRef(false);
 
   const reset = useCallback(() => {
     setStep('method');
@@ -68,13 +83,32 @@ export function CreateAccountWizard({
     setHint(null);
     setBusy(false);
     setOauthBusy(null);
+    setPendingExistingAccount(false);
   }, []);
 
   useEffect(() => {
-    if (!visible) {
+    if (!visible && !oauthInFlightRef.current) {
       reset();
     }
   }, [visible, reset]);
+
+  const finishSuccess = useCallback((options?: { existingAccount?: boolean }) => {
+    onClose();
+    onSuccess(options);
+  }, [onClose, onSuccess]);
+
+  useEffect(() => {
+    if (!visible || !oauthResume) return;
+    oauthInFlightRef.current = false;
+    setOauthBusy(null);
+    setHint(null);
+    if (oauthResume.missingName) {
+      setPendingExistingAccount(oauthResume.existingAccount === true);
+      setStep('name');
+      return;
+    }
+    finishSuccess({ existingAccount: oauthResume.existingAccount });
+  }, [oauthResume, visible, finishSuccess]);
 
   const resolveMessage = (code: string): string => {
     if (code === 'farmer_signup_name_required') return t('farmer_signup_name_required');
@@ -85,11 +119,6 @@ export function CreateAccountWizard({
     if (code === 'sign_in_apple_not_completed') return t('sign_in_apple_not_completed');
     if (code === 'sign_in_oauth_failed') return t('sign_in_oauth_failed');
     return formatSignInErrorMessage(t, code);
-  };
-
-  const finishSuccess = (sync: UploadUnsyncedPlotsResult | null) => {
-    onClose();
-    onSuccess(sync);
   };
 
   const handleEmailSignUp = async () => {
@@ -108,7 +137,7 @@ export function CreateAccountWizard({
         setHint(resolveMessage(result.message));
         return;
       }
-      finishSuccess(null);
+      finishSuccess();
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
@@ -117,6 +146,7 @@ export function CreateAccountWizard({
   };
 
   const handleOAuthSignUp = async (provider: OAuthProvider) => {
+    oauthInFlightRef.current = true;
     setOauthBusy(provider);
     setHint(null);
     try {
@@ -127,20 +157,36 @@ export function CreateAccountWizard({
         localPlots,
       });
       if (!result.ok) {
+        await hydrateSyncAuthFromSettings().catch(() => undefined);
+        if (hasSyncAuthSession()) {
+          finishSuccess({ existingAccount: true });
+          return;
+        }
         setHint(resolveMessage(result.message));
         return;
       }
       if (result.missingName) {
+        if (result.existingAccount) {
+          finishSuccess({ existingAccount: true });
+          return;
+        }
         setOauthBusy(null);
+        setPendingExistingAccount(false);
         setStep('name');
         return;
       }
-      setOauthBusy(null);
-      finishSuccess(null);
+      finishSuccess({ existingAccount: result.existingAccount });
     } catch (e) {
+      await hydrateSyncAuthFromSettings().catch(() => undefined);
+      if (hasSyncAuthSession()) {
+        finishSuccess({ existingAccount: true });
+        return;
+      }
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
+      oauthInFlightRef.current = false;
       setOauthBusy(null);
+      void dismissOAuthBrowserIfOpen();
     }
   };
 
@@ -152,9 +198,19 @@ export function CreateAccountWizard({
     setBusy(true);
     setHint(null);
     try {
-      await ensureFarmerOAuthProfile(fullName.trim());
-      finishSuccess(null);
+      await ensureFarmerOAuthProfile(fullName.trim()).catch(() => undefined);
+      await hydrateSyncAuthFromSettings().catch(() => undefined);
+      if (!hasSyncAuthSession()) {
+        setHint(t('sign_in_oauth_failed'));
+        return;
+      }
+      finishSuccess({ existingAccount: pendingExistingAccount });
     } catch (e) {
+      await hydrateSyncAuthFromSettings().catch(() => undefined);
+      if (hasSyncAuthSession()) {
+        finishSuccess({ existingAccount: pendingExistingAccount });
+        return;
+      }
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
@@ -231,23 +287,26 @@ export function CreateAccountWizard({
                   disabled={busy}
                   loadingProvider={oauthBusy}
                   busyLabel={t('sign_in_oauth_busy')}
-                  googleLabel={t('oauth_google_short')}
-                  appleLabel={t('oauth_apple_short')}
+                  googleLabel={t('sign_in_with_google')}
+                  appleLabel={t('sign_in_with_apple')}
                   onGoogle={() => void handleOAuthSignUp('google')}
                   onApple={() => void handleOAuthSignUp('apple')}
                 />
-                <Pressable
+                <AuthMethodOrDivider label={t('auth_method_or')} />
+                <Button
+                  variant="outline"
+                  size="md"
+                  fullWidth
+                  testID="create-account-use-email"
+                  disabled={busy || oauthBusy !== null}
+                  icon={<Ionicons name="mail-outline" size={18} color={colors.tint} />}
                   onPress={() => {
                     setHint(null);
                     setStep('email');
                   }}
-                  style={authSheetStyles.textLink}
-                  disabled={busy || oauthBusy !== null}
                 >
-                  <ThemedText type="defaultSemiBold" style={authSheetStyles.textLinkLabel}>
-                    {t('farmer_signup_use_email')}
-                  </ThemedText>
-                </Pressable>
+                  {t('farmer_signup_use_email')}
+                </Button>
               </>
             ) : null}
 
@@ -268,6 +327,9 @@ export function CreateAccountWizard({
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  showPasswordToggle
+                  showPasswordAccessibilityLabel={t('show_password')}
+                  hidePasswordAccessibilityLabel={t('hide_password')}
                   placeholder="••••••••"
                   dense
                 />

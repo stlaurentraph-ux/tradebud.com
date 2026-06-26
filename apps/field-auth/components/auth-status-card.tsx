@@ -8,9 +8,21 @@ type AuthStatusCardProps = {
   footer?: string;
   loading?: boolean;
   error?: boolean;
+  primaryAction?: { label: string; href: string };
+  secondaryAction?: { label: string; href: string };
+  troubleshoot?: string;
 };
 
-export function AuthStatusCard({ title, detail, footer, loading, error }: AuthStatusCardProps) {
+export function AuthStatusCard({
+  title,
+  detail,
+  footer,
+  loading,
+  error,
+  primaryAction,
+  secondaryAction,
+  troubleshoot,
+}: AuthStatusCardProps) {
   return (
     <div className="page">
       <div className="card">
@@ -27,6 +39,21 @@ export function AuthStatusCard({ title, detail, footer, loading, error }: AuthSt
           {loading ? '…' : ''} {title}
         </h1>
         <p className="detail">{detail}</p>
+        {primaryAction || secondaryAction ? (
+          <div className="actions">
+            {primaryAction ? (
+              <a className="btn btn-primary" href={primaryAction.href}>
+                {primaryAction.label}
+              </a>
+            ) : null}
+            {secondaryAction ? (
+              <a className="btn btn-secondary" href={secondaryAction.href}>
+                {secondaryAction.label}
+              </a>
+            ) : null}
+          </div>
+        ) : null}
+        {troubleshoot ? <p className="troubleshoot">{troubleshoot}</p> : null}
         {footer ? <p className="footer">{footer}</p> : null}
         {loading ? <div className="spinner" aria-hidden /> : null}
       </div>
@@ -77,6 +104,38 @@ export function AuthStatusCard({ title, detail, footer, loading, error }: AuthSt
           font-size: 0.9375rem;
           line-height: 1.55;
           color: #374151;
+        }
+        .actions {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 20px;
+        }
+        .btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 12px 16px;
+          border-radius: 10px;
+          font-size: 0.9375rem;
+          font-weight: 600;
+          text-decoration: none;
+        }
+        .btn-primary {
+          background: #10b981;
+          color: #022c22;
+        }
+        .btn-secondary {
+          background: #ecfdf5;
+          color: #065f46;
+          border: 1px solid #a7f3d0;
+        }
+        .troubleshoot {
+          margin: 16px 0 0;
+          font-size: 0.75rem;
+          line-height: 1.45;
+          color: #9ca3af;
+          word-break: break-all;
         }
         .footer {
           margin: 20px 0 0;

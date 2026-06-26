@@ -14,6 +14,7 @@ import { buildMergedHarvestPlots } from '@/features/harvest/mergeHarvestPlotOpti
 import { normalizeVoucherRows } from '@/features/harvest/normalizeVoucherRows';
 import { reconcilePlotServerLinks, type PlotServerLinks } from '@/features/plots/plotServerLink';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
+import { getSyncQueueLockSnapshot } from '@/features/sync/syncQueueMutex';
 import { getAccessTokenFromSupabaseWithTimeout } from '@/features/api/syncAuthSession';
 import type { Plot } from '@/features/state/AppStateContext';
 import { loadFieldScopedDeliveryReceipts } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
@@ -92,6 +93,7 @@ export async function buildDeliveryReceiptCatalog(params: {
       plotServerLinks = existingLinks;
     }
 
+    if (!getSyncQueueLockSnapshot().locked) {
     // fetchMergedServerVouchers resolves its own token; do not gate on a slow first read.
     try {
       await getAccessTokenFromSupabaseWithTimeout().catch(() => null);
@@ -115,6 +117,7 @@ export async function buildDeliveryReceiptCatalog(params: {
       deviceReceipts = normalizeLocalDeliveryReceipts(refreshedRows, params.t);
     } catch {
       vouchers = [];
+    }
     }
   } else {
     receiptScope = await loadFieldScopedDeliveryReceipts({

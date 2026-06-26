@@ -8,7 +8,7 @@ import { isMalformedEudrDdsStatusPayloadError } from '@/lib/eudr-dds-status-feed
 import type { AdminOrgType, AdminStatus } from '@/lib/admin-service';
 
 type SupplyChainRole = User['active_role'] | null | undefined;
-type TranslateFn = (key: string) => string;
+export type TranslateFn = (key: string) => string;
 export type WorkflowBreadcrumb = { label: string; href?: string };
 
 const WORKFLOW_LABELS: Record<string, string> = {
@@ -2948,6 +2948,69 @@ const SETTINGS_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
     fallback:
       'Enable MapTiler satellite imagery for plot maps when your workspace API key is configured. Falls back to Esri when unavailable.',
   },
+  geometry_policy_title: {
+    key: 'workflow.settings.geometry_policy.title',
+    fallback: 'Plot geometry policy',
+  },
+  geometry_policy_description: {
+    key: 'workflow.settings.geometry_policy.description',
+    fallback:
+      'Set how strictly field captures must meet confidence tiers before sync, and whether unapproved geometry blocks shipment packages.',
+  },
+  geometry_policy_min_tier_label: {
+    key: 'workflow.settings.geometry_policy.min_tier_label',
+    fallback: 'Minimum capture tier for field sync',
+  },
+  geometry_policy_min_tier_help: {
+    key: 'workflow.settings.geometry_policy.min_tier_help',
+    fallback:
+      'Low allows all captures. Moderate blocks sync for low-confidence boundaries until farmers re-walk or trace on map.',
+  },
+  geometry_policy_ack_mode_label: {
+    key: 'workflow.settings.geometry_policy.ack_mode_label',
+    fallback: 'Shipment geometry acknowledgement',
+  },
+  geometry_policy_ack_mode_help: {
+    key: 'workflow.settings.geometry_policy.ack_mode_help',
+    fallback:
+      'Warn surfaces package readiness warnings. Block prevents sealing until a reviewer approves plot geometry.',
+  },
+  geometry_policy_tier_low: {
+    key: 'workflow.settings.geometry_policy.tier_low',
+    fallback: 'Low — warn only',
+  },
+  geometry_policy_tier_moderate: {
+    key: 'workflow.settings.geometry_policy.tier_moderate',
+    fallback: 'Moderate — block low-confidence sync',
+  },
+  geometry_policy_tier_high: {
+    key: 'workflow.settings.geometry_policy.tier_high',
+    fallback: 'High — block below high confidence',
+  },
+  geometry_policy_ack_mode_warn: {
+    key: 'workflow.settings.geometry_policy.ack_mode_warn',
+    fallback: 'Warn on packages',
+  },
+  geometry_policy_ack_mode_block: {
+    key: 'workflow.settings.geometry_policy.ack_mode_block',
+    fallback: 'Block packages until approved',
+  },
+  geometry_policy_save: {
+    key: 'workflow.settings.geometry_policy.save',
+    fallback: 'Save geometry policy',
+  },
+  geometry_policy_toast_success: {
+    key: 'workflow.settings.geometry_policy.toast_success',
+    fallback: 'Geometry policy updated.',
+  },
+  geometry_policy_error_save: {
+    key: 'workflow.settings.geometry_policy.error_save',
+    fallback: 'Failed to save geometry policy.',
+  },
+  geometry_policy_current: {
+    key: 'workflow.settings.geometry_policy.current',
+    fallback: 'Saved policy: {{minTier}} minimum tier, {{ackMode}} on shipments.',
+  },
 };
 
 const SETTINGS_LICENSE_PAGE_COPY: Record<string, { key: string; fallback: string }> = {
@@ -3539,12 +3602,72 @@ const PLOT_GEOMETRY_REVIEWER_COPY: Record<string, { key: string; fallback: strin
   },
 };
 
+const PLOT_GEOMETRY_APPROVAL_COPY: Record<string, { key: string; fallback: string }> = {
+  title: {
+    key: 'workflow.plots.detail.geometry_approval.title',
+    fallback: 'Geometry approved for shipment',
+  },
+  body: {
+    key: 'workflow.plots.detail.geometry_approval.body',
+    fallback:
+      'Confirm the current boundary is acceptable for exporter shipment coverage. Approval is audited and cleared if geometry is revised.',
+  },
+  recommended_body: {
+    key: 'workflow.plots.detail.geometry_approval.recommended_body',
+    fallback:
+      'Field capture confidence is fair or low. Approve after map review, or ask the farmer to trace the boundary on satellite imagery.',
+  },
+  approved_body: {
+    key: 'workflow.plots.detail.geometry_approval.approved_body',
+    fallback: 'Approved for shipment coverage on {date}.',
+  },
+  needs_review_badge: {
+    key: 'workflow.plots.detail.geometry_approval.needs_review_badge',
+    fallback: 'Review recommended',
+  },
+  approved_badge: {
+    key: 'workflow.plots.detail.geometry_approval.approved_badge',
+    fallback: 'Approved',
+  },
+  approve_action: {
+    key: 'workflow.plots.detail.geometry_approval.approve_action',
+    fallback: 'Approve geometry for shipment',
+  },
+  approving: {
+    key: 'workflow.plots.detail.geometry_approval.approving',
+    fallback: 'Approving…',
+  },
+  loading: {
+    key: 'workflow.plots.detail.geometry_approval.loading',
+    fallback: 'Loading plot geometry…',
+  },
+  success: {
+    key: 'workflow.plots.detail.geometry_approval.success',
+    fallback: 'Geometry approved for shipment coverage.',
+  },
+};
+
 export function getPlotGeometryReviewerCopy(
   key: keyof typeof PLOT_GEOMETRY_REVIEWER_COPY,
   t?: TranslateFn,
   vars?: Record<string, string | number>,
 ): string {
   const entry = PLOT_GEOMETRY_REVIEWER_COPY[key];
+  let text = wf(entry.key, entry.fallback, t);
+  if (vars) {
+    for (const [name, value] of Object.entries(vars)) {
+      text = text.replace(`{${name}}`, String(value));
+    }
+  }
+  return text;
+}
+
+export function getPlotGeometryApprovalCopy(
+  key: keyof typeof PLOT_GEOMETRY_APPROVAL_COPY,
+  t?: TranslateFn,
+  vars?: Record<string, string | number>,
+): string {
+  const entry = PLOT_GEOMETRY_APPROVAL_COPY[key];
   let text = wf(entry.key, entry.fallback, t);
   if (vars) {
     for (const [name, value] of Object.entries(vars)) {
@@ -5186,6 +5309,51 @@ export function getOutreachResponsesSummary(accepted: number, pending: number, t
   );
 }
 
+export function getOutreachResponsesSummaryWithTotal(
+  accepted: number,
+  pending: number,
+  total: number,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.responses.summary_with_total',
+    '{{accepted}} accepted · {{pending}} pending / {{total}} total',
+    t,
+    { accepted, pending, total },
+  );
+}
+
+export function getOutreachFunnelSummary(
+  counts: import('@/lib/campaign-recipient-timeline').CampaignRecipientStatusCounts | undefined,
+  t?: TranslateFn,
+): string {
+  if (!counts) {
+    return '';
+  }
+  const parts: string[] = [];
+  if (counts.fulfilled > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.fulfilled', '{{count}} fulfilled', t, { count: counts.fulfilled }),
+    );
+  }
+  if (counts.signed_up > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.joined', '{{count}} joined', t, { count: counts.signed_up }),
+    );
+  }
+  if (counts.invite_sent > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.invited', '{{count}} invited', t, { count: counts.invite_sent }),
+    );
+  }
+  if (counts.refused > 0) {
+    parts.push(
+      wf('workflow.outreach.funnel.refused', '{{count}} refused', t, { count: counts.refused }),
+    );
+  }
+  return parts.join(' · ');
+}
+
 export function getOutreachViewTimelineLabel(t?: TranslateFn): string {
   return wf('workflow.outreach.action.view_timeline', 'View timeline', t);
 }
@@ -5211,6 +5379,227 @@ export function getOutreachWizardDescription(role?: SupplyChainRole, t?: Transla
       : 'Create a new request campaign for producer, plot, or evidence data',
     t,
   );
+}
+
+export function getInboundCampaignBannerTitle(t?: TranslateFn): string {
+  return wf('workflow.inbox.inbound_banner.title', 'New Compliance Request', t);
+}
+
+export function getInboundCampaignBannerMessage(
+  t: TranslateFn | undefined,
+  values: { fromOrg: string; title: string; dueDate: string },
+): string {
+  return wf(
+    'workflow.inbox.inbound_banner.message',
+    '{{fromOrg}} has sent you a compliance request "{{title}}" due {{dueDate}}',
+    t,
+    values,
+  );
+}
+
+export function getInboundCampaignBannerCta(t?: TranslateFn): string {
+  return wf('workflow.inbox.inbound_banner.cta', 'Fulfill Request', t);
+}
+
+export function getCampaignRecipientTimelineTitle(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.title', 'Campaign Recipients', t);
+}
+
+export function getCampaignRecipientTimelineDescription(
+  campaignTitle: string | null | undefined,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.timeline.description',
+    campaignTitle ? `Recipients and activity for "${campaignTitle}"` : 'Recipients and activity for this campaign',
+    t,
+    campaignTitle ? { title: campaignTitle } : undefined,
+  );
+}
+
+export function getCampaignRecipientTimelineLoading(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.loading', 'Loading recipients…', t);
+}
+
+export function getCampaignRecipientTimelineError(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.error', 'Failed to load recipients', t);
+}
+
+export function getCampaignRecipientTimelineTabRecipients(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.tab.recipients', 'Recipients', t);
+}
+
+export function getCampaignRecipientTimelineTabActivity(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.tab.activity', 'Activity', t);
+}
+
+export function getCampaignRecipientTimelineEmptyRecipients(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.empty.recipients', 'No recipients added yet', t);
+}
+
+export function getCampaignRecipientTimelineEmptyFiltered(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.empty.filtered', 'No recipients match this filter', t);
+}
+
+export function getCampaignRecipientTimelineEmptyActivity(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.empty.activity', 'No activity recorded yet', t);
+}
+
+export function getCampaignRecipientTimelineCopyEmailLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.action.copy_email', 'Copy email', t);
+}
+
+export function getCampaignRecipientTimelineCopyConnectLinkLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.action.copy_signup_link', 'Copy signup link', t);
+}
+
+export function getCampaignRecipientTimelineCopyInboxLinkLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.action.copy_inbox_link', 'Copy inbox link', t);
+}
+
+export function getCampaignRecipientTimelineResendInviteLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.action.resend_invite', 'Resend invite', t);
+}
+
+export function getCampaignRecipientTimelineFilterLabel(
+  filter: import('@/lib/campaign-recipient-timeline').CampaignRecipientFilter,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    all: 'workflow.outreach.timeline.filter.all',
+    invite_sent: 'workflow.outreach.timeline.filter.invite_sent',
+    signed_up: 'workflow.outreach.timeline.filter.signed_up',
+    awaiting_response: 'workflow.outreach.timeline.filter.awaiting_response',
+    fulfilled: 'workflow.outreach.timeline.filter.fulfilled',
+    refused: 'workflow.outreach.timeline.filter.refused',
+  };
+  const fallbackMap: Record<string, string> = {
+    all: 'All',
+    invite_sent: 'Invited',
+    signed_up: 'Signed up',
+    awaiting_response: 'Awaiting response',
+    fulfilled: 'Fulfilled',
+    refused: 'Refused',
+  };
+  return wf(keyMap[filter] ?? 'workflow.outreach.timeline.filter.all', fallbackMap[filter] ?? filter, t);
+}
+
+export function getCampaignRecipientTimelineLastActivityLabel(
+  relativeTime: string,
+  t?: TranslateFn,
+): string {
+  return wf('workflow.outreach.timeline.last_activity', '{{time}}', t, { time: relativeTime });
+}
+
+export function getCampaignRecipientTimelineLatestDecisionLabel(
+  relativeTime: string,
+  t?: TranslateFn,
+): string {
+  return wf(
+    'workflow.outreach.timeline.latest_decision',
+    'Latest decision: {{time}}',
+    t,
+    { time: relativeTime },
+  );
+}
+
+export function getCampaignRecipientTimelineLoadMoreDecisions(t?: TranslateFn): string {
+  return wf('workflow.outreach.timeline.load_more', 'Load more', t);
+}
+
+export function getCampaignRecipientOnboardingStatusLabel(
+  status: import('@/lib/campaign-recipient-timeline').CampaignRecipientOnboardingStatus,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    fulfilled: 'workflow.outreach.recipient.status.fulfilled',
+    accepted: 'workflow.outreach.recipient.status.accepted',
+    refused: 'workflow.outreach.recipient.status.refused',
+    signed_up: 'workflow.outreach.recipient.status.signed_up',
+    invite_sent: 'workflow.outreach.recipient.status.invite_sent',
+    on_platform: 'workflow.outreach.recipient.status.on_platform',
+  };
+  const fallbackMap: Record<string, string> = {
+    fulfilled: 'Fulfilled',
+    accepted: 'Accepted',
+    refused: 'Refused',
+    signed_up: 'Signed up',
+    invite_sent: 'Invited',
+    on_platform: 'On platform',
+  };
+  return wf(keyMap[status] ?? 'workflow.outreach.recipient.status.invite_sent', fallbackMap[status] ?? status, t);
+}
+
+export function getCampaignRecipientFulfillmentSourceLabel(
+  source: import('@/lib/campaign-recipient-timeline').CampaignFulfillmentSource,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    farmer_app_email: 'workflow.outreach.recipient.fulfillment.farmer_app_email',
+    farmer_app_phone: 'workflow.outreach.recipient.fulfillment.farmer_app_phone',
+    cooperative_on_behalf: 'workflow.outreach.recipient.fulfillment.cooperative_on_behalf',
+  };
+  const fallbackMap: Record<string, string> = {
+    farmer_app_email: 'Responded in Tracebud (email)',
+    farmer_app_phone: 'Responded in Tracebud (phone)',
+    cooperative_on_behalf: 'Submitted on behalf of farmer',
+  };
+  return wf(keyMap[source] ?? 'workflow.outreach.recipient.fulfillment.cooperative_on_behalf', fallbackMap[source] ?? source, t);
+}
+
+export function getCampaignRecipientDeskQrPrintLabel(t?: TranslateFn): string {
+  return wf('workflow.outreach.recipient.desk_qr.print_short', 'Print desk QR', t);
+}
+
+export function getCampaignRecipientProgressStepLabel(
+  stepId: import('@/lib/campaign-recipient-timeline').CampaignRecipientProgressStepId,
+  t?: TranslateFn,
+): string {
+  const keyMap: Record<string, string> = {
+    invited: 'workflow.outreach.recipient.step.invited',
+    joined: 'workflow.outreach.recipient.step.joined',
+    responded: 'workflow.outreach.recipient.step.responded',
+    fulfilled: 'workflow.outreach.recipient.step.fulfilled',
+  };
+  const fallbackMap: Record<string, string> = {
+    invited: 'Invited',
+    joined: 'Joined',
+    responded: 'Responded',
+    fulfilled: 'Fulfilled',
+  };
+  return wf(keyMap[stepId] ?? 'workflow.outreach.recipient.step.invited', fallbackMap[stepId] ?? stepId, t);
+}
+
+export function getCampaignRecipientFunnelProgressLabel(
+  t: TranslateFn | undefined,
+  values: { fulfilled: number; total: number; percent: number },
+): string {
+  return wf(
+    'workflow.outreach.recipient.funnel.progress',
+    '{{fulfilled}} of {{total}} fulfilled',
+    t,
+    values,
+  );
+}
+
+export function getCampaignRecipientFunnelStatLabel(
+  key: 'invited' | 'joined' | 'responded' | 'fulfilled',
+  t: TranslateFn | undefined,
+  values: { count: number },
+): string {
+  const keyMap: Record<string, string> = {
+    invited: 'workflow.outreach.recipient.funnel.stat.invited',
+    joined: 'workflow.outreach.recipient.funnel.stat.joined',
+    responded: 'workflow.outreach.recipient.funnel.stat.responded',
+    fulfilled: 'workflow.outreach.recipient.funnel.stat.fulfilled',
+  };
+  const fallbackMap: Record<string, string> = {
+    invited: '{{count}} invited',
+    joined: '{{count}} joined',
+    responded: '{{count}} responded',
+    fulfilled: '{{count}} fulfilled',
+  };
+  return wf(keyMap[key] ?? 'workflow.outreach.recipient.funnel.stat.invited', fallbackMap[key] ?? key, t, values);
 }
 
 export function getComplianceHubScoreLabel(t?: TranslateFn): string {
@@ -5377,6 +5766,136 @@ const HARVEST_RECEIVE_DELIVERY_COPY: Record<string, { key: string; fallback: str
     fallback: 'Voucher not found. Ask the producer to sync from the field app and confirm network consent.',
   },
   qr_added: { key: 'workflow.harvest.receive.qr_added', fallback: 'Voucher added' },
+  inbox_title: {
+    key: 'workflow.harvest.receive.inbox_title',
+    fallback: 'Directed to you',
+  },
+  inbox_empty: {
+    key: 'workflow.harvest.receive.inbox_empty',
+    fallback: 'No new deliveries directed to your organisation yet.',
+  },
+  scan_cta: { key: 'workflow.harvest.receive.scan_cta', fallback: 'Scan QR' },
+  scan_title: { key: 'workflow.harvest.receive.scan_title', fallback: 'Scan delivery QR' },
+  scan_description: {
+    key: 'workflow.harvest.receive.scan_description',
+    fallback: 'Point the camera at the receipt QR or a shared delivery link.',
+  },
+  scan_bulk_title: { key: 'workflow.harvest.receive.scan_bulk_title', fallback: 'Bulk scan delivery QR' },
+  scan_bulk_description: {
+    key: 'workflow.harvest.receive.scan_bulk_description',
+    fallback: 'Keep scanning codes from the same truck visit. The camera stays open until you close it.',
+  },
+  scan_bulk_toggle: {
+    key: 'workflow.harvest.receive.scan_bulk_toggle',
+    fallback: 'Keep scanning (truck visit)',
+  },
+  scan_session_count: {
+    key: 'workflow.harvest.receive.scan_session_count',
+    fallback: '{{count}} code(s) scanned this session',
+  },
+  scan_detected_toast: {
+    key: 'workflow.harvest.receive.scan_detected_toast',
+    fallback: 'Scanned {{ref}}',
+  },
+  scan_close: { key: 'workflow.harvest.receive.scan_close', fallback: 'Close' },
+  scan_camera_error: {
+    key: 'workflow.harvest.receive.scan_camera_error',
+    fallback: 'Camera access failed. Paste the code manually instead.',
+  },
+  scan_unsupported: {
+    key: 'workflow.harvest.receive.scan_unsupported',
+    fallback: 'Camera scanning is not supported in this browser. Paste the voucher code instead.',
+  },
+  auto_claim_banner_title: {
+    key: 'workflow.harvest.receive.auto_claim_banner_title',
+    fallback: 'Delivery link detected',
+  },
+  auto_claim_banner_body: {
+    key: 'workflow.harvest.receive.auto_claim_banner_body',
+    fallback: 'Confirm physical handoff to stage this delivery for batch assembly.',
+  },
+  trip_added: {
+    key: 'workflow.harvest.receive.trip_added',
+    fallback: '{{count}} voucher(s) from trip added',
+  },
+  bulk_scan_cta: {
+    key: 'workflow.harvest.receive.bulk_scan_cta',
+    fallback: 'Bulk scan',
+  },
+  handoff_title: {
+    key: 'workflow.harvest.receive.handoff_title',
+    fallback: 'Confirm physical handoff',
+  },
+  handoff_description: {
+    key: 'workflow.harvest.receive.handoff_description',
+    fallback: 'Record the weight received at the desk before staging vouchers for batch assembly.',
+  },
+  handoff_expected: {
+    key: 'workflow.harvest.receive.handoff_expected',
+    fallback: 'Expected from receipt: {{kg}} kg',
+  },
+  handoff_summary_label: {
+    key: 'workflow.harvest.receive.handoff_summary_label',
+    fallback: 'Receipt summary',
+  },
+  handoff_variance_warning: {
+    key: 'workflow.harvest.receive.handoff_variance_warning',
+    fallback:
+      'Received weight ({{received}} kg) differs from the receipt ({{expected}} kg). Add a desk note if the variance is expected.',
+  },
+  handoff_plot_count: {
+    key: 'workflow.harvest.receive.handoff_plot_count',
+    fallback: '{{count}} plots',
+  },
+  handoff_received_label: {
+    key: 'workflow.harvest.receive.handoff_received_label',
+    fallback: 'Weight received (kg)',
+  },
+  handoff_note_label: {
+    key: 'workflow.harvest.receive.handoff_note_label',
+    fallback: 'Desk note (optional)',
+  },
+  handoff_note_placeholder: {
+    key: 'workflow.harvest.receive.handoff_note_placeholder',
+    fallback: 'Truck plate, scale variance, etc.',
+  },
+  handoff_invalid_weight: {
+    key: 'workflow.harvest.receive.handoff_invalid_weight',
+    fallback: 'Enter a valid received weight in kilograms.',
+  },
+  handoff_failed: {
+    key: 'workflow.harvest.receive.handoff_failed',
+    fallback: 'Could not record handoff. Try again or contact support.',
+  },
+  handoff_cancel: { key: 'workflow.harvest.receive.handoff_cancel', fallback: 'Cancel' },
+  handoff_confirm: { key: 'workflow.harvest.receive.handoff_confirm', fallback: 'Confirm & stage' },
+  handoff_confirming: { key: 'workflow.harvest.receive.handoff_confirming', fallback: 'Confirming…' },
+  handoff_photo_label: {
+    key: 'workflow.harvest.receive.handoff_photo_label',
+    fallback: 'Desk photo (optional)',
+  },
+  handoff_photo_hint: {
+    key: 'workflow.harvest.receive.handoff_photo_hint',
+    fallback: 'Photo of scale or truck plate. Only a hash is stored for audit — not the image file.',
+  },
+  handoff_photo_attached: {
+    key: 'workflow.harvest.receive.handoff_photo_attached',
+    fallback: 'Attached: {{name}}',
+  },
+  handoff_photo_too_large: {
+    key: 'workflow.harvest.receive.handoff_photo_too_large',
+    fallback: 'Photo must be under 600 KB. Take a closer crop or lower resolution.',
+  },
+  coach_title: {
+    key: 'workflow.harvest.receive.coach_title',
+    fallback: 'Start with Directed to you or scan a receipt',
+  },
+  coach_body: {
+    key: 'workflow.harvest.receive.coach_body',
+    fallback:
+      'Member deliveries directed to your organisation appear in the inbox. Otherwise scan or paste the voucher code.',
+  },
+  coach_dismiss: { key: 'workflow.harvest.receive.coach_dismiss', fallback: 'Got it' },
   footnote: {
     key: 'workflow.harvest.receive.footnote',
     fallback:
@@ -9246,7 +9765,7 @@ function resolveContactsAudience(
 }
 
 export function getContactsStatLabel(
-  stat: 'total' | 'active' | 'blocked' | 'organizations' | 'people',
+  stat: 'total' | 'active' | 'blocked' | 'organizations' | 'people' | 'submitted',
   roleOrCooperative: boolean | import('@/types').User['active_role'] | undefined,
   t?: TranslateFn,
 ): string {
@@ -9272,6 +9791,7 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'workflow.contacts.stat.blocked_exporter'
           : 'workflow.contacts.stat.blocked',
+    submitted: 'workflow.contacts.stat.submitted',
   } as const;
   const fallbackMap = {
     total:
@@ -9294,6 +9814,7 @@ export function getContactsStatLabel(
         : audience === 'exporter'
           ? 'Supplier Blockers'
           : 'Blocked',
+    submitted: 'Submitted',
   } as const;
   return wf(keyMap[stat], fallbackMap[stat], t);
 }
@@ -11441,3 +11962,4 @@ export function collectWorkflowTerminologyCopyManifest(): Record<string, string>
     ...flattenCopyRegistry(ADMIN_RBAC_COPY),
   };
 }
+

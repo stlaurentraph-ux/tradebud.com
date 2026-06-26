@@ -22,6 +22,11 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
     roles: ['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer'],
   },
   {
+    id: 'requests_operational_issues',
+    file: 'requests/requests.controller.ts',
+    roles: ['admin', 'exporter', 'compliance_manager', 'cooperative', 'importer', 'country_reviewer', 'sponsor'],
+  },
+  {
     id: 'requests_evidence',
     file: 'requests/requests.controller.ts',
     roles: ['admin', 'exporter', 'compliance_manager', 'cooperative'],
@@ -73,6 +78,12 @@ export const BACKEND_API_ACCESS_ENTRIES: readonly BackendApiAccessEntry[] = [
     file: 'plots/plots.controller.ts',
     roles: ['farmer', 'agent'],
     note: 'enforceSyncPlotScope via resolveFieldActorRole',
+  },
+  {
+    id: 'plots_approve_geometry',
+    file: 'plots/plots.controller.ts',
+    roles: ['exporter', 'compliance_manager', 'country_reviewer', 'admin'],
+    note: 'POST approve-geometry',
   },
   {
     id: 'bulk_plot_import',

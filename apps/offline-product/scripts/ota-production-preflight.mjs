@@ -80,6 +80,8 @@ function main() {
   runStep('field regression guard', () => runNodeScript('field-regression-guard.mjs'));
   runStep('automation guards (strict)', () => runNpmScript('qa:automation:phase1:strict'));
   runStep('EAS OTA skew guard', () => runNodeScript('eas-ota-skew-guard.mjs'));
+  runStep('OAuth provider verify', () => runNpmScript('oauth:verify'));
+  runStep('OAuth SSO health check', () => runNodeScript('oauth-sso-health-check.mjs'));
 
   if (ci) {
     console.log('\n==> device sign-off (skipped in --ci mode)');

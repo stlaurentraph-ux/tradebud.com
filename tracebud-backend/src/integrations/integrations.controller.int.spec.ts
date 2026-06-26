@@ -1,8 +1,9 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Pool } from 'pg';
 import { IntegrationsController } from './integrations.controller';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
+const testDbUrl = requireTestDatabaseUrl();
 const describeIfDb = testDbUrl ? describe : describe.skip;
 const schema = `tb_integrations_controller_int_test_${process.pid}_${Date.now().toString(36)}`;
 

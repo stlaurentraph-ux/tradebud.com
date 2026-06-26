@@ -10,6 +10,11 @@ import { routing } from './i18n/routing';
 const intlMiddleware = createMiddleware(routing);
 
 export default function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith('/d/') || pathname.startsWith('/t/')) {
+    return NextResponse.next();
+  }
+
   const previewSecret = process.env.MARKETING_PREVIEW_SECRET;
   const previewParam = request.nextUrl.searchParams.get(MARKETING_PREVIEW_PARAM);
 

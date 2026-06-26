@@ -1,6 +1,7 @@
 import type { TranslateFn } from '@/features/i18n/translate';
 import type { PlotSyncBlockInfo } from '@/features/sync/plotSyncPending';
 import type { SyncFailure } from '@/features/sync/syncFailure';
+import type { FieldSyncMode } from '@/features/sync/resolveFieldSyncMode';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabilityMessage';
 import { formatSyncFailureUserMessage } from '@/features/sync/mapSyncFailureMessage';
@@ -34,6 +35,8 @@ export type SyncNowUserOutcome = {
   evidenceFetchFailed?: boolean;
   evidenceDownloadFailed?: number;
   declarationsFetchFailed?: boolean;
+  /** push_only skipped cloud restore; full ran pull + push. */
+  syncMode?: FieldSyncMode;
   /** Measured after the run — queue + plots still needing attention on device. */
   remainingPending?: number;
   unsyncedPlotCount?: number;
@@ -102,6 +105,10 @@ export function formatPendingSyncSummary(
     return t('sync_result_incomplete_plot_count', { n: pending.unsyncedPlotCount });
   }
 
+  if (pending.total <= 0) {
+    return t('sync_result_complete');
+  }
+
   return t('sync_result_incomplete', { n: pending.total });
 }
 
@@ -122,6 +129,7 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
       if (reason) return reason;
       return resolveSyncReachFailedShortMessage(t, getTracebudApiBaseUrl());
     }
+    return t('sync_result_restore_partial_failed');
   }
 
   if (remainingPending === 0) {
@@ -172,8 +180,12 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
     if (restoredReceipts > 0) {
       return t('sync_result_receipts_restored', { n: restoredReceipts });
     }
-    if ((outcome.receiptsRequeued ?? 0) > 0) {
-      return t('sync_result_receipts_requeued', { n: outcome.receiptsRequeued ?? 0 });
+    const requeuedReceipts = outcome.receiptsRequeued ?? 0;
+    if (requeuedReceipts > 0) {
+      return t('sync_result_receipts_requeued', { n: requeuedReceipts });
+    }
+    if (outcome.plotsAlreadySynced) {
+      return t('backup_up_to_date');
     }
     return t('sync_result_complete');
   }

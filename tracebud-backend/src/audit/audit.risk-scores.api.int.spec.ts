@@ -3,11 +3,13 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { Pool } from 'pg';
 import { AuditController } from './audit.controller';
+import { AuditWriteService } from './audit-write.service';
 import { PG_POOL } from '../db/db.module';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { requireTestDatabaseUrl } from '../testing/require-test-database-url';
 
-const testDbUrl = process.env.TEST_DATABASE_URL;
-const describeIfDb = testDbUrl ? describe : describe.skip;
+const testDbUrl = requireTestDatabaseUrl();
+
 const schema = `tb_audit_risk_scores_api_int_test_${process.pid}_${Date.now().toString(36)}`;
 
 function withSearchPath(connectionString: string, _targetSchema: string) {
@@ -34,7 +36,7 @@ class TestAuthGuard implements CanActivate {
   }
 }
 
-describeIfDb('Audit risk-score API integration: phase/band filters', () => {
+describe('Audit risk-score API integration: phase/band filters', () => {
   let pool: Pool;
   let app: INestApplication;
 
@@ -59,7 +61,7 @@ describeIfDb('Audit risk-score API integration: phase/band filters', () => {
     `);
     const moduleRef = await Test.createTestingModule({
       controllers: [AuditController],
-      providers: [{ provide: PG_POOL, useValue: pool }],
+      providers: [{ provide: PG_POOL, useValue: pool }, AuditWriteService],
     })
       .overrideGuard(SupabaseAuthGuard)
       .useValue(new TestAuthGuard())

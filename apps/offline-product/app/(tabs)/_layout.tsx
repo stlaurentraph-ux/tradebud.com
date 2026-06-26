@@ -2,16 +2,25 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors, Brand, Shadows } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useLanguage } from '@/features/state/LanguageContext';
 
+/** Icon + label row inside the tab bar (excluding safe-area padding). */
+const TAB_BAR_CONTENT_HEIGHT = 56;
+const TAB_BAR_PADDING_TOP = 8;
+const TAB_BAR_PADDING_BOTTOM_MIN = 8;
+
 export default function TabLayout() {
   const colorScheme = useColorScheme();
   const colors = Colors[colorScheme ?? 'light'];
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
+  const tabBarPaddingBottom = Math.max(insets.bottom, TAB_BAR_PADDING_BOTTOM_MIN);
+  const tabBarHeight = TAB_BAR_CONTENT_HEIGHT + TAB_BAR_PADDING_TOP + tabBarPaddingBottom;
 
   return (
     <Tabs
@@ -22,9 +31,9 @@ export default function TabLayout() {
           backgroundColor: colors.tabBackground,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          paddingTop: 8,
-          paddingBottom: 8,
-          height: 72,
+          paddingTop: TAB_BAR_PADDING_TOP,
+          paddingBottom: tabBarPaddingBottom,
+          height: tabBarHeight,
           ...Shadows.sm,
         },
         tabBarLabelStyle: {
@@ -39,6 +48,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('tab_home'),
+          tabBarButton: (props) => <HapticTab {...props} testID="tab-home" />,
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'home' : 'home-outline'} size={26} color={color} />

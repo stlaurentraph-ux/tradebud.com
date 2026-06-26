@@ -6,6 +6,8 @@
  * Profiles (MAESTRO_SEED_PROFILE):
  *   default — farmer + plot (full local seed)
  *   cross_device_b — plot + server link, no local media (Device B restore UX)
+ *   backed_up_offline — plot + server link, signed-out backup status smoke
+ *   delta_sync_idle — plot + server link + field_sync_cursor_v1 (delta skip soak seed)
  *
  * Requires Tracebud installed and booted once (creates tracebud_offline.db).
  */
@@ -74,6 +76,21 @@ function sql(dbPath, statement) {
   sh(`sqlite3 ${JSON.stringify(dbPath)} ${JSON.stringify(oneLine)}`);
 }
 
+function seedBackedUpOfflineProfile(dbPath) {
+  sql(
+    dbPath,
+    `INSERT OR REPLACE INTO plot_legal (plotId, serverPlotId) VALUES ('${PLOT_ID}', '${SERVER_PLOT_ID}')`,
+  );
+  sql(
+    dbPath,
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('tracebud.syncAuth.signedOut', '1')`,
+  );
+  sql(
+    dbPath,
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('maestroSeedProfile', 'backed_up_offline')`,
+  );
+}
+
 function seedCrossDeviceBProfile(dbPath) {
   sql(dbPath, 'DELETE FROM plot_photos;');
   sql(dbPath, 'DELETE FROM plot_title_photos;');
@@ -85,6 +102,23 @@ function seedCrossDeviceBProfile(dbPath) {
   sql(
     dbPath,
     `INSERT OR REPLACE INTO settings (key, value) VALUES ('maestroSeedProfile', 'cross_device_b')`,
+  );
+}
+
+function seedDeltaSyncIdleProfile(dbPath) {
+  seedCrossDeviceBProfile(dbPath);
+  const cursorJson = JSON.stringify({
+    cursorMs: NOW,
+    auditByFarmer: { [FARMER_ID]: new Date(NOW).toISOString() },
+    voucherFingerprint: '',
+  }).replace(/'/g, "''");
+  sql(
+    dbPath,
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('field_sync_cursor_v1', '${cursorJson}')`,
+  );
+  sql(
+    dbPath,
+    `INSERT OR REPLACE INTO settings (key, value) VALUES ('maestroSeedProfile', 'delta_sync_idle')`,
   );
 }
 
@@ -112,6 +146,10 @@ function main() {
 
   if (profile === 'cross_device_b') {
     seedCrossDeviceBProfile(dbPath);
+  } else if (profile === 'backed_up_offline') {
+    seedBackedUpOfflineProfile(dbPath);
+  } else if (profile === 'delta_sync_idle') {
+    seedDeltaSyncIdleProfile(dbPath);
   } else {
     sql(dbPath, `DELETE FROM settings WHERE key = 'maestroSeedProfile'`);
   }

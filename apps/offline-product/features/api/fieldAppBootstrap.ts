@@ -12,11 +12,26 @@ const BOOTSTRAP_CACHE_MS = 15 * 60 * 1000;
 const bootstrappedAtByFarmerId = new Map<string, number>();
 const inflightByFarmerId = new Map<string, Promise<{ ok: true } | { ok: false; message: string }>>();
 let lastOwnedFarmerIds: string[] = [];
+let ownedFarmerIdsSessionCache: string[] | null = null;
+let ownedFarmerIdsSessionDepth = 0;
+
+export function beginOwnedFarmerIdsSessionCache(): void {
+  ownedFarmerIdsSessionDepth += 1;
+}
+
+export function endOwnedFarmerIdsSessionCache(): void {
+  ownedFarmerIdsSessionDepth = Math.max(0, ownedFarmerIdsSessionDepth - 1);
+  if (ownedFarmerIdsSessionDepth === 0) {
+    ownedFarmerIdsSessionCache = null;
+  }
+}
 
 export function clearFieldProducerBootstrapCache(): void {
   bootstrappedAtByFarmerId.clear();
   inflightByFarmerId.clear();
   lastOwnedFarmerIds = [];
+  ownedFarmerIdsSessionCache = null;
+  ownedFarmerIdsSessionDepth = 0;
 }
 
 export function getBootstrapOwnedFarmerIds(): string[] {
@@ -43,6 +58,8 @@ export async function bootstrapFieldAppProducer(
     farmerId: string;
     fullName?: string;
     countryCode?: string;
+    campaignId?: string;
+    claimToken?: string;
   },
   options?: { timeoutMs?: number; force?: boolean },
 ): Promise<{ ok: true } | { ok: false; message: string }> {
@@ -81,6 +98,8 @@ export async function bootstrapFieldAppProducer(
           farmerId,
           fullName: params.fullName?.trim() || undefined,
           countryCode: params.countryCode?.trim() || undefined,
+          campaignId: params.campaignId?.trim() || undefined,
+          claimToken: params.claimToken?.trim() || undefined,
         }),
         signal: controller.signal,
       });
@@ -89,6 +108,17 @@ export async function bootstrapFieldAppProducer(
         const body = await res.json().catch(() => ({}));
         rememberOwnedFarmerIds(body);
         bootstrappedAtByFarmerId.set(farmerId, Date.now());
+        if (params.campaignId?.trim()) {
+          const { trackEvent, ANALYTICS_EVENTS } = await import('@/features/observability/analytics');
+          trackEvent(
+            params.claimToken?.trim()
+              ? ANALYTICS_EVENTS.CAMPAIGN_INVITE_CLAIMED_BY_TOKEN
+              : ANALYTICS_EVENTS.CAMPAIGN_INVITE_CLAIMED_ON_BOOTSTRAP,
+            {
+              campaignId: params.campaignId.trim(),
+            },
+          );
+        }
         return { ok: true };
       }
 
@@ -134,7 +164,7 @@ export async function bootstrapFieldAppProducer(
 /** Best-effort server link before plot sync (creates farmer_profile when missing). */
 export async function ensureFieldProducerBootstrapped(
   farmerId: string,
-  options?: { fullName?: string; force?: boolean },
+  options?: { fullName?: string; force?: boolean; campaignId?: string; claimToken?: string },
 ): Promise<void> {
   const scopedFarmerId = farmerId.trim();
   if (!scopedFarmerId || !hasSyncAuthSession()) {
@@ -145,6 +175,8 @@ export async function ensureFieldProducerBootstrapped(
     {
       farmerId: scopedFarmerId,
       fullName,
+      campaignId: options?.campaignId?.trim() || undefined,
+      claimToken: options?.claimToken?.trim() || undefined,
     },
     { force: options?.force === true },
   ).catch(() => undefined);
@@ -152,6 +184,10 @@ export async function ensureFieldProducerBootstrapped(
 
 /** Lightweight lookup of linked farmer profiles (works without parsing bootstrap POST body). */
 export async function fetchOwnedFarmerIdsFromApi(): Promise<string[]> {
+  if (ownedFarmerIdsSessionDepth > 0 && ownedFarmerIdsSessionCache) {
+    return [...ownedFarmerIdsSessionCache];
+  }
+
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
     return [];
@@ -183,6 +219,9 @@ export async function fetchOwnedFarmerIdsFromApi(): Promise<string[]> {
     const ids = raw.map((id) => String(id).trim()).filter(Boolean);
     if (ids.length > 0) {
       lastOwnedFarmerIds = ids;
+      if (ownedFarmerIdsSessionDepth > 0) {
+        ownedFarmerIdsSessionCache = ids;
+      }
     }
     return ids;
   } catch {

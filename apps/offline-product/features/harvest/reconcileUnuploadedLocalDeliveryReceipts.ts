@@ -6,6 +6,7 @@ import type { PlotServerLinks } from '@/features/plots/plotServerLink';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
   enqueuePendingSync,
+  isLocalDeliveryReceiptPendingUpload,
   loadAllLocalDeliveryReceipts,
   updateLocalDeliveryReceipt,
 } from '@/features/state/persistence';
@@ -67,6 +68,7 @@ export async function reconcileUnuploadedLocalDeliveryReceipts(params: {
 
   let requeuedCount = 0;
   for (const receipt of unmatched) {
+    if (!isLocalDeliveryReceiptPendingUpload(receipt)) continue;
     const kg = Number(receipt.kg);
     if (!Number.isFinite(kg) || kg <= 0) continue;
     if (!receipt.localPlotId?.trim()) continue;

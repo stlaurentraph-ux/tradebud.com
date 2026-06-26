@@ -2,9 +2,20 @@
 
 Track completed milestones/features/docs updates.
 
+- **#264 campaign-delivery integration onto main** (2026-06-26, PR #307, branch `intake-264-integration`): 33-conflict merge resolved; real-code fixes (OAuth callback/cold-start, campaign invite preview, SetPassword, harvest multi-plot, sync pipeline, WalkPerimeter); offline Vitest harness stabilized for Expo/RN native modules (`test/setup-expo.ts` + `test/stubs/*` + `vitest.config.ts`). All apps green (offline 625, dashboard 616, backend 523); all GitHub Actions CI lanes green. Awaiting human review/merge.
+- **Delivery intake Phase B (FEAT-011)** (2026-06-24): trip QR, show-buyer sheet, desk handoff confirmation, signup auto-claim from marketing preview, bulk scan + ZXing fallback.
+- **Delivery intake smart links (ADR-009 Phase A)** (2026-06-24): public preview API, marketing + dashboard `/d/[ref]`, desk scan/inbox/auto-claim, field smart QR + intake advisory.
+- Dashboard + backend **geometry approval for shipment (S6.4)** (2026-06-24): plot approval columns, tenant geometry policy, package readiness warnings/blockers, dashboard approval card.
+- Field **OAuth reliability** (2026-06-24): iOS browser fallback, step telemetry (`oauth_step`), `oauthOrchestrator.ts` single entry point, Maestro §4 smoke flows (`oauth-sign-in-sheet-smoke`, `oauth-callback-missing-url-smoke`), `ios-oauth-guard`, `oauth-orchestrator-guard`, `oauth-maestro-guard`, `oauth:verify:ios`, SSO health check, FR-014, `ota:preview:preflight`.
+- Field **dual-use dashboard OAuth + sign-out soak** (2026-06-24): cooperative/exporter matching identity allowed in field app; `oauthOrchestratorPolicy` tests; sign-out persistence Maestro smoke.
+- Offline + backend **buyer invite + cloud audit defer structural safeguards** (2026-06-23): registries, `cloud-audit-sync-guard`, network routing guard extensions, regression ledger FR-012/FR-013, DEVICE smoke §5.
+- Backend **farmer-initiated delivery consent** (2026-06-19): directed email/tenant delivery auto-grants `SHIPMENT_PREPARATION`; pending→active on deliver; revoked/denied blocked.
+- Backend **cross-surface network routing** (2026-06-19): shared `email-to-tenant-resolution.ts` (delivery + inbox fan-out); consent farmers in `resolveFarmerIdsForTenant`; registry + guard + integration test.
+- Dashboard **compliance issues + exporter workflow structural contracts** (2026-06-19): registries, guards, PermissionGates, analytics, Playwright paths #5–#6; backend `requests_operational_issues` entry.
 - Dashboard **CRM/outreach structural contracts phases 1–4** (2026-06-19): registry + 8 guards; send/archive campaign UI; backend network role parity; Playwright golden path #4; `requests:archive` permission; feature-gate + audit parity guards; FEAT doc.
 - Dashboard **CRM/outreach structural contracts** (2026-06-19): `dashboardCrmOutreachRegistry.ts`; guards for contact statuses, campaign/inbox states, request types, network PermissionGate contracts; outreach `requests:create` gate.
 - Dashboard **structural automation phase 2** (2026-06-19): legal/DDS registry, permission matrix, backend role parity, analytics slice guards.
+- Offline **Phase 1b cloud delivery receipt restore** (2026-06-19): server harvest vouchers → local SQLite on Sync now / post-sign-in; scope-aware merged fetch; My Plots delivery counts + Harvests browser hydrate on iPad.
 - Offline **Phase 1 cloud plot restore** (2026-06-19): server → local plot hydration on Sync now; backend list includes geometry; plot server link reconciliation.
 - Offline automation **4.O.2** (2026-06-22): golden field tenant smoke manifest + blocking Expo CI probe; `FIELD_TENANT_SMOKE_*` secrets documented.
 - Offline automation **Maestro seed + asserts** (2026-06-22): CI bootstrap seeds simulator SQLite; tighter plot/settings nightly flows; guard asserts seed wiring.

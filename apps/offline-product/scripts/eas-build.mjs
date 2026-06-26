@@ -16,7 +16,7 @@ if (args.length === 0) {
   process.exit(1);
 }
 
-const result = spawnSync('npx', ['eas-cli', 'build', ...args], {
+const result = spawnSync('npx', ['eas-cli', 'build', '--verbose-logs', ...args], {
   stdio: 'inherit',
   env: {
     ...process.env,

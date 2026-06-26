@@ -33,13 +33,18 @@ export async function resolveFieldHarvestFarmerIds(params: {
     localPlots: params.localPlots,
   });
 
+  const MAX_VOUCHER_SCOPE_IDS = 12;
+  const legacyReceiptFarmerIds = (await listLocalDeliveryReceiptFarmerIds().catch(() => [])).slice(
+    0,
+    4,
+  );
   const voucherFarmerIds = uniqueIds([
     profileFarmerId,
     scope.apiFarmerId,
     ...scope.ownedFarmerIds,
     ...params.localPlots.map((plot) => plot.farmerId ?? ''),
-    ...(await listLocalDeliveryReceiptFarmerIds().catch(() => [])),
-  ]);
+    ...legacyReceiptFarmerIds,
+  ]).slice(0, MAX_VOUCHER_SCOPE_IDS);
 
   return {
     apiFarmerId: scope.apiFarmerId,

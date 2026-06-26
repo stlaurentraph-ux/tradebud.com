@@ -8,6 +8,7 @@ import { TwoFactorSetupDialog } from '@/components/settings/two-factor-setup-dia
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -35,6 +36,7 @@ import {
   type Locale,
 } from '@/lib/locale-policy';
 import {
+  getAuthCopy,
   getNotificationCapabilityCopy,
   getSettingsLicensePageCopy,
   getSettingsPageCopy,
@@ -578,34 +580,37 @@ export default function SettingsPage() {
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium">{getSettingsPageCopy('security_current_password', t)}</label>
-                      <Input
-                        type="password"
+                      <PasswordInput
                         value={passwordForm.currentPassword}
                         onChange={(event) =>
                           setPasswordForm((previous) => ({ ...previous, currentPassword: event.target.value }))
                         }
                         disabled
                         placeholder={getSettingsPageCopy('security_current_password_hint', t)}
+                        showPasswordLabel={getAuthCopy('show_password', t)}
+                        hidePasswordLabel={getAuthCopy('hide_password', t)}
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">{getSettingsPageCopy('security_new_password', t)}</label>
-                      <Input
-                        type="password"
+                      <PasswordInput
                         value={passwordForm.newPassword}
                         onChange={(event) =>
                           setPasswordForm((previous) => ({ ...previous, newPassword: event.target.value }))
                         }
+                        showPasswordLabel={getAuthCopy('show_password', t)}
+                        hidePasswordLabel={getAuthCopy('hide_password', t)}
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium">{getSettingsPageCopy('security_confirm_password', t)}</label>
-                      <Input
-                        type="password"
+                      <PasswordInput
                         value={passwordForm.confirmPassword}
                         onChange={(event) =>
                           setPasswordForm((previous) => ({ ...previous, confirmPassword: event.target.value }))
                         }
+                        showPasswordLabel={getAuthCopy('show_password', t)}
+                        hidePasswordLabel={getAuthCopy('hide_password', t)}
                       />
                     </div>
                     <div className="flex justify-end">

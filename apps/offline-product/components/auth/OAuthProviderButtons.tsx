@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Button } from '@/components/ui/button';
 import { Spacing } from '@/constants/theme';
-import type { OAuthProvider } from '@/features/auth/oauthSignIn';
+import type { OAuthProvider } from '@/features/auth/oauthOrchestrator';
 
 type OAuthProviderButtonsProps = {
   disabled?: boolean;
@@ -27,25 +27,27 @@ export function OAuthProviderButtons({
   const busy = disabled || loadingProvider !== null;
 
   return (
-    <View style={styles.row}>
+    <View style={styles.stack}>
       <Button
         variant="outline"
-        size="sm"
-        style={styles.btn}
+        size="md"
+        fullWidth
         disabled={busy}
         loading={loadingProvider === 'google'}
-        icon={<Ionicons name="logo-google" size={17} color="#4285F4" />}
+        testID="sign-in-oauth-google"
+        icon={<Ionicons name="logo-google" size={18} color="#4285F4" />}
         onPress={onGoogle}
       >
         {loadingProvider === 'google' ? busyLabel : googleLabel}
       </Button>
       <Button
         variant="outline"
-        size="sm"
-        style={styles.btn}
+        size="md"
+        fullWidth
         disabled={busy}
         loading={loadingProvider === 'apple'}
-        icon={<Ionicons name="logo-apple" size={17} color="#111827" />}
+        testID="sign-in-oauth-apple"
+        icon={<Ionicons name="logo-apple" size={18} color="#111827" />}
         onPress={onApple}
       >
         {loadingProvider === 'apple' ? busyLabel : appleLabel}
@@ -55,12 +57,8 @@ export function OAuthProviderButtons({
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
+  stack: {
+    width: '100%',
     gap: Spacing.sm,
-    marginTop: 2,
-  },
-  btn: {
-    flex: 1,
   },
 });

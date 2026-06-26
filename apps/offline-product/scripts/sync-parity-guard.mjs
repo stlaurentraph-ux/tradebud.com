@@ -22,15 +22,50 @@ function main() {
   const issues = [];
   const registry = read('features/sync/farmerArtifactRegistry.ts');
   const pipeline = read('features/sync/runFieldSyncPipeline.ts');
+  const focusRestore = read('features/sync/restoreCloudMediaFromServer.ts');
+  const focusPull = read('features/sync/restoreCloudStateOnFocus.ts');
   const orchestrator = read('features/sync/restoreFarmerCloudState.ts');
   const queue = read('features/sync/processPendingSyncQueue.ts');
   const prefs = read('features/sync/syncFieldDevicePreferences.ts');
+  const prune = read('features/sync/pruneRedundantPendingUploadActions.ts');
 
   const restoreModules = extractNames(registry, 'FARMER_ARTIFACT_RESTORE_MODULES');
   const uploadActions = extractNames(registry, 'PENDING_SYNC_UPLOAD_ACTION_TYPES');
 
+  if (!pipeline.includes('pruneRedundantPendingUploadActions')) {
+    issues.push('runFieldSyncPipeline must call pruneRedundantPendingUploadActions after restore');
+  }
+  if (!focusPull.includes('pruneRedundantPendingUploadActions')) {
+    issues.push('restoreCloudStateOnFocus must call pruneRedundantPendingUploadActions after receipt restore');
+  }
+
+  for (const actionType of uploadActions) {
+    if (!prune.includes(`'${actionType}'`) && !prune.includes(`"${actionType}"`)) {
+      issues.push(`pruneRedundantPendingUploadActions missing handler for ${actionType}`);
+    }
+    if (!prune.includes(`actionType === '${actionType}'`)) {
+      issues.push(`pruneRedundantPendingUploadActions must branch on actionType === '${actionType}'`);
+    }
+  }
+
+  if (!prune.includes('PRUNE_BRANCH_COVERAGE')) {
+    issues.push('pruneRedundantPendingUploadActions must declare PRUNE_BRANCH_COVERAGE for registry parity');
+  }
+
   if (!pipeline.includes('restoreFarmerCloudState')) {
     issues.push('runFieldSyncPipeline must call restoreFarmerCloudState');
+  }
+  if (!focusRestore.includes('restoreLocalPlotsFromServer')) {
+    issues.push('restoreCloudMediaFromServer must call restoreLocalPlotsFromServer (focus-restore pull path)');
+  }
+  if (!focusRestore.includes('warmPlotServerLinksForSync')) {
+    issues.push('restoreCloudMediaFromServer must warm plot_server_links before media restore');
+  }
+  if (!focusPull.includes('restoreCloudMediaFromServer')) {
+    issues.push('restoreCloudStateOnFocus must call restoreCloudMediaFromServer');
+  }
+  if (!focusPull.includes('restoreLocalDeliveryReceiptsFromServer')) {
+    issues.push('restoreCloudStateOnFocus must call restoreLocalDeliveryReceiptsFromServer');
   }
   if (!pipeline.includes('enqueueFarmerCloudSyncActions')) {
     issues.push('runFieldSyncPipeline must call enqueueFarmerCloudSyncActions');

@@ -1,28 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { spawn } from 'node:child_process';
-
-function stripQuotes(value) {
-  if (
-    (value.startsWith('"') && value.endsWith('"')) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-  return value;
-}
-
-function loadTestDbUrlFromRootEnv() {
-  const envPath = resolve(process.cwd(), '..', '.env.local');
-  const content = readFileSync(envPath, 'utf8');
-  const line = content
-    .split(/\r?\n/)
-    .find((entry) => entry.startsWith('TEST_DATABASE_URL='));
-  if (!line) return null;
-  const rawValue = line.slice('TEST_DATABASE_URL='.length).trim();
-  if (!rawValue) return null;
-  return stripQuotes(rawValue);
-}
+import { resolveTestDatabaseUrl } from './db-url-from-env.mjs';
 
 function run() {
   const args = process.argv.slice(2);
@@ -31,12 +8,18 @@ function run() {
     process.exit(1);
   }
 
-  let testDbUrl = process.env.TEST_DATABASE_URL;
+  let testDbUrl = process.env.TEST_DATABASE_URL?.trim();
   if (!testDbUrl) {
     try {
-      testDbUrl = loadTestDbUrlFromRootEnv() ?? undefined;
-    } catch {
-      testDbUrl = undefined;
+      testDbUrl = resolveTestDatabaseUrl();
+    } catch (error) {
+      console.error(
+        error instanceof Error
+          ? error.message
+          : 'TEST_DATABASE_URL is required for integration tests.',
+      );
+      console.error('Tip: npm run db:sync:test-env  then  npm run test:integration');
+      process.exit(1);
     }
   }
 
@@ -45,7 +28,7 @@ function run() {
     shell: false,
     env: {
       ...process.env,
-      ...(testDbUrl ? { TEST_DATABASE_URL: testDbUrl } : {}),
+      TEST_DATABASE_URL: testDbUrl,
     },
   });
 

@@ -3,12 +3,13 @@ import { BillingModule } from '../billing/billing.module';
 import { ConsentModule } from '../consent/consent.module';
 import { DbModule } from '../db/db.module';
 import { HarvestController } from './harvest.controller';
+import { HarvestPublicController } from './harvest.public.controller';
 import { HarvestService } from './harvest.service';
 import { LaunchModule } from '../launch/launch.module';
 
 @Module({
   imports: [DbModule, LaunchModule, BillingModule, ConsentModule],
-  controllers: [HarvestController],
+  controllers: [HarvestController, HarvestPublicController],
   providers: [HarvestService],
   exports: [HarvestService],
 })

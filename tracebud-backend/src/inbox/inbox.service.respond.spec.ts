@@ -28,12 +28,20 @@ describe('InboxService respond fulfillment', () => {
         return { rows: [{ email: 'exporter@tracebud.test' }] };
       }
 
+      if (normalized.includes('FROM campaign_recipient_invites')) {
+        return { rows: [] };
+      }
+
       if (normalized.includes('INSERT INTO request_campaign_recipient_decisions')) {
         return { rows: [{ campaign_id: 'camp_1' }] };
       }
 
       if (normalized.includes('UPDATE request_campaigns')) {
         return { rows: [] };
+      }
+
+      if (normalized.includes('UPDATE crm_contacts') && normalized.includes("status = 'submitted'")) {
+        return { rows: [{ id: 'contact_1' }] };
       }
 
       return { rows: [] };
@@ -60,7 +68,8 @@ describe('InboxService respond fulfillment', () => {
         sql.includes('request_campaign_recipient_decisions') &&
         Array.isArray(params) &&
         params[0] === 'camp_1' &&
-        params[1] === 'exporter@tracebud.test',
+        params[1] === 'exporter@tracebud.test' &&
+        params[3] === 'cooperative_on_behalf',
       ),
     ).toBe(true);
     expect(
@@ -69,6 +78,14 @@ describe('InboxService respond fulfillment', () => {
         const payload = JSON.parse(String(params?.[2] ?? '{}'));
         return payload.notes === 'FPIC packet uploaded' && payload.evidencePackageIds?.includes('pkg_1');
       }),
+    ).toBe(true);
+    expect(
+      calls.some(([sql, params]) =>
+        sql.includes('crm_contacts') &&
+        sql.includes("status = 'submitted'") &&
+        params?.[0] === 'tenant_importer' &&
+        params?.[1] === 'exporter@tracebud.test',
+      ),
     ).toBe(true);
   });
 });

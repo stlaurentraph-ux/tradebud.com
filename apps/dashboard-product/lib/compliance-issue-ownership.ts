@@ -1,6 +1,11 @@
+import {
+  DASHBOARD_OPERATIONAL_ISSUE_KINDS,
+  canPersistOperationalIssueStatus,
+} from '@/lib/dashboardComplianceIssuesRegistry';
+
 export type ComplianceIssueOwnerRole = 'cooperative' | 'exporter' | 'importer' | 'farmer' | 'system';
 
-export type ComplianceIssueKind = 'canonical' | 'campaign' | 'request' | 'upstream_blocker';
+export type ComplianceIssueKind = (typeof DASHBOARD_OPERATIONAL_ISSUE_KINDS)[number];
 
 export function formatOwnerRoleLabel(role: string | null | undefined): string {
   switch (role) {
@@ -50,7 +55,7 @@ export function issueKindBadgeClass(kind: string | null | undefined): string {
 }
 
 export function canPersistIssueStatus(issueId: string, canUpdateStatus?: boolean): boolean {
-  return Boolean(canUpdateStatus && issueId.startsWith('issue_compliance_'));
+  return canPersistOperationalIssueStatus(issueId, canUpdateStatus);
 }
 
 export function isUpstreamBlockerIssue(kind: string | null | undefined): boolean {

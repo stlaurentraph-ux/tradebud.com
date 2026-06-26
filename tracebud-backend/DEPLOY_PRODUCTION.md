@@ -20,6 +20,19 @@ EXPO_PUBLIC_API_URL=https://api.tracebud.com/api
 
 (path includes `/api` because Nest `setGlobalPrefix('api')`).
 
+## Deploy rule (production)
+
+**Use git push to the Railway-linked branch** (`main` or your feature branch with auto-deploy). That builds from the monorepo with **Root Directory** `tracebud-backend`.
+
+Do **not** rely on Railway dashboard **Redeploy** or `railway up` from a subdirectory — those snapshots can miss `tracebud-backend/` and fail with `lstat …/tracebud-backend: no such file or directory`. If a deploy looks stale, push to the linked branch instead.
+
+Post-deploy verification:
+
+```bash
+npm run deploy:smoke -w tracebud-backend
+# Expect: health ok + public probe ok (delivery + campaign preview 404s)
+```
+
 ---
 
 ## Part A — Railway (≈15 minutes)
@@ -39,6 +52,7 @@ In Railway → **Variables**, add (from `tracebud-backend/.env.production.exampl
 |----------|--------|
 | `NODE_ENV` | `production` |
 | `DATABASE_URL` | Supabase → Settings → Database → **Connection string** (pooler, same as local) |
+| `PG_POOL_MAX` | `5` per API replica (optional; defaults to 5 in code) |
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_ANON_KEY` | Supabase anon key |
 | `GFW_API_KEY` | [GFW Data API](https://data-api.globalforestwatch.org/user/login) → API keys |
@@ -117,7 +131,70 @@ This adds:
 - RLS policies on `consent_grants` (defense-in-depth)
 - `farmer_push_devices` (Expo push tokens for consent-request alerts)
 
-### 2c.1 Enable Expo push (geometry + consent alerts)
+### 2d. Delivery buyer invites (unknown email → Resend → signup claim)
+
+Required for field-app **Deliver to email** when the buyer is not on Tracebud yet.
+
+**1. Database**
+
+```bash
+cd tracebud-backend
+# DATABASE_URL = Supabase pooler URL in .env.local
+npm run db:apply:voucher-buyer-invites
+npm run db:verify:voucher-buyer-invites
+```
+
+Supabase CLI alternative: `supabase/migrations/20260623120000_voucher_buyer_invites.sql`.
+
+**2. Railway env** (transactional email)
+
+| Variable | Purpose |
+|----------|---------|
+| `RESEND_API_KEY` | Resend API key |
+| `RESEND_FROM_EMAIL` | Verified sender domain |
+| `RESEND_FROM_NAME` | Display name (optional) |
+| `RESEND_REPLY_TO_EMAIL` | Reply-to (optional) |
+| `TRACEBUD_DASHBOARD_PUBLIC_URL` | Signup/login links in invite email |
+
+```bash
+npm run check:resend
+```
+
+Redeploy backend after env + migration.
+
+**3. Smoke**
+
+- Field app: deliver to a fresh email → invite alert on device.
+- Resend dashboard: `delivery-buyer-invite` received.
+- Dashboard: sign up with that email → delivery appears in buyer vouchers (`voucher_buyer_invites.status = claimed`).
+
+Device checklist: `apps/offline-product/DEVICE_SMOKE_CHECKLIST.md` §5a.
+
+### 2e. Postgres connection hygiene (Supabase)
+
+Before scaling Railway replicas or running many local migration scripts:
+
+```bash
+cd tracebud-backend
+npm run check:db-connection
+```
+
+Railway variables:
+
+| Variable | Recommended |
+|----------|-------------|
+| `DATABASE_URL` | Transaction pooler `:6543` + `?pgbouncer=true` |
+| `PG_POOL_MAX` | `5` per replica (hard cap 20 in code) |
+
+**Local only** (not on Railway): set `TEST_DATABASE_URL` to the Supabase **Test** project pooler (`atisrfxsjjvjekwqcbjk`) for `npm run test:integration`. All `db:apply:*` / `db:verify:*` scripts use `DATABASE_URL` (prod) only. Copy from repo root with `npm run db:sync:test-env` — see `.env.local.example`.
+
+```bash
+curl -sS https://api.tracebud.com/api/health | jq '.database'
+```
+
+Expect `matchesProdProject: true` and `projectRef: "uzsktajlnofosxeqwdwl"`. A test-project ref in production means Railway `DATABASE_URL` is misconfigured.
+
+See `RAILWAY_QUICKSTART.md` §Connection hygiene.
 
 **1. Database** — same step as above (`farmer_push_devices` via `db:apply:consent-sovereignty-v11`).
 

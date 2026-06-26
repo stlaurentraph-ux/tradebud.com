@@ -1,43 +1,11 @@
-### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
-- **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
-- **Tests / collection**:
-  - `locales/en.json` — added 50 missing copy keys from the workflow-copy manifest fallbacks and aligned 11 mismatched values to canonical strings (`en-copy-parity.test.ts` green).
-  - `vitest.config.ts` — excluded `e2e/**` so Playwright's `test()` is not invoked under the vitest runner (golden-paths run in their own CI step).
-- **Lint (0 problems, config unchanged except restoring a convention)**:
-  - `no-require-imports` (16) — `lib/i18n/index.ts` now uses ESM `import` for locale JSON instead of `require()`.
-  - `no-empty-object-type` (1) — `app/harvests/page.tsx` `interface Harvest extends … {}` → `type Harvest = …`.
-  - `no-img-element` (2) — justified disables for the test `next/image` mock and the dynamic XYZ tile grid in `plot-satellite-map.tsx`.
-  - `no-unused-vars` (44) — restored `^_` arg/var/caught ignore pattern in `packages/eslint-config/nextjs.mjs` (repo-wide convention) and deleted ~25 genuinely dead imports/vars.
-  - `exhaustive-deps` (9) + `preserve-manual-memoization` (3) — added missing deps / `useMemo` / `useCallback` wrappers and hoisted nested object props to locals.
-  - `set-state-in-effect` (36) — `demo-data-context.tsx` refactored to `useSyncExternalStore`; remaining 35 effect-driven async-load / hydration resets carry a justified `eslint-disable-next-line` (React Compiler adoption tracked separately).
-- **Verify**: `npx eslint .` → 0 problems; `npx tsc --noEmit` → 0 errors; `npx vitest run` → 584/584.
-- **Status**: branch `fix/dashboard-ci-en-parity-and-react-hooks`.
+### 2026-06-26 (Lane 3 integration — #264 campaign-delivery onto main, PR #307, branch `intake-264-integration`)
 
-### 2026-06-25 (Lane 2 fix — offline persistence write-atomicity + geo round-trip)
-- **Context**: Final extraction from the red-team branch (#298) onto `main`, re-implemented surgically against main's current file (the original commit was entangled with WIP and would not apply cleanly).
-- **Fixes**:
-  - `persistFarmer` / `persistPlots` now wrap their DELETE + reinsert in `withExclusiveTransactionAsync` (BEGIN EXCLUSIVE + rollback on throw). A crash/kill mid-write can no longer leave the farmer profile wiped or the plots table truncated.
-  - Added a `plotsDbLock` (mirroring the existing `farmerDbLock`) so overlapping `persistPlots` calls (local edit vs cloud restore) resolve last-call-wins by arrival order, not IO timing.
-  - **Data-fidelity bug**: `loadAppState` now reads back `declarationLatitude/Longitude/GeoCapturedAt`. These were already written by `persistFarmer` but never loaded, so a farmer's geo declaration was silently lost on every app reload.
-  - Guarded `loadAppState` plot mapping against corrupt `pointsJson` that parses to a non-array (e.g. literal `null`) — previously one bad row threw and aborted the whole load.
-  - Test mock (`expoSqliteMemoryMock`) gained `withTransactionAsync` / `withExclusiveTransactionAsync`.
-- **Verify**: `npm run typecheck` (0 errors), `npm run lint` green, `npx vitest run` → 481/481 (added a geo round-trip regression test).
-- **Status**: pushed as `fix/offline-persistence-atomicity`.
-
-### 2026-06-25 (Lane 2 fix — offline app typecheck now clean)
-- **Context**: After merging #299 (iOS/Android platform + security hardening, clean off `main`), `tsc --noEmit` on `apps/offline-product` still failed with 3 pre-existing errors in `features/sync/`.
-- **Fixes (no behavior change except a crash repair)**:
-  - `autoBackupPolicy.ts` — `params.work.hasWork` → `work.hasWork`. `params` is `{ plots, nowMs }`; `params.work` was `undefined` at runtime, so `evaluateConservativeAutoBackup` threw whenever called. Now uses the local `LocalSyncWorkSnapshot`.
-  - `formatSyncNowUserMessage.ts` — `n: outcome.receiptsRequeued ?? 0` (the `?? 0` guard did not narrow the property type).
-  - `measureCloudParitySummary.ts` — import `loadLocalDeliveryReceiptsForFarmer` from `@/features/state/persistence` (its real home, matching sibling sync files) instead of the non-exporting `@/features/harvest/localDeliveryReceipts`.
-- **Verify**: `npm run typecheck` → 0 errors; `npm run lint` green; `npx vitest run` → 478/478. No registry/state/permission/analytics surface changed.
-- **Status**: pushed as `fix/offline-typecheck-main` (#301); offline app is type-clean on `main` for the first time.
-
-### 2026-06-25 (Lane 2 fix — sync queue mutex fencing token)
-- **Context**: Extracted a self-contained reliability fix from the red-team work (#298) onto `main`. Prevents two pipelines draining the pending sync queue concurrently after a stale-lock force-release.
-- **Fix**: `syncQueueMutex.ts` now assigns a unique fencing token (`currentHolderId`) per lock acquisition. A holder may only mutate shared lock state on release if it is still the current holder, so a hung holder's eventual `finally` becomes a no-op once the lock is force-released and handed to a new acquirer. Adds `releaseStaleSyncQueueLockIfNeeded` (safety valve when a holder outlives `SYNC_*_OPERATION_MS`).
-- **Verify**: `npm run typecheck` (no new errors), `npm run lint` green, `npx vitest run` → 480/480 (incl. 2 new mutex cases). Depends only on `syncOperationLimits` (already on `main`).
-- **Status**: pushed as `fix/offline-sync-queue-mutex-fencing` (#302).
+- **Merge** — integrated the #264 campaign-delivery feature stack onto current `main`; resolved 33 conflicts (ours for #264 features, theirs for landed security/#302, union for analytics baselines). No unmerged paths; JSON baselines valid.
+- **Real-code fixes surfaced by merge** — OAuth callback / Android cold-start, campaign invite preview, SetPassword, harvest multi-plot delivery, sync pipeline, WalkPerimeter.
+- **Offline Vitest harness (test-infra only, not CI-weakening)** — new `test/setup-expo.ts` polyfills `globalThis.expo` for the Node env; `test/stubs/*` stub `react-native`, `expo`, `expo-sqlite`, `expo-notifications`, `@sentry/react-native`, and native OAuth sign-in; `vitest.config.ts` wires `setupFiles` + `resolve.alias` + targeted `server.deps.inline`. Unblocks the 3 previously harness-blocked offline test files; corrected an incomplete WIP fixture in `runFieldSyncPipeline.test.ts` (push-only drain).
+- **Verify** — offline 625/625, dashboard 616/616, backend 523/523; offline typecheck 0, lint 0; structural guards green (offline/dashboard/backend). All GitHub Actions CI lanes green on PR #307.
+- **Known non-blocking** — `tradebud-com` Vercel preview deploy fails on a pre-existing project output-directory misconfig (every recent deploy incl. production on `main` is already `ERROR`); unrelated to this PR. Not changed (Vercel config requires explicit user request).
+- **Status** — pushed for review; no merge without human approval.
 
 ### 2026-06-24 (Lane 2 fix — bulk-plot-import CI regressions on PR #267)
 - **Failing checks**: Backend build (TS2307 missing `field-enumeration.service`) and Dashboard typecheck/build (5 TypeScript errors in bulk import parsers) — both PR-caused by Phases D–F commits.
@@ -46,6 +14,158 @@
 - **Fix applied (this session)**: Applied identical `withSearchPath` connection-string search_path isolation + dynamic schema names to both failing tests.
 - **Verify**: `npm run lint -w tracebud-backend && npm run build -w tracebud-backend` pass; `npm run typecheck -w dashboard-product` passes.
 - **Status**: Dashboard CI check passing; backend lint/build/unit tests passing; integration test fix pushed as `f291e0ca`. Human merge remains blocked pending CI green.
+
+### 2026-06-24 (supplier campaign onboarding — ops hardening, branch `feature/backend-supplier-campaign-onboarding`)
+
+- **Deploy smoke** — public preview probes for delivery receipt + campaign invite (`backend-deploy-smoke.json`, `run-backend-deploy-smoke.mjs`).
+- **Migrations** — `db:apply` / `db:verify` scripts for TB-V16-061–063 + bundle `db:apply:supplier-campaign-onboarding`.
+- **Observability** — `public-preview-observability.ts` structured logs + Sentry breadcrumbs on public preview controllers.
+- **Integration** — `supplier-campaign-onboarding.int.spec.ts` (invite → signup claim → CRM submitted).
+- **Guards** — network routing guard asserts `link-pending-network-invites-on-signup` orchestrator.
+- **Docs** — `FEAT-014-supplier-campaign-onboarding.md`; ops commands in `supplier-onboarding.md`; Railway git-push rule in deploy docs.
+
+### 2026-06-24 (ADR-012 P6 — SMS fallback, desk QR print, delivery attempts)
+
+- **Schema** — TB-V16-067: `campaign_delivery_attempts` audit table for email/WhatsApp/SMS/desk sends.
+- **Backend** — Twilio SMS fallback when WhatsApp is skipped; desk invites get claim tokens + `issueCampaignDeskClaimLink`; token claim supports `desk_only` QR path.
+- **Dashboard** — desk-only recipient rows expose print-ready QR sheet from campaign timeline dialog.
+- **Migrations** — `apply-adr012-outreach-migrations.mjs` applies TB-V16-063/065/066/067 idempotently.
+
+### 2026-06-24 (delivery intake QR — Phase E observability & QA closure)
+
+- **Marketing** — `delivery_qr_preview_viewed` + `marketing_cta_clicked` on `/d/` and `/t/`; client preview via `/api/delivery-preview` proxies.
+- **Playwright** — golden path for delivery receipt preview (mocked API).
+- **QA** — `cooperative-voucher-intake-qa.md` extended for trip QR, handoff, auto-claim, bulk scan.
+- **Dashboard** — Sentry breadcrumbs on delivery preview proxy 404/429.
+
+### 2026-06-24 (ADR-012 P5 — buyer fulfillment provenance)
+
+- **Schema** — TB-V16-066: `fulfillment_source` + `contact_id` on `request_campaign_recipient_decisions`; `require_farmer_app_confirmation` on `request_campaigns`.
+- **Backend** — `campaign-fulfillment-source.ts` derives `farmer_app_email` / `farmer_app_phone` / `cooperative_on_behalf`; inbox + consent grant paths record decisions via `record-campaign-fulfillment-decision.ts`.
+- **Timeline** — recipient onboarding respects strict coop policy (coop fulfillment stays `accepted` until farmer claims when flag set).
+- **Dashboard** — campaign decisions dialog shows green farmer-direct vs amber cooperative fulfillment badges.
+- **Analytics** — `fulfillment_source_recorded` audit events on decision insert.
+
+### 2026-06-24 (ADR-012 P1 — CRM farmer phone reachability)
+
+- **Schema** — TB-V16-063: farmer CRM contacts allow null email when phone present.
+- **Backend** — `crm-contact-reachability.ts`; create/update paths accept `phone_only`; duplicate phone guard per tenant.
+- **Dashboard** — add/edit farmer wizards + CSV import support phone-only producers.
+- **Verification** — backend + dashboard reachability unit tests green.
+
+### 2026-06-24 (ADR-012 P4 — field phone OTP + token claim)
+
+- **Backend** — `claim-campaign-invite-by-token.ts` validates WhatsApp invite tokens against verified phone on bootstrap.
+- **Field app** — phone OTP sign-in for `campaign_phone` variant; persists claim token from deep links; bootstrap sends `claimToken`.
+- **Analytics** — `farmer_auth_phone_otp_*`, `campaign_invite_claimed_by_token`.
+
+### 2026-06-24 (ADR-012 P3 — WhatsApp campaign delivery + claim landing)
+
+- **Schema** — TB-V16-065: `claim_token_hash` / `claim_expires_at` on `campaign_recipient_invites`.
+- **Send path** — phone-only CRM contacts plan `whatsapp` channel; Meta Graph template when `WHATSAPP_*` env set; claim URL via field-auth.
+- **Public API** — `GET /v1/public/requests/campaigns/:id/invite?token=` validates token before field-app deep link.
+- **Dashboard** — recipient timeline shows 📧 / 📱 channel icons.
+- **Verification** — claim token, WhatsApp delivery, delivery-plan, timeline specs (17 backend); dashboard timeline tests (8).
+
+### 2026-06-24 (ADR-012 P2 — contact-centric campaigns)
+
+- **Backend** — `target_contact_ids` on `request_campaigns`; invite rows keyed by `contact_id` with `delivery_channel` (`email` | `desk_only`); TB-V16-064 migration.
+- **Send path** — email branch via Resend; phone-only CRM contacts queue `desk_only` invites (cooperative follow-up until WhatsApp P3).
+- **Dashboard** — campaign wizard sends `contact_id` in targets; drafts allow phone-only farmers; timeline shows `recipient_label` for desk-only rows.
+- **Verification** — `campaign-contact-targets`, `campaign-delivery-plan`, `campaign-recipient-timeline`, `campaign-recipient-invite` specs (11/11); dashboard `campaign-recipient-timeline.test.ts` (7/7).
+
+### 2026-06-24 (delivery intake QR — Phase D hardening)
+
+- **Dashboard** — `/t/[ref]` trip preview; handoff photo hash audit; desk coach marks.
+- **Marketing** — read-only QR on `/d/` and `/t/` preview pages.
+- **Field** — amber advisory icon; show-buyer brightness copy.
+- **Backend** — `plot-capture-quality-policy`; public preview rate limit 45/min/IP.
+
+### 2026-06-24 (delivery intake QR — Phase C desk polish)
+
+- Focus: desk scan ergonomics, scanner feedback, handoff variance UX, public preview clarity.
+- Files changed: `harvest-receive-delivery-panel.tsx`, `voucher-qr-scanner-dialog.tsx`, `delivery-handoff-dialog.tsx`, marketing `/d` + `/t`, dashboard `/d`, `delivery-intake-preview-chrome.tsx`, `en.json`, `workflow-terminology-labels.ts`.
+- Verification: `harvest-receive-delivery-panel.test.tsx` pass.
+
+### 2026-06-24 (field — field-sync-delta cursor wiring)
+
+- **Delta probe** — `GET /v1/me/field-sync-delta` now drives sync mode: persisted cursor (`field_sync_cursor_v1`) stores plot/audit/voucher watermarks; skip full restore when inbound unchanged.
+- **Surfaces** — Settings Sync now, conservative auto-backup, and focus pull (`restoreCloudStateOnFocus`) probe before heavy restore; cursor advanced after successful pipeline.
+- **Analytics** — `field_sync_delta_skipped` when focus pull skips restore; cursor cleared on sign-out.
+- **Guards** — `field-sync-mode-guard.mjs` extended; `fieldSyncDeltaEvaluate.test.ts` + mode/focus tests.
+
+### 2026-06-24 (delivery intake QR — Phase B complete)
+
+- **Handoff** — desk confirms received kg + optional note before staging; `POST /v1/harvest/vouchers/handoff-confirm`; audit `delivery_handoff_confirmed`.
+- **Signup auto-claim** — marketing `/d/` and `/t/` link to `/create-account?claim=` and `/login?next=/harvests?claim=`; onboarding step 3 redirects to claim.
+- **Bulk scan** — continuous camera mode on delivery desk; `@zxing/browser` fallback when native `BarcodeDetector` missing.
+
+### 2026-06-24 (delivery intake QR — Phase B partial)
+
+- **Trip QR** — `T-…` refs on multi-plot delivery; `tracebud.com/t/{ref}` marketing preview; desk claims all vouchers in one scan.
+- **Show buyer** — full-screen QR sheet on single + multi-plot receipts; ECC level H on QR encode.
+- **Migration** — `voucher.delivery_trip_ref` (`tb_v16_060`).
+
+### 2026-06-24 (delivery intake QR — ADR-009 Phase A)
+
+- **ADR-009 + FEAT-011** — smart-link QR (`tracebud.com/d/V-…`), public preview API, desk inbox/scan/auto-claim, field intake advisory.
+- **Backend** — `GET /v1/public/harvest/delivery-preview/:qrRef`; `directed_to_tenant` on tenant voucher list.
+- **Dashboard** — `/d/[ref]` preview, camera scan dialog, directed inbox, `?claim=` auto-stage.
+- **Field** — QR encodes smart URL; pre-submit buyer-intake advisory on unverified plots.
+- **Marketing** — `/d/[ref]` public receipt page with register CTA.
+
+### 2026-06-24 (capture quality S6.4 — geometry approval for shipment)
+
+- **Backend** — `geometry_approved_at` on plot; `tenant_geometry_policy`; `POST /v1/plots/:id/approve-geometry`; package readiness `GEOMETRY_APPROVAL_*` codes; approval cleared on geometry supersession.
+- **Dashboard** — `PlotGeometryApprovalCard` on plot detail; exporter package warnings for unapproved low-confidence plots.
+- **Migrations** — `tb_v16_052`, `tb_v16_053`, Supabase `20260624120000`.
+
+### 2026-06-24 (field — OAuth reliability: iOS fallback, telemetry, guards)
+
+- **iOS Google fallback** — installable iOS (EAS preview/production) falls back to browser OAuth when native Google fails; Metro physical dev unchanged (no double prompt).
+- **Step telemetry** — `oauth_step`, `oauth_browser_fallback` analytics events; `OAuthFlowError` with pipeline step on failures (`native_prompt` → `session_persist`).
+- **Guards** — `ios-oauth-guard.mjs`, `oauth:verify:ios`, `oauth:sso-health-check.mjs`, `oauth-orchestrator-guard.mjs`, `oauth-maestro-guard.mjs`; FR-014 regression ledger row.
+- **Maestro** — `oauth-sign-in-sheet-smoke.yaml` + `oauth-callback-missing-url-smoke.yaml` (§4 subset; Google account picker still manual on device).
+- **Orchestrator** — `oauthOrchestrator.ts` centralizes native/browser sign-in, callback waiters, deep-link completion, and cold-start callback.
+- **OTA gates** — `ota:preview:preflight` (tests + oauth:verify + SSO health + sign-off); production preflight also runs OAuth verify + SSO health.
+
+### 2026-06-24 (field — capture quality S6 + preview OTA)
+
+- **Set password errors** — password-save failures no longer map to generic “Could not sign in”; session/reauth/network-specific copy in Settings.
+- **Pre-upload review card** — low/moderate confidence prompts before plot save with one-tap “Trace on map” + save anyway; analytics `geometry_pre_upload_review_*`.
+- **Product OS** — ADR-008 capture quality tiers; `field-capture-quality-registry.md`; FEAT-003 §S6 roadmap (Bluetooth GNSS last-resort stub).
+- **Preview OTA** — `update:preview:ios` with password + capture-quality bundle (`DEVICE_SMOKE_SIGNOFF_SKIP=1` — signoff commit stale).
+
+### 2026-06-23 (field + backend — structural safeguards for invite + cloud audit defer)
+
+- **Buyer invite guards** — expanded `networkRoutingRegistry` field surfaces; `backend-network-routing-guard` checks signup claim + invite UX modules; DEVICE smoke §5 buyer invite; FR-012 regression ledger row.
+- **Cloud audit defer guards** — `FARMER_CLOUD_SYNC_PREP_OPTIONS` in `farmerArtifactRegistry.ts`; new `cloud-audit-sync-guard.mjs`; `enqueueFarmerCloudSyncActions.test.ts`; FR-013 regression ledger row; registry docs for markers and sync prep.
+
+### 2026-06-19 (field + backend — unknown buyer email delivery)
+
+- **Invite flow** — unknown dashboard email creates voucher with `intended_recipient_email`, `voucher_buyer_invites` row, optional Resend invite; returns `buyerInvite` on harvest POST.
+- **Signup claim** — `claimPendingDeliveryBuyerInvitesOnSignup` runs on dashboard signup + workspace setup; sets `intended_recipient_tenant_id`, activates consent, marks invite `claimed`; buyer sees voucher in dashboard.
+- **Ship ops** — `db:apply:voucher-buyer-invites`, Supabase mirror `20260623120000`, `DEPLOY_PRODUCTION.md` §2d, device checklist §5a.
+- **Postgres connection hygiene** — default `PG_POOL_MAX=5`, pool drain on shutdown, shared `migration-db-client.mjs` + `check:db-connection`, Railway/docs updated.
+- **Field UX** — clearer Deliver to copy; legacy unknown-email Alert → QR-only retry; invite success Alert → receipt.
+- **Tests** — integration unknown-email path; `deliveryBuyerInviteMessages.test.ts`.
+
+### 2026-06-19 (backend — farmer-initiated delivery consent)
+
+- **Directed delivery** — `ensureActiveConsentForDirectedDelivery` auto-creates/activates `SHIPMENT_PREPARATION` grants when farmer delivers to resolved buyer tenant/email; revoked/denied still block.
+- **Tests** — `delivery-consent-grant.spec.ts`; integration test for cold-email delivery path; field app copy updated.
+
+### 2026-06-19 (backend — cross-surface network routing)
+
+- **Shared resolver** — `email-to-tenant-resolution.ts` (signup contacts + admin_users) used by delivery routing and inbox campaign fan-out.
+- **Buyer visibility** — `resolveFarmerIdsForTenant` unions active `consent_grants` farmers.
+- **Structural** — `networkRoutingRegistry.ts`, guard, integration test `network-routing-delivery.int.spec.ts`.
+
+### 2026-06-19 (dashboard — compliance issues + exporter structural)
+
+- **Operational issues** — `dashboardComplianceIssuesRegistry.ts` + 3 guards; kanban/detail PermissionGate; analytics (`ISSUE_*`); Playwright `compliance-issues-status.spec.ts`; backend `requests_operational_issues` binding.
+- **Exporter critical path** — `dashboardExporterWorkflowRegistry.ts` + guard; package detail `assemble-shipment-action` testid; Playwright `exporter-package-readiness.spec.ts`.
+- **Golden paths** — Playwright manifest 4 → 6 (slice 4.6); `qa:structural:ci` green.
 
 ### 2026-06-19 (dashboard — CRM/outreach phase 4)
 

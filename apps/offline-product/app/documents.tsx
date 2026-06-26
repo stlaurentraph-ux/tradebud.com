@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { StackGradientHeader } from '@/components/layout/StackGradientHeader';
-import { router, useFocusEffect } from 'expo-router';
+import { router } from 'expo-router';
 
 import { ProducerDeclarationsSection } from '@/components/evidence/ProducerDeclarationsSection';
 import { ProducerSupportingFilesSection } from '@/components/evidence/ProducerSupportingFilesSection';
@@ -14,10 +14,7 @@ import { ActionButton as Button } from '@/components/ui/action-button';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
-import { subscribeServerPlotSyncChanged, emitServerPlotSyncChanged } from '@/features/sync/plotServerSync';
-import { hasSyncAuthSession } from '@/features/api/syncAuthSession';
-import { prepareFieldSyncContext } from '@/features/sync/resolveFieldSyncScope';
-import { restoreCloudMediaFromServer } from '@/features/sync/restoreCloudMediaFromServer';
+import { useFocusCloudPull, useReloadOnServerPlotSyncChanged } from '@/features/sync/useFocusCloudPull';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import {
   loadAllPlotReadinessStates,
@@ -34,6 +31,7 @@ import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import {
   deletePlotEvidenceItem,
+  loadAppState,
   loadEvidenceForPlot,
   persistPlotEvidenceItem,
   type PlotEvidenceItem,
@@ -169,85 +167,47 @@ export default function DocumentsScreen() {
     void refreshSupportingSyncMeta();
   }, [refreshSupportingSyncMeta]);
 
-  useEffect(() => {
-    return subscribeServerPlotSyncChanged(() => {
-      void reloadFromDisk().then(async () => {
-        await refreshProfileDocs();
-        await refreshSupportingSyncMeta();
-        await refreshPlotReadiness();
-      });
-    });
-  }, [reloadFromDisk, refreshPlotReadiness, refreshProfileDocs, refreshSupportingSyncMeta]);
-
-  const restoreCloudMediaIfSignedIn = useCallback(async () => {
-    if (!farmer?.id || !hasSyncAuthSession()) return;
-    try {
-      const { farmerId, ownedFarmerIds } = await prepareFieldSyncContext({
-        profileFarmerId: farmer.id,
-        localPlots: plots,
-      });
-      const result = await restoreCloudMediaFromServer({
-        apiFarmerId: farmerId,
-        ownedFarmerIds,
-        localPlots: plots,
-        localFarmer: farmer,
-      });
-      const restored =
-        result.evidenceRestored +
-        result.groundTruthRestored +
-        result.landTitleRestored +
-        (result.devicePreferencesRestored ? 1 : 0) +
-        (result.profilePhotoRestored ? 1 : 0) +
-        (result.mappingDraftRestored ? 1 : 0) +
-        result.offlinePacksQueued;
-      if (restored > 0) {
-        emitServerPlotSyncChanged();
+  const refreshAfterCloudPull = useCallback(async () => {
+    await refreshProfileDocs();
+    await refreshSupportingSyncMeta();
+    await refreshPlotReadiness();
+    if (isSignedIn && farmer?.id) {
+      const alreadyQueued = await producerSupportingHasPendingSync(farmer.id);
+      if (!alreadyQueued) {
+        await tryUploadSupportingDocs();
       }
-    } catch {
-      // Non-blocking; Settings Sync now remains the full path.
     }
-    // Keyed on farmer?.id (identity) so a new farmer object reference does not retrigger restore; plots covers data changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [farmer?.id, plots]);
+    if (farmer?.id && isSignedIn) {
+      const diskState = await loadAppState();
+      const rows = await fetchServerPlotListForUi({
+        profileFarmerId: farmer.id,
+        localPlots: diskState.plots.length > 0 ? diskState.plots : plots,
+      }).catch(() => []);
+      setBackendPlots(rows ?? []);
+    } else {
+      setBackendPlots([]);
+    }
+  }, [
+    farmer?.id,
+    isSignedIn,
+    plots,
+    refreshPlotReadiness,
+    refreshProfileDocs,
+    refreshSupportingSyncMeta,
+    tryUploadSupportingDocs,
+  ]);
 
-  useFocusEffect(
-    useCallback(() => {
-      let cancelled = false;
-      void (async () => {
-        await reloadFromDisk();
-        if (cancelled) return;
-        if (isSignedIn && farmer?.id) {
-          await restoreCloudMediaIfSignedIn();
-          if (cancelled) return;
-          await reloadFromDisk();
-        }
-        await refreshProfileDocs();
-        await refreshSupportingSyncMeta();
-        if (isSignedIn && farmer?.id) {
-          const alreadyQueued = await producerSupportingHasPendingSync(farmer.id);
-          if (!alreadyQueued) {
-            await tryUploadSupportingDocs();
-          }
-        }
-        if (cancelled) return;
-        if (farmer?.id && isSignedIn) {
-          void fetchServerPlotListForUi({
-            profileFarmerId: farmer.id,
-            localPlots: plots,
-          })
-            .then((rows) => {
-              if (!cancelled) setBackendPlots(rows ?? []);
-            })
-            .catch(() => undefined);
-        } else if (!cancelled) {
-          setBackendPlots([]);
-        }
-      })();
-      return () => {
-        cancelled = true;
-      };
-    }, [farmer?.id, isSignedIn, plots, reloadFromDisk, refreshProfileDocs, refreshSupportingSyncMeta, restoreCloudMediaIfSignedIn, tryUploadSupportingDocs]),
-  );
+  useFocusCloudPull({
+    isSignedIn,
+    reloadFromDisk,
+    onPullComplete: refreshAfterCloudPull,
+    enabled: Boolean(farmer?.id),
+  });
+
+  useReloadOnServerPlotSyncChanged({
+    reloadFromDisk,
+    onSyncChanged: refreshAfterCloudPull,
+  });
 
   useEffect(() => {
     void refreshPlotReadiness();

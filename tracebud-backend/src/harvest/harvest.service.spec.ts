@@ -110,6 +110,59 @@ describe('HarvestService.evaluateDdsPackageReadiness', () => {
     );
   });
 
+  it('warns when package plot geometry is not approved and capture confidence is low', async () => {
+    const pool = {
+      query: jest.fn().mockImplementation(async (sql: string) => {
+        if (String(sql).includes('plot_tenure_verification')) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (String(sql).includes('compliance_issues')) {
+          return { rows: [], rowCount: 0 };
+        }
+        if (String(sql).includes('geometry_approved_at')) {
+          return {
+            rows: [
+              {
+                plot_id: 'plot_geo_1',
+                plot_name: 'Weak GPS Plot',
+                geometry_approved_at: null,
+                geometry_capture: {
+                  geometry_confidence_tier: 'low',
+                  geometry_confidence_score: 38,
+                },
+              },
+            ],
+            rowCount: 1,
+          };
+        }
+        return { rows: [], rowCount: 1 };
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+    jest.spyOn(service, 'getDdsPackageDetail').mockResolvedValue({
+      package: { id: 'pkg_geo' },
+      vouchers: [
+        {
+          id: 'v_geo',
+          kg: 42,
+          harvest_date: '2026-04-16',
+          declared_area_ha: 1.1,
+          plot_name: 'Weak GPS Plot',
+          plot_id: 'plot_geo_1',
+        },
+      ],
+    } as any);
+
+    const result = await service.evaluateDdsPackageReadiness('pkg_geo', 'tenant_1');
+
+    expect(result.status).toBe('warning_review');
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'GEOMETRY_APPROVAL_RECOMMENDED' }),
+      ]),
+    );
+  });
+
   it('blocks package when linked plot tenure review is required', async () => {
     const pool = {
       query: jest.fn().mockImplementation(async (sql: string) => {
@@ -645,6 +698,42 @@ describe('HarvestService.listFieldVouchersForAuthUser', () => {
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining('SELECT fp.id FROM farmer_profile fp WHERE fp.user_id = $1::uuid'),
       ['auth-user'],
+    );
+  });
+});
+
+describe('HarvestService.getDeliveryPublicPreview', () => {
+  it('returns eligibility summary without sensitive fields', async () => {
+    const pool = {
+      query: jest.fn().mockResolvedValue({
+        rowCount: 1,
+        rows: [
+          {
+            qr_code_ref: 'V-PUBLIC01',
+            kg: 420,
+            harvest_date: '2026-06-20',
+            plot_name: 'Block A',
+            plot_status: 'verified',
+            dds_package_id: null,
+            plot_id: 'plot-1',
+            intended_recipient_tenant_id: 'tenant-a',
+            created_at: '2026-06-20T12:00:00.000Z',
+          },
+        ],
+      }),
+    };
+    const service = makeHarvestService(pool as any);
+
+    const preview = await service.getDeliveryPublicPreview('V-PUBLIC01');
+
+    expect(preview).toEqual(
+      expect.objectContaining({
+        qrRef: 'V-PUBLIC01',
+        kg: 420,
+        eligibleForBuyerIntake: true,
+        directedToBuyer: true,
+        intakeBlockReason: null,
+      }),
     );
   });
 });

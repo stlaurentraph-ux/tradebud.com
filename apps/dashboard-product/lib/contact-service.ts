@@ -16,7 +16,7 @@ export type {
 export interface ContactRecord {
   id: string;
   full_name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   organization: string | null;
   contact_type: ContactActivityType;
@@ -99,8 +99,9 @@ export async function listContacts(): Promise<ContactRecord[]> {
 
 export async function createContact(input: {
   full_name: string;
-  email: string;
+  email?: string | null;
   phone?: string | null;
+  phone_only?: boolean;
   organization?: string | null;
   contact_type?: ContactActivityType;
   processing_subtype?: ProcessingFacilitySubtype | null;
@@ -148,8 +149,9 @@ export async function updateContact(
   id: string,
   input: {
     full_name?: string;
-    email?: string;
+    email?: string | null;
     phone?: string | null;
+    phone_only?: boolean;
     organization?: string | null;
     contact_type?: ContactActivityType;
     processing_subtype?: ProcessingFacilitySubtype | null;

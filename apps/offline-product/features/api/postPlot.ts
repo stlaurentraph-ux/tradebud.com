@@ -127,6 +127,8 @@ export async function postPlotToBackend(params: {
   precisionMeters: number | null;
   cadastralKey?: string | null;
   geometryCapture?: PlotGeometryCaptureMetadata | null;
+  producerContactId?: string | null;
+  assignmentId?: string | null;
 }): Promise<PostPlotToBackendResult> {
   let accessToken: string | null;
   try {
@@ -154,6 +156,12 @@ export async function postPlotToBackend(params: {
         precisionMeters: params.precisionMeters,
         cadastralKey: params.cadastralKey ?? null,
         geometryCapture: params.geometryCapture ?? null,
+        ...(params.producerContactId?.trim()
+          ? { producerContactId: params.producerContactId.trim() }
+          : {}),
+        ...(params.assignmentId?.trim()
+          ? { assignmentId: params.assignmentId.trim() }
+          : {}),
       }),
     });
     if (!res.ok) {
@@ -323,6 +331,7 @@ export async function postHarvestToBackend(params: {
   clientEventId?: string;
   deliverToTenantId?: string;
   deliverToEmail?: string;
+  deliveryTripRef?: string;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -346,6 +355,7 @@ export async function postHarvestToBackend(params: {
         clientEventId: params.clientEventId ?? null,
         deliverToTenantId: params.deliverToTenantId ?? null,
         deliverToEmail: params.deliverToEmail ?? null,
+        deliveryTripRef: params.deliveryTripRef ?? null,
       }),
     });
 

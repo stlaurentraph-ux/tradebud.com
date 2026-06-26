@@ -27,6 +27,9 @@ import { mapPlotUploadErrorMessage } from '@/features/errors/mapApiErrorToUserMe
 import { resolveClientPlotId } from '@/features/plots/clientPlotId';
 import { isSyncSignedIn } from '@/features/auth/signInSync';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
+import { useEnumerationOptional } from '@/features/enumeration/EnumerationContext';
+import { resolveCaptureIntent } from '@/features/enumeration/resolveCaptureIntent';
+import { EnumerationActiveMemberBanner } from '@/components/enumeration/EnumerationActiveMemberBanner';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { navigateHome } from '@/features/navigation/routes';
 import {
@@ -73,11 +76,21 @@ import {
   assessPlotGeometryQuality,
   localPlotRefsForGeometry,
   localPolygonQualityMessage,
+  type LocalGeometryQualityIssue,
 } from '@/features/compliance/plotGeometryQuality';
 import {
   hasUnsavedMappingProgress,
   runWithMappingDiscardConfirm,
 } from '@/features/mapping/mappingDiscardConfirm';
+import {
+  isWalkStartGateReady,
+  isWeakGpsForWalkCoach,
+  resolveWalkLiveHint,
+  shouldSuggestAlternateCapture,
+  walkStartGateSecondsRemaining,
+  WALK_CAPTURE_POOR_GPS_M,
+  type WalkCoachHintTone,
+} from '@/features/mapping/walkCaptureCoaching';
 import {
   hasDuplicatePlotName,
   proposeUniqueDefaultPlotName,
@@ -109,6 +122,32 @@ function geometryQualityAlertTitle(
     : t('walk_invalid_boundary_title');
 }
 
+function promptBlockingPlotGeometryIssues(params: {
+  blockingIssues: LocalGeometryQualityIssue[];
+  t: (key: string) => string;
+  onWalkAgain: () => void;
+  onTraceOnMap: () => void;
+}): boolean {
+  const { blockingIssues, t, onWalkAgain, onTraceOnMap } = params;
+  const message = localPolygonQualityMessage(blockingIssues, t);
+  const title = geometryQualityAlertTitle(blockingIssues, t);
+  const recoverable = blockingIssues.some(
+    (issue) => issue.code === 'GEO-104' || issue.code === 'GEO-105',
+  );
+
+  if (!recoverable) {
+    Alert.alert(title, message);
+    return true;
+  }
+
+  Alert.alert(title, message, [
+    { text: t('cancel'), style: 'cancel' },
+    { text: t('walk_geometry_walk_again'), onPress: onWalkAgain },
+    { text: t('walk_geo_confidence_cta_trace'), onPress: onTraceOnMap },
+  ]);
+  return true;
+}
+
 type CaptureMethod = 'walk' | 'draw' | 'centroid' | 'pin';
 type CaptureMethodPage = CaptureMethod;
 
@@ -125,6 +164,8 @@ export function WalkPerimeterScreen() {
     samples,
     area,
     precisionMeters,
+    lastSpeedMps,
+    gpsFixDropped,
     isRecording,
     lastError,
     mode,
@@ -139,12 +180,22 @@ export function WalkPerimeterScreen() {
   } = useWalkPerimeter({ onLocationDenied });
   const { farmer, setFarmer, plots, addPlot, updatePlot, isAppReady } = useAppState();
   const { openSignIn } = useSignInSheet();
+  const enumeration = useEnumerationOptional();
   const params = useLocalSearchParams<{ editPlotId?: string }>();
   const editPlotId = typeof params.editPlotId === 'string' ? params.editPlotId : undefined;
   const editingPlot = useMemo(
     () => (editPlotId ? plots.find((p) => p.id === editPlotId) : undefined),
     [editPlotId, plots],
   );
+
+  useEffect(() => {
+    if (!enumeration?.isEnumerationMode || editPlotId || enumeration.activeMember) return;
+    Alert.alert(
+      t('enumeration_no_active_member_title'),
+      t('enumeration_no_active_member_body'),
+      [{ text: t('close'), onPress: () => router.back() }],
+    );
+  }, [editPlotId, enumeration?.activeMember, enumeration?.isEnumerationMode, t]);
   const editInitDone = useRef<string | null>(null);
   const [farmerIdInput, setFarmerIdInput] = useState(farmer?.id ?? '');
   const [farmerNameInput, setFarmerNameInput] = useState(farmer?.name ?? '');
@@ -167,7 +218,6 @@ export function WalkPerimeterScreen() {
   const [cornerHoldAnchor, setCornerHoldAnchor] = useState(0);
   const [pinHoldAnchor, setPinHoldAnchor] = useState(0);
   const wasRecordingRef = useRef(false);
-  const [showGpsWarning, setShowGpsWarning] = useState(false);
   const [deviceRegion, setDeviceRegion] = useState<Region | null>(null);
   const [manualTraceImagery, setManualTraceImagery] = useState<{
     imagerySource: ManualTraceImagerySource;
@@ -179,6 +229,10 @@ export function WalkPerimeterScreen() {
   const [alternateCaptureOpen, setAlternateCaptureOpen] = useState(false);
   const [mapScrollLock, setMapScrollLock] = useState(false);
   const [drawTracingActive, setDrawTracingActive] = useState(false);
+  const [gpsStableSeconds, setGpsStableSeconds] = useState(0);
+  const [walkStartGateOverride, setWalkStartGateOverride] = useState(false);
+  const [weakGpsWalkSeconds, setWeakGpsWalkSeconds] = useState(0);
+  const alternateCaptureSuggestedRef = useRef(false);
 
   useMappingDraftCloudSync({
     farmerId: farmer?.id,
@@ -284,23 +338,49 @@ export function WalkPerimeterScreen() {
 
   useEffect(() => {
     if (!isRecording) return;
-    const t = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setRecordingSeconds((s) => s + 1), 1000);
+    return () => clearInterval(timer);
   }, [isRecording]);
 
+  const showCapturePageEarly = !showCompletionPage;
+  const isWalkCaptureModeEarly = captureMethod === 'walk' && selectedMethodPage === 'walk';
+
   useEffect(() => {
-    if (!isRecording) return;
-    if (precisionMeters != null && precisionMeters > 10) {
-      setShowGpsWarning(true);
-      const to = setTimeout(() => setShowGpsWarning(false), 2200);
-      return () => clearTimeout(to);
+    if (!showCapturePageEarly || !isWalkCaptureModeEarly || isRecording) {
+      setGpsStableSeconds(0);
+      return;
     }
-    if (recordingSeconds > 0 && recordingSeconds % 8 === 0 && Math.random() > 0.7) {
-      setShowGpsWarning(true);
-      const to = setTimeout(() => setShowGpsWarning(false), 2200);
-      return () => clearTimeout(to);
+    const tick = setInterval(() => {
+      const preview = previewPrecisionMeters ?? precisionMeters;
+      if (preview != null && preview <= 10) {
+        setGpsStableSeconds((seconds) => Math.min(seconds + 1, 6));
+      } else {
+        setGpsStableSeconds(0);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [
+    captureMethod,
+    isRecording,
+    isWalkCaptureModeEarly,
+    precisionMeters,
+    previewPrecisionMeters,
+    selectedMethodPage,
+    showCapturePageEarly,
+  ]);
+
+  useEffect(() => {
+    if (!isRecording || captureMethod !== 'walk') {
+      setWeakGpsWalkSeconds(0);
+      return;
     }
-  }, [isRecording, precisionMeters, recordingSeconds]);
+    const tick = setInterval(() => {
+      if (isWeakGpsForWalkCoach(precisionMeters)) {
+        setWeakGpsWalkSeconds((seconds) => seconds + 1);
+      }
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [captureMethod, isRecording, precisionMeters]);
 
   const boundaryPointCount = points.length;
 
@@ -705,6 +785,68 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     }
   }, []);
 
+  const resetCaptureFlowState = useCallback(() => {
+    setShowCompletionPage(false);
+    setShowDetailedForm(false);
+    setSelectedMethodPage(null);
+    reset();
+    setCompletionPhotos([]);
+    lastRegisteredPlotIdRef.current = null;
+    lastSavedPlotRef.current = null;
+  }, [reset]);
+
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+  const createLocalFarmerId = () => {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
+  const resolveProfileId = useCallback((): string => {
+    if (enumeration?.isEnumerationMode && enumeration.activeMember?.farmerId) {
+      return enumeration.activeMember.farmerId;
+    }
+    const typed = farmerIdInput.trim();
+    if (isUuid(typed)) return typed;
+    if (farmer?.id && isUuid(farmer.id)) return farmer.id;
+    return createLocalFarmerId();
+  }, [enumeration?.activeMember?.farmerId, enumeration?.isEnumerationMode, farmer?.id, farmerIdInput]);
+
+  const resolveProducerContactId = useCallback((): string | undefined => {
+    const farmerId = resolveProfileId();
+    const contactId = enumeration?.producerContactIdForFarmer(farmerId);
+    return contactId?.trim() || undefined;
+  }, [enumeration, resolveProfileId]);
+
+  const resolveAssignmentId = useCallback((): string | undefined => {
+    const farmerId = resolveProfileId();
+    const assignmentId = enumeration?.assignmentIdForFarmer(farmerId);
+    return assignmentId?.trim() || undefined;
+  }, [enumeration, resolveProfileId]);
+
+  const finishEnumerationPlotVisit = useCallback(
+    (next: 'documents' | 'home') => {
+      const pid = lastRegisteredPlotIdRef.current;
+      const farmerId = resolveProfileId();
+      const captureIntent = lastSavedPlotRef.current?.geometryCapture?.captureIntent ?? null;
+      void enumeration?.recordPlotCapturedForMember(farmerId, { captureIntent });
+      resetCaptureFlowState();
+      if (next === 'documents' && pid) {
+        router.replace(`/plot/${encodeURIComponent(pid)}?sub=documents`);
+        return;
+      }
+      router.replace('/(tabs)');
+    },
+    [enumeration, resetCaptureFlowState, resolveProfileId],
+  );
+
   const openShortPathIfPlotSaved = useCallback(
     (newPlotId: string | undefined, savedPlot: Plot | null) => {
       if (!newPlotId || !savedPlot) {
@@ -753,21 +895,28 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const resolveGeometryCaptureForSave = useCallback((): PlotGeometryCaptureMetadata => {
     const precision = precisionMeters ?? previewPrecisionMeters ?? null;
+    const kind = captureMethod === 'pin' ? 'point' : 'polygon';
     const assessment =
       geometryConfidence ??
       assessGeometryConfidence({
         captureMethod,
-        kind: captureMethod === 'pin' ? 'point' : 'polygon',
+        kind,
         precisionMeters: precision,
         points,
         areaHa: area.hectares,
         declaredAreaHa: parsedDeclaredAreaHa,
       });
+    const captureIntent = resolveCaptureIntent({
+      kind,
+      captureMethod,
+      declaredAreaHa: parsedDeclaredAreaHa,
+    });
     return buildPlotGeometryCaptureMetadata({
       captureMethod,
       assessment,
       manualTraceImagery: captureMethod === 'draw' ? manualTraceImagery : null,
       precisionMeters: precision,
+      captureIntent,
     });
   }, [
     area.hectares,
@@ -788,43 +937,35 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       declaredAreaHectares?: number | null,
       geometryCapture?: PlotGeometryCaptureMetadata | null,
     ) => {
-      if (!farmer?.id || !isSyncSignedIn()) return;
+      if (!resolveProfileId() || !isSyncSignedIn()) return;
+      const uploadFarmerId = resolveProfileId();
       const retry = () => {
         postPlotToBackend({
-          farmerId: farmer.id,
+          farmerId: uploadFarmerId,
           clientPlotId: resolveClientPlotId({ id: plotId }),
           name: displayName.trim() || undefined,
           geometry,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
           geometryCapture: geometryCapture ?? null,
+          producerContactId: resolveProducerContactId(),
+          assignmentId: resolveAssignmentId(),
         }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, retry));
       };
       retry();
     },
-    [farmer?.id, handlePlotUploadResult, precisionMeters],
+    [handlePlotUploadResult, precisionMeters, resolveAssignmentId, resolveProducerContactId, resolveProfileId],
   );
 
-  const isUuid = (value: string) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  const isEnumerationCapture = Boolean(
+    enumeration?.isEnumerationMode && enumeration.activeMember,
+  );
 
-  const createLocalFarmerId = () => {
-    if (typeof globalThis.crypto?.randomUUID === 'function') {
-      return globalThis.crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  };
-
-  const resolveProfileId = useCallback((): string => {
-    const typed = farmerIdInput.trim();
-    if (isUuid(typed)) return typed;
-    if (farmer?.id && isUuid(farmer.id)) return farmer.id;
-    return createLocalFarmerId();
-  }, [farmer?.id, farmerIdInput]);
+  const geometryComparisonPlots = useMemo(() => {
+    if (!enumeration?.isEnumerationMode || !enumeration.activeMember) return plots;
+    const farmerId = enumeration.activeMember.farmerId;
+    return plots.filter((plot) => plot.farmerId === farmerId);
+  }, [enumeration?.activeMember, enumeration?.isEnumerationMode, plots]);
 
   const suggestedPlotName = useMemo(
     () => proposeUniqueDefaultPlotName(plots, resolveProfileId()),
@@ -914,6 +1055,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     safeClearBoundary();
     // Stay in trace mode so the map does not flip marker/overlay modes while clearing.
   }, [safeClearBoundary]);
+
+  const restartWalkedBoundaryCapture = useCallback(() => {
+    safeClearBoundary();
+    if (captureMethod === 'walk' && selectedMethodPage === 'walk') {
+      void startRecording();
+    }
+  }, [captureMethod, safeClearBoundary, selectedMethodPage, startRecording]);
 
   const canSavePlot = points.length >= 3 && area.squareMeters > 0;
   const canSavePointPlot = points.length >= 1;
@@ -1147,29 +1295,92 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     if (!showCapturePage || captureMethod !== 'walk' || selectedMethodPage !== 'walk') {
       return null;
     }
-    if (!isRecording) {
-      if (points.length >= 3) {
-        return t('walk_hint_close_loop');
-      }
-      return null;
-    }
-    if (points.length >= 3 && area.hectares >= 0.02) {
-      return t('walk_hint_close_loop');
-    }
-    if (effectivePrecisionMeters != null && effectivePrecisionMeters > 15) {
-      return t('walk_tip_recording_phone');
-    }
-    return t('walk_tip_walk_edge');
+    const hint = resolveWalkLiveHint({
+      isRecording,
+      pointCount: points.length,
+      areaHectares: area.hectares,
+      precisionMeters: effectivePrecisionMeters,
+      speedMps: isRecording ? lastSpeedMps : null,
+      gpsFixDropped,
+      boundaryPoints: points,
+    });
+    if (!hint) return null;
+    return {
+      text: hint.params ? t(hint.key, hint.params) : t(hint.key),
+      tone: hint.tone,
+    };
   }, [
     area.hectares,
     captureMethod,
     effectivePrecisionMeters,
+    gpsFixDropped,
     isRecording,
-    points.length,
+    lastSpeedMps,
+    points,
     selectedMethodPage,
     showCapturePage,
     t,
   ]);
+
+  const walkPreviewPrecision = previewPrecisionMeters ?? precisionMeters;
+  const walkStartGateReady = isWalkStartGateReady({
+    precisionMeters: walkPreviewPrecision,
+    stableSeconds: gpsStableSeconds,
+    override: walkStartGateOverride,
+  });
+  const walkStartGateRemaining = walkStartGateSecondsRemaining(gpsStableSeconds);
+
+  const handleStartWalkRecording = useCallback(() => {
+    if (!walkStartGateReady) return;
+    alternateCaptureSuggestedRef.current = false;
+    setWeakGpsWalkSeconds(0);
+    void startRecording();
+  }, [startRecording, walkStartGateReady]);
+
+  const handleStartWalkAnyway = useCallback(() => {
+    setWalkStartGateOverride(true);
+    alternateCaptureSuggestedRef.current = false;
+    setWeakGpsWalkSeconds(0);
+    void startRecording();
+  }, [startRecording]);
+
+  useEffect(() => {
+    if (
+      !shouldSuggestAlternateCapture({
+        isRecording,
+        alreadySuggested: alternateCaptureSuggestedRef.current,
+        weakGpsSeconds: weakGpsWalkSeconds,
+      })
+    ) {
+      return;
+    }
+    alternateCaptureSuggestedRef.current = true;
+    Alert.alert(t('walk_coach_alternate_title'), t('walk_coach_alternate_body'), [
+      {
+        text: t('walk_coach_keep_walking'),
+        style: 'cancel',
+      },
+      {
+        text: t('walk_method_centroid'),
+        onPress: () => switchToCaptureMethod('centroid', 'centroid'),
+      },
+      {
+        text: t('walk_geo_confidence_cta_trace'),
+        onPress: () => {
+          void enterManualTraceRef.current('confidence_cta');
+        },
+      },
+    ]);
+  }, [isRecording, switchToCaptureMethod, t, weakGpsWalkSeconds]);
+
+  const walkCoachHintStyle = useCallback(
+    (tone: WalkCoachHintTone) => {
+      if (tone === 'warning') return [styles.walkCaptureHint, styles.walkCoachHintWarning];
+      if (tone === 'caution') return [styles.walkCaptureHint, styles.walkCoachHintCaution];
+      return styles.walkCaptureHint;
+    },
+    [styles.walkCaptureHint, styles.walkCoachHintCaution, styles.walkCoachHintWarning],
+  );
 
   const drawCaptureHint = useMemo(() => {
     if (!showCapturePage || captureMethod !== 'draw') {
@@ -1211,7 +1422,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       holdPercent: cornerHoldPercent,
       savedCornerCount: points.length,
       secondsRemaining: cornerHoldSecondsRemaining,
-      poorGps: effectivePrecisionMeters != null && effectivePrecisionMeters > 15,
+      poorGps: effectivePrecisionMeters != null && effectivePrecisionMeters > WALK_CAPTURE_POOR_GPS_M,
     });
   }, [
     captureMethod,
@@ -1460,15 +1671,17 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       kind: 'point',
       points: pointPointsPayload,
       areaHa: declaredAreaHectares ?? 0,
-      otherPlots: localPlotRefsForGeometry(plots, editingPlot?.id),
+      otherPlots: localPlotRefsForGeometry(geometryComparisonPlots, editingPlot?.id),
       excludePlotId: editingPlot?.id,
       phase: 'save',
     });
     if (pointGeometryQuality.blockingIssues.length > 0) {
-      Alert.alert(
-        geometryQualityAlertTitle(pointGeometryQuality.blockingIssues, t),
-        localPolygonQualityMessage(pointGeometryQuality.blockingIssues, t),
-      );
+      promptBlockingPlotGeometryIssues({
+        blockingIssues: pointGeometryQuality.blockingIssues,
+        t,
+        onWalkAgain: restartWalkedBoundaryCapture,
+        onTraceOnMap: openManualTraceFromConfidence,
+      });
       return;
     }
 
@@ -1536,17 +1749,19 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
 
-    if (farmer && newPlotId) {
+    if (newPlotId) {
       const plotIdForUpload = newPlotId;
       const tryServerUpload = () => {
         postPlotToBackend({
-          farmerId: farmer.id,
+          farmerId,
           clientPlotId: resolveClientPlotId({ id: plotIdForUpload }),
           name: name.trim() || undefined,
           geometry: pointGeometryForUpload,
           declaredAreaHa: declaredAreaHectares ?? null,
           precisionMeters: precisionMeters ?? null,
           geometryCapture,
+          producerContactId: resolveProducerContactId(),
+          assignmentId: resolveAssignmentId(),
         }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, tryServerUpload));
       };
       finishNewPlotSave(name, newPlotId, tryServerUpload);
@@ -1560,23 +1775,21 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
 
-    if (precisionMeters != null && precisionMeters > 10) {
-      Alert.alert(t('walk_poor_gps_title'), t('walk_poor_gps_body'));
-    }
-
     const polygonGeometryQuality = assessPlotGeometryQuality({
       kind: 'polygon',
       points,
       areaHa: area.hectares,
-      otherPlots: localPlotRefsForGeometry(plots, editingPlot?.id),
+      otherPlots: localPlotRefsForGeometry(geometryComparisonPlots, editingPlot?.id),
       excludePlotId: editingPlot?.id,
       phase: 'save',
     });
     if (polygonGeometryQuality.blockingIssues.length > 0) {
-      Alert.alert(
-        geometryQualityAlertTitle(polygonGeometryQuality.blockingIssues, t),
-        localPolygonQualityMessage(polygonGeometryQuality.blockingIssues, t),
-      );
+      promptBlockingPlotGeometryIssues({
+        blockingIssues: polygonGeometryQuality.blockingIssues,
+        t,
+        onWalkAgain: restartWalkedBoundaryCapture,
+        onTraceOnMap: openManualTraceFromConfidence,
+      });
       return;
     }
 
@@ -1710,17 +1923,19 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         return;
       }
 
-      if (farmer && points.length > 0 && !editingPlot && newPlotId) {
+      if (points.length > 0 && !editingPlot && newPlotId) {
         const plotIdForUpload = newPlotId;
         const tryServerUpload = () => {
           postPlotToBackend({
-            farmerId: farmer.id,
+            farmerId,
             clientPlotId: resolveClientPlotId({ id: plotIdForUpload }),
             name: name.trim() || undefined,
             geometry: geometryForUpload,
             declaredAreaHa: declaredAreaHectares ?? null,
             precisionMeters: precisionMeters ?? null,
             geometryCapture,
+            producerContactId: resolveProducerContactId(),
+            assignmentId: resolveAssignmentId(),
           }).then((r: PostPlotToBackendResult) => handlePlotUploadResult(r, tryServerUpload));
         };
         finishNewPlotSave(name, newPlotId, tryServerUpload);
@@ -1736,7 +1951,15 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           detail: localPolygonQualityMessage(polygonGeometryQuality.warnings, t),
         }),
         [
-          { text: t('geo_quality_fix_boundary'), style: 'cancel' },
+          {
+            text: t('geo_quality_fix_boundary'),
+            style: 'cancel',
+            onPress: restartWalkedBoundaryCapture,
+          },
+          {
+            text: t('walk_geo_confidence_cta_trace'),
+            onPress: openManualTraceFromConfidence,
+          },
           { text: t('geo_quality_save_on_phone'), onPress: completePolygonSave },
         ],
       );
@@ -1815,9 +2038,25 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const renderWalkCaptureActions = () => (
     <View style={{ gap: 8 }}>
+      {!isRecording && !walkStartGateReady ? (
+        <ThemedText type="caption" style={styles.walkCoachStartChip} testID="walk-coach-start-settling">
+          {walkStartGateRemaining > 0
+            ? t('walk_coach_start_settling', { seconds: walkStartGateRemaining })
+            : t('walk_wait_strong_gps')}
+        </ThemedText>
+      ) : null}
+      {!isRecording && walkStartGateReady ? (
+        <ThemedText type="caption" style={[styles.walkCoachStartChip, styles.walkCoachStartReady]}>
+          {t('walk_coach_start_ready')}
+        </ThemedText>
+      ) : null}
       {walkCaptureHint ? (
-        <ThemedText type="caption" style={styles.walkCaptureHint}>
-          {walkCaptureHint}
+        <ThemedText
+          type="caption"
+          style={walkCoachHintStyle(walkCaptureHint.tone)}
+          testID="walk-coach-hint"
+        >
+          {walkCaptureHint.text}
         </ThemedText>
       ) : null}
       {!isRecording ? (
@@ -1825,7 +2064,8 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           variant="secondary"
           style={{ backgroundColor: '#0A7F59', minHeight: 56 }}
           icon={<Ionicons name="play-outline" size={20} color="#FFFFFF" />}
-          onPress={startRecording}
+          onPress={handleStartWalkRecording}
+          disabled={!walkStartGateReady}
           fullWidth
         >
           {points.length === 0 ? t('start_walking') : t('walk_start_recording')}
@@ -1841,6 +2081,13 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           {t('walk_stop_and_save')}
         </Button>
       )}
+      {!isRecording && !walkStartGateReady ? (
+        <Pressable onPress={handleStartWalkAnyway} hitSlop={8} testID="walk-start-anyway">
+          <ThemedText type="caption" style={styles.walkCoachStartAnyway}>
+            {t('walk_coach_start_anyway')}
+          </ThemedText>
+        </Pressable>
+      ) : null}
       {!isRecording && points.length >= 3 ? (
         <Button variant="primary" onPress={handleWalkStopAndSave} fullWidth>
           {editingPlot ? t('walk_save_boundary') : t('walk_complete_geolocation')}
@@ -2025,6 +2272,21 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
 
   const renderPinCaptureActions = () => (
     <View style={{ gap: 8 }}>
+      {isEnumerationCapture && estimatedSize !== 'gte4' ? (
+        <Button
+          variant="outline"
+          testID="enumeration-map-full-boundary"
+          onPress={() => {
+            trackEvent(ANALYTICS_EVENTS.ENUMERATION_CAPTURE_INTENT_FULL_BOUNDARY, {
+              farmerId: enumeration?.activeMember?.farmerId ?? null,
+            });
+            switchToCaptureMethod('walk', 'walk');
+          }}
+          fullWidth
+        >
+          {t('enumeration_map_full_boundary')}
+        </Button>
+      ) : null}
       {isRecording ? (
         <View style={styles.averagingTrackCompact}>
           <View
@@ -2203,6 +2465,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             },
           ]}
         >
+        {isEnumerationCapture && enumeration?.activeMember ? (
+          <EnumerationActiveMemberBanner member={enumeration.activeMember} />
+        ) : null}
         {!showDetailedForm ? (
           <>
             <Card variant="elevated" style={styles.plotLandingCombinedCard}>
@@ -2379,6 +2644,10 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         fullWidth
                         style={{ minHeight: 56 }}
                         onPress={() => {
+                          if (isEnumerationCapture) {
+                            finishEnumerationPlotVisit('documents');
+                            return;
+                          }
                           const pid = lastRegisteredPlotIdRef.current;
                           setShowCompletionPage(false);
                           setShowDetailedForm(false);
@@ -2392,15 +2661,23 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                           router.replace('/(tabs)/explore');
                         }}
                       >
-                        {t('walk_completion_add_land_papers')}
+                        {isEnumerationCapture
+                          ? t('enumeration_completion_add_tenure')
+                          : t('walk_completion_add_land_papers')}
                       </Button>
-                      <ThemedText type="caption" style={styles.completionLandHint}>
-                        {t('walk_completion_land_papers_hint')}
-                      </ThemedText>
+                      {!isEnumerationCapture ? (
+                        <ThemedText type="caption" style={styles.completionLandHint}>
+                          {t('walk_completion_land_papers_hint')}
+                        </ThemedText>
+                      ) : null}
                       <Button
                         variant="secondary"
                         fullWidth
                         onPress={() => {
+                          if (isEnumerationCapture) {
+                            finishEnumerationPlotVisit('home');
+                            return;
+                          }
                           const pid = lastRegisteredPlotIdRef.current;
                           setShowCompletionPage(false);
                           setShowDetailedForm(false);
@@ -2414,7 +2691,9 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                           router.replace('/(tabs)/explore');
                         }}
                       >
-                        {t('walk_completion_view_plot')}
+                        {isEnumerationCapture
+                          ? t('enumeration_next_member')
+                          : t('walk_completion_view_plot')}
                       </Button>
                     </View>
                   </>
@@ -2455,26 +2734,28 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       />
                     ) : null}
 
-                    <Pressable
-                      onPress={() => {
-                        const pid = lastRegisteredPlotIdRef.current;
-                        setShowCompletionPage(false);
-                        setShowDetailedForm(false);
-                        setSelectedMethodPage(null);
-                        reset();
-                        setCompletionPhotos([]);
-                        if (pid) {
-                          router.replace(`/plot/${encodeURIComponent(pid)}`);
-                          return;
-                        }
-                        router.replace('/(tabs)/explore');
-                      }}
-                      style={styles.completionSkipLink}
-                    >
-                      <ThemedText type="caption" style={styles.completionSkipLinkText}>
-                        {t('walk_completion_skip_photos')}
-                      </ThemedText>
-                    </Pressable>
+                    {!isEnumerationCapture ? (
+                      <Pressable
+                        onPress={() => {
+                          const pid = lastRegisteredPlotIdRef.current;
+                          setShowCompletionPage(false);
+                          setShowDetailedForm(false);
+                          setSelectedMethodPage(null);
+                          reset();
+                          setCompletionPhotos([]);
+                          if (pid) {
+                            router.replace(`/plot/${encodeURIComponent(pid)}`);
+                            return;
+                          }
+                          router.replace('/(tabs)/explore');
+                        }}
+                        style={styles.completionSkipLink}
+                      >
+                        <ThemedText type="caption" style={styles.completionSkipLinkText}>
+                          {t('walk_completion_skip_photos')}
+                        </ThemedText>
+                      </Pressable>
+                    ) : null}
                   </>
                 )}
 
@@ -2530,6 +2811,14 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                       youMarkerFollowsPosition={isRecording}
                     />
                   </MapView>
+                  {isRecording && gpsFixDropped && points.length > 0 ? (
+                    <View style={styles.walkCoachMapChip} pointerEvents="none" testID="walk-coach-gps-paused">
+                      <Ionicons name="pause-circle-outline" size={14} color="#FFFFFF" />
+                      <ThemedText type="caption" style={styles.walkCoachMapChipText}>
+                        {t('walk_coach_gps_paused_map')}
+                      </ThemedText>
+                    </View>
+                  ) : null}
                   {isRecording ? (
                     <View style={styles.recordingMapBadge} pointerEvents="none">
                       <Animated.View
