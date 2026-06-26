@@ -44,7 +44,7 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H12 | Offline sync | iOS/Android | Pending-sync queue silently FIFO-evicts at 1000 cap (`persistence.native.ts:1074`) | Block enqueue w/ user error + `sync_queue_evicted` event | [x] emits `sync_queue_overflow_evicted` audit on eviction |
 | H13 | Offline sync | iOS/Android | SQLite boot failure still sets `isAppReady=true` (`AppStateContext.tsx:173`) | Error/recovery state; don't mark ready | [x] `bootError` + `SplashGate` recovery UI |
 | H14 | Offline auth | all | Raw auth/OAuth/sync errors → Sentry unsanitized (`analytics.ts:88`, `callback.tsx:105`, `reportSyncFailure.ts:12`) | `sanitizeAnalyticsProperties`; stable error codes | [x] |
-| H15 | Offline auth | iOS/Android | Production OAuth uses custom scheme, not verified App Links (`eas.json:45`) | Enable associatedDomains/App Links for prod; scheme dev-only | [ ] |
+| H15 | Offline auth | iOS/Android | Production OAuth uses custom scheme, not verified App Links (`eas.json:45`) | Enable associatedDomains/App Links for prod; scheme dev-only | [x] PR pending |
 | H16 | Offline auth | all | `fieldRoleHasPermission` defined but never enforced at runtime | `useFieldPermission` gating sync/harvest/evidence; wire blocked-roles | [x] PR #323 |
 | H17 | Offline auth | iOS/Android/web | Legacy plaintext sync password fallback in SQLite (`syncAuthStorage.ts:54-69`) | Force migrate-or-clear on boot; remove password fallback | [x] |
 | H18 | Offline auth | iOS/Android | Farmer PII unencrypted in SQLite; SQLCipher deferred | Encrypt-at-rest or formally accept + document for v1 | [ ] |
