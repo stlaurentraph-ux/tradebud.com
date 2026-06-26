@@ -16,17 +16,10 @@
 - **Verify**: typecheck 0, lint 0, `harvestBackTarget.test.ts` 4/4, device-qa-preflight OK.
 - **Status**: branch `fix/offline-b5-b6`.
 
-### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
-- **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
-- **Tests / collection**:
-  - `locales/en.json` — added 50 missing copy keys from the workflow-copy manifest fallbacks and aligned 11 mismatched values to canonical strings (`en-copy-parity.test.ts` green).
-  - `vitest.config.ts` — excluded `e2e/**` so Playwright's `test()` is not invoked under the vitest runner (golden-paths run in their own CI step).
-- **Lint (0 problems, config unchanged except restoring a convention)**:
-  - `no-require-imports` (16) — `lib/i18n/index.ts` now uses ESM `import` for locale JSON instead of `require()`.
-  - `no-empty-object-type` (1) — `app/harvests/page.tsx` `interface Harvest extends … {}` → `type Harvest = …`.
-  - `no-img-element` (2) — justified disables for the test `next/image` mock and the dynamic XYZ tile grid in `plot-satellite-map.tsx`.
-  - `no-unused-vars` (44) — restored `^_` arg/var/caught ignore pattern in `packages/eslint-config/nextjs.mjs` (repo-wide convention) and deleted ~25 genuinely dead imports/vars.
-  - `exhaustive-deps` (9) + `preserve-manual-memoization` (3) — added missing deps / `useMemo` / `useCallback` wrappers and hoisted nested object props to locals.
-  - `set-state-in-effect` (36) — `demo-data-context.tsx` refactored to `useSyncExternalStore`; remaining 35 effect-driven async-load / hydration resets carry a justified `eslint-disable-next-line` (React Compiler adoption tracked separately).
-- **Verify**: `npx eslint .` → 0 problems; `npx tsc --noEmit` → 0 errors; `npx vitest run` → 584/584.
-- **Status**: branch `fix/dashboard-ci-en-parity-and-react-hooks`.
+### 2026-06-26 (Lane 1 guardrails — CI dashboard gate + path-filter gate, audit B7)
+- **Context**: Dashboard `lint typecheck test` ran with `continue-on-error: true`, so regressions merged green. Path-filtered jobs that skip entirely can satisfy branch protection without running checks.
+- **Fixes**:
+  - Removed `continue-on-error` from dashboard-product lint/typecheck/test step (verified green locally: 584 tests).
+  - Added `ci-path-filter-gate` PR job: when paths-filter marks an app as changed, the matching CI job must `success` (not `skipped`/`failure`).
+- **Note**: Enabling the new gate as a required GitHub check is human gate **0.H** — this PR only adds the job.
+- **Status**: branch `chore/automation-ci-dashboard-gate`.
