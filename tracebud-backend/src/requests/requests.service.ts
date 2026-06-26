@@ -950,6 +950,19 @@ export class RequestsService {
     if (!this.verifyDecisionToken(input.campaignId, recipientEmail, input.token)) {
       throw new BadRequestException('Invalid decision token.');
     }
+    const activeCampaign = await this.pool.query<{ id: string }>(
+      `
+        SELECT id
+        FROM request_campaigns
+        WHERE id = $1
+          AND status IN ('RUNNING', 'PARTIAL')
+        LIMIT 1
+      `,
+      [input.campaignId],
+    );
+    if (!activeCampaign.rows[0]) {
+      throw new BadRequestException('Decision intent can only be recorded for active campaigns.');
+    }
     const insertedDecision = await this.pool.query(
       `
         INSERT INTO request_campaign_recipient_decisions (
@@ -985,12 +998,13 @@ export class RequestsService {
           END,
           updated_at = NOW()
         WHERE id = $1
+          AND status IN ('RUNNING', 'PARTIAL')
         RETURNING *
       `,
       [input.campaignId, input.decision],
     );
     if (!updated.rows[0]) {
-      throw new BadRequestException('Campaign not found for decision intent recording.');
+      throw new BadRequestException('Decision intent can only be recorded for active campaigns.');
     }
     const campaign = this.mapRow(updated.rows[0]);
 
