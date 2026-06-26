@@ -13,7 +13,15 @@
   - Blocking Expo CI step `release:preflight:production` with `RELEASE_PREFLIGHT_STRICT=1` + GitHub secret injection.
   - `release-preflight-guard.mjs` wired into `qa:structural`.
 - **Ops**: add `EXPO_PUBLIC_SENTRY_DSN` + `EXPO_PUBLIC_GOOGLE_*` to GitHub Actions (see `ci-secrets-and-fixtures.md`).
-- **Branch**: `fix/offline-release-preflight-h24`.
+- **Status**: merged via PR #317.
+
+### 2026-06-26 (Lane 2 fix — Maestro golden path on PR + Android emulator, audit H25)
+- **Context**: Maestro `settings-sync-smoke` golden path only ran on `main` push (macOS); PRs got wiring preflight only; no Android E2E lane.
+- **Fixes**:
+  - `offline-maestro.yml` — iOS + Android golden path on `pull_request` and `push`.
+  - Android lane via `reactivecircus/android-emulator-runner` + `maestro-ci-bootstrap-emulator.sh` / `maestro-ci-golden-path-android.sh`.
+  - Manifest + `maestro-golden-path-guard.mjs` in `qa:structural`.
+- **Branch**: `fix/offline-maestro-pr-android-h25`.
 
 ### 2026-06-26 (Lane 2 fix — backend audit POST rate cap, audit H8)
 - **Context**: `/v1/audit` POST routes were fully exempt from rate limiting — audit spam could bypass per-IP/user budgets.

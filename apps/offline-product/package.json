@@ -37,6 +37,8 @@
     "qa:maestro:preflight": "node ./scripts/maestro-ci-preflight.mjs",
     "qa:maestro:write-baseline": "node ./scripts/maestro-ci-preflight.mjs --write-baseline",
     "qa:maestro:golden-path": "bash ./scripts/maestro-ci-golden-path.sh",
+    "qa:maestro:golden-path:android": "bash ./scripts/maestro-ci-golden-path-android.sh",
+    "qa:maestro:golden-path:assert": "node ./scripts/maestro-golden-path-guard.mjs",
     "qa:maestro:nightly": "bash ./scripts/maestro-ci-nightly-smoke.sh",
     "qa:maestro:nightly:assert": "node ./scripts/maestro-nightly-smoke-guard.mjs",
     "security:preflight": "node ./scripts/security-preflight.mjs",

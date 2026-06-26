@@ -53,8 +53,8 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H21 | Offline UI | all | Home readiness stats stale after plot work (`index.tsx:60-94`) | `useFocusEffect(refreshPlotReadiness)` | [x] already wired |
 | H22 | Offline UI | Android | `androidMapsConfig` guard unused → blank maps if API key missing | Render config-missing placeholder at map mount | [x] PR #319 |
 | H23 | Infra | CI | Post-deploy smokes `exit 0` when secrets unset | Fail on main-deploy when required secrets missing | [x] PR #316 |
-| H24 | Infra | iOS/Android | `eas.json` prod omits anon key/Sentry DSN/Google IDs; `release:preflight` not in CI | Add preflight/secret-assertion to CI | [x] PR `fix/offline-release-preflight-h24` |
-| H25 | Infra | iOS/Android/CI | Maestro golden path on `push:main` only; no Android E2E | Run on PR; add Android emulator lane | [ ] |
+| H24 | Infra | iOS/Android | `eas.json` prod omits anon key/Sentry DSN/Google IDs; `release:preflight` not in CI | Add preflight/secret-assertion to CI | [x] PR #317 |
+| H25 | Infra | iOS/Android/CI | Maestro golden path on `push:main` only; no Android E2E | Run on PR; add Android emulator lane | [x] PR #318 |
 | H26 | Infra | iOS/Android | Sentry mobile plugin points at `sentry.io` but org is EU `de.sentry.io` (`app.config.js:17`) | Set plugin `url: https://de.sentry.io/` | [x] |
 
 ---

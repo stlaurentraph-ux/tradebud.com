@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "slice": "H25",
+  "flowsBaseline": "qa/automation-baselines/maestro-flows.json",
+  "goldenPathFlow": "settings-sync-smoke.yaml",
+  "workflowFile": ".github/workflows/offline-maestro.yml",
+  "iosJobName": "Maestro golden path (macOS)",
+  "androidJobName": "Maestro golden path (Android)",
+  "ciTriggers": ["pull_request", "push"],
+  "androidEmulator": {
+    "apiLevel": 34,
+    "profile": "pixel_6"
+  }
+}
