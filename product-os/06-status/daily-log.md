@@ -1,3 +1,12 @@
+### 2026-06-26 (Lane 2 fix — offline field permission enforcement, audit H16)
+- **Context**: `fieldRoleHasPermission` and blocked dashboard roles were defined in the registry but never enforced at sync/harvest/evidence runtime paths.
+- **Fixes**:
+  - `fieldPermissionGate.ts` + `useFieldPermission` hook — runtime checks via JWT role + registry matrix.
+  - Manual sync pipeline, harvest cloud submit, and ground-truth photo upload gate on `sync:manual`, `harvest:log`, and `evidence:upload`.
+  - Settings shows `field_permission_denied` when sync is blocked for role.
+- **Guards**: `role-permission-guard.mjs` + `security-preflight.mjs` wiring checks; `fieldPermissionGate.test.ts` (5 cases).
+- **Branch**: `fix/offline-field-permission-h16`.
+
 ### 2026-06-26 (Lane 2 fix — purge legacy plaintext sync passwords, audit H17)
 - **Context**: `syncAuthStorage` still read/wrote farmer passwords in SQLite settings when SecureStore was unavailable (web) or before migration.
 - **Fixes**:

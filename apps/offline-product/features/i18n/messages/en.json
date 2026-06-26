@@ -1169,6 +1169,7 @@
   "sync_queue_smart_pass_retrying": "Smart sweep pass 1/2: retrying items",
   "sync_queue_smart_sweep_label": "Smart sweep",
   "sync_session_expired_short": "Session expired. Please sign in again in Settings.",
+  "field_permission_denied": "This account cannot use field app features. Sign in with a farmer or agent account.",
   "sync_status": "Backup",
   "sync_status_section": "Backup",
   "synced_plots": "Synced plots (backend)",

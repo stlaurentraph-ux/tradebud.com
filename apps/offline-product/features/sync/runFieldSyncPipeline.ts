@@ -40,6 +40,10 @@ import { classifyPlotListFailure, classifySyncFailure } from '@/features/sync/sy
 import { resolveSyncReachFailedShortMessage } from '@/features/sync/syncReachabilityMessage';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
+import {
+  assertFieldAppPermission,
+  FieldPermissionDeniedError,
+} from '@/features/auth/fieldPermissionGate';
 
 export type FieldSyncPipelineParams = {
   accessToken: string;
@@ -72,6 +76,7 @@ export type FieldSyncPipelineResult = {
   stoppedForAuth?: boolean;
   /** Plots merged from server during restore — caller should reload local state when > 0. */
   plotsRestored?: number;
+  permissionDenied?: boolean;
 };
 
 function mergeQueueResult(
@@ -133,6 +138,21 @@ export async function runFieldSyncPipeline(
     maxQueuePasses = 4,
     onPhase,
   } = params;
+
+  try {
+    await assertFieldAppPermission('sync:manual');
+  } catch (error) {
+    if (error instanceof FieldPermissionDeniedError) {
+      return {
+        outcome: {},
+        lastPlotUploadResult: null,
+        syncResultMessage: '',
+        skipQueueDrain: true,
+        permissionDenied: true,
+      };
+    }
+    throw error;
+  }
 
   const setPhase = (phase: SyncQueuePhase) => {
     onPhase?.(phase);

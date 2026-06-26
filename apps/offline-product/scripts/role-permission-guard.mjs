@@ -67,6 +67,43 @@ function main() {
     }
   }
 
+  const permissionGate = read('features/auth/fieldPermissionGate.ts');
+  if (!permissionGate.includes('fieldRoleHasPermission')) {
+    issues.push('fieldPermissionGate.ts must use fieldRoleHasPermission');
+  }
+  if (!permissionGate.includes('DASHBOARD_ROLES_BLOCKED_FROM_FIELD_APP')) {
+    issues.push('fieldPermissionGate.ts must use DASHBOARD_ROLES_BLOCKED_FROM_FIELD_APP');
+  }
+
+  const syncPipeline = read('features/sync/runFieldSyncPipeline.ts');
+  if (!syncPipeline.includes('assertFieldAppPermission')) {
+    issues.push('runFieldSyncPipeline.ts must assert sync:manual permission');
+  }
+
+  const submitHarvest = read('features/harvest/submitHarvest.ts');
+  if (!submitHarvest.includes("checkFieldAppPermission('harvest:log')")) {
+    issues.push('submitHarvest.ts must check harvest:log permission');
+  }
+
+  const groundTruthSync = read('features/evidence/syncGroundTruthPhotosWithFiles.ts');
+  if (!groundTruthSync.includes("checkFieldAppPermission('evidence:upload')")) {
+    issues.push('syncGroundTruthPhotosWithFiles.ts must check evidence:upload permission');
+  }
+
+  const useFieldPermission = read('features/auth/useFieldPermission.ts');
+  if (!useFieldPermission.includes('checkFieldAppPermissionForRole')) {
+    issues.push('useFieldPermission.ts must use checkFieldAppPermissionForRole');
+  }
+  if (
+    !useFieldPermission.includes('const can =') ||
+    !useFieldPermission.includes('const denyReason =')
+  ) {
+    issues.push('useFieldPermission.ts must expose can() and denyReason()');
+  }
+  if (!useFieldPermission.includes('refresh')) {
+    issues.push('useFieldPermission.ts must expose refresh()');
+  }
+
   if (issues.length === 0) {
     console.log('role-permission-guard: OK');
     process.exit(0);
