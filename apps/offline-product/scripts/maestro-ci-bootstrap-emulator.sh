@@ -59,9 +59,4 @@ export MAESTRO_APP_ID="$APP_ID"
 # Maestro driver handshake can exceed the 15s Android default on cold CI emulators.
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
 
-echo "==> Launching Tracebud once before Maestro driver handshake"
-adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
-adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
-sleep 5
-
-echo "Android bootstrap ready for Maestro."
+echo "Android bootstrap ready for Maestro (flow uses launchApp clearState)."

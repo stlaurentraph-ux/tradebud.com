@@ -80,10 +80,11 @@ jobs:
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       IPHONE_DEVICE: iPhone 16
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      MAESTRO_SEED_SKIP: '1'
     defaults:
       run:
         working-directory: apps/offline-product
@@ -122,6 +123,14 @@ jobs:
       - name: Maestro wiring preflight
         run: npm run qa:maestro:preflight
 
+      - name: Require EXPO_TOKEN (EAS simulator install)
+        run: |
+          set -euo pipefail
+          if [ -z "${EXPO_TOKEN}" ]; then
+            echo "::error::EXPO_TOKEN secret is required — expo run:ios exceeds the 120m job budget."
+            exit 1
+          fi
+
       - name: Run Maestro golden path
         run: npm run qa:maestro:golden-path
 
@@ -136,6 +145,7 @@ jobs:
     timeout-minutes: 120
     env:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
+      MAESTRO_SEED_SKIP: '1'
       EXPO_PUBLIC_API_URL: https://api.tracebud.com/api
       EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
       EXPO_PUBLIC_OAUTH_BRIDGE_URL: https://app.tracebud.com/auth/callback
@@ -181,6 +191,16 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-maestro-${{ runner.os }}-${{ hashFiles('apps/offline-product/package-lock.json') }}
+          restore-keys: |
+            gradle-maestro-${{ runner.os }}-
 
       - name: Assemble debug APK (outside emulator)
         run: |

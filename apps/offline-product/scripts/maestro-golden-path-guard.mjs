@@ -47,6 +47,34 @@ function assertManifestShape(manifest) {
   }
 }
 
+function assertGoldenPathFlow(manifest) {
+  const flow = readOffline(`.maestro/flows/${manifest.goldenPathFlow}`);
+  if (!flow.includes('extendedWaitUntil')) {
+    throw new Error(`${manifest.goldenPathFlow} must wait for boot before tapping tabs`);
+  }
+  if (!flow.includes('tab-home')) {
+    throw new Error(`${manifest.goldenPathFlow} must wait for tab-home (SplashGate boot)`);
+  }
+  if (!flow.includes('clearState')) {
+    throw new Error(`${manifest.goldenPathFlow} must launchApp with clearState on CI`);
+  }
+  const bootWaitMs = manifest.goldenPathBootWaitMs;
+  if (!bootWaitMs || bootWaitMs < 60000) {
+    throw new Error('manifest goldenPathBootWaitMs must be >= 60000');
+  }
+}
+
+function assertGoldenPathScripts() {
+  const iosGolden = readOffline('scripts/maestro-ci-golden-path.sh');
+  const androidGolden = readOffline('scripts/maestro-ci-golden-path-android.sh');
+  if (!iosGolden.includes('MAESTRO_SEED_SKIP')) {
+    throw new Error('iOS golden path must default MAESTRO_SEED_SKIP=1');
+  }
+  if (!androidGolden.includes('MAESTRO_SEED_SKIP')) {
+    throw new Error('Android golden path must default MAESTRO_SEED_SKIP=1');
+  }
+}
+
 function assertFlowsBaseline(manifest) {
   const baseline = JSON.parse(readOffline(manifest.flowsBaseline));
   if (baseline.goldenPathFlow !== manifest.goldenPathFlow) {
@@ -101,6 +129,22 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('assembleDebug')) {
     throw new Error(`${manifest.workflowFile} must prebuild/assembleDebug before emulator Maestro`);
   }
+  if (!workflow.includes('MAESTRO_SEED_SKIP')) {
+    throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);
+  }
+  if (!workflow.includes('EXPO_TOKEN secret is required')) {
+    throw new Error(`${manifest.workflowFile} macOS job must fail fast without EXPO_TOKEN`);
+  }
+  if (!workflow.includes('timeout-minutes: 120') || !workflow.includes('maestro-golden-path:')) {
+    throw new Error(`${manifest.workflowFile} macOS golden path must allow 120m timeout`);
+  }
+  if (!workflow.includes('Cache Gradle')) {
+    throw new Error(`${manifest.workflowFile} Android job must cache Gradle`);
+  }
+  const iosTimeout = manifest.iosTimeoutMinutes;
+  if (!iosTimeout || iosTimeout < 120) {
+    throw new Error('manifest iosTimeoutMinutes must be >= 120');
+  }
   const emulatorOptions = manifest.androidEmulator?.emulatorOptions;
   if (!emulatorOptions || !workflow.includes('swiftshader_indirect')) {
     throw new Error('workflow emulator-options must use swiftshader_indirect (manifest parity)');
@@ -129,6 +173,8 @@ function main() {
   const manifest = loadManifest();
   assertManifestShape(manifest);
   assertFlowsBaseline(manifest);
+  assertGoldenPathFlow(manifest);
+  assertGoldenPathScripts();
   assertAndroidRunner(manifest);
   assertWorkflow(manifest);
   assertPackageScripts();

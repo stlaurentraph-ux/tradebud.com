@@ -101,6 +101,7 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 
 | testID | Screen |
 |--------|--------|
+| `tab-home` | Bottom tab → Home (boot wait anchor for CI golden path) |
 | `tab-my-plots` | Bottom tab → My Plots |
 | `tab-settings` | Bottom tab → Settings |
 | `settings-sync-now` | Settings → Sync now (signed in) |

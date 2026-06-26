@@ -1,7 +1,18 @@
 appId: com.tracebud.app
 ---
 # Settings → Backup section (Sync now when signed in, sign-in CTA otherwise).
-- launchApp
+- launchApp:
+    clearState: true
+- waitForAnimationToEnd
+# SplashGate + SQLite boot (H13) can take 30–90s on cold CI emulators.
+- extendedWaitUntil:
+    visible:
+      id: "tab-home"
+    timeout: 120000
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 60000
 - tapOn:
     id: "tab-settings"
 - assertVisible:

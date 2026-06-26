@@ -7,6 +7,9 @@
   "iosJobName": "Maestro golden path (macOS)",
   "androidJobName": "Maestro golden path (Android)",
   "ciTriggers": ["pull_request", "push"],
+  "iosTimeoutMinutes": 120,
+  "maestroSeedSkip": true,
+  "goldenPathBootWaitMs": 120000,
   "androidEmulator": {
     "apiLevel": 34,
     "profile": "pixel_6",
