@@ -51,7 +51,7 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H19 | Offline UI | all (Android worst) | Live `MapView` per plot row (`explore.tsx:300`, `PlotMapPreview.tsx:70`) → ANR/crash | Static snapshot/SVG thumbnail or `FlatList` virtualization | [ ] |
 | H20 | Offline UI | all | Monolithic `AppStateContext` + non-memoized `SignInSheetContext` value → global re-renders | Split contexts / `useMemo` provider value | [ ] |
 | H21 | Offline UI | all | Home readiness stats stale after plot work (`index.tsx:60-94`) | `useFocusEffect(refreshPlotReadiness)` | [ ] |
-| H22 | Offline UI | Android | `androidMapsConfig` guard unused → blank maps if API key missing | Render config-missing placeholder at map mount | [ ] |
+| H22 | Offline UI | Android | `androidMapsConfig` guard unused → blank maps if API key missing | Render config-missing placeholder at map mount | [x] |
 | H23 | Infra | CI | Post-deploy smokes `exit 0` when secrets unset | Fail on main-deploy when required secrets missing | [ ] |
 | H24 | Infra | iOS/Android | `eas.json` prod omits anon key/Sentry DSN/Google IDs; `release:preflight` not in CI | Add preflight/secret-assertion to CI | [ ] |
 | H25 | Infra | iOS/Android/CI | Maestro golden path on `push:main` only; no Android E2E | Run on PR; add Android emulator lane | [ ] |

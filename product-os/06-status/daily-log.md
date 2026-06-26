@@ -1,3 +1,12 @@
+### 2026-06-26 (Lane 2 fix — Android maps config-missing placeholder, audit H22)
+- **Context**: `isAndroidGoogleMapsConfigured()` existed but was unused — Android builds without `GOOGLE_MAPS_API_KEY` showed blank `MapView` panels.
+- **Fixes**:
+  - `shouldBlockNativeMapView()` + `FieldMapMountGate` / `AndroidMapsUnavailablePlaceholder` at all native map mounts (plot preview, plot detail, photo vault, walk/draw/pin/centroid capture).
+  - `app.config.js` wires `GOOGLE_MAPS_API_KEY` / `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` → `android.config.googleMaps.apiKey` + `extra.googleMapsConfigured`.
+  - i18n `plot_map_android_unavailable`.
+- **Guards**: `device-qa-preflight.mjs` asserts gate wiring on all map surfaces.
+- **Status**: PR pending.
+
 ### 2026-06-26 (Lane 2 fix — Sentry EU plugin URL for offline builds, audit H26)
 - **Context**: `@sentry/react-native/expo` plugin pointed at `https://sentry.io/` but Tracebud's org is on **de.sentry.io** — source map uploads could fail or land on the wrong region.
 - **Fix**: `app.config.js` defaults `SENTRY_PLUGIN.url` to `https://de.sentry.io/` (override via `SENTRY_HOST` for non-EU dev).

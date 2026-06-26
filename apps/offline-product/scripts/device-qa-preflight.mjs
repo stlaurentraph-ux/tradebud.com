@@ -171,6 +171,14 @@ if (placeholderKeys.length > 0) {
 }
 console.log('OK en.json: no placeholder keys');
 
+assertIncludes('app.config.js', 'googleMapsConfigured', 'Android maps config flag in app.config');
+assertIncludes('app.config.js', 'googleMaps: { apiKey: googleMapsApiKey }', 'Android maps API key wiring');
+assertIncludes('components/plot-map/PlotMapPreview.tsx', 'shouldBlockNativeMapView', 'plot preview maps gate');
+assertIncludes('components/plot-map/PlotMap.native.tsx', 'FieldMapMountGate', 'plot map native gate');
+assertIncludes('components/plot-photo-vault/PhotoVaultMap.native.tsx', 'FieldMapMountGate', 'photo vault map gate');
+assertIncludes('features/mapping/WalkPerimeterScreen.tsx', 'FieldMapMountGate', 'walk perimeter map gate');
+assertIncludes('features/i18n/messages/en.json', 'plot_map_android_unavailable', 'Android maps unavailable copy');
+
 assertFile('features/sync/runFieldSyncPipeline.ts', 'unified field sync pipeline');
 assertFile('features/sync/reportSyncFailure.ts', 'sync failure Sentry breadcrumbs');
 assertFile('features/sync/syncFailureFromEvidenceUpload.ts', 'storage vs API failure mapping');

@@ -138,6 +138,15 @@ module.exports = ({ config }) => {
     ];
   }
 
+  const googleMapsApiKey =
+    process.env.GOOGLE_MAPS_API_KEY?.trim() || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
+  if (googleMapsApiKey) {
+    android.config = {
+      ...(android.config ?? {}),
+      googleMaps: { apiKey: googleMapsApiKey },
+    };
+  }
+
   const sentryDsn = process.env.EXPO_PUBLIC_SENTRY_DSN?.trim();
   const googleOAuth = {
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID?.trim() || undefined,
@@ -150,6 +159,7 @@ module.exports = ({ config }) => {
     ...(config.extra ?? {}),
     ...(sentryDsn ? { sentryDsn } : {}),
     googleOAuth,
+    googleMapsConfigured: Boolean(googleMapsApiKey),
   };
 
   return {
