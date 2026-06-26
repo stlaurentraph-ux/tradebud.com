@@ -23,6 +23,7 @@ const guards = [
   ['railway-build-context-guard.mjs', []],
   ['validation-pipe-guard.mjs', []],
   ['pg-ssl-config-guard.mjs', []],
+  ['rate-limit-redis-guard.mjs', []],
   ['check-tenure-parse-readiness.mjs', ['--static-only']],
 ];
 

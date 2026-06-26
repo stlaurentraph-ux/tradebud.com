@@ -100,6 +100,15 @@ Deploy Sentry environment tags (slice 2.1 — set in Vercel/Railway, not GitHub)
 | marketing | `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | `VERCEL_ENV=preview` → `staging` |
 | backend | `SENTRY_ENVIRONMENT` | `RAILWAY_ENVIRONMENT_NAME` → `staging` unless `production` |
 
+Railway backend (audit H3 — distributed rate limiting):
+
+| Variable | Where | Purpose |
+|----------|-------|---------|
+| `UPSTASH_REDIS_REST_URL` | Railway `tracebud-backend` | Upstash Redis REST endpoint for cross-replica rate limits |
+| `UPSTASH_REDIS_REST_TOKEN` | Railway `tracebud-backend` | Upstash REST token (**sensitive**) |
+
+When unset, backend falls back to in-process memory buckets (single-replica dev only). Production should set both.
+
 Marketing build: no secrets required for static build; forms need env only at runtime on Vercel.
 
 ---

@@ -32,7 +32,7 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 |----|------|----------|-------|-----|--------|
 | H1 | Backend | backend | Public campaign `preview` needs no token; leaks `senderTenantId` + UUID enumeration (`requests.public.controller.ts:33`) | Require signed invite token; drop tenant id; generic 404 | [x] preview route removed |
 | H2 | Backend | backend | Public decision-intent mutates inactive campaigns (`requests.service.ts:2089`) | Add `status IN ('RUNNING','PARTIAL')` guard | [x] |
-| H3 | Backend | backend | In-memory per-process rate limiting (`rate-limit.middleware.ts:11`) → N× budget across replicas | Redis/Upstash sliding window; stricter `/v1/public/*` | [ ] |
+| H3 | Backend | backend | In-memory per-process rate limiting (`rate-limit.middleware.ts:11`) → N× budget across replicas | Redis/Upstash sliding window; stricter `/v1/public/*` | [x] PR #331 |
 | H4 | Backend | backend | DB TLS `rejectUnauthorized:false` (`pg-pool-config.ts:53`) | Pin CA, verify in prod | [x] PR (H4) |
 | H5 | Backend | backend | No global `ValidationPipe`; untyped `@Body()` on public routes | `ValidationPipe({whitelist,forbidNonWhitelisted,transform})` + DTOs | [x] PR (H5) |
 | H6 | Backend | backend | Decision-token HMAC falls back to `RESEND_API_KEY` (`requests.service.ts:247`) | Dedicated `RESEND_DECISION_SECRET`, fail closed | [x] |
