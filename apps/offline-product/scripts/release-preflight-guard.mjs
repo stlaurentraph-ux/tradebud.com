@@ -53,6 +53,12 @@ function assertEasJson(manifest) {
       `eas.json ${manifest.easBuildProfile} must set environment "${manifest.easEnvironment}"`,
     );
   }
+  const prodEnv = profile.env ?? {};
+  if (prodEnv.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME === '1') {
+    throw new Error(
+      `eas.json ${manifest.easBuildProfile} must not set EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME (use App Links / Universal Links in production)`,
+    );
+  }
 }
 
 function assertPreflightScript(manifest) {

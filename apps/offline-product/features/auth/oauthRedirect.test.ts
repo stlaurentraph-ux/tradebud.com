@@ -58,4 +58,24 @@ describe('oauthRedirect native build', () => {
     expect(getOAuthRedirectMatchPrefix()).toBe('tracebudoffline://auth/callback');
     vi.unstubAllGlobals();
   });
+
+  it('uses custom scheme in preview when EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME=1', async () => {
+    vi.stubGlobal('__DEV__', false);
+    process.env.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME = '1';
+    vi.resetModules();
+    vi.doMock('expo-constants', () => ({
+      default: {
+        appOwnership: 'user',
+        expoConfig: { scheme: 'tracebudoffline' },
+      },
+    }));
+    vi.doMock('expo-auth-session', () => ({
+      makeRedirectUri: ({ scheme, path }: { scheme?: string; path?: string }) =>
+        `${scheme}://${path ?? ''}`,
+    }));
+    const { getOAuthRedirectUri } = await import('./oauthRedirect');
+    expect(getOAuthRedirectUri()).toBe('tracebudoffline://auth/callback');
+    delete process.env.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME;
+    vi.unstubAllGlobals();
+  });
 });
