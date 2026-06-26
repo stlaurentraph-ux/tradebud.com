@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactNode,
@@ -726,18 +727,29 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const signInSheetContextValue = useMemo(
+    () => ({
+      openSignIn,
+      openCreateAccount,
+      closeSignIn,
+      isSignedIn,
+      refreshAuth,
+      signOutOnDevice,
+      promptBackupConsent,
+    }),
+    [
+      openSignIn,
+      openCreateAccount,
+      closeSignIn,
+      isSignedIn,
+      refreshAuth,
+      signOutOnDevice,
+      promptBackupConsent,
+    ],
+  );
+
   return (
-    <SignInSheetContext.Provider
-      value={{
-        openSignIn,
-        openCreateAccount,
-        closeSignIn,
-        isSignedIn,
-        refreshAuth,
-        signOutOnDevice,
-        promptBackupConsent,
-      }}
-    >
+    <SignInSheetContext.Provider value={signInSheetContextValue}>
       {children}
       <WelcomeAccountModal
         visible={welcomeVisible}
