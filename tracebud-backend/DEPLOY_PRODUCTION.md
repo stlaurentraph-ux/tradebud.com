@@ -28,8 +28,8 @@ EXPO_PUBLIC_API_URL=https://api.tracebud.com/api
 
 1. Sign in at [railway.app](https://railway.app).
 2. **New Project** → **Deploy from GitHub repo** (this monorepo) or **Empty** + CLI.
-3. If monorepo: set **Root Directory** to `tracebud-backend`.
-4. Railway detects `Dockerfile` + `railway.toml` (health check `/api/health`).
+3. If monorepo: set **Root Directory** to **`.`** (repo root), not `tracebud-backend`. Railway uses `/railway.toml` and builds `tracebud-backend/Dockerfile`, which copies the workspace package `packages/tracebud-import-v1-canonical` (required by bulk plot import).
+4. Health check: `/api/health` (see root `railway.toml`).
 
 ### 2. Environment variables
 

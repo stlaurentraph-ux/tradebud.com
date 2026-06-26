@@ -1,0 +1,17 @@
+**/node_modules
+**/.git
+**/.cursor
+**/dist
+**/.next
+**/.turbo
+**/.expo
+apps/offline-product
+apps/marketing
+apps/dashboard-product
+apps/field-auth
+apps/founder-os
+product-os
+docs
+.github
+*.md
+!tracebud-backend/email-templates/**
