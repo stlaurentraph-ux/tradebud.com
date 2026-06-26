@@ -20,7 +20,7 @@ import {
   countDeliveryReceiptsForPlots,
   normalizeLocalDeliveryReceipts,
 } from '@/features/harvest/localDeliveryReceipts';
-import { loadAllLocalDeliveryReceipts, loadPlotServerLinks, getSetting } from '@/features/state/persistence';
+import { loadAllLocalDeliveryReceipts, loadPlotServerLinks } from '@/features/state/persistence';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
@@ -74,8 +74,6 @@ export default function PlotsScreen() {
   const [deliveryCountByPlotId, setDeliveryCountByPlotId] = useState<Record<string, number>>({});
   const [photoCountByPlotId, setPhotoCountByPlotId] = useState<Record<string, number>>({});
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});
-  const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
-  const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
   const [selectedPlotId, setSelectedPlotId] = useState<string | undefined>(plots[0]?.id);
   /** One-shot section from Home (vouchers/documents); cleared after first plot open. */
   const [pickerIntent, setPickerIntent] = useState<PlotPickerIntent | null>(null);
@@ -169,25 +167,6 @@ export default function PlotsScreen() {
       current && plots.some((plot) => plot.id === current) ? current : plots[0]?.id,
     );
   }, [plots]);
-
-  const refreshOfflineTileSettings = useCallback(() => {
-    void getSetting('offlineTilesEnabled')
-      .then((value) => setOfflineTilesEnabled(value === '1'))
-      .catch(() => setOfflineTilesEnabled(false));
-    void getSetting('offlineTilesActivePackId')
-      .then((value) => setOfflineTilesPackId(value?.trim() || null))
-      .catch(() => setOfflineTilesPackId(null));
-  }, []);
-
-  useEffect(() => {
-    refreshOfflineTileSettings();
-  }, [refreshOfflineTileSettings]);
-
-  useFocusEffect(
-    useCallback(() => {
-      refreshOfflineTileSettings();
-    }, [refreshOfflineTileSettings]),
-  );
 
   // Home → receipts: stay on My Plots so the farmer can pick a plot or see counts on each card.
 
@@ -326,11 +305,7 @@ export default function PlotsScreen() {
                 ]}
               >
                 <View style={styles.plotCardRow}>
-                  <PlotListThumbnail
-                    plot={plot}
-                    offlineTilesEnabled={offlineTilesEnabled}
-                    offlineTilesPackId={offlineTilesPackId}
-                  />
+                  <PlotListThumbnail plot={plot} />
                   <View style={styles.plotCardBody}>
                     <View style={styles.rowHeader}>
                       <ThemedText type="subtitle" numberOfLines={2} style={styles.plotName}>
