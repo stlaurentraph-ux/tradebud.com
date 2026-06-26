@@ -51,6 +51,19 @@ describe('analytics', () => {
     );
   });
 
+  it('redacts PII from properties before Sentry reporting', () => {
+    trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+      reason: 'sign_in_oauth_failed',
+      detail: 'login failed for farmer@example.com',
+    });
+
+    expect(sentryMocks.addSentryBreadcrumb).toHaveBeenCalledWith(
+      ANALYTICS_EVENTS.SIGN_IN_FAILURE,
+      { reason: 'sign_in_oauth_failed', detail: '[redacted]' },
+      'warning',
+    );
+  });
+
   it('no-ops remote reporting when sentry is disabled', () => {
     sentryMocks.isSentryEnabled.mockReturnValue(false);
 
