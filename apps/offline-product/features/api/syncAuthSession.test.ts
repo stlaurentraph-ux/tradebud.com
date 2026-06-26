@@ -8,6 +8,7 @@ vi.mock('@/features/security/syncAuthStorage', () => ({
   }),
   isSyncAuthDismissedOnDevice: vi.fn(async () => dismissedOnDevice),
   loadSyncAuthCredentials: vi.fn(async () => null),
+  migrateOrClearLegacySyncAuthOnBoot: vi.fn(async () => undefined),
   saveOAuthSyncAuthCredentials: vi.fn(async () => {
     if (dismissedOnDevice) return;
   }),

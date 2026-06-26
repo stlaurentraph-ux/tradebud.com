@@ -1,11 +1,16 @@
+### 2026-06-26 (Lane 2 fix — purge legacy plaintext sync passwords, audit H17)
+- **Context**: `syncAuthStorage` still read/wrote farmer passwords in SQLite settings when SecureStore was unavailable (web) or before migration.
+- **Fixes**:
+  - `migrateOrClearLegacySyncAuthOnBoot()` — migrate to SecureStore on native, purge on web.
+  - `saveSyncAuthCredentials` no longer writes plaintext passwords; requires SecureStore.
+  - `hydrateSyncAuthFromSettings` runs boot migration before credential load.
+- **Guards**: `security-preflight.mjs` asserts migration wiring and no `saveLegacyCredentials`.
+- **Status**: PR #320.
+
 ### 2026-06-26 (Lane 2 fix — Android maps config-missing placeholder, audit H22)
 - **Context**: `isAndroidGoogleMapsConfigured()` existed but was unused — Android builds without `GOOGLE_MAPS_API_KEY` showed blank `MapView` panels.
-- **Fixes**:
-  - `shouldBlockNativeMapView()` + `FieldMapMountGate` / `AndroidMapsUnavailablePlaceholder` at all native map mounts (plot preview, plot detail, photo vault, walk/draw/pin/centroid capture).
-  - `app.config.js` wires `GOOGLE_MAPS_API_KEY` / `EXPO_PUBLIC_GOOGLE_MAPS_API_KEY` → `android.config.googleMaps.apiKey` + `extra.googleMapsConfigured`.
-  - i18n `plot_map_android_unavailable`.
-- **Guards**: `device-qa-preflight.mjs` asserts gate wiring on all map surfaces.
-- **Status**: PR #319.
+- **Fixes**: `FieldMapMountGate` at all native map mounts; `app.config.js` wires Google Maps API key.
+- **Status**: merged via PR #319.
 
 ### 2026-06-26 (Lane 2 fix — post-deploy smoke fail-closed on main, audit H23)
 - **Context**: Backend/dashboard/marketing deploy smoke workflows `exit 0` when required GitHub secrets were unset — giving false confidence after production deploys.

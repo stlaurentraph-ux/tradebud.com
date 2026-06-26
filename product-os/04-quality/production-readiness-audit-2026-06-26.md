@@ -46,7 +46,7 @@ Severity legend: **BLOCKER** = must fix before any real-user exposure · **HIGH*
 | H14 | Offline auth | all | Raw auth/OAuth/sync errors → Sentry unsanitized (`analytics.ts:88`, `callback.tsx:105`, `reportSyncFailure.ts:12`) | `sanitizeAnalyticsProperties`; stable error codes | [ ] |
 | H15 | Offline auth | iOS/Android | Production OAuth uses custom scheme, not verified App Links (`eas.json:45`) | Enable associatedDomains/App Links for prod; scheme dev-only | [ ] |
 | H16 | Offline auth | all | `fieldRoleHasPermission` defined but never enforced at runtime | `useFieldPermission` gating sync/harvest/evidence; wire blocked-roles | [ ] |
-| H17 | Offline auth | iOS/Android/web | Legacy plaintext sync password fallback in SQLite (`syncAuthStorage.ts:54-69`) | Force migrate-or-clear on boot; remove password fallback | [ ] |
+| H17 | Offline auth | iOS/Android/web | Legacy plaintext sync password fallback in SQLite (`syncAuthStorage.ts:54-69`) | Force migrate-or-clear on boot; remove password fallback | [x] |
 | H18 | Offline auth | iOS/Android | Farmer PII unencrypted in SQLite; SQLCipher deferred | Encrypt-at-rest or formally accept + document for v1 | [ ] |
 | H19 | Offline UI | all (Android worst) | Live `MapView` per plot row (`explore.tsx:300`, `PlotMapPreview.tsx:70`) → ANR/crash | Static snapshot/SVG thumbnail or `FlatList` virtualization | [ ] |
 | H20 | Offline UI | all | Monolithic `AppStateContext` + non-memoized `SignInSheetContext` value → global re-renders | Split contexts / `useMemo` provider value | [ ] |
