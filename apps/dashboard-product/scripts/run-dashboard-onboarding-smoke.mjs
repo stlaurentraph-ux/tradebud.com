@@ -75,12 +75,18 @@ function runProxySmoke(manifest) {
   }
 }
 
+function requireStrictSecrets() {
+  return (
+    process.env.DEPLOY_SMOKE_STRICT === '1' || process.env.DASHBOARD_SMOKE_REQUIRE_SECRET === '1'
+  );
+}
+
 async function main() {
   const manifest = loadManifest();
   const baseUrl = resolveBaseUrl(manifest);
   const bearer = process.env[manifest.bearerEnv]?.trim();
 
-  if (!process.env[manifest.envBaseUrl]?.trim() && process.env.DASHBOARD_SMOKE_REQUIRE_SECRET === '1') {
+  if (!process.env[manifest.envBaseUrl]?.trim() && requireStrictSecrets()) {
     console.error(`Missing ${manifest.envBaseUrl}`);
     process.exit(1);
   }

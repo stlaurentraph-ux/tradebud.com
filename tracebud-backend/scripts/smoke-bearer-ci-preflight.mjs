@@ -50,6 +50,13 @@ async function main() {
     return;
   }
 
+  if (process.env.DEPLOY_SMOKE_STRICT === '1') {
+    console.error(
+      'Smoke auth not configured — required for deploy smoke on main/production (SUPABASE_URL + SUPABASE_ANON_KEY + SUPABASE_SERVICE_ROLE_KEY or TRACEBUD_SMOKE_BEARER_TOKEN).',
+    );
+    process.exit(1);
+  }
+
   console.log('Smoke auth not configured — downstream smoke step will skip.');
 }
 
