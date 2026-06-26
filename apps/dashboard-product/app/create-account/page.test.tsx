@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { ReactElement } from 'react';
 import CreateAccountPage from './page';
 import { markOnboardingAction } from '@/lib/onboarding-actions';
 
@@ -18,6 +17,8 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('next/image', () => ({
+  // This mock intentionally renders a plain <img> to stand in for next/image in tests.
+  // eslint-disable-next-line @next/next/no-img-element
   default: (props: { alt: string }) => <img alt={props.alt} />,
 }));
 

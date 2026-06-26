@@ -67,3 +67,12 @@ export const FIELD_MAP_CAPTURE_UI_PROPS = {
 export function fieldMapUsesCustomTiles(mode: FieldMapTileMode): boolean {
   return mode !== 'none';
 }
+
+/**
+ * `<LocalTile>` expects a filesystem path, not a `file://` URL. Offline templates come from
+ * `documentDirectory` which is a `file://` URL in Expo; strip the scheme so the path resolves on
+ * both iOS and Android. (Online `https://` templates are left untouched for `<UrlTile>`.)
+ */
+export function toLocalTilePathTemplate(fileUrlTemplate: string): string {
+  return fileUrlTemplate.replace(/^file:\/\//i, '');
+}

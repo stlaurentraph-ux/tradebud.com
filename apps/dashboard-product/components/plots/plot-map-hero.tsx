@@ -39,9 +39,10 @@ export function PlotMapHero({ plotId }: PlotMapHeroProps) {
   const [factsOpen, setFactsOpen] = useState(false);
 
   const kind = preview ? normalizePlotKind(preview.kind) : 'unknown';
+  const geometry = preview?.geometry;
   const coordinates = useMemo(
-    () => (preview?.geometry ? extractGeoJsonCoordinates(preview.geometry) : []),
-    [preview?.geometry],
+    () => (geometry ? extractGeoJsonCoordinates(geometry) : []),
+    [geometry],
   );
 
   const title = preview?.name ?? getPlotDetailPageSubtitle(plotId, t);

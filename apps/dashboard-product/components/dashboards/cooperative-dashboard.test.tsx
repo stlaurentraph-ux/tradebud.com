@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { CooperativeDashboard } from './cooperative-dashboard';
 
 vi.mock('@/lib/auth-context', () => ({

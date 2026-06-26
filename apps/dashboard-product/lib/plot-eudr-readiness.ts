@@ -2,7 +2,6 @@ import {
   isPlotGeometryCaptureComplete,
   isPlotFieldVerified,
   mapTenantPlotToInventoryRow,
-  normalizeComplianceStatus,
   type PlotComplianceStatus,
   type PlotInventoryRow,
 } from '@/lib/plot-inventory';

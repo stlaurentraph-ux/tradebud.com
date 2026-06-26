@@ -46,6 +46,7 @@ export function GeometryRemediationPanel() {
   useEffect(() => {
     const token = window.sessionStorage.getItem('tracebud_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     setLoading(true);
     void fetch('/api/plots/geometry-remediation?limit=20', { headers, cache: 'no-store' })
       .then(async (response) => {
@@ -63,7 +64,7 @@ export function GeometryRemediationPanel() {
         setError(resolveWorkflowErrorMessage(err, 'geometry_remediation_load', t));
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   return (
     <Card>

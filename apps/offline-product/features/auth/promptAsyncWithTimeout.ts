@@ -1,5 +1,5 @@
 import type { AuthSessionResult } from 'expo-auth-session';
-import type { AuthSessionOpenOptions, DiscoveryDocument } from 'expo-auth-session';
+import type { AuthRequestPromptOptions, DiscoveryDocument } from 'expo-auth-session';
 import type { AuthRequest } from 'expo-auth-session';
 
 import { OAuthFlowError } from '@/features/auth/oauthFlowError';
@@ -10,7 +10,7 @@ export const GOOGLE_NATIVE_PROMPT_TIMEOUT_MS = 90_000;
 export async function promptAsyncWithTimeout(
   request: AuthRequest,
   discovery: DiscoveryDocument,
-  options: AuthSessionOpenOptions | undefined,
+  options: AuthRequestPromptOptions | undefined,
   maxMs = GOOGLE_NATIVE_PROMPT_TIMEOUT_MS,
 ): Promise<AuthSessionResult> {
   let timer: ReturnType<typeof setTimeout> | null = null;

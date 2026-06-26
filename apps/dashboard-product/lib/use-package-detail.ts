@@ -46,6 +46,7 @@ export function usePackageDetail(packageId: string | null, fallbackTenantId: str
     if (demoDataEnabled) {
       const found = mockPackages.find((item) => item.id === packageId) ?? null;
       if (!cancelled) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
         setPkg(found);
         setVouchers([]);
         setIsLoading(false);

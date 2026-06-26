@@ -46,17 +46,12 @@ export function resolveFieldSyncMode(input: ResolveFieldSyncModeInput): FieldSyn
   if (
     nothingLocalPending &&
     input.hasFieldSyncCursor === true &&
-    input.needsCloudRestore !== true &&
     (input.cloudDeltaHasInboundChanges === false || input.deltaProbeFailed === true)
   ) {
     return 'push_only';
   }
 
-  if (
-    input.hasFieldSyncCursor === true &&
-    input.cloudDeltaHasInboundChanges === false &&
-    input.needsCloudRestore !== true
-  ) {
+  if (input.hasFieldSyncCursor === true && input.cloudDeltaHasInboundChanges === false) {
     return 'push_only';
   }
   return 'full';

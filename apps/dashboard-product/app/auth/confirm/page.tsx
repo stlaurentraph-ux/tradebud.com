@@ -33,6 +33,7 @@ export default function AuthConfirmPage() {
     const error = search.get('error') ?? hashParams.error;
     const errorDescription = search.get('error_description') ?? hashParams.error_description;
     if (error) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setStatus('error');
       setProviderError(errorDescription ?? error);
       window.history.replaceState(null, '', window.location.pathname);

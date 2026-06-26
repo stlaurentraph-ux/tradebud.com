@@ -24,7 +24,6 @@ export const ESRI_WORLD_IMAGERY_TILE_URL =
   'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile';
 
 const TILE_SIZE = PLOT_MAP_TILE_SIZE;
-const ESRI_TILE_URL = ESRI_WORLD_IMAGERY_TILE_URL;
 
 function ringToLatLng(ring: number[][]): LatLng[] {
   const points: LatLng[] = [];

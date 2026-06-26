@@ -121,6 +121,7 @@ function AddContactPageContent() {
   useEffect(() => {
     const requestedMode = searchParams.get('mode');
     if (requestedMode && MODE_FROM_QUERY[requestedMode]) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setMode(MODE_FROM_QUERY[requestedMode]);
       return;
     }

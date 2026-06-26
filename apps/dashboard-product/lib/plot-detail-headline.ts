@@ -1,8 +1,6 @@
 import type { PlotEudrReadinessAssessment } from '@/lib/plot-eudr-readiness';
 import { formatDeforestationScreeningStatus } from '@/lib/plot-eudr-readiness';
 import type { PlotTenureStatusBadge } from '@/lib/plot-tenure-status';
-import { tenureBadgeLabel } from '@/lib/plot-tenure-status';
-
 export type PlotDetailHeadlineTone = 'ready' | 'attention' | 'blocked';
 
 export interface PlotDetailHeadline {

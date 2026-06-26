@@ -105,6 +105,7 @@ export function GuidedTourOverlay() {
 
   // Mount guard (portal needs document)
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     setMounted(true);
   }, []);
 
@@ -112,6 +113,7 @@ export function GuidedTourOverlay() {
   useEffect(() => {
     if (!isActive || !step?.ctaHref) return;
     if (pathname === step.ctaHref) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     setSpotlightRect(null);
     setTooltipPos(null);
     router.push(step.ctaHref);

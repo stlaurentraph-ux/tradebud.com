@@ -39,7 +39,6 @@ export async function measureCloudParitySummary(params: {
         auditRows: null,
         localPlots: params.localPlots,
         localReceiptCount: 0,
-        serverPlotCount: null,
         serverPlotsMissingOnDevice: null,
         serverVoucherCount: null,
         localMedia: { groundTruth: 0, landTitle: 0, evidence: 0 },

@@ -1,4 +1,5 @@
 import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
+import { resolveFieldHarvestFarmerIds } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
 import { reconcileLocalDeliveryReceiptSyncStateFromServer } from '@/features/harvest/reconcileLocalDeliveryReceiptSyncState';
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { fetchMergedAuditEventsForFarmer } from '@/features/sync/fetchMergedAuditEventsForFarmer';
@@ -122,16 +123,17 @@ export async function hydrateLocalSyncMarkersFromServer(params: {
   }
 
   if (params.localFarmer?.id && params.localPlots.length >= 0) {
+    const { voucherFarmerIds } = await resolveFieldHarvestFarmerIds({
+      profileFarmerId: params.localFarmer.id,
+      localPlots: params.localPlots,
+    });
     const [vouchers, backendPlots, plotServerLinks] = await Promise.all([
-      fetchMergedServerVouchers({
-        profileFarmerId: params.localFarmer.id,
-        localPlots: params.localPlots,
-      }).catch(() => [] as unknown[]),
+      fetchMergedServerVouchers(voucherFarmerIds).catch(() => [] as unknown[]),
       fetchBackendPlotsForSyncScope({
         farmerId: apiFarmerId,
         ownedFarmerIds: params.ownedFarmerIds,
       }).catch(() => []),
-      loadPlotServerLinks().catch(() => ({})),
+      loadPlotServerLinks().catch((): Record<string, string> => ({})),
     ]);
     const receipts = await reconcileLocalDeliveryReceiptSyncStateFromServer({
       vouchers,

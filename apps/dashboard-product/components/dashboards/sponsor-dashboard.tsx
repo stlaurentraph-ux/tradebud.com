@@ -71,17 +71,6 @@ type BackendOrganisation = {
   roleInNetwork?: string;
 };
 
-type BackendCampaign = {
-  id?: string;
-  title?: string;
-  status?: string;
-  target_organization_ids?: unknown[];
-  target_farmer_ids?: unknown[];
-  target_plot_ids?: unknown[];
-  target_contact_emails?: unknown[];
-  commodity?: string;
-};
-
 function mapOrganisationRecord(record: Record<string, unknown>, t?: (key: string) => string): BackendOrganisation {
   const completenessRaw = Number(record.onboardingCompleteness);
   const status = String(record.status ?? '').toUpperCase();
@@ -126,7 +115,6 @@ export function SponsorDashboard({ metrics, home }: SponsorDashboardProps) {
   const campaigns = summary.rawCampaigns;
   const orgCount = summary.organisationCount;
   const campaignCount = summary.campaignCount;
-  const draftCampaignCount = summary.draftCampaignCount;
   const countryCoverage = summary.countryCoverage;
   const commodityCoverage = summary.commodityCoverage;
   const networkRoles = summary.networkRoles;

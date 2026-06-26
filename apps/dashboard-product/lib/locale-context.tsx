@@ -46,6 +46,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const resolved = getCurrentLocale(role);
     const clamped = clampLocaleForRole(resolved, role);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     setLocaleState(clamped);
     setTimezoneState(getCurrentTimezone());
     document.documentElement.lang = clamped;

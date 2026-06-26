@@ -674,7 +674,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           setIsSignedIn(true);
           await closeAllAuthSurfaces();
           void syncLocalFarmerFromAuth();
-          if (outcome.status === 'completed' && outcome.result.apiUnreachable) {
+          if (outcome.status === 'completed' && outcome.result.ok && outcome.result.apiUnreachable) {
             Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
           }
         }

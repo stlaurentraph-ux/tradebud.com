@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { PendingSyncAction } from '@/features/state/persistence';
+
 const restoreMocks = vi.hoisted(() => ({
   restoreLocalPlotsFromServer: vi.fn(),
   restoreLocalDeliveryReceiptsFromServer: vi.fn(),
@@ -19,6 +21,7 @@ const restoreMocks = vi.hoisted(() => ({
   hydrateLocalSyncMarkersFromServer: vi.fn(),
   restoreLocalDeclarationsFromServer: vi.fn(),
   loadAppState: vi.fn(),
+  getSetting: vi.fn(async () => null),
 }));
 
 vi.mock('@/features/sync/processPendingSyncQueue', () => ({
@@ -108,6 +111,7 @@ vi.mock('@/features/state/persistence', () => ({
   loadPendingSyncActions: restoreMocks.loadPendingSyncActions,
   loadPlotServerLinks: restoreMocks.loadPlotServerLinks,
   loadAppState: restoreMocks.loadAppState,
+  getSetting: restoreMocks.getSetting,
 }));
 
 vi.mock('@/features/sync/processPendingConsentQueue', () => ({
@@ -141,13 +145,24 @@ const baseParams = {
   accessToken: 'token',
   apiFarmerId: 'farmer-api',
   farmerScopeIds: ['farmer-api'],
-  syncFarmer: { id: 'farmer-local', name: 'Test Farmer' },
-  syncPlots: [{ id: 'plot-1', name: 'Plot 1', areaHectares: 1, kind: 'permanent_crop' as const }],
+  syncFarmer: { id: 'farmer-local', name: 'Test Farmer', role: 'farmer' as const, selfDeclared: false },
+  syncPlots: [
+    {
+      id: 'plot-1',
+      farmerId: 'farmer-local',
+      name: 'Plot 1',
+      createdAt: 0,
+      areaSquareMeters: 10000,
+      areaHectares: 1,
+      kind: 'polygon' as const,
+      points: [],
+    },
+  ],
   t,
   selectedQueueActionTypes: ['audit_sync' as const],
   allQueueActionTypes: ['audit_sync' as const],
   syncDrainActionTypes: ['audit_sync' as const],
-  consentActionTypes: [] as const,
+  consentActionTypes: [] as PendingSyncAction['actionType'][],
   isConsentQueueActionType: () => false,
 };
 
@@ -208,6 +223,20 @@ describe('runFieldSyncPipeline push_only observability guard', () => {
   });
 
   it('pulls declarations but skips full cloud restore when syncMode is push_only', async () => {
+    // A pending audit_sync row keeps the manual queue drain active in push_only mode.
+    restoreMocks.loadPendingSyncActions.mockResolvedValue([
+      {
+        id: 1,
+        createdAt: 0,
+        hlcTimestamp: '0',
+        actionType: 'audit_sync',
+        payloadJson: '{}',
+        attempts: 0,
+        lastError: null,
+        lastAttemptAt: null,
+      },
+    ]);
+
     const { runFieldSyncPipeline } = await import('./runFieldSyncPipeline');
 
     await runFieldSyncPipeline({

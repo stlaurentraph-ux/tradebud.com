@@ -1,6 +1,7 @@
 /** Step in the OAuth pipeline — surfaced in analytics when sign-in fails. */
 export type OAuthFlowStep =
   | 'native_prompt'
+  | 'native_prompt_timeout'
   | 'native_code'
   | 'native_token_exchange'
   | 'supabase_id_token'

@@ -89,6 +89,8 @@ export default function HomeScreen() {
     setActionRequired((prev) =>
       prev?.message === message && prev?.plotId === plot.id ? prev : { message, plotId: plot.id },
     );
+    // plots is read via plotsRef.current; plots.length is kept to recompute when the count changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backendPlots, farmer, t, plots.length]);
 
   const refreshBackendPlots = useCallback(

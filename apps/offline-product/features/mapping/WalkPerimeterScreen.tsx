@@ -795,6 +795,42 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     lastSavedPlotRef.current = null;
   }, [reset]);
 
+  const isUuid = (value: string) =>
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+
+  const createLocalFarmerId = () => {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+      return globalThis.crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  };
+
+  const resolveProfileId = useCallback((): string => {
+    if (enumeration?.isEnumerationMode && enumeration.activeMember?.farmerId) {
+      return enumeration.activeMember.farmerId;
+    }
+    const typed = farmerIdInput.trim();
+    if (isUuid(typed)) return typed;
+    if (farmer?.id && isUuid(farmer.id)) return farmer.id;
+    return createLocalFarmerId();
+  }, [enumeration?.activeMember?.farmerId, enumeration?.isEnumerationMode, farmer?.id, farmerIdInput]);
+
+  const resolveProducerContactId = useCallback((): string | undefined => {
+    const farmerId = resolveProfileId();
+    const contactId = enumeration?.producerContactIdForFarmer(farmerId);
+    return contactId?.trim() || undefined;
+  }, [enumeration, resolveProfileId]);
+
+  const resolveAssignmentId = useCallback((): string | undefined => {
+    const farmerId = resolveProfileId();
+    const assignmentId = enumeration?.assignmentIdForFarmer(farmerId);
+    return assignmentId?.trim() || undefined;
+  }, [enumeration, resolveProfileId]);
+
   const finishEnumerationPlotVisit = useCallback(
     (next: 'documents' | 'home') => {
       const pid = lastRegisteredPlotIdRef.current;
@@ -806,7 +842,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         router.replace(`/plot/${encodeURIComponent(pid)}?sub=documents`);
         return;
       }
-      router.replace('/(tabs)/');
+      router.replace('/(tabs)');
     },
     [enumeration, resetCaptureFlowState, resolveProfileId],
   );
@@ -920,42 +956,6 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     },
     [handlePlotUploadResult, precisionMeters, resolveAssignmentId, resolveProducerContactId, resolveProfileId],
   );
-
-  const isUuid = (value: string) =>
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
-
-  const createLocalFarmerId = () => {
-    if (typeof globalThis.crypto?.randomUUID === 'function') {
-      return globalThis.crypto.randomUUID();
-    }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-      const r = (Math.random() * 16) | 0;
-      const v = c === 'x' ? r : (r & 0x3) | 0x8;
-      return v.toString(16);
-    });
-  };
-
-  const resolveProfileId = useCallback((): string => {
-    if (enumeration?.isEnumerationMode && enumeration.activeMember?.farmerId) {
-      return enumeration.activeMember.farmerId;
-    }
-    const typed = farmerIdInput.trim();
-    if (isUuid(typed)) return typed;
-    if (farmer?.id && isUuid(farmer.id)) return farmer.id;
-    return createLocalFarmerId();
-  }, [enumeration?.activeMember?.farmerId, enumeration?.isEnumerationMode, farmer?.id, farmerIdInput]);
-
-  const resolveProducerContactId = useCallback((): string | undefined => {
-    const farmerId = resolveProfileId();
-    const contactId = enumeration?.producerContactIdForFarmer(farmerId);
-    return contactId?.trim() || undefined;
-  }, [enumeration, resolveProfileId]);
-
-  const resolveAssignmentId = useCallback((): string | undefined => {
-    const farmerId = resolveProfileId();
-    const assignmentId = enumeration?.assignmentIdForFarmer(farmerId);
-    return assignmentId?.trim() || undefined;
-  }, [enumeration, resolveProfileId]);
 
   const isEnumerationCapture = Boolean(
     enumeration?.isEnumerationMode && enumeration.activeMember,

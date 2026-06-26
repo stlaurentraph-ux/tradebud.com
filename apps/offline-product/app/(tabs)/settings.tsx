@@ -524,7 +524,7 @@ export default function SettingsScreen() {
         sessionOpened.end();
       }
     }
-  }, [farmer, plots, reloadFromDisk]);
+  }, [farmer, plots, reloadFromDisk, t]);
 
   const refreshCloudParity = useCallback(
     async (plotSnapshot?: Plot[]) => {

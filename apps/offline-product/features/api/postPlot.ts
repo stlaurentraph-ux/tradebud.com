@@ -331,6 +331,7 @@ export async function postHarvestToBackend(params: {
   clientEventId?: string;
   deliverToTenantId?: string;
   deliverToEmail?: string;
+  deliveryTripRef?: string;
 }) {
   const accessToken = await getAccessTokenFromSupabase();
   if (!accessToken) {
@@ -354,6 +355,7 @@ export async function postHarvestToBackend(params: {
         clientEventId: params.clientEventId ?? null,
         deliverToTenantId: params.deliverToTenantId ?? null,
         deliverToEmail: params.deliverToEmail ?? null,
+        deliveryTripRef: params.deliveryTripRef ?? null,
       }),
     });
 

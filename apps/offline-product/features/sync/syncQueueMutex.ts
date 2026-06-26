@@ -4,7 +4,9 @@ import {
 } from '@/features/sync/syncOperationLimits';
 
 let locked = false;
-const waitQueue: Array<() => void> = [];
+/** Each queued waiter returns true if it actually took the lock (false if it had already timed out). */
+type QueuedGrant = () => boolean;
+const waitQueue: QueuedGrant[] = [];
 
 const DEFAULT_LOCK_WAIT_MS = 45_000;
 
@@ -36,6 +38,25 @@ let phase: SyncQueuePhase = 'idle';
 let lockStartedAt: number | null = null;
 let waitingSince: number | null = null;
 let waiterCount = 0;
+
+/**
+ * Fencing token. Each successful lock acquisition gets a unique id. A holder may only mutate the
+ * shared lock state on release if it is still the current holder. This is what makes
+ * `releaseStaleSyncQueueLockIfNeeded` safe: when a hung holder is force-released and the lock is
+ * handed to a new acquirer, the original holder's eventual `finally` runs with a stale token and
+ * becomes a no-op — instead of clearing `locked` / popping a waiter out from under the new holder
+ * (which previously allowed two pipelines to drain the pending sync queue concurrently).
+ */
+let currentHolderId: number | null = null;
+let holderIdCounter = 0;
+
+function assignHolderLock(): number {
+  locked = true;
+  currentHolderId = ++holderIdCounter;
+  lockStartedAt = Date.now();
+  phase = 'preparing';
+  return currentHolderId;
+}
 
 const listeners = new Set<() => void>();
 
@@ -87,6 +108,8 @@ export function releaseStaleSyncQueueLockIfNeeded(nowMs = Date.now()): boolean {
   if (!locked || lockStartedAt == null) return false;
   if (nowMs - lockStartedAt < MAX_LOCK_HOLD_MS) return false;
   locked = false;
+  // Invalidate the hung holder's fencing token so its eventual `finally` is a no-op.
+  currentHolderId = null;
   phase = 'idle';
   lockStartedAt = null;
   waitingSince = null;
@@ -95,18 +118,27 @@ export function releaseStaleSyncQueueLockIfNeeded(nowMs = Date.now()): boolean {
   return true;
 }
 
-function waitForSyncQueueLock(waitMs: LockWaitMs): Promise<void> {
+function handoffOrRelease(): void {
+  // Skip waiters that already timed out; grant to the first live one, else fully release.
+  while (waitQueue.length > 0) {
+    const next = waitQueue.shift();
+    if (next && next()) {
+      return;
+    }
+  }
+  locked = false;
+  currentHolderId = null;
+  phase = 'idle';
+  lockStartedAt = null;
+  waitingSince = null;
+  emitSyncQueueLockChange();
+}
+
+function waitForSyncQueueLock(waitMs: LockWaitMs): Promise<number> {
   releaseStaleSyncQueueLockIfNeeded();
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<number>((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let settled = false;
-
-    const finishWait = (grant: () => void) => {
-      if (settled) return;
-      settled = true;
-      if (timer) clearTimeout(timer);
-      grant();
-    };
 
     const onTimeout = () => {
       if (settled) return;
@@ -121,21 +153,24 @@ function waitForSyncQueueLock(waitMs: LockWaitMs): Promise<void> {
       timer = setTimeout(onTimeout, waitMs);
     }
 
-    const grant = () => {
-      if (settled) return;
+    const grant = (): boolean => {
+      if (settled) return false;
       settled = true;
       if (timer) clearTimeout(timer);
       waiterCount = Math.max(0, waiterCount - 1);
       if (waiterCount === 0) waitingSince = null;
-      resolve();
+      const holderId = assignHolderLock();
+      emitSyncQueueLockChange();
+      resolve(holderId);
+      return true;
     };
 
     if (!locked) {
-      locked = true;
-      lockStartedAt = Date.now();
-      phase = 'preparing';
+      settled = true;
+      if (timer) clearTimeout(timer);
+      const holderId = assignHolderLock();
       emitSyncQueueLockChange();
-      grant();
+      resolve(holderId);
       return;
     }
 
@@ -151,23 +186,16 @@ export async function withSyncQueueLock<T>(
   fn: () => Promise<T>,
   options?: { waitMs?: LockWaitMs },
 ): Promise<T> {
-  await waitForSyncQueueLock(options?.waitMs ?? DEFAULT_LOCK_WAIT_MS);
+  const holderId = await waitForSyncQueueLock(options?.waitMs ?? DEFAULT_LOCK_WAIT_MS);
 
   try {
     return await fn();
   } finally {
-    const next = waitQueue.shift();
-    if (next) {
-      lockStartedAt = Date.now();
-      phase = 'preparing';
-      emitSyncQueueLockChange();
-      next();
-    } else {
-      locked = false;
-      phase = 'idle';
-      lockStartedAt = null;
-      waitingSince = null;
-      emitSyncQueueLockChange();
+    // Only release/hand off if we are still the current holder. If we were force-released as a
+    // stale holder, ownership has already moved to another caller — touching shared state here
+    // would corrupt the lock and allow a concurrent drain.
+    if (currentHolderId === holderId) {
+      handoffOrRelease();
     }
   }
 }
@@ -180,5 +208,7 @@ export function resetSyncQueueLockForTests() {
   lockStartedAt = null;
   waitingSince = null;
   waiterCount = 0;
+  currentHolderId = null;
+  holderIdCounter = 0;
   listeners.clear();
 }

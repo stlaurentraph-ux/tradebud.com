@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AppHeader } from '@/components/layout/app-header';
 import { WelcomeCard } from '@/components/onboarding/welcome-card';
@@ -94,6 +94,7 @@ export function DashboardHomeClient({
 
   useEffect(() => {
     if (!userId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setWelcomeAcknowledged(false);
       return;
     }

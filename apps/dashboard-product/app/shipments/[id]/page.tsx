@@ -66,6 +66,7 @@ export default function ShipmentDetailPage() {
 
   useEffect(() => {
     if (!id) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setShipment(null);
       setIsLoading(false);
       return;

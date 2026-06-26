@@ -24,9 +24,10 @@ export function PlotMapThumbnail({ plotId, className }: PlotMapThumbnailProps) {
   const { tileProvider, attribution } = usePlotMapTileProvider();
 
   const kind = preview ? normalizePlotKind(preview.kind) : 'unknown';
+  const geometry = preview?.geometry;
   const coordinates = useMemo(
-    () => (preview?.geometry ? extractGeoJsonCoordinates(preview.geometry) : []),
-    [preview?.geometry],
+    () => (geometry ? extractGeoJsonCoordinates(geometry) : []),
+    [geometry],
   );
 
   return (

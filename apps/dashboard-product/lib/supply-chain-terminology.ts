@@ -295,7 +295,7 @@ export function getSealBillingHint(role?: SupplyChainRole): string {
   return 'Sealing meters €1 origin usage for this month when you file to TRACES.';
 }
 
-export function getEvidencePageTitle(role?: SupplyChainRole): string {
+export function getEvidencePageTitle(_role?: SupplyChainRole): string {
   return 'Evidence';
 }
 

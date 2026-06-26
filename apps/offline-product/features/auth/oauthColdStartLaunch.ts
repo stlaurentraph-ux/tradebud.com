@@ -15,7 +15,9 @@ export function planOAuthColdStartLaunch(input: { isAppReady: boolean }): OAuthC
 }
 
 /** Leave the intermediary /auth/callback screen — OAuth already finished or route is stale. */
-export function shouldExitOAuthIntermediaryScreen(outcome: OAuthColdStartResult): boolean {
+export function shouldExitOAuthIntermediaryScreen(
+  outcome: OAuthColdStartResult,
+): outcome is Exclude<OAuthColdStartResult, { status: 'failed' }> {
   return (
     outcome.status === 'delivered_to_waiter' ||
     outcome.status === 'already_signed_in' ||

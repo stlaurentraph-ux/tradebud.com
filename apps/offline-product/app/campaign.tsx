@@ -51,7 +51,7 @@ export default function CampaignInviteScreen() {
     return () => {
       cancelled = true;
     };
-  }, [campaignId]);
+  }, [campaignId, claimToken]);
 
   if (!campaignId) {
     return (
@@ -63,7 +63,7 @@ export default function CampaignInviteScreen() {
           {t('campaign_invite_missing_title')}
         </ThemedText>
         <ThemedText style={styles.landingBody}>{t('campaign_invite_missing_body')}</ThemedText>
-        <Button title={t('campaign_invite_go_home')} onPress={() => router.replace('/(tabs)')} />
+        <Button onPress={() => router.replace('/(tabs)')}>{t('campaign_invite_go_home')}</Button>
       </ThemedView>
     );
   }
@@ -95,7 +95,6 @@ export default function CampaignInviteScreen() {
       </ThemedText>
       <ThemedText style={styles.landingBody}>{t('campaign_invite_opening_body')}</ThemedText>
       <Button
-        title={t('campaign_invite_banner_cta')}
         onPress={() => {
           openSignIn({
             variant: claimToken ? 'campaign_phone' : 'general',
@@ -106,7 +105,9 @@ export default function CampaignInviteScreen() {
           });
         }}
         disabled={previewLoading}
-      />
+      >
+        {t('campaign_invite_banner_cta')}
+      </Button>
       <Pressable onPress={() => router.replace('/(tabs)')} style={styles.remindLater}>
         <ThemedText type="caption" style={styles.remindLaterText}>
           {t('campaign_invite_go_home')}

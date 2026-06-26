@@ -3,6 +3,7 @@ import Constants from 'expo-constants';
 import * as Notifications from 'expo-notifications';
 
 import { registerPushDevice, unregisterPushDevice } from '@/features/api/pushDevices';
+import { ensureAndroidNotificationChannel } from '@/features/notifications/androidNotificationChannel';
 import { requestPushPermission } from '@/features/permissions/pushPermission';
 import { getSetting } from '@/features/state/persistence';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
@@ -34,11 +35,16 @@ async function readCurrentExpoPushToken(): Promise<string | null> {
     Constants.expoConfig?.extra?.eas?.projectId ??
     Constants.easConfig?.projectId ??
     Constants.expoConfig?.extra?.projectId;
-  const tokenResult = await Notifications.getExpoPushTokenAsync(
-    projectId ? { projectId: String(projectId) } : undefined,
-  );
-  const pushToken = tokenResult.data?.trim();
-  return pushToken || null;
+  try {
+    const tokenResult = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId: String(projectId) } : undefined,
+    );
+    const pushToken = tokenResult.data?.trim();
+    return pushToken || null;
+  } catch {
+    // Dev builds without FCM / google-services.json — push is optional.
+    return null;
+  }
 }
 
 export async function registerFarmerPushToken(
@@ -52,6 +58,9 @@ export async function registerFarmerPushToken(
   if (optIn === '0') {
     return { ok: false, reason: 'opted_out' };
   }
+
+  // Android needs a high-importance channel before any notification can present as a heads-up.
+  await ensureAndroidNotificationChannel().catch(() => undefined);
 
   const permission = await requestPushPermission();
   if (permission === 'unavailable') {

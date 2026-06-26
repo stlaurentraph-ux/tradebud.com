@@ -254,7 +254,7 @@ export async function completeOAuthFromDeepLink(
 
 /** Cold-start handler for /auth/callback route. */
 export async function runOAuthColdStartCallback(
-  params: OAuthDeepLinkCompleteParams & { url: string | null },
+  params: Omit<OAuthDeepLinkCompleteParams, 'url'> & { url: string | null },
 ): Promise<OAuthColdStartResult> {
   if (params.url && deliverOAuthDeepLink(params.url)) {
     return { status: 'delivered_to_waiter' };

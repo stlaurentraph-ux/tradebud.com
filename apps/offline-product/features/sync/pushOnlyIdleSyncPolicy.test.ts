@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
+import type { Plot } from '@/features/state/AppStateContext';
+import type { PendingSyncAction } from '@/features/state/persistence';
 import {
   allLocalPlotsLinked,
   countQueueActionsForTypes,
@@ -8,6 +10,27 @@ import {
   shouldRefreshCloudParityAfterSync,
 } from './pushOnlyIdleSyncPolicy';
 
+const mkPlot = (over: Partial<Plot> & Pick<Plot, 'id'>): Plot => ({
+  farmerId: 'f1',
+  name: 'P',
+  createdAt: 0,
+  areaSquareMeters: 10000,
+  areaHectares: 1,
+  kind: 'polygon',
+  points: [],
+  ...over,
+});
+
+const mkAction = (over: Partial<PendingSyncAction> & Pick<PendingSyncAction, 'id' | 'actionType'>): PendingSyncAction => ({
+  payloadJson: '{}',
+  hlcTimestamp: `1:${over.id}`,
+  createdAt: over.id,
+  attempts: 0,
+  lastError: null,
+  lastAttemptAt: null,
+  ...over,
+});
+
 describe('pushOnlyIdleSyncPolicy', () => {
   it('detects complete local declarations', () => {
     expect(
@@ -15,19 +38,20 @@ describe('pushOnlyIdleSyncPolicy', () => {
         {
           id: 'f1',
           name: 'A',
+          role: 'farmer',
           selfDeclared: true,
           selfDeclaredAt: 1,
           fpicConsent: true,
           laborNoChildLabor: true,
           laborNoForcedLabor: true,
         },
-        [{ id: 'p1', name: 'P', areaHectares: 1, kind: 'permanent_crop', landTenureDeclared: true, noDeforestationDeclared: true }],
+        [mkPlot({ id: 'p1', landTenureDeclared: true, noDeforestationDeclared: true })],
       ),
     ).toBe(true);
     expect(
       localDeclarationsComplete(
-        { id: 'f1', name: 'A' },
-        [{ id: 'p1', name: 'P', areaHectares: 1, kind: 'permanent_crop' }],
+        { id: 'f1', name: 'A', role: 'farmer', selfDeclared: false },
+        [mkPlot({ id: 'p1' })],
       ),
     ).toBe(false);
   });
@@ -60,8 +84,8 @@ describe('pushOnlyIdleSyncPolicy', () => {
     expect(
       countQueueActionsForTypes(
         [
-          { id: '1', actionType: 'harvest', payloadJson: '{}', createdAt: 1, lastError: null },
-          { id: '2', actionType: 'audit_sync', payloadJson: '{}', createdAt: 2, lastError: null },
+          mkAction({ id: 1, actionType: 'harvest' }),
+          mkAction({ id: 2, actionType: 'audit_sync' }),
         ],
         ['harvest', 'photos_sync'],
       ),
@@ -69,10 +93,8 @@ describe('pushOnlyIdleSyncPolicy', () => {
   });
 
   it('detects when every local plot has a server link', () => {
-    expect(allLocalPlotsLinked([{ id: 'p1', name: 'P', areaHectares: 1, kind: 'permanent_crop' }], { p1: 's1' })).toBe(
-      true,
-    );
-    expect(allLocalPlotsLinked([{ id: 'p1', name: 'P', areaHectares: 1, kind: 'permanent_crop' }], {})).toBe(false);
+    expect(allLocalPlotsLinked([mkPlot({ id: 'p1' })], { p1: 's1' })).toBe(true);
+    expect(allLocalPlotsLinked([mkPlot({ id: 'p1' })], {})).toBe(false);
   });
 
   it('skips parity refresh after idle push_only sync', () => {

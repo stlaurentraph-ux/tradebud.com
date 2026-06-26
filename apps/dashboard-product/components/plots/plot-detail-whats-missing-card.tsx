@@ -23,7 +23,7 @@ export function PlotDetailWhatsMissingCard({ onOpenSection }: PlotDetailWhatsMis
   const { assessment, isLoading } = usePlotDetailContext();
   const [expanded, setExpanded] = useState(false);
 
-  const gaps = assessment?.gaps ?? [];
+  const gaps = useMemo(() => assessment?.gaps ?? [], [assessment]);
   const ready = assessment?.ready ?? false;
   const gapsSummary = getPlotEudrReadinessGapsSummary(gaps, t);
 

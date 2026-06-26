@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { fetchAndCacheCampaignInvitePreview } from '@/features/campaign/fetchAndCacheCampaignInvitePreview';
 import {
+  readPendingCampaignClaimToken,
   readPendingCampaignInvitePreview,
   type CampaignInvitePreview,
 } from '@/features/campaign/campaignInviteContext';
