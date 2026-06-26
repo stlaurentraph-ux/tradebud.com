@@ -1,7 +1,6 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { DDSPackage } from '@/types';
 import { useAuth } from '@/lib/auth-context';
 import { resolveHarvestPackageScope } from '@/lib/harvest-package-scope';
 import { useHarvestPackages } from '@/lib/use-harvest-packages';

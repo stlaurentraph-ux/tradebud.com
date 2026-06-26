@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import type { TenantRole, User } from '@/types';
+import type { User } from '@/types';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
 import {

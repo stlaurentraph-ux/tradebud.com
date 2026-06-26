@@ -8206,7 +8206,6 @@ export function getIntegrationsSchedulerLoadingLabel(t?: TranslateFn): string {
 }
 
 type IntegrationRunStatus = 'started' | 'completed' | 'failed';
-type IntegrationRunType = 'validation' | 'scoring';
 type IntegrationTimelineEvent =
   | 'draft_saved'
   | 'submitted'

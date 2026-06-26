@@ -1,4 +1,4 @@
-import type { ShipmentStatus, TenantRole } from '@/types';
+import type { TenantRole } from '@/types';
 
 export interface DashboardMaturityMetrics {
   total_packages?: number;

@@ -1,13 +1,27 @@
 import {
   ALL_LOCALES,
-  getAvailableLocalesForRole,
   getLocaleLabel as getCatalogLocaleLabel,
   isLocale as isCatalogLocale,
-  isLocaleForRole,
   resolveLocaleForRole,
   type Locale,
 } from '@/lib/locale-policy';
 import type { TenantRole } from '@/types';
+import enTranslations from '../../locales/en.json';
+import frOverlay from '../../locales/fr.json';
+import esOverlay from '../../locales/es.json';
+import deOverlay from '../../locales/overlays/de.json';
+import itOverlay from '../../locales/overlays/it.json';
+import nlOverlay from '../../locales/overlays/nl.json';
+import ptOverlay from '../../locales/overlays/pt.json';
+import noOverlay from '../../locales/overlays/no.json';
+import swOverlay from '../../locales/overlays/sw.json';
+import rwOverlay from '../../locales/overlays/rw.json';
+import lgOverlay from '../../locales/overlays/lg.json';
+import amOverlay from '../../locales/overlays/am.json';
+import idOverlay from '../../locales/overlays/id.json';
+import viOverlay from '../../locales/overlays/vi.json';
+import hiOverlay from '../../locales/overlays/hi.json';
+import arOverlay from '../../locales/overlays/ar.json';
 
 export type { Locale };
 export {
@@ -23,24 +37,24 @@ export type DashboardTimezone = 'UTC' | 'Europe/Paris' | 'Africa/Kigali' | 'Amer
 const LOCALE_STORAGE_KEY = 'tracebud_locale';
 const TIMEZONE_STORAGE_KEY = 'tracebud_timezone';
 
-const EN_TRANSLATIONS: Record<string, string> = require('../../locales/en.json');
+const EN_TRANSLATIONS: Record<string, string> = enTranslations;
 
 const LOCALE_OVERLAYS: Partial<Record<Locale, Record<string, string>>> = {
-  fr: require('../../locales/fr.json'),
-  es: require('../../locales/es.json'),
-  de: require('../../locales/overlays/de.json'),
-  it: require('../../locales/overlays/it.json'),
-  nl: require('../../locales/overlays/nl.json'),
-  pt: require('../../locales/overlays/pt.json'),
-  no: require('../../locales/overlays/no.json'),
-  sw: require('../../locales/overlays/sw.json'),
-  rw: require('../../locales/overlays/rw.json'),
-  lg: require('../../locales/overlays/lg.json'),
-  am: require('../../locales/overlays/am.json'),
-  id: require('../../locales/overlays/id.json'),
-  vi: require('../../locales/overlays/vi.json'),
-  hi: require('../../locales/overlays/hi.json'),
-  ar: require('../../locales/overlays/ar.json'),
+  fr: frOverlay,
+  es: esOverlay,
+  de: deOverlay,
+  it: itOverlay,
+  nl: nlOverlay,
+  pt: ptOverlay,
+  no: noOverlay,
+  sw: swOverlay,
+  rw: rwOverlay,
+  lg: lgOverlay,
+  am: amOverlay,
+  id: idOverlay,
+  vi: viOverlay,
+  hi: hiOverlay,
+  ar: arOverlay,
 };
 
 const MERGED_TRANSLATIONS: Record<Locale, Record<string, string>> = ALL_LOCALES.reduce(

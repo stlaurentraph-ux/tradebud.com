@@ -4,9 +4,8 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
-  useState,
+  useSyncExternalStore,
   type ReactNode,
 } from 'react';
 import {
@@ -24,29 +23,21 @@ interface DemoDataContextValue {
 
 const DemoDataContext = createContext<DemoDataContextValue | null>(null);
 
+function subscribeDemoData(onStoreChange: () => void): () => void {
+  window.addEventListener(DEMO_DATA_CHANGED_EVENT, onStoreChange);
+  return () => window.removeEventListener(DEMO_DATA_CHANGED_EVENT, onStoreChange);
+}
+
 export function DemoDataProvider({ children }: { children: ReactNode }) {
   const isToggleAvailable = isDemoDataToggleAvailable();
-  const [demoDataEnabled, setDemoDataEnabledState] = useState(false);
-
-  useEffect(() => {
-    setDemoDataEnabledState(readDemoDataEnabled());
-    const onChanged = (event: Event) => {
-      const detail = (event as CustomEvent<{ enabled?: boolean }>).detail;
-      if (typeof detail?.enabled === 'boolean') {
-        setDemoDataEnabledState(detail.enabled);
-        return;
-      }
-      setDemoDataEnabledState(readDemoDataEnabled());
-    };
-    window.addEventListener(DEMO_DATA_CHANGED_EVENT, onChanged);
-    return () => window.removeEventListener(DEMO_DATA_CHANGED_EVENT, onChanged);
-  }, []);
+  // External store: sessionStorage is the source of truth, kept in sync via the
+  // DEMO_DATA_CHANGED_EVENT dispatched by writeDemoDataEnabled. Server snapshot is false.
+  const demoDataEnabled = useSyncExternalStore(subscribeDemoData, readDemoDataEnabled, () => false);
 
   const setDemoDataEnabled = useCallback(
     (enabled: boolean) => {
       if (!isToggleAvailable) return;
       writeDemoDataEnabled(enabled);
-      setDemoDataEnabledState(enabled);
     },
     [isToggleAvailable],
   );

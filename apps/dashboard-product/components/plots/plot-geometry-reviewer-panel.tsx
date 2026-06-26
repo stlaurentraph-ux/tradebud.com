@@ -51,13 +51,15 @@ export function PlotGeometryReviewerPanel({ plotId }: PlotGeometryReviewerPanelP
 
   const role = user?.active_role;
   const kind = preview ? normalizePlotKind(preview.kind) : 'unknown';
+  const geometry = preview?.geometry;
+  const geometryCapture = preview?.geometry_capture;
   const coordinates = useMemo(
-    () => (preview?.geometry ? extractGeoJsonCoordinates(preview.geometry) : []),
-    [preview?.geometry],
+    () => (geometry ? extractGeoJsonCoordinates(geometry) : []),
+    [geometry],
   );
   const capture = useMemo(
-    () => normalizePlotGeometryCapture(preview?.geometry_capture),
-    [preview?.geometry_capture],
+    () => normalizePlotGeometryCapture(geometryCapture),
+    [geometryCapture],
   );
   const needsReview = geometryCaptureNeedsReview(capture);
 

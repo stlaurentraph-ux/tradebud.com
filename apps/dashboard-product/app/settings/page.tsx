@@ -129,7 +129,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, user?.id, user?.name, role, locale, timezone]);
+  }, [activeTab, user?.id, user?.name, role, locale, timezone, t]);
 
   const handlePreferencesSave = async () => {
     setIsSavingPreferences(true);
@@ -233,7 +233,7 @@ export default function SettingsPage() {
     return () => {
       cancelled = true;
     };
-  }, [activeTab, isTwoFactorDialogOpen]);
+  }, [activeTab, isTwoFactorDialogOpen, t]);
 
   const handlePasswordUpdate = async () => {
     if (!passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword) {

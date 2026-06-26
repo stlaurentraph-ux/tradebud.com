@@ -235,7 +235,7 @@ export function RunDetailsDrawer({
       }
     };
     void loadTimeline();
-  }, [open, run]);
+  }, [open, run, t]);
 
   if (!run) return null;
 

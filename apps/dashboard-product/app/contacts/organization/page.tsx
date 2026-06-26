@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { ArrowLeft, Building2, UserPlus } from 'lucide-react';
@@ -58,7 +58,7 @@ function ContactOrganizationPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshContacts = async () => {
+  const refreshContacts = useCallback(async () => {
     try {
       setError(null);
       const data = await listContacts();
@@ -69,11 +69,11 @@ function ContactOrganizationPageContent() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
     void refreshContacts();
-  }, []);
+  }, [refreshContacts]);
 
   const group = useMemo(
     () => (organizationName ? findOrganizationGroup(contacts, organizationName) : null),

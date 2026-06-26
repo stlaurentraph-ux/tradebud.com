@@ -6,8 +6,6 @@ import { getPlotById } from '@/lib/mocks/plots';
 import { normalizePlotKind, type PlotKind } from '@/lib/plot-inventory';
 import type { PlotGroundTruthPhotoSummary } from '@/lib/plot-eudr-readiness';
 import { defaultGroundTruthPhotoSummary, normalizeGroundTruthPhotoSummary } from '@/lib/plot-eudr-readiness';
-import { normalizePlotGeometryCapture } from '@/lib/plot-geometry-capture';
-
 export type PlotMapPreviewRecord = {
   id: string;
   name: string;
@@ -143,6 +141,7 @@ export function usePlotMapPreview(plotId: string, options?: { enabled?: boolean 
   useEffect(() => {
     if (!plotId || !enabled) {
       if (!enabled) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
         setIsLoading(false);
       } else {
         setPreview(null);

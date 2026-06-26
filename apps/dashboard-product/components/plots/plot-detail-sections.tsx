@@ -98,6 +98,7 @@ export function PlotDetailSections({
 
   useEffect(() => {
     if (!openSectionRequest) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     setSectionOpen(openSectionRequest, true);
     onOpenSectionRequestHandled();
     const el = document.getElementById(`plot-section-${openSectionRequest}`);

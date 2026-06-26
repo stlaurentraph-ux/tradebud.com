@@ -1,13 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import type { TimelineEvent } from '@/components/ui/timeline-row';
 import type { HarvestPackageScope } from '@/lib/harvest-package-scope';
 import { normalizeSummaryCampaigns } from '@/lib/dashboard-home-data';
 import type { SponsorDashboardSummaryPayload } from '@/lib/build-sponsor-dashboard-summary';
 import type { DashboardSummaryPayload } from '@/lib/load-dashboard-summary';
 import type { RequestCampaign } from '@/lib/use-requests';
-import type { DDSPackage, ShipmentStatus } from '@/types';
+import type { DDSPackage } from '@/types';
 import { getAccessToken } from '@/lib/auth-session';
 import type { DashboardSummaryMetrics } from '@/lib/build-dashboard-summary';
 
@@ -56,6 +55,7 @@ export function useDashboardSummary(
 
   useEffect(() => {
     if (!enabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setMetrics(null);
       setPackages([]);
       setCampaigns([]);

@@ -254,7 +254,7 @@ export function getVirginStateCopyManifest(): Record<string, string> {
       }
     }
   }
-  for (const [key, entry] of Object.entries(VIRGIN_SHELL_COPY)) {
+  for (const entry of Object.values(VIRGIN_SHELL_COPY)) {
     manifest[entry.key] = entry.fallback;
   }
   return manifest;
