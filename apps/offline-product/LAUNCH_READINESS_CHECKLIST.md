@@ -27,7 +27,7 @@ This checklist is the minimum bar before publishing the Tracebud farmer field ap
 ## 3) Security Hardening
 
 - [x] Credentials/tokens are stored with secure platform storage (`syncAuthStorage` + SecureStore; `security:preflight`).
-- [ ] Sensitive local data at rest is encrypted where required (SQLite OS sandbox; full SQLCipher out of MVP scope).
+- [x] Sensitive local data at rest is encrypted where required (SQLite OS sandbox; full SQLCipher deferred — see `product-os/04-quality/offline-sqlite-at-rest-h18.md`).
 - [ ] TLS/certificate hardening is enabled for production API calls (HTTPS enforced in `release-preflight`; no cert pinning in v1).
 - [x] PII is never written to debug logs (`sanitizeLogContext` in `logError`; `security:preflight`).
 - [x] Non-validation errors reported to Sentry when `EXPO_PUBLIC_SENTRY_DSN` is set (`logError` bridge).

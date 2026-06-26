@@ -21,6 +21,7 @@ const guards = [
   'analytics-slice-guard.mjs',
   'release-preflight-guard.mjs',
   'plot-list-thumbnail-guard.mjs',
+  'sqlite-at-rest-guard.mjs',
 ];
 
 const args = process.argv.slice(2);
