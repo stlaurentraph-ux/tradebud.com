@@ -188,7 +188,17 @@ export class BillingController {
       throw new BadRequestException('billingPeriod is required.');
     }
 
-    const tenantId = body.tenantId?.trim() || requireTenantId(req);
+    // Bind the invoice to the caller's own tenant. A tenant admin must not finalize
+    // invoices for another tenant via body.tenantId; platform-wide finalize runs go
+    // through the scheduler-token-gated `invoices/finalize-period` endpoint instead.
+    const callerTenantId = requireTenantId(req);
+    const requestedTenantId = body.tenantId?.trim();
+    if (requestedTenantId && requestedTenantId !== callerTenantId) {
+      throw new ForbiddenException(
+        'Cannot finalize invoices for another tenant. Use the finalize-period endpoint for platform-wide runs.',
+      );
+    }
+    const tenantId = callerTenantId;
     const subscriptionAmountEur = Number(body.subscriptionAmountEur ?? 0);
 
     const invoice = await this.billingService.finalizeMonthlyInvoice(
