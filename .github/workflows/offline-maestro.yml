@@ -181,9 +181,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-boot-timeout: 1200
-          script: |
-            cd apps/offline-product
-            npm run qa:maestro:golden-path:android
+          script: cd apps/offline-product && npm run qa:maestro:golden-path:android
 
   maestro-macos:
     name: Maestro macOS CLI smoke
