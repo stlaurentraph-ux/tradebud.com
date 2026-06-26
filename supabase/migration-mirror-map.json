@@ -126,6 +126,11 @@
       "supabase": "20260624220000_bulk_import_policy_integrator_keys.sql",
       "backend": "tb_v16_066_bulk_import_policy_integrator_keys.sql",
       "purpose": "bulk_import_policy_integrator_keys"
+    },
+    {
+      "supabase": "20260626180000_stripe_webhook_event_ledger.sql",
+      "backend": "tb_v16_067_stripe_webhook_event_ledger.sql",
+      "purpose": "stripe_webhook_event_ledger"
     }
   ],
   "supabaseOnly": [
