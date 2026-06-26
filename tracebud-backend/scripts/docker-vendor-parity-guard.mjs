@@ -35,6 +35,15 @@ for (const file of files) {
   }
 }
 
+const backendPkgPath = path.join(backendRoot, 'package.json');
+const backendPkg = JSON.parse(readFileSync(backendPkgPath, 'utf8'));
+if (backendPkg.dependencies?.['@tracebud/import-v1-canonical'] !== 'file:./vendor/import-v1-canonical') {
+  console.error(
+    'docker-vendor-parity-guard: tracebud-backend/package.json must depend on file:./vendor/import-v1-canonical',
+  );
+  failed = true;
+}
+
 if (failed) {
   console.error(
     'docker-vendor-parity-guard: copy packages/tracebud-import-v1-canonical into tracebud-backend/vendor/import-v1-canonical',

@@ -4,11 +4,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# package.json pins @tracebud/import-v1-canonical to file:./vendor/import-v1-canonical
 COPY vendor/import-v1-canonical ./vendor/import-v1-canonical
-COPY package.json ./
+COPY package.json package-lock.json* ./
 
-RUN npm pkg set dependencies.@tracebud/import-v1-canonical=file:./vendor/import-v1-canonical \
-  && npm install
+RUN npm install
 
 COPY . .
 

@@ -20,6 +20,7 @@ const guards = [
   ['backend-deploy-smoke-guard.mjs', []],
   ['stripe-webhook-replay-guard.mjs', []],
   ['docker-vendor-parity-guard.mjs', []],
+  ['railway-build-context-guard.mjs', []],
   ['check-tenure-parse-readiness.mjs', ['--static-only']],
 ];
 
