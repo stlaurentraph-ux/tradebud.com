@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "slice": "H18",
+  "decision": "accept_os_sandbox_v1",
+  "decisionDoc": "product-os/04-quality/offline-sqlite-at-rest-h18.md",
+  "databaseFile": "tracebud_offline.db",
+  "credentialModule": "apps/offline-product/features/security/syncAuthStorage.ts",
+  "legacyMigrationExport": "migrateOrClearLegacySyncAuthOnBoot",
+  "securityPreflightScript": "apps/offline-product/scripts/security-preflight.mjs",
+  "structuralGuardScript": "apps/offline-product/scripts/sqlite-at-rest-guard.mjs",
+  "sqlCipherStatus": "deferred_post_v1"
+}
