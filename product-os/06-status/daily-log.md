@@ -1,3 +1,9 @@
+### 2026-06-26 (Lane 2 fix — Sentry EU plugin URL for offline builds, audit H26)
+- **Context**: `@sentry/react-native/expo` plugin pointed at `https://sentry.io/` but Tracebud's org is on **de.sentry.io** — source map uploads could fail or land on the wrong region.
+- **Fix**: `app.config.js` defaults `SENTRY_PLUGIN.url` to `https://de.sentry.io/` (override via `SENTRY_HOST` for non-EU dev).
+- **Guards**: `device-qa-preflight.mjs` asserts EU host and rejects hardcoded US URL.
+- **Status**: branch `fix/offline-sentry-eu-h26`.
+
 ### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
 - **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
 - **Tests / collection**:

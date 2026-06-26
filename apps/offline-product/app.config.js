@@ -2,6 +2,8 @@ const appJson = require('./app.json');
 
 const SENTRY_ORG = process.env.SENTRY_ORG ?? 'tracebud';
 const SENTRY_PROJECT = process.env.SENTRY_PROJECT ?? 'react-native';
+/** Tracebud Sentry org is on the EU region — plugin uploads must target de.sentry.io. */
+const SENTRY_PLUGIN_URL = (process.env.SENTRY_HOST ?? 'https://de.sentry.io/').replace(/\/?$/, '/');
 
 const PRODUCTION_NOTIFICATIONS_PLUGIN = [
   'expo-notifications',
@@ -14,7 +16,7 @@ const PRODUCTION_NOTIFICATIONS_PLUGIN = [
 const SENTRY_PLUGIN = [
   '@sentry/react-native/expo',
   {
-    url: 'https://sentry.io/',
+    url: SENTRY_PLUGIN_URL,
     organization: SENTRY_ORG,
     project: SENTRY_PROJECT,
   },
