@@ -1,3 +1,8 @@
+### 2026-06-26 (Lane 2 fix — Railway deploy pg TLS bundle in Docker image)
+- **Context**: Railway redeploy after Upstash env var change failed healthcheck — runtime container lacked `certs/rds-global-bundle.pem` (H4 pg TLS).
+- **Fixes**: Dockerfile runner stage copies `certs/`; `pg-ssl-config-guard` asserts COPY wiring.
+- **Branch**: `fix/backend-docker-pg-ssl-certs` → PR #335.
+
 ### 2026-06-26 (Lane 2 fix — Stripe webhook event.id dedupe, audit H7)
 - **Context**: Stripe at-least-once delivery could replay `invoice.paid` / `invoice.payment_failed` and re-run reconciliation queries without an event ledger.
 - **Fixes**: `stripe_webhook_events` table + `claimStripeWebhookEvent()` before `handleStripeWebhookEvent` side effects; duplicate deliveries return `{ duplicate: true }` without touching invoices.

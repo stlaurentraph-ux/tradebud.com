@@ -34,4 +34,10 @@ if (!existsSync(caPath)) {
   process.exit(1);
 }
 
+const dockerfile = read('Dockerfile');
+if (!dockerfile.includes('COPY --from=builder /app/certs ./certs')) {
+  console.error('pg-ssl-config-guard: Dockerfile runner stage must COPY certs for production TLS');
+  process.exit(1);
+}
+
 console.log('pg-ssl-config-guard: OK');

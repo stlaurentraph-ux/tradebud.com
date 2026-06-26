@@ -104,10 +104,10 @@ Railway backend (audit H3 — distributed rate limiting):
 
 | Variable | Where | Purpose |
 |----------|-------|---------|
-| `UPSTASH_REDIS_REST_URL` | Railway `tracebud-backend` | Upstash Redis REST endpoint for cross-replica rate limits |
-| `UPSTASH_REDIS_REST_TOKEN` | Railway `tracebud-backend` | Upstash REST token (**sensitive**) |
+| `UPSTASH_REDIS_REST_URL` | Railway `tradebud.com` service | Upstash Redis REST endpoint (`https://….upstash.io`) — **external** Upstash account, not Railway Redis |
+| `UPSTASH_REDIS_REST_TOKEN` | Railway `tradebud.com` service | Upstash REST token (**sensitive**) |
 
-When unset, backend falls back to in-process memory buckets (single-replica dev only). Production should set both.
+When unset, backend falls back to in-process memory buckets (single-replica dev only). Production should set both from [upstash.com](https://upstash.com) (do not deploy the Railway Serverless Redis template — removed 2026-06-26).
 
 Marketing build: no secrets required for static build; forms need env only at runtime on Vercel.
 
