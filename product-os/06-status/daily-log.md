@@ -1,3 +1,11 @@
+### 2026-06-26 (Lane 1 guardrails — CI dashboard gate + path-filter gate, audit B7)
+- **Context**: Dashboard `lint typecheck test` ran with `continue-on-error: true`, so regressions merged green. Path-filtered jobs that skip entirely can satisfy branch protection without running checks.
+- **Fixes**:
+  - Removed `continue-on-error` from dashboard-product lint/typecheck/test step (verified green locally: 584 tests).
+  - Added `ci-path-filter-gate` PR job: when paths-filter marks an app as changed, the matching CI job must `success` (not `skipped`/`failure`).
+- **Note**: Enabling the new gate as a required GitHub check is human gate **0.H** — this PR only adds the job.
+- **Status**: branch `chore/automation-ci-dashboard-gate`.
+
 ### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
 - **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
 - **Tests / collection**:
