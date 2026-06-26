@@ -230,8 +230,7 @@ export class InboxService {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
-      await client.query('DELETE FROM inbox_request_events');
-      await client.query('DELETE FROM inbox_requests');
+      await client.query('TRUNCATE inbox_request_events, inbox_requests RESTART IDENTITY CASCADE');
 
       for (const request of requests) {
         await client.query(
