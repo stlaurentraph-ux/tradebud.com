@@ -1,3 +1,15 @@
+### 2026-06-26 (Lane 2 fix — offline sync data-loss + boot-safety, audit B4/H9/H11–H13)
+- **Context**: Offline tier of the 2026-06-26 production-readiness audit. Fixes the data-loss / silent-failure findings that exist on `main` (H10 / push-only mode lives only on the unmerged #264 branch and is deferred to PR #307).
+- **Fixes**:
+  - **B4** — `syncGroundTruthPhotosWithFiles` now passes `stableKey: photo.id` (deterministic storage path → retries upsert the same object instead of creating duplicate blobs) and throws on partial upload failure so the pending-sync queue row is retained and the remaining photos retry instead of being dropped.
+  - **H9** — `processPendingSyncQueue` no longer swallows the local delivery-receipt update after a harvest POST. A failed receipt write now throws so the queue row is retained and retried (the harvest POST is idempotent via `clientEventId`); previously the server had the harvest while the local receipt stayed `pendingSync` forever.
+  - **H11** — `runAutoBackup` loads the authoritative persisted farmer (new `loadFarmerProfile()`) instead of a `selfDeclared:false` stub, so background auto-backup can backfill producer declaration audits (`hasProducerAttestationsComplete` could never be satisfied by the stub).
+  - **H12** — pending-sync cap eviction (`enqueuePendingSync`) now records a `sync_queue_overflow_evicted` audit event (count + cap + action types) instead of silently dropping the oldest unsynced field work.
+  - **H13** — SQLite boot failure (`AppStateContext`) now sets a `bootError` flag and reports to Sentry instead of only a dev `console.warn`; `SplashGate` renders a Retry recovery screen rather than a misleading empty Home that could overwrite real data. (Recovery copy is hardcoded English — localization is a follow-up; no new i18n keys to avoid 16-locale parity churn.)
+- **Tests**: `syncGroundTruthPhotosWithFiles.test.ts` (idempotent key + partial-failure throw), `runAutoBackup.test.ts` (persisted farmer threaded through), `persistence.sqlite.test.ts` (H12 eviction + `loadFarmerProfile` round-trip). Extended `expoSqliteMemoryMock` to model `pending_sync` + `audit_log`. H13 has no automated test — `main` has no RN component render harness (no `.test.tsx`).
+- **Verify**: `npm run typecheck` (0), `npm run lint` (0 warnings), `npx vitest run` → 488/488, `npm run qa:structural` OK (feature-doc-guard WARN is non-blocking).
+- **Status**: branch `fix/offline-sync-correctness`.
+
 ### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
 - **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
 - **Tests / collection**:

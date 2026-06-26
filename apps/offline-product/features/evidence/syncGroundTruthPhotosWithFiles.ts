@@ -52,6 +52,20 @@ function assertGroundTruthPhotosUploaded(summary: GroundTruthSyncSummary, photos
       },
     );
   }
+  // Partial success must still fail the action so the pending-sync queue row is retained
+  // and the remaining photos retry; otherwise they are dropped permanently.
+  if (summary.failedUploadCount > 0) {
+    throw new SyncFailureError(
+      summary.firstSyncFailure ?? {
+        step: 'photo_storage',
+        cause: 'unknown',
+        message:
+          summary.firstUploadError ??
+          'Some field photos did not upload. Try Sync now again.',
+        actionType: 'photos_sync',
+      },
+    );
+  }
 }
 
 /** Upload local ground-truth photos to storage when signed in, then sync metadata to the API. */
@@ -88,6 +102,9 @@ export async function syncGroundTruthPhotosWithFiles(params: {
       farmerId: params.farmerId,
       plotId: params.serverPlotId,
       kind: 'ground_truth',
+      // Deterministic path per local photo row so retries upsert the same object
+      // instead of creating a new blob each attempt (PlotPhoto has no storagePath column).
+      stableKey: photo.id,
     });
     if (upload.ok) {
       summary.uploadedCount += 1;
