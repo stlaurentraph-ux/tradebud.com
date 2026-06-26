@@ -265,11 +265,14 @@ export async function processPendingSyncQueue(params: {
           clientEventId,
         } as Parameters<typeof postHarvestToBackend>[0]);
         const qrCodeRef = readHarvestSubmitQrCodeRef(harvestResponse);
+        // Do not swallow this error: if the local receipt update fails, throw so the queue row
+        // is retained and retried (the harvest POST is idempotent via clientEventId). Otherwise
+        // the server has the harvest but the local receipt stays pendingSync forever.
         await updateLocalDeliveryReceipt(clientEventId, {
           qrCodeRef,
           pendingSync: false,
           serverPlotId: sid,
-        }).catch(() => undefined);
+        });
         trackEvent(ANALYTICS_EVENTS.HARVEST_SUBMIT_SUCCESS, {
           plotId: localId,
           serverPlotId: sid,

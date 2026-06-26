@@ -94,11 +94,15 @@ const nextId = () => seq++;
 export async function initDatabase() {}
 
 export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: Plot[] }> {
+  return { farmer: await loadFarmerProfile(), plots: memPlots };
+}
+
+export async function loadFarmerProfile(): Promise<FarmerProfile | undefined> {
   const photoUri = memSettings['farmerProfilePhotoUri'];
   if (memFarmer && photoUri && photoUri.length > 0) {
-    return { farmer: { ...memFarmer, profilePhotoUri: photoUri }, plots: memPlots };
+    return { ...memFarmer, profilePhotoUri: photoUri };
   }
-  return { farmer: memFarmer, plots: memPlots };
+  return memFarmer;
 }
 
 export async function persistFarmer(farmer?: FarmerProfile) {

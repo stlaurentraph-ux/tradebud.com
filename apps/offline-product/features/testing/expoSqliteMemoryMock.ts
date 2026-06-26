@@ -48,6 +48,26 @@ type DeliveryReceiptRow = {
   buyerLabel: string;
 };
 
+type PendingSyncRow = {
+  id: number;
+  createdAt: number;
+  hlcTimestamp: string | null;
+  actionType: string;
+  payloadJson: string;
+  attempts: number;
+  lastError: string | null;
+  lastAttemptAt: number | null;
+};
+
+type AuditLogRow = {
+  id: number;
+  timestamp: number;
+  userId: string | null;
+  deviceId: string | null;
+  eventType: string;
+  payloadJson: string;
+};
+
 export type ExpoSqliteMemoryMock = {
   openDatabaseAsync: (name: string) => Promise<{
     execAsync: (sql: string) => Promise<void>;
@@ -62,6 +82,8 @@ export type ExpoSqliteMemoryMock = {
     evidence: EvidenceRow[];
     farmer: FarmerRow[];
     deliveryReceipts: DeliveryReceiptRow[];
+    pendingSync: PendingSyncRow[];
+    auditLog: AuditLogRow[];
   };
   reset: () => void;
 };
@@ -72,18 +94,29 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
     evidence: [] as EvidenceRow[],
     farmer: [] as FarmerRow[],
     deliveryReceipts: [] as DeliveryReceiptRow[],
+    pendingSync: [] as PendingSyncRow[],
+    auditLog: [] as AuditLogRow[],
   };
   let titlePhotoId = 1;
   let evidenceId = 1;
+  let pendingSyncId = 1;
+  let auditLogId = 1;
 
   const reset = () => {
     tables.titlePhotos.length = 0;
     tables.evidence.length = 0;
     tables.farmer.length = 0;
     tables.deliveryReceipts.length = 0;
+    tables.pendingSync.length = 0;
+    tables.auditLog.length = 0;
     titlePhotoId = 1;
     evidenceId = 1;
+    pendingSyncId = 1;
+    auditLogId = 1;
   };
+
+  const pendingSyncOrdered = (): PendingSyncRow[] =>
+    [...tables.pendingSync].sort((a, b) => a.createdAt - b.createdAt || a.id - b.id);
 
   const readFarmerRow = (params: unknown[]): FarmerRow => ({
     id: String(params[0]),
@@ -194,6 +227,45 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
         );
         return { lastInsertRowId: 0 };
       }
+      if (sql.includes('UPDATE pending_sync SET payloadJson = ?, lastError = ? WHERE id = ?')) {
+        const id = Number(params[2]);
+        const row = tables.pendingSync.find((entry) => entry.id === id);
+        if (row) {
+          row.payloadJson = String(params[0]);
+          row.lastError = params[1] != null ? String(params[1]) : null;
+        }
+        return { lastInsertRowId: 0 };
+      }
+      if (sql.includes('INSERT INTO pending_sync')) {
+        const row: PendingSyncRow = {
+          id: pendingSyncId++,
+          createdAt: Number(params[0]),
+          hlcTimestamp: params[1] != null ? String(params[1]) : null,
+          actionType: String(params[2]),
+          payloadJson: String(params[3]),
+          attempts: 0,
+          lastError: params[4] != null ? String(params[4]) : null,
+          lastAttemptAt: null,
+        };
+        tables.pendingSync.push(row);
+        return { lastInsertRowId: row.id };
+      }
+      if (sql.includes('DELETE FROM pending_sync WHERE id IN')) {
+        const ids = new Set(params.map((value) => Number(value)));
+        tables.pendingSync = tables.pendingSync.filter((row) => !ids.has(row.id));
+        return { lastInsertRowId: 0 };
+      }
+      if (sql.includes('INSERT INTO audit_log')) {
+        tables.auditLog.push({
+          id: auditLogId++,
+          timestamp: Number(params[0]),
+          userId: params[1] != null ? String(params[1]) : null,
+          deviceId: params[2] != null ? String(params[2]) : null,
+          eventType: String(params[3]),
+          payloadJson: String(params[4]),
+        });
+        return { lastInsertRowId: 0 };
+      }
       return { lastInsertRowId: 0 };
     },
     getAllAsync: async <T>(sql: string, params: unknown[] = []): Promise<T[]> => {
@@ -239,6 +311,21 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
       if (sql.includes('FROM plot_legal')) {
         return [] as T[];
       }
+      if (sql.includes('FROM pending_sync')) {
+        if (sql.includes('MAX(COUNT(*)')) {
+          const cap = Number(params[0]);
+          const evictCount = Math.max(tables.pendingSync.length - cap, 0);
+          return pendingSyncOrdered()
+            .slice(0, evictCount)
+            .map((row) => ({ id: row.id, actionType: row.actionType })) as T[];
+        }
+        return pendingSyncOrdered() as T[];
+      }
+      if (sql.includes('FROM audit_log')) {
+        const limit = Number(params[0]);
+        const rows = [...tables.auditLog].sort((a, b) => b.timestamp - a.timestamp);
+        return (Number.isFinite(limit) ? rows.slice(0, limit) : rows) as T[];
+      }
       return [] as T[];
     },
     getFirstAsync: async <T>(sql: string, params: unknown[] = []): Promise<T | null> => {
@@ -249,6 +336,10 @@ export function createExpoSqliteMemoryMock(): ExpoSqliteMemoryMock {
           return (row ?? null) as T | null;
         }
         return (tables.farmer[0] ?? null) as T | null;
+      }
+      if (sql.includes('FROM pending_sync')) {
+        const row = [...tables.pendingSync].sort((a, b) => b.id - a.id)[0];
+        return (row ? { hlcTimestamp: row.hlcTimestamp } : null) as T | null;
       }
       return null;
     },

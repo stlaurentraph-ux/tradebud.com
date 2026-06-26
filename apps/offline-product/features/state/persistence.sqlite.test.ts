@@ -207,4 +207,52 @@ describe('persistence.native sqlite integration', () => {
     expect(loaded.farmer?.declarationLongitude).toBe(-1.654321);
     expect(loaded.farmer?.declarationGeoCapturedAt).toBe(capturedAt);
   });
+
+  it('loadFarmerProfile returns the persisted farmer with attestation flags', async () => {
+    const { persistFarmer, loadFarmerProfile } = await import('./persistence.native');
+    const farmerId = '44444444-4444-4444-8444-444444444444';
+    await persistFarmer({
+      id: farmerId,
+      role: 'farmer',
+      name: 'Ada',
+      selfDeclared: true,
+      fpicConsent: true,
+      laborNoChildLabor: true,
+      laborNoForcedLabor: true,
+    });
+
+    const farmer = await loadFarmerProfile();
+    expect(farmer?.id).toBe(farmerId);
+    expect(farmer?.selfDeclared).toBe(true);
+    expect(farmer?.fpicConsent).toBe(true);
+    expect(farmer?.laborNoChildLabor).toBe(true);
+    expect(farmer?.laborNoForcedLabor).toBe(true);
+  });
+
+  it('enqueuePendingSync evicts oldest rows at the cap and logs an audit event (H12)', async () => {
+    const { enqueuePendingSync, loadPendingSyncActions, loadLocalAuditEvents } = await import(
+      './persistence.native'
+    );
+
+    // payload '{}' on audit_sync yields a null dedup key, so every row is inserted (no merge).
+    const total = 1002;
+    for (let i = 0; i < total; i += 1) {
+      await enqueuePendingSync({
+        createdAt: 1000 + i,
+        actionType: 'audit_sync',
+        payloadJson: '{}',
+        lastError: null,
+      });
+    }
+
+    const rows = await loadPendingSyncActions();
+    expect(rows).toHaveLength(1000);
+    // The two oldest rows (createdAt 1000, 1001) must have been evicted.
+    expect(rows[0]?.createdAt).toBe(1002);
+
+    const audit = await loadLocalAuditEvents({ limit: 500 });
+    const evictions = audit.filter((e) => e.eventType === 'sync_queue_overflow_evicted');
+    expect(evictions.length).toBeGreaterThanOrEqual(1);
+    expect(evictions[0]?.payload).toMatchObject({ cap: 1000 });
+  });
 });
