@@ -4,7 +4,14 @@
 - **Tests**: `requests.service.spec.ts` — active-campaign mocks updated; new rejection case for inactive campaign.
 - **Note**: Audit H1 (public campaign preview / `senderTenantId` leak) — no preview endpoint exists on `main` today; field-auth references `/invite?token=` which is not implemented in `RequestsPublicController` yet.
 - **Verify**: backend unit tests 423/423.
-- **Status**: branch `fix/backend-public-campaign-guard`.
+- **Status**: merged via PR #311.
+
+### 2026-06-26 (Lane 2 fix — dedicated decision-link HMAC secret, audit H6)
+- **Context**: Email CTA decision tokens fell back to `RESEND_API_KEY` when `RESEND_DECISION_SECRET` was unset — coupling link signing to the transactional email API key.
+- **Fix**: `getDecisionSecret()` now requires `RESEND_DECISION_SECRET` only; fail closed with a clear error. Updated `.env.production.example` comment.
+- **Tests**: Replaced API-key fallback acceptance test with rejection when dedicated secret is unset.
+- **Verify**: backend unit tests 423/423.
+- **Status**: merged via PR #314.
 
 ### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
 - **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
