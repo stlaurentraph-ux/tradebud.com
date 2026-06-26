@@ -1,5 +1,6 @@
 # Railway deploy config (https://railway.app)
-# Root directory for this service: tracebud-backend (set in Railway dashboard if monorepo)
+# Root directory for this service: tracebud-backend (set in Railway dashboard if monorepo).
+# Do not set Root Directory to repo root — Railway needs this file + Dockerfile here.
 
 [build]
 builder = "DOCKERFILE"
