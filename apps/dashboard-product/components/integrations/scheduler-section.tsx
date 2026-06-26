@@ -189,7 +189,7 @@ export function SchedulerSection() {
     };
 
     void loadSchedulerData();
-  }, []);
+  }, [t]);
 
   const handleTrigger = async () => {
     if (!config?.tokenConfigured) {

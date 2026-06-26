@@ -205,6 +205,9 @@ export function PlotSatelliteMap({
           >
             <div className="absolute inset-0 overflow-hidden">
               {tiles.map((tile) => (
+                // Dynamic XYZ map-tile grid with computed pixel offsets — next/image
+                // cannot optimize per-tile external URLs and would break the transform layout.
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   key={`${tile.url}-${tile.left}-${tile.top}`}
                   src={tile.url}

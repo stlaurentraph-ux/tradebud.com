@@ -17,6 +17,20 @@ export function createNextjsEslintConfig(extraIgnores = []) {
     },
     ...nextVitals,
     ...nextTs,
+    {
+      // Honor the repo-wide convention that a leading underscore marks an
+      // intentionally-unused binding (params, locals, caught errors).
+      rules: {
+        "@typescript-eslint/no-unused-vars": [
+          "error",
+          {
+            argsIgnorePattern: "^_",
+            varsIgnorePattern: "^_",
+            caughtErrorsIgnorePattern: "^_",
+          },
+        ],
+      },
+    },
   ]
 }
 

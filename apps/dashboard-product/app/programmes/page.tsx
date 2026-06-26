@@ -120,6 +120,7 @@ function ProgrammesPageContent() {
 
   useEffect(() => {
     if (searchParams.get('new') === '1') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setIsWizardOpen(true);
     }
   }, [searchParams]);
@@ -135,6 +136,7 @@ function ProgrammesPageContent() {
 
   useEffect(() => {
     const token = window.sessionStorage.getItem('tracebud_token');
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     setIsLoading(true);
     fetch('/api/requests/campaigns', {
       method: 'GET',

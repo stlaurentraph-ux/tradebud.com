@@ -23,6 +23,7 @@ export function DeferredDashboardSection({
     if (!node || isVisible) return;
 
     if (typeof IntersectionObserver === 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setIsVisible(true);
       return;
     }

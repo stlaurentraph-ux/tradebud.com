@@ -146,12 +146,14 @@ function ComplianceIssuesPageContent() {
       ownership === 'campaign' ||
       ownership === 'request'
     ) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setKindFilter(ownership);
     }
   }, [searchParams]);
 
   useEffect(() => {
     if (role !== 'cooperative') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setBackendBlockingCount(null);
       return;
     }
@@ -173,6 +175,7 @@ function ComplianceIssuesPageContent() {
     }
     const token = window.sessionStorage.getItem('tracebud_token');
     const headers = token ? { Authorization: `Bearer ${token}` } : undefined;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     setIsLoadingIssues(true);
     void fetch('/api/requests/issues', { headers, cache: 'no-store' })
       .then(async (response) => {

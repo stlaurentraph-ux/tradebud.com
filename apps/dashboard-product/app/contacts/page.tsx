@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useContext } from 'react';
+import { useCallback, useEffect, useMemo, useState, useContext } from 'react';
 import Link from 'next/link';
 import { AppHeader } from '@/components/layout/app-header';
 import { PermissionGate } from '@/components/common/permission-gate';
@@ -38,7 +38,7 @@ import { SupplierOrganizationList } from '@/components/contacts/supplier-organiz
 import { groupContactsByOrganization } from '@/lib/contact-directory';
 
 const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
-const CONTACT_TABLE_COLUMN_KEYS = [
+const _CONTACT_TABLE_COLUMN_KEYS = [
   'name',
   'email',
   'organization',
@@ -48,7 +48,7 @@ const CONTACT_TABLE_COLUMN_KEYS = [
   'last_activity',
   'update_status',
 ] as const;
-type ContactTableColumnKey = (typeof CONTACT_TABLE_COLUMN_KEYS)[number];
+type ContactTableColumnKey = (typeof _CONTACT_TABLE_COLUMN_KEYS)[number];
 
 const CONTACT_TABLE_COLUMNS: Array<{
   key: ContactTableColumnKey;
@@ -88,7 +88,7 @@ export default function ContactsPage() {
     ),
   );
 
-  const refreshContacts = async () => {
+  const refreshContacts = useCallback(async () => {
     try {
       setError(null);
       const data = await listContacts();
@@ -97,11 +97,12 @@ export default function ContactsPage() {
       setError(nextError instanceof Error ? nextError.message : getContactsErrorMessage('load', t));
       setContacts([]);
     }
-  };
+  }, [t]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
     void refreshContacts();
-  }, []);
+  }, [refreshContacts]);
 
   const filtered = useMemo(() => {
     return contacts.filter((contact) => {

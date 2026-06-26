@@ -50,7 +50,7 @@ import {
   getRegisterDeliveryHeaderCtaLabel,
 } from '@/lib/workflow-terminology-labels';
 
-interface Harvest extends ExporterBatchRecord {}
+type Harvest = ExporterBatchRecord;
 
 const devMockHarvests: Harvest[] =
   process.env.NODE_ENV !== 'production' ? mockBatches : [];
@@ -69,6 +69,7 @@ export default function HarvestsPage() {
 
   useEffect(() => {
     if (demoDataEnabled) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional effect-driven state sync (async load / client hydration); React Compiler adoption tracked separately
       setHarvests(mockBatches);
       return;
     }
