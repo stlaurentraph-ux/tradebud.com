@@ -15,6 +15,20 @@ Guard: `npm run qa:structural` in dashboard-product
 
 Permission strings use **`resource:action`** colon format in `lib/rbac.ts` (`packages:view`, `plots:edit`, `audit:export`, …).
 
+## Backend JWT alignment
+
+| Dashboard `TenantRole` | Backend `AppRole` |
+|------------------------|-------------------|
+| `exporter` | `exporter` |
+| `cooperative` | `cooperative` |
+| `country_reviewer` | `country_reviewer` |
+| `importer` | dashboard-only persona (no 1:1 JWT role) |
+| `sponsor` | dashboard-only persona (tier-4) |
+
+Backend JWT workspace roles also include `admin` and `compliance_manager` (not `TenantRole` values).
+
+Guard: `dashboard-backend-role-parity-guard.mjs`
+
 ## Shipment status transitions
 
 Canonical statuses: `DRAFT`, `READY`, `SEALED`, `SUBMITTED`, `ACCEPTED`, `REJECTED`, `ARCHIVED`, `ON_HOLD`.

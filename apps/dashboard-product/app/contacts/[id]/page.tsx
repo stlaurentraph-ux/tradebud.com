@@ -23,6 +23,7 @@ import {
   type ContactRecord,
   type ContactStatus,
 } from '@/lib/contact-service';
+import { DASHBOARD_CONTACT_STATUSES } from '@/lib/dashboardCrmOutreachRegistry';
 import { resolveProducerFarmerId } from '@/lib/consent-grants-service';
 import { useAuth } from '@/lib/auth-context';
 import { LocaleContext } from '@/lib/locale-context';
@@ -43,7 +44,7 @@ import {
   getProducersNavHref,
 } from '@/lib/workflow-terminology-labels';
 
-const CONTACT_STATUSES: ContactStatus[] = ['new', 'invited', 'engaged', 'submitted', 'inactive', 'blocked'];
+const CONTACT_STATUSES: ContactStatus[] = [...DASHBOARD_CONTACT_STATUSES];
 
 interface ContactDetailPageProps {
   params: Promise<{ id: string }>;

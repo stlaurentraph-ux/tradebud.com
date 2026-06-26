@@ -22,6 +22,7 @@ Agents: use `.cursor/commands/start-agent-task.md`. Do not duplicate scope of an
 - **Field app (2026-06-16)** — Delivery saved screen (`DeliveryLoggedPanel`) shipped on harvests tab; plot receipt tab + land-paper gating. Device QA: record delivery → share PNG → view plot receipt; queued path → Sync now.
 - Mobile multi-plot delivery trip shipped (field app harvests tab); cooperative voucher intake QA pack at `product-os/04-quality/cooperative-voucher-intake-qa.md`.
 - Dashboard exporter supplier directory + processing facility subtypes (contacts org list, CSV import labels).
+- **Dashboard CRM/outreach structural contracts (2026-06-19)** — `dashboardCrmOutreachRegistry.ts` + crm/campaign/network-permission guards; contacts/farmers/campaigns/inbox domain parity with backend.
 
 ## Tomorrow (2026-06-17)
 

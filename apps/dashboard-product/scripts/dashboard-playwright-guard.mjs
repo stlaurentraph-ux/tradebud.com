@@ -46,12 +46,19 @@ function assertManifestShape(manifest) {
   if (manifest.smoke?.onboardingStepKey !== 'create_first_campaign') {
     throw new Error('manifest smoke.onboardingStepKey must be create_first_campaign');
   }
-  if (!Array.isArray(manifest.paths) || manifest.paths.length !== 3) {
-    throw new Error('manifest must define exactly three golden paths');
+  if (!Array.isArray(manifest.paths) || manifest.paths.length !== 4) {
+    throw new Error('manifest must define exactly four golden paths');
   }
   const ids = manifest.paths.map((item) => item.id);
-  if (!ids.includes('login_shell') || !ids.includes('login_stub') || !ids.includes('onboarding_read_write')) {
-    throw new Error('manifest paths must include login_shell, login_stub, and onboarding_read_write');
+  if (
+    !ids.includes('login_shell') ||
+    !ids.includes('login_stub') ||
+    !ids.includes('onboarding_read_write') ||
+    !ids.includes('outreach_send_archive')
+  ) {
+    throw new Error(
+      'manifest paths must include login_shell, login_stub, onboarding_read_write, and outreach_send_archive',
+    );
   }
 }
 
@@ -98,6 +105,18 @@ function assertSpecAlignment(manifest) {
     !readDashboard('e2e/helpers/smoke-session.ts').includes('compliance_manager')
   ) {
     throw new Error('onboarding spec must use golden smoke role');
+  }
+
+  const outreachPath = manifest.paths.find((item) => item.id === 'outreach_send_archive');
+  const outreachSpec = readDashboard(outreachPath.specFile);
+  if (!outreachSpec.includes(outreachPath.mockedApi) && !apiMocks.includes(outreachPath.mockedApi)) {
+    throw new Error('outreach spec must mock /api/requests/campaigns');
+  }
+  if (!outreachSpec.includes('/outreach')) {
+    throw new Error('outreach spec must navigate to /outreach');
+  }
+  if (!outreachSpec.includes('Archive') && !outreachSpec.includes('archive')) {
+    throw new Error('outreach spec must exercise archive action');
   }
 }
 

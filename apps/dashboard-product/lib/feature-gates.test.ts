@@ -36,6 +36,7 @@ describe('feature gates', () => {
     expect(getDeferredGateForPath('/outreach/abc-123')).toBe('request_campaigns');
     expect(getDeferredGateForPath('/inbox/')).toBe('request_campaigns');
     expect(getDeferredGateForPath('/inbox/thread-1')).toBe('request_campaigns');
+    expect(getDeferredGateForPath('/programmes/')).toBe('request_campaigns');
     expect(getDeferredGateForPath('/reports/')).toBe(null);
     expect(getDeferredGateForPath('/reports/2026')).toBe(null);
     expect(getDeferredGateForPath('/reports/annual/export')).toBe(null);

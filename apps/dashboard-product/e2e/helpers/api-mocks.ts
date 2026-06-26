@@ -132,3 +132,85 @@ export async function mockOnboardingProxy(page: Page): Promise<{
     postBodies: () => postPayloads,
   };
 }
+
+const SMOKE_DRAFT_CAMPAIGN = {
+  id: 'campaign_playwright_draft',
+  title: 'Playwright Evidence Request',
+  description: 'Golden path draft campaign',
+  request_type: 'GENERAL_EVIDENCE',
+  status: 'DRAFT',
+  target_organization_ids: [],
+  target_farmer_ids: [],
+  target_plot_ids: [],
+  target_contact_emails: ['supplier@tracebud.test'],
+  due_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7).toISOString(),
+  accepted_count: 0,
+  pending_count: 0,
+  expired_count: 0,
+  created_by: 'playwright',
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
+export async function mockOutreachCampaignApis(page: Page): Promise<{
+  sendCalls: () => number;
+  archiveCalls: () => number;
+}> {
+  let campaigns = [{ ...SMOKE_DRAFT_CAMPAIGN }];
+  let sendCount = 0;
+  let archiveCount = 0;
+
+  await page.route('**/api/requests/campaigns', async (route) => {
+    const request = route.request();
+    if (request.method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ campaigns }),
+      });
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.route('**/api/requests/campaigns/*/send', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    sendCount += 1;
+    campaigns = campaigns.map((campaign) =>
+      campaign.id === SMOKE_DRAFT_CAMPAIGN.id
+        ? { ...campaign, status: 'RUNNING', updated_at: new Date().toISOString() }
+        : campaign,
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, campaign: campaigns[0] }),
+    });
+  });
+
+  await page.route('**/api/requests/campaigns/*/archive', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.continue();
+      return;
+    }
+    archiveCount += 1;
+    campaigns = campaigns.map((campaign) =>
+      campaign.id === SMOKE_DRAFT_CAMPAIGN.id
+        ? { ...campaign, status: 'CANCELLED', updated_at: new Date().toISOString() }
+        : campaign,
+    );
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ campaign_id: SMOKE_DRAFT_CAMPAIGN.id, campaign: campaigns[0] }),
+    });
+  });
+
+  return {
+    sendCalls: () => sendCount,
+    archiveCalls: () => archiveCount,
+  };
+}
