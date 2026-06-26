@@ -68,7 +68,7 @@
     "sentry:env:assert": "node ../scripts/sentry-env-tags-guard.mjs"
   },
   "dependencies": {
-    "@tracebud/import-v1-canonical": "*",
+    "@tracebud/import-v1-canonical": "file:./vendor/import-v1-canonical",
     "@sentry/nestjs": "^10.57.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/config": "^4.0.3",

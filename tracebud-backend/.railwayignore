@@ -1,0 +1,10 @@
+# Railway build context (Root Directory = tracebud-backend).
+# Do not ignore vendor/ — @tracebud/import-v1-canonical is vendored for Docker/Railpack.
+node_modules
+dist
+coverage
+.env
+.env.local
+.env.*.local
+*.log
+.git

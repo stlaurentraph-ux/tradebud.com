@@ -20,9 +20,21 @@ Use the **transaction** or **session** pooler URL; not the service role key in `
 1. [railway.app](https://railway.app) → **Login** (GitHub).
 2. **New Project** → **Deploy from GitHub repo** → select this repository.
 3. Click the new service → **Settings**:
-   - **Root Directory**: `tracebud-backend`
+   - **Root Directory**: `tracebud-backend` (required — do **not** use repo root `.`)
+   - **Builder**: Dockerfile (from `railway.toml`; not Railpack/Nixpacks)
    - **Watch Paths** (optional): `tracebud-backend/**`, `packages/tracebud-import-v1-canonical/**`
-4. **Variables** → add:
+   - After changing Root Directory or merging vendor fixes: **Redeploy → Clear build cache**
+
+### Build fails with `404 @tracebud/import-v1-canonical`
+
+That package is **private to the monorepo** (not on npm). Fixes on `main`:
+
+1. **Root Directory** must be `tracebud-backend` (so `railway.toml`, `Dockerfile`, and `vendor/import-v1-canonical/` are in the build context).
+2. Build log must show `COPY vendor/import-v1-canonical` **before** `npm install`.
+3. `package.json` pins `"@tracebud/import-v1-canonical": "file:./vendor/import-v1-canonical"`.
+4. Redeploy with **Clear build cache**. If the log still shows only `COPY package*.json` → `npm install`, Railway is building an **old commit** or the wrong root.
+
+5. **Variables** → add:
 
 | Key | Value |
 |-----|--------|

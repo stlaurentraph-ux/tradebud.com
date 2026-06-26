@@ -1,6 +1,9 @@
 *
 !tracebud-backend
 !tracebud-backend/**
+# When Railway Root Directory = tracebud-backend, ignore patterns are service-relative:
+!vendor
+!vendor/**
 tracebud-backend/node_modules
 tracebud-backend/dist
 tracebud-backend/.env
