@@ -174,7 +174,7 @@ export default function PlotsScreen() {
     void getSetting('offlineTilesEnabled')
       .then((value) => setOfflineTilesEnabled(value === '1'))
       .catch(() => setOfflineTilesEnabled(false));
-    void getSetting('offlineTilesPackId')
+    void getSetting('offlineTilesActivePackId')
       .then((value) => setOfflineTilesPackId(value?.trim() || null))
       .catch(() => setOfflineTilesPackId(null));
   }, []);

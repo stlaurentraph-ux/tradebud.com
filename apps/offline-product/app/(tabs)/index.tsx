@@ -97,6 +97,8 @@ export default function HomeScreen() {
 
   const refreshBackendPlotsRef = useRef(refreshBackendPlots);
   refreshBackendPlotsRef.current = refreshBackendPlots;
+  const refreshPlotReadinessRef = useRef(refreshPlotReadiness);
+  refreshPlotReadinessRef.current = refreshPlotReadiness;
 
   useFocusEffect(
     useCallback(() => {
@@ -108,6 +110,7 @@ export default function HomeScreen() {
         .then((links) => setPlotServerLinks(links))
         .catch(() => undefined);
       void refreshBackendPlotsRef.current(false);
+      void refreshPlotReadinessRef.current();
     }, [refreshAuth]),
   );
 

@@ -6,21 +6,27 @@
 - **Verify**: backend unit tests 423/423.
 - **Status**: merged via PR #311.
 
-### 2026-06-26 (Lane 2 fix — dedicated decision-link HMAC secret, audit H6)
-- **Context**: Email CTA decision tokens fell back to `RESEND_API_KEY` when `RESEND_DECISION_SECRET` was unset — coupling link signing to the transactional email API key.
-- **Fix**: `getDecisionSecret()` now requires `RESEND_DECISION_SECRET` only; fail closed with a clear error. Updated `.env.production.example` comment.
-- **Tests**: Replaced API-key fallback acceptance test with rejection when dedicated secret is unset.
-- **Verify**: backend unit tests 423/423.
-- **Status**: merged via PR #314.
-
-### 2026-06-26 (Lane 2 fix — offline sync data-loss + boot-safety, audit B4/H9/H11–H13)
-- **Context**: Offline tier of the 2026-06-26 production-readiness audit. Fixes the data-loss / silent-failure findings that exist on `main` (H10 / push-only mode lives only on the unmerged #264 branch and is deferred to PR #307).
+### 2026-06-26 (Lane 2 fix — offline My Plots tiles + Android harvest back + home readiness, audit B5/B6/H21)
+- **Context**: Next offline tier from the 2026-06-26 production-readiness audit (functional blockers + one HIGH UI item).
 - **Fixes**:
-  - **B4** — `syncGroundTruthPhotosWithFiles` now passes `stableKey: photo.id` (deterministic storage path → retries upsert the same object instead of creating duplicate blobs) and throws on partial upload failure so the pending-sync queue row is retained and the remaining photos retry instead of being dropped.
-  - **H9** — `processPendingSyncQueue` no longer swallows the local delivery-receipt update after a harvest POST. A failed receipt write now throws so the queue row is retained and retried (the harvest POST is idempotent via `clientEventId`); previously the server had the harvest while the local receipt stayed `pendingSync` forever.
-  - **H11** — `runAutoBackup` loads the authoritative persisted farmer (new `loadFarmerProfile()`) instead of a `selfDeclared:false` stub, so background auto-backup can backfill producer declaration audits (`hasProducerAttestationsComplete` could never be satisfied by the stub).
-  - **H12** — pending-sync cap eviction (`enqueuePendingSync`) now records a `sync_queue_overflow_evicted` audit event (count + cap + action types) instead of silently dropping the oldest unsynced field work.
-  - **H13** — SQLite boot failure (`AppStateContext`) now sets a `bootError` flag and reports to Sentry instead of only a dev `console.warn`; `SplashGate` renders a Retry recovery screen rather than a misleading empty Home that could overwrite real data. (Recovery copy is hardcoded English — localization is a follow-up; no new i18n keys to avoid 16-locale parity churn.)
-- **Tests**: `syncGroundTruthPhotosWithFiles.test.ts` (idempotent key + partial-failure throw), `runAutoBackup.test.ts` (persisted farmer threaded through), `persistence.sqlite.test.ts` (H12 eviction + `loadFarmerProfile` round-trip). Extended `expoSqliteMemoryMock` to model `pending_sync` + `audit_log`. H13 has no automated test — `main` has no RN component render harness (no `.test.tsx`).
-- **Verify**: `npm run typecheck` (0), `npm run lint` (0 warnings), `npx vitest run` → 488/488, `npm run qa:structural` OK (feature-doc-guard WARN is non-blocking).
-- **Status**: branch `fix/offline-sync-correctness`.
+  - **B5** — `explore.tsx` (My Plots) now reads `getSetting('offlineTilesActivePackId')` instead of the stale `offlineTilesPackId` key used everywhere else → plot list thumbnails resolve the correct offline basemap when offline tiles are enabled.
+  - **B6** — `harvests.tsx` wires Android `BackHandler` through `resolveHarvestBackTarget` (same logic as header back) so hardware back steps through multi-plot wizard / record-weight / plot-selector sub-flows instead of exiting the tab.
+  - **H21** — Home tab `useFocusEffect` now calls `refreshPlotReadiness()` on focus so compliant/pending stats and the action-required card update after plot work.
+- **Guards**: `device-qa-preflight.mjs` asserts explore active-pack key + harvest BackHandler wiring.
+- **Verify**: typecheck 0, lint 0, `harvestBackTarget.test.ts` 4/4, device-qa-preflight OK.
+- **Status**: branch `fix/offline-b5-b6`.
+
+### 2026-06-26 (Lane 2 fix — dashboard CI: en-copy parity + lint debt on `main`)
+- **Context**: `main`'s dashboard checks were latently red (path-filtered CI had hidden them). An `eslint-config-next` bump surfaced 112 lint problems and the new `en-copy-parity` test failed; vitest was also collecting Playwright e2e specs. Fixing all of it for real, no config weakening.
+- **Tests / collection**:
+  - `locales/en.json` — added 50 missing copy keys from the workflow-copy manifest fallbacks and aligned 11 mismatched values to canonical strings (`en-copy-parity.test.ts` green).
+  - `vitest.config.ts` — excluded `e2e/**` so Playwright's `test()` is not invoked under the vitest runner (golden-paths run in their own CI step).
+- **Lint (0 problems, config unchanged except restoring a convention)**:
+  - `no-require-imports` (16) — `lib/i18n/index.ts` now uses ESM `import` for locale JSON instead of `require()`.
+  - `no-empty-object-type` (1) — `app/harvests/page.tsx` `interface Harvest extends … {}` → `type Harvest = …`.
+  - `no-img-element` (2) — justified disables for the test `next/image` mock and the dynamic XYZ tile grid in `plot-satellite-map.tsx`.
+  - `no-unused-vars` (44) — restored `^_` arg/var/caught ignore pattern in `packages/eslint-config/nextjs.mjs` (repo-wide convention) and deleted ~25 genuinely dead imports/vars.
+  - `exhaustive-deps` (9) + `preserve-manual-memoization` (3) — added missing deps / `useMemo` / `useCallback` wrappers and hoisted nested object props to locals.
+  - `set-state-in-effect` (36) — `demo-data-context.tsx` refactored to `useSyncExternalStore`; remaining 35 effect-driven async-load / hydration resets carry a justified `eslint-disable-next-line` (React Compiler adoption tracked separately).
+- **Verify**: `npx eslint .` → 0 problems; `npx tsc --noEmit` → 0 errors; `npx vitest run` → 584/584.
+- **Status**: branch `fix/dashboard-ci-en-parity-and-react-hooks`.
