@@ -180,7 +180,9 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
-          script: npm run qa:maestro:golden-path:android
+          script: |
+            cd apps/offline-product
+            npm run qa:maestro:golden-path:android
 
   maestro-macos:
     name: Maestro macOS CLI smoke
