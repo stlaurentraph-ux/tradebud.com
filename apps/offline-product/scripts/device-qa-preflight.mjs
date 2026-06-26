@@ -83,6 +83,8 @@ assertIncludes('STORE_OPS_CHECKLIST.md', 'App Privacy', 'store ops privacy secti
 assertIncludes('scripts/store-ops-preflight.mjs', 'NSUserNotificationsUsageDescription', 'store preflight push string');
 assertIncludes('features/api/postPlot.ts', "from './syncAuthSession'", 'postPlot unified auth');
 assertIncludes('scripts/security-preflight.mjs', 'sanitizeLogContext', 'security preflight script');
+assertIncludes('app.config.js', 'https://de.sentry.io/', 'Sentry Expo plugin defaults to EU host');
+assertNotIncludes('app.config.js', "url: 'https://sentry.io/'", 'Sentry plugin must not hardcode US host');
 
 // Home screen 2×2 tiles — layout + copy contract (dev + prod)
 assertIncludes('screenStyles/homeScreenStyles.ts', 'HOME_TILE_PAD_MIN = 16', 'home tiles min padding');
