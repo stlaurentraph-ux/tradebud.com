@@ -25,9 +25,22 @@ describe('resolvePgSslConfig', () => {
     });
   });
 
-  it('verifies remote TLS in production with bundled RDS CA', () => {
+  it('verifies Supabase TLS in production via system trust store (no RDS CA)', () => {
     process.env.NODE_ENV = 'production';
     const ssl = resolvePgSslConfig('postgresql://postgres:pw@aws-0-eu.pooler.supabase.com:6543/postgres');
+    expect(ssl).toEqual({ rejectUnauthorized: true });
+  });
+
+  it('does not require verification outside production for Supabase', () => {
+    const ssl = resolvePgSslConfig('postgresql://postgres:pw@aws-0-eu.pooler.supabase.com:6543/postgres');
+    expect(ssl).toEqual({ rejectUnauthorized: false });
+  });
+
+  it('verifies remote RDS TLS in production with bundled RDS CA', () => {
+    process.env.NODE_ENV = 'production';
+    const ssl = resolvePgSslConfig(
+      'postgresql://postgres:pw@tracebud.abc123.us-east-1.rds.amazonaws.com:5432/postgres',
+    );
     expect(ssl).toEqual(
       expect.objectContaining({
         rejectUnauthorized: true,
@@ -36,8 +49,10 @@ describe('resolvePgSslConfig', () => {
     );
   });
 
-  it('does not require verification outside production when CA is present', () => {
-    const ssl = resolvePgSslConfig('postgresql://postgres:pw@aws-0-eu.pooler.supabase.com:6543/postgres');
+  it('does not require verification outside production when CA is present for RDS', () => {
+    const ssl = resolvePgSslConfig(
+      'postgresql://postgres:pw@tracebud.abc123.us-east-1.rds.amazonaws.com:5432/postgres',
+    );
     expect(ssl).toEqual(
       expect.objectContaining({
         rejectUnauthorized: false,

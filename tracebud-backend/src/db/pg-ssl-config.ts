@@ -6,6 +6,14 @@ function isLocalDatabaseUrl(connectionString: string): boolean {
   return /(?:localhost|127\.0\.0\.1)/i.test(connectionString);
 }
 
+function isSupabaseDatabaseUrl(connectionString: string): boolean {
+  return /supabase\.(com|co)/i.test(connectionString);
+}
+
+function isAwsRdsDatabaseUrl(connectionString: string): boolean {
+  return /\.rds\.amazonaws\.com/i.test(connectionString);
+}
+
 function resolvePgCaPem(): string | undefined {
   const fromEnv = process.env.DATABASE_SSL_CA?.trim();
   if (fromEnv) {
@@ -36,13 +44,23 @@ export function resolvePgSslConfig(connectionString: string): boolean | Connecti
     return { rejectUnauthorized: false };
   }
 
-  const ca = resolvePgCaPem();
   const verify = process.env.NODE_ENV === 'production';
 
-  if (verify && !ca) {
+  // Supabase uses public CAs — verify with the OS trust store, not the RDS bundle.
+  if (isSupabaseDatabaseUrl(connectionString)) {
+    return { rejectUnauthorized: verify };
+  }
+
+  const ca = resolvePgCaPem();
+
+  if (verify && isAwsRdsDatabaseUrl(connectionString) && !ca) {
     throw new Error(
-      'Production DATABASE_URL requires TLS verification. Provide certs/rds-global-bundle.pem or DATABASE_SSL_CA.',
+      'Production RDS DATABASE_URL requires TLS verification. Provide certs/rds-global-bundle.pem or DATABASE_SSL_CA.',
     );
+  }
+
+  if (verify && !ca) {
+    return { rejectUnauthorized: true };
   }
 
   return {
