@@ -16,9 +16,12 @@ npx expo prebuild --platform android --no-install
 
 GRADLE_FILE="$ROOT/android/app/build.gradle"
 echo "==> Force JS embed in debug APK (debug variant skips bundling by default)"
-node <<'NODE' "$GRADLE_FILE"
+MAESTRO_GRADLE_FILE="$GRADLE_FILE" node <<'NODE'
 const fs = require('node:fs');
-const gradlePath = process.argv[1];
+const gradlePath = process.env.MAESTRO_GRADLE_FILE;
+if (!gradlePath) {
+  throw new Error('MAESTRO_GRADLE_FILE is required');
+}
 let source = fs.readFileSync(gradlePath, 'utf8');
 if (!/debuggableVariants\s*=\s*\[\]/.test(source)) {
   source = source.replace(/react\s*\{/, 'react {\n    debuggableVariants = []');
