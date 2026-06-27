@@ -4,17 +4,15 @@ appId: com.tracebud.app
 - launchApp:
     clearState: true
 - waitForAnimationToEnd
-# SplashGate + SQLite boot (H13) can take 30–90s on cold CI emulators.
+# SplashGate + SQLite boot (H13) — use tab labels (reliable on Android; testIDs vary by RN nav).
 - extendedWaitUntil:
-    visible:
-      id: "tab-home"
+    visible: "Home"
     timeout: 120000
 - extendedWaitUntil:
-    visible:
-      id: "tab-settings"
+    visible: "Settings"
     timeout: 60000
 - tapOn:
-    id: "tab-settings"
+    text: "Settings"
 - assertVisible:
     text: ".*Backup.*"
 - assertVisible:

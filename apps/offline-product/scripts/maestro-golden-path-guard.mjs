@@ -52,8 +52,11 @@ function assertGoldenPathFlow(manifest) {
   if (!flow.includes('extendedWaitUntil')) {
     throw new Error(`${manifest.goldenPathFlow} must wait for boot before tapping tabs`);
   }
-  if (!flow.includes('tab-home')) {
-    throw new Error(`${manifest.goldenPathFlow} must wait for tab-home (SplashGate boot)`);
+  if (!flow.includes('visible: "Home"')) {
+    throw new Error(`${manifest.goldenPathFlow} must wait for Home tab label (Android CI)`);
+  }
+  if (!flow.includes('text: "Settings"')) {
+    throw new Error(`${manifest.goldenPathFlow} must tap Settings by tab label`);
   }
   if (!flow.includes('clearState')) {
     throw new Error(`${manifest.goldenPathFlow} must launchApp with clearState on CI`);
@@ -126,8 +129,15 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('emulator-options')) {
     throw new Error(`${manifest.workflowFile} Android job must set emulator-options for software GPU`);
   }
-  if (!workflow.includes('assembleDebug')) {
-    throw new Error(`${manifest.workflowFile} must prebuild/assembleDebug before emulator Maestro`);
+  if (!workflow.includes('maestro-ci-assemble-android-apk.sh')) {
+    throw new Error(`${manifest.workflowFile} must assemble Android APK via maestro-ci-assemble-android-apk.sh`);
+  }
+  const assembleScript = readOffline('scripts/maestro-ci-assemble-android-apk.sh');
+  if (!assembleScript.includes('export:embed')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must run expo export:embed');
+  }
+  if (!assembleScript.includes('assembleDebug')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must run gradle assembleDebug');
   }
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);

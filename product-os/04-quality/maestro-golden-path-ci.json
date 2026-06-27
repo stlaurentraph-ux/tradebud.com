@@ -10,6 +10,7 @@
   "iosTimeoutMinutes": 120,
   "maestroSeedSkip": true,
   "goldenPathBootWaitMs": 120000,
+  "androidApkAssemblyScript": "scripts/maestro-ci-assemble-android-apk.sh",
   "androidEmulator": {
     "apiLevel": 34,
     "profile": "pixel_6",

@@ -10,6 +10,7 @@ on:
       - 'apps/offline-product/qa/automation-baselines/maestro-flows.json'
       - 'apps/offline-product/scripts/maestro-ci-golden-path-android.sh'
       - 'apps/offline-product/scripts/maestro-ci-bootstrap-emulator.sh'
+      - 'apps/offline-product/scripts/maestro-ci-assemble-android-apk.sh'
       - 'product-os/04-quality/maestro-golden-path-ci.json'
       - 'apps/offline-product/app.json'
       - 'apps/offline-product/eas.json'
@@ -22,6 +23,7 @@ on:
       - 'apps/offline-product/qa/automation-baselines/maestro-flows.json'
       - 'apps/offline-product/scripts/maestro-ci-golden-path-android.sh'
       - 'apps/offline-product/scripts/maestro-ci-bootstrap-emulator.sh'
+      - 'apps/offline-product/scripts/maestro-ci-assemble-android-apk.sh'
       - 'product-os/04-quality/maestro-golden-path-ci.json'
       - '.github/workflows/offline-maestro.yml'
   workflow_dispatch:
@@ -203,11 +205,7 @@ jobs:
             gradle-maestro-${{ runner.os }}-
 
       - name: Assemble debug APK (outside emulator)
-        run: |
-          set -euo pipefail
-          npx expo prebuild --platform android --no-install
-          cd android
-          ./gradlew assembleDebug --no-daemon -q
+        run: bash ./scripts/maestro-ci-assemble-android-apk.sh
 
       - name: Run Maestro golden path on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
