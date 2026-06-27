@@ -17,6 +17,10 @@ if (!dbModule.includes('resolvePgSslConfig')) {
   console.error('pg-ssl-config-guard: db.module.ts must use resolvePgSslConfig()');
   process.exit(1);
 }
+if (!dbModule.includes('normalizeDatabaseConnectionString')) {
+  console.error('pg-ssl-config-guard: db.module.ts must normalize Supabase DATABASE_URL');
+  process.exit(1);
+}
 if (dbModule.includes('rejectUnauthorized: false')) {
   console.error('pg-ssl-config-guard: db.module.ts must not hard-code rejectUnauthorized: false');
   process.exit(1);
@@ -24,7 +28,11 @@ if (dbModule.includes('rejectUnauthorized: false')) {
 
 const sslConfig = read('src/db/pg-ssl-config.ts');
 if (!sslConfig.includes('rejectUnauthorized: verify')) {
-  console.error('pg-ssl-config-guard: pg-ssl-config.ts must verify TLS in production');
+  console.error('pg-ssl-config-guard: pg-ssl-config.ts must verify TLS in production for RDS');
+  process.exit(1);
+}
+if (!sslConfig.includes('uselibpqcompat')) {
+  console.error('pg-ssl-config-guard: pg-ssl-config.ts must set uselibpqcompat for Supabase pooler');
   process.exit(1);
 }
 
@@ -37,18 +45,6 @@ if (!existsSync(caPath)) {
 const dockerfile = read('Dockerfile');
 if (!dockerfile.includes('COPY --from=builder /app/certs ./certs')) {
   console.error('pg-ssl-config-guard: Dockerfile runner stage must COPY certs for production TLS');
-  process.exit(1);
-}
-if (!dockerfile.includes('ca-certificates')) {
-  console.error('pg-ssl-config-guard: Dockerfile runner must install ca-certificates for Supabase TLS');
-  process.exit(1);
-}
-if (!dockerfile.includes('NODE_EXTRA_CA_CERTS')) {
-  console.error('pg-ssl-config-guard: Dockerfile must set NODE_EXTRA_CA_CERTS for Alpine pg TLS');
-  process.exit(1);
-}
-if (!sslConfig.includes('rootCertificates')) {
-  console.error('pg-ssl-config-guard: pg-ssl-config.ts must merge Node rootCertificates for Supabase');
   process.exit(1);
 }
 
