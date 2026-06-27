@@ -64,10 +64,10 @@ seed_maestro_db() {
     echo "==> Skipping full Maestro DB seed (MAESTRO_SEED_SKIP=1)"
     echo "==> Launching Tracebud once to initialize local SQLite"
     xcrun simctl launch "$DEVICE_ID" "$APP_ID" >/dev/null
-    sleep 8
-    echo "==> Applying golden-path boot profile (MAESTRO_SEED_SKIP=1)"
+    echo "==> Applying golden-path boot profile (polls until DB exists, up to ${MAESTRO_SEED_DB_WAIT_MS:-120000}ms)"
     MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \
       MAESTRO_BOOT_PLATFORM=ios \
+      MAESTRO_SEED_DB_WAIT_MS="${MAESTRO_SEED_DB_WAIT_MS:-120000}" \
       node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
     xcrun simctl terminate "$DEVICE_ID" "$APP_ID" 2>/dev/null || true
     return

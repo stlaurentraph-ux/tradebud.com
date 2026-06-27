@@ -9,9 +9,11 @@
  *
  * Requires Tracebud installed and booted once (creates tracebud_offline.db).
  */
-import { execSync } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
+import {
+  findBootedIosDeviceId,
+  sh,
+  waitForIosTracebudDb,
+} from './maestro-ios-db-path.mjs';
 
 export const MAESTRO_SEED_FARMER_NAME = 'Maria Santos';
 export const MAESTRO_SEED_PLOT_NAME = 'Finca Norte';
@@ -20,54 +22,6 @@ const FARMER_ID = 'a0000000-0000-4000-8000-000000000001';
 const PLOT_ID = 'a0000000-0000-4000-8000-000000000011';
 const SERVER_PLOT_ID = 'a0000000-0000-4000-8000-000000000099';
 const NOW = Date.now();
-const DB_WAIT_MS = Number(process.env.MAESTRO_SEED_DB_WAIT_MS ?? 45_000);
-const DB_POLL_MS = 500;
-
-function sh(cmd) {
-  return execSync(cmd, { encoding: 'utf8' }).trim();
-}
-
-function sleep(ms) {
-  execSync(`sleep ${Math.ceil(ms / 1000)}`);
-}
-
-function findBootedDeviceId() {
-  const deviceId = process.env.MAESTRO_DEVICE_ID?.trim();
-  if (deviceId) return deviceId;
-
-  const out = sh('xcrun simctl list devices booted');
-  const match = out.match(/\(([0-9A-F-]{36})\) \(Booted\)/i);
-  if (!match) throw new Error('No booted iOS simulator. Open Simulator first.');
-  return match[1];
-}
-
-function findTracebudDb(deviceId) {
-  const root = path.join(
-    process.env.HOME,
-    'Library/Developer/CoreSimulator/Devices',
-    deviceId,
-    'data/Containers/Data/Application',
-  );
-  if (!fs.existsSync(root)) return null;
-
-  for (const appId of fs.readdirSync(root)) {
-    const dbPath = path.join(root, appId, 'Documents/SQLite/tracebud_offline.db');
-    if (fs.existsSync(dbPath)) return dbPath;
-  }
-  return null;
-}
-
-function waitForTracebudDb(deviceId) {
-  const started = Date.now();
-  while (Date.now() - started < DB_WAIT_MS) {
-    const dbPath = findTracebudDb(deviceId);
-    if (dbPath) return dbPath;
-    sleep(DB_POLL_MS);
-  }
-  throw new Error(
-    'tracebud_offline.db not found. Install Tracebud, launch once on the simulator, then retry.',
-  );
-}
 
 function sql(dbPath, statement) {
   const oneLine = statement.replace(/\s+/g, ' ').trim();
@@ -90,8 +44,8 @@ function seedCrossDeviceBProfile(dbPath) {
 
 function main() {
   const profile = (process.env.MAESTRO_SEED_PROFILE ?? 'default').trim();
-  const deviceId = findBootedDeviceId();
-  const dbPath = waitForTracebudDb(deviceId);
+  const deviceId = findBootedIosDeviceId();
+  const dbPath = waitForIosTracebudDb(deviceId);
   const pointsJson = JSON.stringify([
     { latitude: 14.0818, longitude: -87.2068 },
     { latitude: 14.0828, longitude: -87.2068 },

@@ -10,18 +10,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import {
+  findBootedIosDeviceId,
+  sh,
+  sleepMs,
+  waitForIosTracebudDb,
+} from './maestro-ios-db-path.mjs';
+
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const baselinePath = path.join(root, 'qa/automation-baselines/maestro-boot-state.json');
-const DB_WAIT_MS = Number(process.env.MAESTRO_SEED_DB_WAIT_MS ?? 45_000);
+const DB_WAIT_MS = Number(process.env.MAESTRO_SEED_DB_WAIT_MS ?? 120_000);
 const DB_POLL_MS = 500;
-
-function sh(cmd) {
-  return execSync(cmd, { encoding: 'utf8' }).trim();
-}
-
-function sleep(ms) {
-  execSync(`sleep ${Math.ceil(ms / 1000)}`);
-}
 
 function loadBaseline() {
   return JSON.parse(fs.readFileSync(baselinePath, 'utf8'));
@@ -52,41 +51,6 @@ function applySettings(dbPath, settings) {
   }
 }
 
-function findIosDb(deviceId) {
-  const appsRoot = path.join(
-    process.env.HOME,
-    'Library/Developer/CoreSimulator/Devices',
-    deviceId,
-    'data/Containers/Data/Application',
-  );
-  if (!fs.existsSync(appsRoot)) return null;
-  for (const appId of fs.readdirSync(appsRoot)) {
-    const dbPath = path.join(appId, 'Documents/SQLite/tracebud_offline.db');
-    const full = path.join(appsRoot, dbPath);
-    if (fs.existsSync(full)) return full;
-  }
-  return null;
-}
-
-function waitForIosDb(deviceId) {
-  const started = Date.now();
-  while (Date.now() - started < DB_WAIT_MS) {
-    const dbPath = findIosDb(deviceId);
-    if (dbPath) return dbPath;
-    sleep(DB_POLL_MS);
-  }
-  throw new Error('tracebud_offline.db not found on iOS simulator after bootstrap launch.');
-}
-
-function findBootedIosDeviceId() {
-  const deviceId = process.env.MAESTRO_DEVICE_ID?.trim();
-  if (deviceId) return deviceId;
-  const out = sh('xcrun simctl list devices booted');
-  const match = out.match(/\(([0-9A-F-]{36})\) \(Booted\)/i);
-  if (!match) throw new Error('No booted iOS simulator.');
-  return match[1];
-}
-
 function androidSerial() {
   return (
     process.env.MAESTRO_ANDROID_SERIAL?.trim() ||
@@ -110,16 +74,23 @@ function findAndroidDb(serial) {
 
 function waitForAndroidDb(serial) {
   const started = Date.now();
+  let attempts = 0;
   while (Date.now() - started < DB_WAIT_MS) {
+    attempts += 1;
     const rel = findAndroidDb(serial);
-    if (rel) return rel;
-    sleep(DB_POLL_MS);
+    if (rel) {
+      console.log(`Found tracebud_offline.db after ${attempts} attempt(s): ${rel}`);
+      return rel;
+    }
+    sleepMs(DB_POLL_MS);
   }
-  throw new Error('tracebud_offline.db not found on Android emulator after bootstrap launch.');
+  throw new Error(
+    `tracebud_offline.db not found on Android emulator after ${DB_WAIT_MS}ms (${attempts} attempts).`,
+  );
 }
 
 function applyAndroidSettings(serial, relPath, settings) {
-  const stmts = ["PRAGMA journal_mode = WAL;"];
+  const stmts = ['PRAGMA journal_mode = WAL;'];
   for (const [key, value] of Object.entries(settings)) {
     const escaped = String(value).replace(/'/g, "''");
     stmts.push(
@@ -147,7 +118,7 @@ function main() {
   }
 
   const deviceId = findBootedIosDeviceId();
-  const dbPath = waitForIosDb(deviceId);
+  const dbPath = waitForIosTracebudDb(deviceId, { waitMs: DB_WAIT_MS, pollMs: DB_POLL_MS });
   applySettings(dbPath, profile.settings);
   console.log(`Maestro boot profile "${profileId}" applied on iOS (${dbPath})`);
 }

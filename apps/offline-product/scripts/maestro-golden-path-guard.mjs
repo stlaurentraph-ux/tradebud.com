@@ -182,6 +182,13 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);
   }
+  if (!workflow.includes('MAESTRO_SEED_DB_WAIT_MS')) {
+    throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_DB_WAIT_MS`);
+  }
+  const bootDbWaitMs = manifest.bootDbWaitMs;
+  if (!bootDbWaitMs || bootDbWaitMs < 120000) {
+    throw new Error('manifest bootDbWaitMs must be >= 120000');
+  }
   if (!workflow.includes('timeout-minutes: 120') || !workflow.includes('maestro-golden-path:')) {
     throw new Error(`${manifest.workflowFile} macOS golden path must allow 120m timeout`);
   }

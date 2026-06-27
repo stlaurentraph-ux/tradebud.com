@@ -97,6 +97,7 @@ jobs:
       EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL: https://app.tracebud.com/auth/confirm
       SENTRY_DISABLE_AUTO_UPLOAD: 'true'
       MAESTRO_SEED_SKIP: '1'
+      MAESTRO_SEED_DB_WAIT_MS: '120000'
     defaults:
       run:
         working-directory: apps/offline-product
@@ -153,6 +154,7 @@ jobs:
     env:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
       MAESTRO_SEED_SKIP: '1'
+      MAESTRO_SEED_DB_WAIT_MS: '120000'
       EXPO_PUBLIC_API_URL: https://api.tracebud.com/api
       EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
       EXPO_PUBLIC_OAUTH_BRIDGE_URL: https://app.tracebud.com/auth/callback
