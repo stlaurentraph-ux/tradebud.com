@@ -62,8 +62,19 @@ export MAESTRO_APP_ID="$APP_ID"
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
 
 echo "==> Launching Tracebud once to initialize local SQLite"
-adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || \
-  adb -s "$DEVICE_SERIAL" shell am start -n "$APP_ID/.MainActivity" >/dev/null 2>&1 || true
+adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
+  adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+
+echo "==> Waiting for Tracebud process (up to 90s)"
+for _ in $(seq 1 45); do
+  if adb -s "$DEVICE_SERIAL" shell pidof "$APP_ID" 2>/dev/null | grep -q .; then
+    echo "Tracebud process running"
+    break
+  fi
+  sleep 2
+done
+
+adb -s "$DEVICE_SERIAL" root 2>/dev/null || true
 
 if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
   echo "==> Applying golden-path boot profile (polls until DB exists, up to ${MAESTRO_SEED_DB_WAIT_MS:-120000}ms)"
