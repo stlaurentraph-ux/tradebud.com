@@ -52,18 +52,29 @@ function assertGoldenPathFlow(manifest) {
   if (!flow.includes('extendedWaitUntil')) {
     throw new Error(`${manifest.goldenPathFlow} must wait for boot before tapping tabs`);
   }
-  if (!flow.includes('visible: "Home"')) {
-    throw new Error(`${manifest.goldenPathFlow} must wait for Home tab label (Android CI)`);
+  if (!flow.includes('id: "tab-home"')) {
+    throw new Error(`${manifest.goldenPathFlow} must wait for tab-home testID (locale-safe CI)`);
   }
-  if (!flow.includes('text: "Settings"')) {
-    throw new Error(`${manifest.goldenPathFlow} must tap Settings by tab label`);
+  if (!flow.includes('id: "tab-settings"')) {
+    throw new Error(`${manifest.goldenPathFlow} must tap tab-settings testID`);
   }
-  if (!flow.includes('clearState')) {
-    throw new Error(`${manifest.goldenPathFlow} must launchApp with clearState on CI`);
+  if (!flow.includes('clearState: false')) {
+    throw new Error(`${manifest.goldenPathFlow} must launchApp with clearState: false (bootstrap reinstalls)`);
   }
   const bootWaitMs = manifest.goldenPathBootWaitMs;
   if (!bootWaitMs || bootWaitMs < 60000) {
     throw new Error('manifest goldenPathBootWaitMs must be >= 60000');
+  }
+}
+
+function assertBootstrapInitLaunch() {
+  const iosBootstrap = readOffline('scripts/maestro-ci-bootstrap-simulator.sh');
+  if (!iosBootstrap.includes('initialize local SQLite')) {
+    throw new Error('iOS bootstrap must launch once to initialize SQLite when seed is skipped');
+  }
+  const androidBootstrap = readOffline('scripts/maestro-ci-bootstrap-emulator.sh');
+  if (!androidBootstrap.includes('initialize local SQLite')) {
+    throw new Error('Android bootstrap must launch once to initialize SQLite after APK install');
   }
 }
 
@@ -185,6 +196,7 @@ function main() {
   assertFlowsBaseline(manifest);
   assertGoldenPathFlow(manifest);
   assertGoldenPathScripts();
+  assertBootstrapInitLaunch();
   assertAndroidRunner(manifest);
   assertWorkflow(manifest);
   assertPackageScripts();

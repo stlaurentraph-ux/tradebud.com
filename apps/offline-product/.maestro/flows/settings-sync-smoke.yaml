@@ -1,18 +1,21 @@
 appId: com.tracebud.app
 ---
 # Settings → Backup section (Sync now when signed in, sign-in CTA otherwise).
+# Bootstrap uninstall/reinstalls the app; avoid clearState so SQLite init from bootstrap survives.
 - launchApp:
-    clearState: true
+    clearState: false
 - waitForAnimationToEnd
-# SplashGate + SQLite boot (H13) — use tab labels (reliable on Android; testIDs vary by RN nav).
+# SplashGate + SQLite boot (H13) — tab testIDs are stable across locales and RN navigation.
 - extendedWaitUntil:
-    visible: "Home"
+    visible:
+      id: "tab-home"
     timeout: 120000
 - extendedWaitUntil:
-    visible: "Settings"
+    visible:
+      id: "tab-settings"
     timeout: 60000
 - tapOn:
-    text: "Settings"
+    id: "tab-settings"
 - assertVisible:
     text: ".*Backup.*"
 - assertVisible:

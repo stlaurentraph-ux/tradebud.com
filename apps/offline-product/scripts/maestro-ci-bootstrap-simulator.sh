@@ -58,6 +58,10 @@ export MAESTRO_APP_ID="$APP_ID"
 seed_maestro_db() {
   if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
     echo "==> Skipping Maestro DB seed (MAESTRO_SEED_SKIP=1)"
+    echo "==> Launching Tracebud once to initialize local SQLite"
+    xcrun simctl launch "$DEVICE_ID" "$APP_ID" >/dev/null
+    sleep 8
+    xcrun simctl terminate "$DEVICE_ID" "$APP_ID" 2>/dev/null || true
     return
   fi
 
