@@ -43,6 +43,7 @@ import { CreateAccountWizard } from '@/components/auth/CreateAccountWizard';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
 import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
+import { MAESTRO_BOOT_READY_TEST_ID } from '@/features/testing/maestroBootStateRegistry';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { clearFieldProducerBootstrapCache } from '@/features/api/fieldAppBootstrap';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
@@ -751,6 +752,15 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   return (
     <SignInSheetContext.Provider value={signInSheetContextValue}>
       {children}
+      {authReady && !welcomeVisible ? (
+        <View
+          testID={MAESTRO_BOOT_READY_TEST_ID}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+          pointerEvents="none"
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+        />
+      ) : null}
       <WelcomeAccountModal
         visible={welcomeVisible}
         title={t('welcome_account_title')}

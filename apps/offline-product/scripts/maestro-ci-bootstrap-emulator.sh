@@ -65,4 +65,13 @@ adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAU
 sleep 8
 adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
 
+if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
+  echo "==> Applying golden-path boot profile (MAESTRO_SEED_SKIP=1)"
+  MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \
+    MAESTRO_BOOT_PLATFORM=android \
+    MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL" \
+    node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
+  adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
+fi
+
 echo "Android bootstrap ready for Maestro (flow uses launchApp clearState: false)."

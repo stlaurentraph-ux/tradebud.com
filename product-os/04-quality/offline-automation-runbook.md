@@ -86,9 +86,9 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 
 **Manual macOS E2E:** GitHub Actions → **Offline Maestro (macOS)** → `workflow_dispatch` with `run_golden_path=true` or `run_flows=true`.
 
-**Golden path on `main` (3.O.1):** pushes touching offline Maestro paths run `settings-sync-smoke.yaml` on `macos-latest`. Uses `EXPO_TOKEN` + latest EAS simulator build when set; otherwise `expo run:ios` (slower).
+**Golden path on PR + `main` (H25):** both platforms build from the checked-out commit (`maestro-ci-assemble-*`). Boot state is defined in `maestro-boot-state-registry.md` / `maestro-boot-state.json` — profile `golden_path_minimal` seeds locale + welcome dismissed and the flow waits on `maestro-boot-ready`. Guard: `maestro-boot-state-guard.mjs`.
 
-**Simulator seed (4.8+):** all macOS Maestro runners source `maestro-ci-bootstrap-simulator.sh`, which seeds SQLite (`Maria Santos` / `Finca Norte`) via `seed-maestro-simulator.mjs` before flows. Plot/document nightly flows assert that plot; `MAESTRO_SEED_SKIP=1` skips seed for debugging.
+**Simulator seed (4.8+ / nightly):** macOS Maestro runners source `maestro-ci-bootstrap-simulator.sh`, which seeds SQLite (`Maria Santos` / `Finca Norte`) via `seed-maestro-simulator.mjs` before plot/document flows. Golden path uses `MAESTRO_SEED_SKIP=1` + boot profile instead of full farmer/plot seed.
 
 **Refresh flow manifest baseline:**
 

@@ -5,14 +5,14 @@ appId: com.tracebud.app
 - launchApp:
     clearState: false
 - waitForAnimationToEnd
-# First-launch welcome sheet blocks tab bar until dismissed (optional when pre-seeded).
+# First-launch welcome sheet blocks tab bar until dismissed (optional when boot profile seeded).
 - tapOn:
     id: "welcome-account-skip"
     optional: true
-# SplashGate + SQLite boot (H13) — tab testIDs are stable across locales and RN navigation.
+# Boot profile anchor — visible when SQLite + auth boot finished and welcome is not blocking.
 - extendedWaitUntil:
     visible:
-      id: "tab-home"
+      id: "maestro-boot-ready"
     timeout: 120000
 - extendedWaitUntil:
     visible:

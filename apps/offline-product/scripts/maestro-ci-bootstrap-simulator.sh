@@ -65,8 +65,10 @@ seed_maestro_db() {
     echo "==> Launching Tracebud once to initialize local SQLite"
     xcrun simctl launch "$DEVICE_ID" "$APP_ID" >/dev/null
     sleep 8
-    echo "==> Applying golden-path minimal seed (locale + welcome dismissed)"
-    node "$ROOT/scripts/seed-maestro-golden-path-minimal.mjs"
+    echo "==> Applying golden-path boot profile (MAESTRO_SEED_SKIP=1)"
+    MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \
+      MAESTRO_BOOT_PLATFORM=ios \
+      node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
     xcrun simctl terminate "$DEVICE_ID" "$APP_ID" 2>/dev/null || true
     return
   fi

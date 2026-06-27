@@ -12,6 +12,8 @@ on:
       - 'apps/offline-product/scripts/maestro-ci-bootstrap-emulator.sh'
       - 'apps/offline-product/scripts/maestro-ci-assemble-android-apk.sh'
       - 'apps/offline-product/scripts/maestro-ci-assemble-ios-simulator.sh'
+      - 'apps/offline-product/qa/automation-baselines/maestro-boot-state.json'
+      - 'product-os/04-quality/maestro-boot-state-registry.md'
       - 'product-os/04-quality/maestro-golden-path-ci.json'
       - 'apps/offline-product/app.json'
       - 'apps/offline-product/eas.json'
@@ -26,6 +28,8 @@ on:
       - 'apps/offline-product/scripts/maestro-ci-bootstrap-emulator.sh'
       - 'apps/offline-product/scripts/maestro-ci-assemble-android-apk.sh'
       - 'apps/offline-product/scripts/maestro-ci-assemble-ios-simulator.sh'
+      - 'apps/offline-product/qa/automation-baselines/maestro-boot-state.json'
+      - 'product-os/04-quality/maestro-boot-state-registry.md'
       - 'product-os/04-quality/maestro-golden-path-ci.json'
       - '.github/workflows/offline-maestro.yml'
   workflow_dispatch:

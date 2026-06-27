@@ -10,6 +10,7 @@ How Tracebud encodes cross-cutting invariants as **contract-as-code** so agents 
 |--------|----------|-------------|-------|
 | Farmer cross-device artifacts | `farmer-artifact-sync-registry.md` | `features/sync/farmerArtifactRegistry.ts` | `sync-parity-guard.mjs`, `registry-md-parity-guard.mjs`, `pending-sync-registry-guard.mjs`, `ui-reload-guard.mjs` |
 | Cross-device smoke wiring | `DEVICE_SMOKE_CHECKLIST.md` §12 | `.maestro/flows/settings-sync-smoke.yaml` | `cross-device-smoke-wiring-guard.mjs` |
+| Maestro boot state (CI) | `maestro-boot-state-registry.md` | `qa/automation-baselines/maestro-boot-state.json` | `maestro-boot-state-guard.mjs` |
 | Field regressions | `field-app-regression-ledger.md` | — | `field-regression-guard.mjs` |
 | Analytics slices | — | `features/observability/analytics.ts` | `analytics-slice-guard.mjs` (strict in `qa:structural:ci`) |
 | Field roles | `field-role-permission-registry.md` | `fieldRolePermissionRegistry.ts` | `role-permission-guard.mjs` |

@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "goldenPathBootProfile": "golden_path_minimal",
+  "profiles": {
+    "golden_path_minimal": {
+      "label": "Golden path CI (H25) — no farmer/plot seed",
+      "seedScript": "scripts/seed-maestro-boot-profile.mjs",
+      "settings": {
+        "tracebudAppLanguage": "en",
+        "account_welcome_dismissed": "1"
+      },
+      "bootReadyTestId": "maestro-boot-ready",
+      "optionalFlowTestIds": ["welcome-account-skip"],
+      "flowTestIds": ["maestro-boot-ready", "tab-settings"],
+      "buildFromCommit": true,
+      "platforms": ["ios", "android"]
+    },
+    "default": {
+      "label": "Nightly / plot flows — Maria Santos + Finca Norte",
+      "seedScript": "scripts/seed-maestro-simulator.mjs",
+      "settings": {
+        "tracebudAppLanguage": "en"
+      },
+      "bootReadyTestId": "maestro-boot-ready",
+      "optionalFlowTestIds": [],
+      "flowTestIds": ["tab-my-plots", "tab-settings"],
+      "buildFromCommit": false,
+      "platforms": ["ios"]
+    }
+  }
+}

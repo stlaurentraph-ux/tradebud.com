@@ -42,6 +42,9 @@ function assertManifestShape(manifest) {
   if (!manifest.workflowFile || !manifest.goldenPathFlow) {
     throw new Error('manifest must define workflowFile and goldenPathFlow');
   }
+  if (!manifest.goldenPathBootProfile) {
+    throw new Error('manifest must define goldenPathBootProfile');
+  }
   if (!manifest.ciTriggers?.includes('pull_request')) {
     throw new Error('manifest must include pull_request trigger for golden path');
   }
@@ -52,8 +55,8 @@ function assertGoldenPathFlow(manifest) {
   if (!flow.includes('extendedWaitUntil')) {
     throw new Error(`${manifest.goldenPathFlow} must wait for boot before tapping tabs`);
   }
-  if (!flow.includes('id: "tab-home"')) {
-    throw new Error(`${manifest.goldenPathFlow} must wait for tab-home testID (locale-safe CI)`);
+  if (!flow.includes('id: "maestro-boot-ready"')) {
+    throw new Error(`${manifest.goldenPathFlow} must wait for maestro-boot-ready testID (boot profile anchor)`);
   }
   if (!flow.includes('id: "tab-settings"')) {
     throw new Error(`${manifest.goldenPathFlow} must tap tab-settings testID`);
@@ -75,8 +78,8 @@ function assertBootstrapInitLaunch() {
   if (!iosBootstrap.includes('initialize local SQLite')) {
     throw new Error('iOS bootstrap must launch once to initialize SQLite when seed is skipped');
   }
-  if (!iosBootstrap.includes('seed-maestro-golden-path-minimal.mjs')) {
-    throw new Error('iOS bootstrap must apply golden-path minimal seed when MAESTRO_SEED_SKIP=1');
+  if (!iosBootstrap.includes('seed-maestro-boot-profile.mjs')) {
+    throw new Error('iOS bootstrap must apply golden-path boot profile when MAESTRO_SEED_SKIP=1');
   }
   if (!iosBootstrap.includes('Debug-iphonesimulator/Tracebud.app')) {
     throw new Error('iOS bootstrap must install prebuilt simulator app when present');
