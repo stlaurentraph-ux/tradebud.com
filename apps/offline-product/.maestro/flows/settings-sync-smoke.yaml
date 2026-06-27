@@ -5,6 +5,10 @@ appId: com.tracebud.app
 - launchApp:
     clearState: false
 - waitForAnimationToEnd
+# First-launch welcome sheet blocks tab bar until dismissed (optional when pre-seeded).
+- tapOn:
+    id: "welcome-account-skip"
+    optional: true
 # SplashGate + SQLite boot (H13) — tab testIDs are stable across locales and RN navigation.
 - extendedWaitUntil:
     visible:

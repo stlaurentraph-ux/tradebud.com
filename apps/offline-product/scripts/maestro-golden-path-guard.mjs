@@ -58,6 +58,9 @@ function assertGoldenPathFlow(manifest) {
   if (!flow.includes('id: "tab-settings"')) {
     throw new Error(`${manifest.goldenPathFlow} must tap tab-settings testID`);
   }
+  if (!flow.includes('welcome-account-skip')) {
+    throw new Error(`${manifest.goldenPathFlow} must optionally dismiss welcome-account-skip`);
+  }
   if (!flow.includes('clearState: false')) {
     throw new Error(`${manifest.goldenPathFlow} must launchApp with clearState: false (bootstrap reinstalls)`);
   }
@@ -71,6 +74,12 @@ function assertBootstrapInitLaunch() {
   const iosBootstrap = readOffline('scripts/maestro-ci-bootstrap-simulator.sh');
   if (!iosBootstrap.includes('initialize local SQLite')) {
     throw new Error('iOS bootstrap must launch once to initialize SQLite when seed is skipped');
+  }
+  if (!iosBootstrap.includes('seed-maestro-golden-path-minimal.mjs')) {
+    throw new Error('iOS bootstrap must apply golden-path minimal seed when MAESTRO_SEED_SKIP=1');
+  }
+  if (!iosBootstrap.includes('Debug-iphonesimulator/Tracebud.app')) {
+    throw new Error('iOS bootstrap must install prebuilt simulator app when present');
   }
   const androidBootstrap = readOffline('scripts/maestro-ci-bootstrap-emulator.sh');
   if (!androidBootstrap.includes('initialize local SQLite')) {
@@ -117,6 +126,20 @@ function assertAndroidRunner(manifest) {
   }
 }
 
+function assertIosAssembly(manifest) {
+  const assembleScript = readOffline(manifest.iosSimulatorAssemblyScript);
+  if (!assembleScript.includes('export:embed')) {
+    throw new Error(`${manifest.iosSimulatorAssemblyScript} must run expo export:embed`);
+  }
+  if (!assembleScript.includes('xcodebuild')) {
+    throw new Error(`${manifest.iosSimulatorAssemblyScript} must run xcodebuild for simulator`);
+  }
+  const bootstrap = readOffline('scripts/maestro-ci-bootstrap-simulator.sh');
+  if (!bootstrap.includes('ios-build/DerivedData')) {
+    throw new Error('iOS bootstrap must install app from ios-build/DerivedData path');
+  }
+}
+
 function assertWorkflow(manifest) {
   const workflow = readRepo(manifest.workflowFile);
   if (!workflow.includes(manifest.iosJobName)) {
@@ -143,6 +166,9 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('maestro-ci-assemble-android-apk.sh')) {
     throw new Error(`${manifest.workflowFile} must assemble Android APK via maestro-ci-assemble-android-apk.sh`);
   }
+  if (!workflow.includes('maestro-ci-assemble-ios-simulator.sh')) {
+    throw new Error(`${manifest.workflowFile} must assemble iOS simulator app via maestro-ci-assemble-ios-simulator.sh`);
+  }
   const assembleScript = readOffline('scripts/maestro-ci-assemble-android-apk.sh');
   if (!assembleScript.includes('export:embed')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must run expo export:embed');
@@ -152,9 +178,6 @@ function assertWorkflow(manifest) {
   }
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);
-  }
-  if (!workflow.includes('EXPO_TOKEN secret is required')) {
-    throw new Error(`${manifest.workflowFile} macOS job must fail fast without EXPO_TOKEN`);
   }
   if (!workflow.includes('timeout-minutes: 120') || !workflow.includes('maestro-golden-path:')) {
     throw new Error(`${manifest.workflowFile} macOS golden path must allow 120m timeout`);
@@ -197,6 +220,7 @@ function main() {
   assertGoldenPathFlow(manifest);
   assertGoldenPathScripts();
   assertBootstrapInitLaunch();
+  assertIosAssembly(manifest);
   assertAndroidRunner(manifest);
   assertWorkflow(manifest);
   assertPackageScripts();

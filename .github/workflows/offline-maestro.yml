@@ -11,6 +11,7 @@ on:
       - 'apps/offline-product/scripts/maestro-ci-golden-path-android.sh'
       - 'apps/offline-product/scripts/maestro-ci-bootstrap-emulator.sh'
       - 'apps/offline-product/scripts/maestro-ci-assemble-android-apk.sh'
+      - 'apps/offline-product/scripts/maestro-ci-assemble-ios-simulator.sh'
       - 'product-os/04-quality/maestro-golden-path-ci.json'
       - 'apps/offline-product/app.json'
       - 'apps/offline-product/eas.json'
@@ -24,6 +25,7 @@ on:
       - 'apps/offline-product/scripts/maestro-ci-golden-path-android.sh'
       - 'apps/offline-product/scripts/maestro-ci-bootstrap-emulator.sh'
       - 'apps/offline-product/scripts/maestro-ci-assemble-android-apk.sh'
+      - 'apps/offline-product/scripts/maestro-ci-assemble-ios-simulator.sh'
       - 'product-os/04-quality/maestro-golden-path-ci.json'
       - '.github/workflows/offline-maestro.yml'
   workflow_dispatch:
@@ -85,7 +87,11 @@ jobs:
     timeout-minutes: 120
     env:
       IPHONE_DEVICE: iPhone 16
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      EXPO_PUBLIC_API_URL: https://api.tracebud.com/api
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_OAUTH_BRIDGE_URL: https://app.tracebud.com/auth/callback
+      EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL: https://app.tracebud.com/auth/confirm
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
       MAESTRO_SEED_SKIP: '1'
     defaults:
       run:
@@ -125,13 +131,8 @@ jobs:
       - name: Maestro wiring preflight
         run: npm run qa:maestro:preflight
 
-      - name: Require EXPO_TOKEN (EAS simulator install)
-        run: |
-          set -euo pipefail
-          if [ -z "${EXPO_TOKEN}" ]; then
-            echo "::error::EXPO_TOKEN secret is required — expo run:ios exceeds the 120m job budget."
-            exit 1
-          fi
+      - name: Assemble iOS simulator app (PR branch testIDs)
+        run: bash ./scripts/maestro-ci-assemble-ios-simulator.sh
 
       - name: Run Maestro golden path
         run: npm run qa:maestro:golden-path
