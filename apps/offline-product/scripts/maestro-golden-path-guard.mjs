@@ -134,8 +134,11 @@ function assertIosAssembly(manifest) {
   if (!assembleScript.includes('export:embed')) {
     throw new Error(`${manifest.iosSimulatorAssemblyScript} must run expo export:embed`);
   }
-  if (!assembleScript.includes('xcodebuild')) {
-    throw new Error(`${manifest.iosSimulatorAssemblyScript} must run xcodebuild for simulator`);
+  if (!assembleScript.includes('FORCE_BUNDLING')) {
+    throw new Error(`${manifest.iosSimulatorAssemblyScript} must set FORCE_BUNDLING=1 for Debug simulator embed`);
+  }
+  if (!assembleScript.includes('main.jsbundle')) {
+    throw new Error(`${manifest.iosSimulatorAssemblyScript} must verify embedded JS bundle in .app`);
   }
   const bootstrap = readOffline('scripts/maestro-ci-bootstrap-simulator.sh');
   if (!bootstrap.includes('ios-build/DerivedData')) {

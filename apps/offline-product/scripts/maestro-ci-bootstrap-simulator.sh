@@ -30,6 +30,8 @@ fi
 echo "==> Booting $IPHONE_DEVICE ($DEVICE_ID)"
 xcrun simctl boot "$DEVICE_ID" 2>/dev/null || true
 xcrun simctl bootstatus "$DEVICE_ID" -b
+open -a Simulator >/dev/null 2>&1 || true
+sleep 3
 
 echo "==> Removing previous Tracebud install"
 xcrun simctl uninstall "$DEVICE_ID" "$APP_ID" 2>/dev/null || true

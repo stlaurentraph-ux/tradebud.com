@@ -30,6 +30,10 @@ This registry is the single contract for **profile → settings → seed script 
 | `tracebudAppLanguage` | `en` | Locale-safe Backup / Sync assertions |
 | `account_welcome_dismissed` | `1` | Skip welcome sheet (matches `SignInSheetContext`) |
 
+### iOS commit-built simulator
+
+Debug+simulator Xcode builds skip JS bundling by default (Metro expected). CI assemble uses `FORCE_BUNDLING=1` and verifies `main.jsbundle` is embedded before Maestro runs.
+
 ### Boot-ready testID
 
 | testID | When visible |

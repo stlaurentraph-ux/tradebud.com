@@ -25,8 +25,10 @@ echo "==> pod install"
 cd ios
 pod install --repo-update
 
-echo "==> xcodebuild (iphonesimulator Debug)"
-xcodebuild \
+echo "==> xcodebuild (iphonesimulator Debug, FORCE_BUNDLING=1 — Debug sim skips bundling by default)"
+# React Native skips bundling for Debug+simulator (expects Metro). Maestro CI needs an embedded bundle.
+cd "$ROOT/ios"
+FORCE_BUNDLING=1 xcodebuild \
   -workspace Tracebud.xcworkspace \
   -scheme Tracebud \
   -configuration Debug \
@@ -41,4 +43,10 @@ if [[ ! -d "$APP_PATH" ]]; then
   exit 1
 fi
 
-echo "iOS simulator app ready: $APP_PATH"
+if ! find "$APP_PATH" \( -name 'main.jsbundle' -o -name '*.hbc' -o -name '*.jsbundle' \) -print -quit | grep -q .; then
+  echo "::error::Missing embedded JS bundle in $APP_PATH — app will not boot offline (use FORCE_BUNDLING=1)."
+  find "$APP_PATH" -maxdepth 4 -type f 2>/dev/null | head -30 || true
+  exit 1
+fi
+
+echo "iOS simulator app ready (embedded bundle verified): $APP_PATH"
