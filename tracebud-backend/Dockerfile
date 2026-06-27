@@ -18,7 +18,11 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Alpine needs explicit OS CA bundle for pg TLS (Supabase pooler chain).
+RUN apk add --no-cache ca-certificates && update-ca-certificates
+
 ENV NODE_ENV=production
+ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/node_modules ./node_modules

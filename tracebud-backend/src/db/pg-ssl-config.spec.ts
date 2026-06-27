@@ -7,6 +7,7 @@ describe('resolvePgSslConfig', () => {
     process.env = { ...originalEnv };
     delete process.env.DATABASE_SSL_CA;
     delete process.env.DATABASE_SSL_REJECT_UNAUTHORIZED;
+    delete process.env.NODE_EXTRA_CA_CERTS;
     delete process.env.NODE_ENV;
   });
 
@@ -25,10 +26,15 @@ describe('resolvePgSslConfig', () => {
     });
   });
 
-  it('verifies Supabase TLS in production via system trust store (no RDS CA)', () => {
+  it('verifies Supabase TLS in production with merged Node roots + RDS bundle', () => {
     process.env.NODE_ENV = 'production';
     const ssl = resolvePgSslConfig('postgresql://postgres:pw@aws-0-eu.pooler.supabase.com:6543/postgres');
-    expect(ssl).toEqual({ rejectUnauthorized: true });
+    expect(ssl).toEqual(
+      expect.objectContaining({
+        rejectUnauthorized: true,
+        ca: expect.stringContaining('-----BEGIN CERTIFICATE-----'),
+      }),
+    );
   });
 
   it('does not require verification outside production for Supabase', () => {

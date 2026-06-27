@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { rootCertificates } from 'node:tls';
 import type { ConnectionOptions } from 'tls';
 
 function isLocalDatabaseUrl(connectionString: string): boolean {
@@ -14,6 +15,14 @@ function isAwsRdsDatabaseUrl(connectionString: string): boolean {
   return /\.rds\.amazonaws\.com/i.test(connectionString);
 }
 
+function readBundledRdsCaPem(): string | undefined {
+  const bundledPath = path.resolve(__dirname, '../../certs/rds-global-bundle.pem');
+  if (!existsSync(bundledPath)) {
+    return undefined;
+  }
+  return readFileSync(bundledPath, 'utf8');
+}
+
 function resolvePgCaPem(): string | undefined {
   const fromEnv = process.env.DATABASE_SSL_CA?.trim();
   if (fromEnv) {
@@ -26,12 +35,21 @@ function resolvePgCaPem(): string | undefined {
     throw new Error(`DATABASE_SSL_CA path does not exist: ${fromEnv}`);
   }
 
-  const bundledPath = path.resolve(__dirname, '../../certs/rds-global-bundle.pem');
-  if (existsSync(bundledPath)) {
-    return readFileSync(bundledPath, 'utf8');
-  }
+  return readBundledRdsCaPem();
+}
 
-  return undefined;
+/** Supabase pooler chains through AWS RDS — merge Node roots + RDS bundle (Alpine lacks both alone). */
+function resolveSupabaseCaMaterial(): string {
+  const parts = [...rootCertificates];
+  const rds = readBundledRdsCaPem();
+  if (rds) {
+    parts.push(rds);
+  }
+  const extraPath = process.env.NODE_EXTRA_CA_CERTS?.trim();
+  if (extraPath && existsSync(extraPath)) {
+    parts.push(readFileSync(extraPath, 'utf8'));
+  }
+  return parts.join('\n');
 }
 
 /** TLS options for pg Pool against Supabase/RDS (audit H4). */
@@ -46,9 +64,14 @@ export function resolvePgSslConfig(connectionString: string): boolean | Connecti
 
   const verify = process.env.NODE_ENV === 'production';
 
-  // Supabase uses public CAs — verify with the OS trust store, not the RDS bundle.
   if (isSupabaseDatabaseUrl(connectionString)) {
-    return { rejectUnauthorized: verify };
+    if (!verify) {
+      return { rejectUnauthorized: false };
+    }
+    return {
+      rejectUnauthorized: true,
+      ca: resolveSupabaseCaMaterial(),
+    };
   }
 
   const ca = resolvePgCaPem();
