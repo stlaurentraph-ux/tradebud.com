@@ -32,7 +32,7 @@ This registry is the single contract for **profile → settings → seed script 
 
 ### iOS commit-built simulator
 
-Debug+simulator Xcode builds skip JS bundling by default (Metro expected). CI assemble uses `FORCE_BUNDLING=1` and verifies `main.jsbundle` is embedded before Maestro runs.
+Debug+simulator Xcode builds skip JS bundling (`SKIP_BUNDLING=1` in Expo `.xcode.env`). CI assemble uses **Release** configuration and verifies `main.jsbundle` is embedded before Maestro runs.
 
 ### Boot-ready testID
 

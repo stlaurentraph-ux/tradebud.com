@@ -13,7 +13,9 @@ export EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL="${EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL:
 
 IOS_BUILD_DIR="$ROOT/ios-build"
 DERIVED_DATA="$IOS_BUILD_DIR/DerivedData"
-APP_PATH="$DERIVED_DATA/Build/Products/Debug-iphonesimulator/Tracebud.app"
+# Release embeds JS; Debug+simulator skips bundling (SKIP_BUNDLING=1 in Expo .xcode.env).
+IOS_CONFIGURATION="${IOS_CONFIGURATION:-Release}"
+APP_PATH="$DERIVED_DATA/Build/Products/${IOS_CONFIGURATION}-iphonesimulator/Tracebud.app"
 
 echo "==> expo prebuild (ios)"
 npx expo prebuild --platform ios --no-install
@@ -25,13 +27,12 @@ echo "==> pod install"
 cd ios
 pod install --repo-update
 
-echo "==> xcodebuild (iphonesimulator Debug, FORCE_BUNDLING=1 — Debug sim skips bundling by default)"
-# React Native skips bundling for Debug+simulator (expects Metro). Maestro CI needs an embedded bundle.
+echo "==> xcodebuild (iphonesimulator ${IOS_CONFIGURATION} — embeds JS bundle for offline Maestro)"
 cd "$ROOT/ios"
-FORCE_BUNDLING=1 xcodebuild \
+xcodebuild \
   -workspace Tracebud.xcworkspace \
   -scheme Tracebud \
-  -configuration Debug \
+  -configuration "$IOS_CONFIGURATION" \
   -sdk iphonesimulator \
   -derivedDataPath "$DERIVED_DATA" \
   ONLY_ACTIVE_ARCH=YES \

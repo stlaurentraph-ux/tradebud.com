@@ -81,7 +81,10 @@ function main() {
       issues.push(`Android bootstrap must call ${profile.seedScript} for golden path`);
     }
     if (profile.buildFromCommit) {
-      if (!iosBootstrap.includes('Debug-iphonesimulator/Tracebud.app')) {
+      if (
+        !iosBootstrap.includes('Release-iphonesimulator/Tracebud.app') &&
+        !iosBootstrap.includes('Debug-iphonesimulator/Tracebud.app')
+      ) {
         issues.push('iOS bootstrap must install commit-built simulator app when buildFromCommit');
       }
       if (!androidBootstrap.includes('app-debug.apk')) {

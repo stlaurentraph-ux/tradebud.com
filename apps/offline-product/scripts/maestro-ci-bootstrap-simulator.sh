@@ -36,7 +36,10 @@ sleep 3
 echo "==> Removing previous Tracebud install"
 xcrun simctl uninstall "$DEVICE_ID" "$APP_ID" 2>/dev/null || true
 
-IOS_APP_PATH="$ROOT/ios-build/DerivedData/Build/Products/Debug-iphonesimulator/Tracebud.app"
+IOS_APP_PATH="$ROOT/ios-build/DerivedData/Build/Products/Release-iphonesimulator/Tracebud.app"
+if [[ ! -d "$IOS_APP_PATH" ]]; then
+  IOS_APP_PATH="$ROOT/ios-build/DerivedData/Build/Products/Debug-iphonesimulator/Tracebud.app"
+fi
 if [[ -d "$IOS_APP_PATH" ]]; then
   echo "==> Installing prebuilt simulator app (PR branch — includes tab-home testIDs)"
   xcrun simctl install "$DEVICE_ID" "$IOS_APP_PATH"

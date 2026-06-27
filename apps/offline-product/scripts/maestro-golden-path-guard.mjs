@@ -81,8 +81,8 @@ function assertBootstrapInitLaunch() {
   if (!iosBootstrap.includes('seed-maestro-boot-profile.mjs')) {
     throw new Error('iOS bootstrap must apply golden-path boot profile when MAESTRO_SEED_SKIP=1');
   }
-  if (!iosBootstrap.includes('Debug-iphonesimulator/Tracebud.app')) {
-    throw new Error('iOS bootstrap must install prebuilt simulator app when present');
+  if (!iosBootstrap.includes('Release-iphonesimulator/Tracebud.app')) {
+    throw new Error('iOS bootstrap must install Release simulator app when present');
   }
   const androidBootstrap = readOffline('scripts/maestro-ci-bootstrap-emulator.sh');
   if (!androidBootstrap.includes('initialize local SQLite')) {
@@ -134,15 +134,15 @@ function assertIosAssembly(manifest) {
   if (!assembleScript.includes('export:embed')) {
     throw new Error(`${manifest.iosSimulatorAssemblyScript} must run expo export:embed`);
   }
-  if (!assembleScript.includes('FORCE_BUNDLING')) {
-    throw new Error(`${manifest.iosSimulatorAssemblyScript} must set FORCE_BUNDLING=1 for Debug simulator embed`);
+  if (!assembleScript.includes('IOS_CONFIGURATION') || !assembleScript.includes("IOS_CONFIGURATION:-Release")) {
+    throw new Error(`${manifest.iosSimulatorAssemblyScript} must default IOS_CONFIGURATION to Release (Debug skips JS embed)`);
   }
   if (!assembleScript.includes('main.jsbundle')) {
     throw new Error(`${manifest.iosSimulatorAssemblyScript} must verify embedded JS bundle in .app`);
   }
   const bootstrap = readOffline('scripts/maestro-ci-bootstrap-simulator.sh');
-  if (!bootstrap.includes('ios-build/DerivedData')) {
-    throw new Error('iOS bootstrap must install app from ios-build/DerivedData path');
+  if (!bootstrap.includes('Release-iphonesimulator')) {
+    throw new Error('iOS bootstrap must install Release simulator app from ios-build/DerivedData');
   }
 }
 
