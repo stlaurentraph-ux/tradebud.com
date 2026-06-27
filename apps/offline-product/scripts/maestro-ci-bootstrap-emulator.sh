@@ -74,8 +74,6 @@ for _ in $(seq 1 45); do
   sleep 2
 done
 
-adb -s "$DEVICE_SERIAL" root 2>/dev/null || true
-
 if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
   echo "==> Applying golden-path boot profile (polls until DB exists, up to ${MAESTRO_SEED_DB_WAIT_MS:-120000}ms)"
   MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \

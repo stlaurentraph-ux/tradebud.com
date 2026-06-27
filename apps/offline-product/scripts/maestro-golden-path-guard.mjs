@@ -123,9 +123,6 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('pidof')) {
     throw new Error('Android bootstrap must wait for Tracebud process before DB seed');
   }
-  if (!bootstrap.includes('adb') || !bootstrap.includes('root')) {
-    throw new Error('Android bootstrap must enable adb root for emulator DB seed');
-  }
   if (!bootstrap.includes('Missing prebuilt APK')) {
     throw new Error('Android bootstrap must fail fast when prebuilt APK is missing');
   }
