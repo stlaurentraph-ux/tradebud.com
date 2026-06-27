@@ -36,11 +36,11 @@ xcrun simctl uninstall "$DEVICE_ID" "$APP_ID" 2>/dev/null || true
 
 if [[ -n "${EXPO_TOKEN:-}" ]]; then
   echo "==> Installing latest EAS simulator build (EXPO_TOKEN set)"
-  EAS_NO_VCS=1 npx eas-cli build:run \
+  # build:run has no --non-interactive; CI=1 keeps npx/eas non-prompting on agents.
+  CI=1 EAS_NO_VCS=1 npx eas-cli build:run \
     --platform ios \
     --profile simulator \
     --latest \
-    --non-interactive \
     --simulator "$DEVICE_ID"
 else
   echo "==> Building and installing via expo run:ios (no EXPO_TOKEN — slower)"
