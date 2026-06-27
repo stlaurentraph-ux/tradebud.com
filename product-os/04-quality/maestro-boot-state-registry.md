@@ -34,6 +34,8 @@ This registry is the single contract for **profile → settings → seed script 
 
 Debug+simulator Xcode builds skip JS bundling (`SKIP_BUNDLING=1` in Expo `.xcode.env`). CI assemble uses **Release** configuration and verifies `main.jsbundle` is embedded before Maestro runs.
 
+Android `assembleDebug` also skips JS embed unless `debuggableVariants = []` is set in `app/build.gradle` after prebuild. CI verifies `assets/index.android.bundle` in the APK.
+
 ### Android emulator DB seed
 
 CI uses `adb root` + `/data/data/com.tracebud.app/…` for locate/patch (run-as fallback). Bootstrap waits for `pidof com.tracebud.app` before seeding; provisions a minimal `settings` table if SQLite init is slow on cold emulators.

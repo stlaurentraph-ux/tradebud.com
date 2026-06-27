@@ -194,6 +194,12 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('assembleDebug')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must run gradle assembleDebug');
   }
+  if (!assembleScript.includes('debuggableVariants = []')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must set debuggableVariants = [] (debug skips JS embed by default)');
+  }
+  if (!assembleScript.includes('index.android.bundle')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must verify embedded index.android.bundle in APK');
+  }
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);
   }
