@@ -9,7 +9,7 @@ appId: com.tracebud.app
 - tapOn:
     id: "welcome-account-skip"
     optional: true
-# Boot profile anchor — visible when SQLite + auth boot finished and welcome is not blocking.
+# Boot profile anchor — Maestro requires non-zero opacity (not accessibility-hidden).
 - extendedWaitUntil:
     visible:
       id: "maestro-boot-ready"

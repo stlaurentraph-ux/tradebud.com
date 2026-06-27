@@ -117,8 +117,14 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('MAESTRO_DRIVER_STARTUP_TIMEOUT')) {
     throw new Error('Android bootstrap must set MAESTRO_DRIVER_STARTUP_TIMEOUT');
   }
-  if (!bootstrap.includes('app-debug.apk')) {
-    throw new Error('Android bootstrap must install prebuilt debug APK when present');
+  if (!bootstrap.includes('MAESTRO_ANDROID_APK_PATH')) {
+    throw new Error('Android bootstrap must honor MAESTRO_ANDROID_APK_PATH for prebuilt APK');
+  }
+  if (!bootstrap.includes('Missing prebuilt APK')) {
+    throw new Error('Android bootstrap must fail fast when prebuilt APK is missing');
+  }
+  if (bootstrap.includes('expo run:android')) {
+    throw new Error('Android golden-path bootstrap must not fall back to expo run:android');
   }
   if (!androidGolden.includes('--device')) {
     throw new Error('Android golden path must pass --device to maestro test');
@@ -185,8 +191,8 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);
   }
-  if (!workflow.includes('MAESTRO_SEED_DB_WAIT_MS')) {
-    throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_DB_WAIT_MS`);
+  if (!workflow.includes('MAESTRO_ANDROID_APK_PATH')) {
+    throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_ANDROID_APK_PATH`);
   }
   const bootDbWaitMs = manifest.bootDbWaitMs;
   if (!bootDbWaitMs || bootDbWaitMs < 120000) {

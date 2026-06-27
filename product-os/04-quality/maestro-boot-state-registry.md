@@ -38,7 +38,7 @@ Debug+simulator Xcode builds skip JS bundling (`SKIP_BUNDLING=1` in Expo `.xcode
 
 | testID | When visible |
 |--------|----------------|
-| `maestro-boot-ready` | `authReady && !welcomeVisible` in `SignInSheetContext` |
+| `maestro-boot-ready` | `authReady && !welcomeVisible` — 24×24pt, low opacity; must not use `opacity: 0` (Maestro visibility) |
 
 Golden path flow waits on `maestro-boot-ready` before navigating tabs.
 

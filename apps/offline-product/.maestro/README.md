@@ -101,7 +101,7 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 
 | testID | Screen |
 |--------|--------|
-| `maestro-boot-ready` | CI boot anchor — auth ready, welcome not blocking (`SignInSheetContext`) |
+| `maestro-boot-ready` | CI boot anchor — auth ready, welcome not blocking; must stay Maestro-visible (non-zero opacity) |
 | `tab-home` | Bottom tab → Home |
 | `tab-my-plots` | Bottom tab → My Plots |
 | `tab-settings` | Bottom tab → Settings |

@@ -755,10 +755,9 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       {authReady && !welcomeVisible ? (
         <View
           testID={MAESTRO_BOOT_READY_TEST_ID}
-          accessibilityElementsHidden
-          importantForAccessibility="no-hide-descendants"
+          accessibilityLabel="Maestro boot ready"
           pointerEvents="none"
-          style={{ position: 'absolute', width: 1, height: 1, opacity: 0 }}
+          style={{ position: 'absolute', top: 0, left: 0, width: 24, height: 24, opacity: 0.01 }}
         />
       ) : null}
       <WelcomeAccountModal
