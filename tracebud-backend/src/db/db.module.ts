@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { setDefaultResultOrder } from 'node:dns';
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
-import { resolvePgSslConfig } from './pg-ssl-config';
+import { normalizeDatabaseConnectionString, resolvePgSslConfig } from './pg-ssl-config';
 import * as schema from './schema';
 
 export const DRIZZLE = Symbol('DRIZZLE');
@@ -12,10 +12,11 @@ export const PG_POOL = Symbol('PG_POOL');
 setDefaultResultOrder('ipv4first');
 
 function createPgPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString?.trim()) {
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl?.trim()) {
     throw new Error('DATABASE_URL is not configured.');
   }
+  const connectionString = normalizeDatabaseConnectionString(rawUrl.trim());
 
   const pool = new Pool({
     connectionString,
