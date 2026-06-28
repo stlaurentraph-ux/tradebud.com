@@ -62,6 +62,8 @@ function main() {
     const serial = androidSerial();
     if (!serial) throw new Error('No Android device for Maestro boot profile seed.');
     const relPath = waitForAndroidTracebudDb(serial, { waitMs: DB_WAIT_MS, pollMs: DB_POLL_MS });
+    // Stop Tracebud before patching SQLite — an open WAL handle causes bootError on the next launch.
+    sh(`adb -s ${JSON.stringify(serial)} shell am force-stop com.tracebud.app`);
     applyAndroidBootSettings(serial, relPath, profile.settings);
     console.log(`Maestro boot profile "${profileId}" applied on Android (${relPath})`);
     return;

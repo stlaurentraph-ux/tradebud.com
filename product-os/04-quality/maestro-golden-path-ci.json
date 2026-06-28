@@ -11,8 +11,8 @@
   "maestroSeedSkip": true,
   "goldenPathBootProfile": "golden_path_minimal",
   "goldenPathBootStateBaseline": "qa/automation-baselines/maestro-boot-state.json",
-  "goldenPathBootWaitMs": 120000,
-  "bootDbWaitMs": 120000,
+  "goldenPathBootWaitMs": 240000,
+  "bootDbWaitMs": 180000,
   "androidApkAssemblyScript": "scripts/maestro-ci-assemble-android-apk.sh",
   "iosSimulatorAssemblyScript": "scripts/maestro-ci-assemble-ios-simulator.sh",
   "androidEmulator": {

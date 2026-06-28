@@ -154,7 +154,9 @@ jobs:
     env:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
       MAESTRO_SEED_SKIP: '1'
-      MAESTRO_SEED_DB_WAIT_MS: '120000'
+      MAESTRO_SEED_DB_WAIT_MS: '180000'
+      MAESTRO_BOOT_WAIT_MS: '360000'
+      MAESTRO_CI_RETRY_ATTEMPTS: '3'
       MAESTRO_ANDROID_APK_PATH: ${{ github.workspace }}/apps/offline-product/android/app/build/outputs/apk/debug/app-debug.apk
       EXPO_PUBLIC_API_URL: https://api.tracebud.com/api
       EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co

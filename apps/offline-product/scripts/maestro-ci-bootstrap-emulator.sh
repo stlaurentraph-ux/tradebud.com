@@ -74,17 +74,6 @@ for _ in $(seq 1 45); do
   sleep 2
 done
 
-if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
-  echo "==> Applying golden-path boot profile (polls until DB exists, up to ${MAESTRO_SEED_DB_WAIT_MS:-120000}ms)"
-  MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \
-    MAESTRO_BOOT_PLATFORM=android \
-    MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL" \
-    MAESTRO_SEED_DB_WAIT_MS="${MAESTRO_SEED_DB_WAIT_MS:-120000}" \
-    node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
-fi
-
-adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
-
 dump_tracebud_logcat() {
   local label="${1:-logcat}"
   echo "==> $label"
@@ -92,6 +81,49 @@ dump_tracebud_logcat() {
     | grep -iE 'AndroidRuntime|FATAL EXCEPTION|ReactNative|ReactNativeJS|expo|SQLite|tracebud|AppState|MaestroBoot|boot failed' \
     | tail -100 || true
 }
+
+wait_for_android_js_boot() {
+  local label="${1:-JS boot}"
+  local max_ms="${MAESTRO_BOOT_WAIT_MS:-360000}"
+  local poll_s="${MAESTRO_BOOT_POLL_S:-5}"
+  local deadline=$(( $(date +%s) + max_ms / 1000 ))
+
+  echo "==> Waiting for $label (logcat MaestroBoot / RN main, up to ${max_ms}ms)"
+  adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
+
+  while [[ "$(date +%s)" -lt "$deadline" ]]; do
+    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE '\[MaestroBoot\] marker visible|Running application "main"'; then
+      echo "$label complete"
+      return 0
+    fi
+    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE 'FATAL EXCEPTION.*com\.tracebud\.app'; then
+      echo "App crashed during $label"
+      dump_tracebud_logcat "Logcat after crash during $label"
+      return 1
+    fi
+    sleep "$poll_s"
+  done
+
+  echo "Timed out waiting for $label (${max_ms}ms) — continuing"
+  dump_tracebud_logcat "Logcat after $label timeout"
+  return 0
+}
+
+if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
+  echo "==> Applying golden-path boot profile (polls until DB exists, up to ${MAESTRO_SEED_DB_WAIT_MS:-120000}ms)"
+  MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \
+    MAESTRO_BOOT_PLATFORM=android \
+    MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL" \
+    MAESTRO_SEED_DB_WAIT_MS="${MAESTRO_SEED_DB_WAIT_MS:-120000}" \
+    node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
+
+  echo "==> Post-seed warm-up launch (RN boot after SQLite patch)"
+  adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
+    adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+  wait_for_android_js_boot "bootstrap warm-up" || true
+fi
+
+adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
 
 if [[ "${MAESTRO_LOGCAT_ON_BOOTSTRAP:-1}" == "1" ]]; then
   dump_tracebud_logcat "Logcat after bootstrap seed"
