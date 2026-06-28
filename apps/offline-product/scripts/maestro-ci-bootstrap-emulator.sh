@@ -111,7 +111,7 @@ wait_for_android_js_boot() {
   adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
 
   while [[ "$(date +%s)" -lt "$deadline" ]]; do
-    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE '\[MaestroBoot\] marker visible|Running application "main"|ReactNativeJS.*Running|ReactNativeJS: \[AppState\]'; then
+    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE 'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|Running application "main"|Running "main" with'; then
       echo "$label complete"
       return 0
     fi
@@ -142,7 +142,7 @@ if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
   echo "==> Post-seed warm-up launch (RN boot after SQLite patch)"
   adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
     adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
-  MAESTRO_BOOT_REQUIRE_SUCCESS=1 wait_for_android_js_boot "bootstrap warm-up"
+  wait_for_android_js_boot "bootstrap warm-up" || echo "Bootstrap warm-up incomplete — Maestro will cold-start with extended boot wait"
 fi
 
 adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
