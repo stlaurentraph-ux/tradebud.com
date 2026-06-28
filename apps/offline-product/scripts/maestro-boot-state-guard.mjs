@@ -87,8 +87,8 @@ function main() {
       ) {
         issues.push('iOS bootstrap must install commit-built simulator app when buildFromCommit');
       }
-      if (!androidBootstrap.includes('app-debug.apk')) {
-        issues.push('Android bootstrap must install commit-built debug APK when buildFromCommit');
+      if (!androidBootstrap.includes('app-release.apk') && !androidBootstrap.includes('app-debug.apk')) {
+        issues.push('Android bootstrap must install commit-built release/debug APK when buildFromCommit');
       }
     }
   }

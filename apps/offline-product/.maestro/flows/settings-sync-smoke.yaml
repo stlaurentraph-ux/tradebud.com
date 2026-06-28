@@ -13,7 +13,7 @@ appId: com.tracebud.app
 - extendedWaitUntil:
     visible:
       id: "maestro-boot-ready"
-    timeout: 300000
+    timeout: 600000
 - extendedWaitUntil:
     visible:
       id: "tab-settings"

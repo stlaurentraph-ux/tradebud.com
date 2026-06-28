@@ -16,14 +16,6 @@ export EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL="${EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL:
 echo "==> expo prebuild (android)"
 npx expo prebuild --platform android --no-install
 
-# New Architecture adds heavy dex work on x86_64 CI emulators — disable for Maestro APK only.
-GRADLE_PROPS="$ROOT/android/gradle.properties"
-if [[ -f "$GRADLE_PROPS" ]]; then
-  sed -i.bak 's/newArchEnabled=true/newArchEnabled=false/' "$GRADLE_PROPS" 2>/dev/null || \
-    sed -i '' 's/newArchEnabled=true/newArchEnabled=false/' "$GRADLE_PROPS"
-  echo "==> Maestro CI: newArchEnabled=false in android/gradle.properties"
-fi
-
 GRADLE_FILE="$ROOT/android/app/build.gradle"
 echo "==> Force JS embed in debug APK (debug variant skips bundling by default)"
 MAESTRO_GRADLE_FILE="$GRADLE_FILE" node <<'NODE'
@@ -42,11 +34,11 @@ NODE
 echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
 npx expo export:embed --eager --platform android --dev false
 
-echo "==> gradle assembleDebug (x86_64 for CI emulator)"
+echo "==> gradle assembleRelease (x86_64 for CI emulator — faster dex than debug)"
 cd android
-./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures=x86_64
+./gradlew assembleRelease --no-daemon -q -PreactNativeArchitectures=x86_64
 
-APK_PATH="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
+APK_PATH="$ROOT/android/app/build/outputs/apk/release/app-release.apk"
 if [[ ! -f "$APK_PATH" ]]; then
   echo "Missing APK at $APK_PATH"
   exit 1
@@ -64,4 +56,4 @@ if ! unzip -l "$APK_PATH" | grep -q 'lib/x86_64/'; then
   exit 1
 fi
 
-echo "Android debug APK ready (embedded bundle verified): $APK_PATH"
+echo "Android release APK ready (embedded bundle verified): $APK_PATH"

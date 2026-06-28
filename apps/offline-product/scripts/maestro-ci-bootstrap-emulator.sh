@@ -32,10 +32,10 @@ export MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL"
 
 echo "==> Using Android device $DEVICE_SERIAL"
 
-APK_PATH="${MAESTRO_ANDROID_APK_PATH:-$ROOT/android/app/build/outputs/apk/debug/app-debug.apk}"
+APK_PATH="${MAESTRO_ANDROID_APK_PATH:-$ROOT/android/app/build/outputs/apk/release/app-release.apk}"
 if [[ ! -f "$APK_PATH" ]]; then
   echo "::error::Missing prebuilt APK at $APK_PATH (assemble step must run first)."
-  find "$ROOT" -name 'app-debug.apk' 2>/dev/null | head -5 || true
+  find "$ROOT" -name 'app-release.apk' 2>/dev/null | head -5 || true
   exit 1
 fi
 
@@ -53,7 +53,16 @@ export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 adb -s "$DEVICE_SERIAL" wait-for-device
 adb -s "$DEVICE_SERIAL" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done'
 
-echo "==> Installing prebuilt debug APK from $APK_PATH"
+tune_emulator_dex2oat() {
+  echo "==> Tune emulator dex2oat for speed (CI cold start)"
+  adb -s "$DEVICE_SERIAL" shell setprop dalvik.vm.dex2oat-filter speed 2>/dev/null || true
+  adb -s "$DEVICE_SERIAL" shell setprop dalvik.vm.image-dex2oat-filter speed 2>/dev/null || true
+  adb -s "$DEVICE_SERIAL" shell setprop dalvik.vm.dex2oat-threads 4 2>/dev/null || true
+}
+
+tune_emulator_dex2oat
+
+echo "==> Installing prebuilt release APK from $APK_PATH"
 adb -s "$DEVICE_SERIAL" install -r -g "$APK_PATH"
 
 speed_compile_tracebud_apk() {
