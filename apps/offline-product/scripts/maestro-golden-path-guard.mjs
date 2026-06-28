@@ -123,6 +123,12 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('pidof')) {
     throw new Error('Android bootstrap must wait for Tracebud process before DB seed');
   }
+  if (!bootstrap.includes('dump_tracebud_logcat')) {
+    throw new Error('Android bootstrap must dump logcat after seed for Maestro diagnostics');
+  }
+  if (!androidGolden.includes('dump_tracebud_logcat')) {
+    throw new Error('Android golden path must dump logcat on Maestro failure');
+  }
   if (!bootstrap.includes('Missing prebuilt APK')) {
     throw new Error('Android bootstrap must fail fast when prebuilt APK is missing');
   }
@@ -203,9 +209,19 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('MAESTRO_CI')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must set MAESTRO_CI=1 to disable OTA checks');
   }
+  if (!assembleScript.includes('EXPO_PUBLIC_MAESTRO_CI')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must set EXPO_PUBLIC_MAESTRO_CI=1 for CI boot marker');
+  }
+  const rootLayout = readOffline('app/_layout.tsx');
+  if (!rootLayout.includes('MaestroBootReadyMarker') || !rootLayout.includes('flex: 1')) {
+    throw new Error('app/_layout.tsx must wrap MaestroBootReadyMarker in flex:1 root for Android visibility');
+  }
   const iosAssemble = readOffline(manifest.iosSimulatorAssemblyScript);
   if (!iosAssemble.includes('MAESTRO_CI')) {
     throw new Error(`${manifest.iosSimulatorAssemblyScript} must set MAESTRO_CI=1 to disable OTA checks`);
+  }
+  if (!iosAssemble.includes('EXPO_PUBLIC_MAESTRO_CI')) {
+    throw new Error(`${manifest.iosSimulatorAssemblyScript} must set EXPO_PUBLIC_MAESTRO_CI=1`);
   }
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);

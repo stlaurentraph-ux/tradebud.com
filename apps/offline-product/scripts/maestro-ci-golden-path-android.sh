@@ -20,6 +20,9 @@ fi
 echo "==> Running Maestro golden path (Android): $GOLDEN_FLOW"
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
 adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
-maestro test --device "$DEVICE_SERIAL" "$FLOW_PATH"
+if ! maestro test --device "$DEVICE_SERIAL" "$FLOW_PATH"; then
+  dump_tracebud_logcat "Logcat after Maestro failure" || true
+  exit 1
+fi
 
 echo "Maestro Android golden path passed: $GOLDEN_FLOW"

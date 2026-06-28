@@ -44,7 +44,7 @@ CI uses `adb root` + `/data/data/com.tracebud.app/…` for locate/patch. **Write
 
 | testID | When visible |
 |--------|----------------|
-| `maestro-boot-ready` | `isAppReady && !bootError && welcome dismissed` — `MaestroBootReadyMarker` in root layout (Android uses visible Text) |
+| `maestro-boot-ready` | `isAppReady && !bootError` (+ welcome dismissed on retail builds) — `MaestroBootReadyMarker` in flex root layout |
 
 Golden path flow waits on `maestro-boot-ready` before navigating tabs.
 

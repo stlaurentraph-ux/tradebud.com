@@ -85,4 +85,16 @@ fi
 
 adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
 
+dump_tracebud_logcat() {
+  local label="${1:-logcat}"
+  echo "==> $label"
+  adb -s "$DEVICE_SERIAL" logcat -d -t 400 2>/dev/null \
+    | grep -iE 'AndroidRuntime|FATAL EXCEPTION|ReactNative|ReactNativeJS|expo|SQLite|tracebud|AppState|MaestroBoot|boot failed' \
+    | tail -100 || true
+}
+
+if [[ "${MAESTRO_LOGCAT_ON_BOOTSTRAP:-1}" == "1" ]]; then
+  dump_tracebud_logcat "Logcat after bootstrap seed"
+fi
+
 echo "Android bootstrap ready for Maestro (flow uses launchApp clearState: false)."
