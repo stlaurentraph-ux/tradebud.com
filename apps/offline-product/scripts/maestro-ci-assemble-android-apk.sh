@@ -34,11 +34,31 @@ NODE
 echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
 npx expo export:embed --eager --platform android --dev false
 
-echo "==> gradle assembleRelease (x86_64 for CI emulator — faster dex than debug)"
-cd android
-./gradlew assembleRelease --no-daemon -q -PreactNativeArchitectures=x86_64
+# Release assemble OOMs on GHA (Metaspace) — debug + embedded bundle is the CI path.
+export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8}"
 
-APK_PATH="$ROOT/android/app/build/outputs/apk/release/app-release.apk"
+GRADLE_PROPS="$ROOT/android/gradle.properties"
+if [[ -f "$GRADLE_PROPS" ]]; then
+  MAESTRO_GRADLE_PROPS="$GRADLE_PROPS" node <<'NODE'
+const fs = require('node:fs');
+const propsPath = process.env.MAESTRO_GRADLE_PROPS;
+if (!propsPath) throw new Error('MAESTRO_GRADLE_PROPS is required');
+let source = fs.readFileSync(propsPath, 'utf8');
+const ciJvmArgs = 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8';
+if (/^org\.gradle\.jvmargs=/m.test(source)) {
+  source = source.replace(/^org\.gradle\.jvmargs=.*$/m, ciJvmArgs);
+} else {
+  source += `\n${ciJvmArgs}\n`;
+}
+fs.writeFileSync(propsPath, source);
+NODE
+fi
+
+echo "==> gradle assembleDebug (x86_64 for CI emulator)"
+cd android
+./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures=x86_64
+
+APK_PATH="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 if [[ ! -f "$APK_PATH" ]]; then
   echo "Missing APK at $APK_PATH"
   exit 1
@@ -56,4 +76,4 @@ if ! unzip -l "$APK_PATH" | grep -q 'lib/x86_64/'; then
   exit 1
 fi
 
-echo "Android release APK ready (embedded bundle verified): $APK_PATH"
+echo "Android debug APK ready (embedded bundle verified): $APK_PATH"

@@ -32,10 +32,10 @@ export MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL"
 
 echo "==> Using Android device $DEVICE_SERIAL"
 
-APK_PATH="${MAESTRO_ANDROID_APK_PATH:-$ROOT/android/app/build/outputs/apk/release/app-release.apk}"
+APK_PATH="${MAESTRO_ANDROID_APK_PATH:-$ROOT/android/app/build/outputs/apk/debug/app-debug.apk}"
 if [[ ! -f "$APK_PATH" ]]; then
   echo "::error::Missing prebuilt APK at $APK_PATH (assemble step must run first)."
-  find "$ROOT" -name 'app-release.apk' 2>/dev/null | head -5 || true
+  find "$ROOT" -name 'app-debug.apk' 2>/dev/null | head -5 || true
   exit 1
 fi
 
@@ -62,7 +62,7 @@ tune_emulator_dex2oat() {
 
 tune_emulator_dex2oat
 
-echo "==> Installing prebuilt release APK from $APK_PATH"
+echo "==> Installing prebuilt debug APK from $APK_PATH"
 adb -s "$DEVICE_SERIAL" install -r -g "$APK_PATH"
 
 speed_compile_tracebud_apk() {

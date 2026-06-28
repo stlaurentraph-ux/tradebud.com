@@ -194,8 +194,11 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('export:embed')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must run expo export:embed');
   }
-  if (!assembleScript.includes('assembleRelease')) {
-    throw new Error('maestro-ci-assemble-android-apk.sh must run gradle assembleRelease (faster CI dex than debug)');
+  if (!assembleScript.includes('assembleDebug')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must run gradle assembleDebug');
+  }
+  if (!assembleScript.includes('MaxMetaspaceSize=1024m')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must raise Gradle MaxMetaspaceSize for CI assemble');
   }
   if (!assembleScript.includes('debuggableVariants = []')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must set debuggableVariants = [] (debug skips JS embed by default)');
