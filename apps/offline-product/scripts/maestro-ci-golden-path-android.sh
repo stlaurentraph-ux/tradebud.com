@@ -27,19 +27,8 @@ stabilize_adb() {
   adb -s "$DEVICE_SERIAL" shell input keyevent 82 2>/dev/null || true
 }
 
-prewarm_tracebud_for_maestro() {
-  echo "==> Pre-warming Tracebud (dex cache + RN boot before Maestro driver connect)"
-  adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
-  adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
-  adb -s "$DEVICE_SERIAL" shell am start -W -n "$MAESTRO_APP_ID/.MainActivity" 2>/dev/null || \
-    adb -s "$DEVICE_SERIAL" shell monkey -p "$MAESTRO_APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
-  wait_for_android_js_boot "Maestro pre-warm" || true
-  adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
-  sleep 3
-}
-
 run_maestro_with_retry() {
-  local attempts="${MAESTRO_CI_RETRY_ATTEMPTS:-3}"
+  local attempts="${MAESTRO_CI_RETRY_ATTEMPTS:-2}"
   local n=1
   while [[ "$n" -le "$attempts" ]]; do
     echo "==> Maestro attempt $n/$attempts"
@@ -63,7 +52,6 @@ echo "==> Running Maestro golden path (Android): $GOLDEN_FLOW"
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
 
 stabilize_adb
-prewarm_tracebud_for_maestro
 if ! run_maestro_with_retry; then
   exit 1
 fi

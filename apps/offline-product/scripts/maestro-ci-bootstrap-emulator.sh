@@ -56,6 +56,15 @@ adb -s "$DEVICE_SERIAL" shell 'while [ "$(getprop sys.boot_completed)" != "1" ];
 echo "==> Installing prebuilt debug APK from $APK_PATH"
 adb -s "$DEVICE_SERIAL" install -r -g "$APK_PATH"
 
+speed_compile_tracebud_apk() {
+  echo "==> AOT dex compile Tracebud (speed mode — cuts cold-start verify on CI emulator)"
+  adb -s "$DEVICE_SERIAL" shell cmd package compile -m speed -f "$APP_ID" 2>/dev/null || \
+    adb -s "$DEVICE_SERIAL" shell pm compile -m speed -f "$APP_ID" 2>/dev/null || \
+    echo "Package speed-compile unavailable on this emulator API — continuing"
+}
+
+speed_compile_tracebud_apk
+
 export MAESTRO_APP_ID="$APP_ID"
 
 # Maestro driver handshake can exceed the 15s Android default on cold CI emulators.
@@ -84,15 +93,16 @@ dump_tracebud_logcat() {
 
 wait_for_android_js_boot() {
   local label="${1:-JS boot}"
-  local max_ms="${MAESTRO_BOOT_WAIT_MS:-360000}"
+  local max_ms="${MAESTRO_BOOT_WAIT_MS:-900000}"
   local poll_s="${MAESTRO_BOOT_POLL_S:-5}"
   local deadline=$(( $(date +%s) + max_ms / 1000 ))
+  local require_success="${MAESTRO_BOOT_REQUIRE_SUCCESS:-0}"
 
   echo "==> Waiting for $label (logcat MaestroBoot / RN main, up to ${max_ms}ms)"
   adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
 
   while [[ "$(date +%s)" -lt "$deadline" ]]; do
-    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE '\[MaestroBoot\] marker visible|Running application "main"'; then
+    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE '\[MaestroBoot\] marker visible|Running application "main"|ReactNativeJS.*Running|ReactNativeJS: \[AppState\]'; then
       echo "$label complete"
       return 0
     fi
@@ -104,8 +114,11 @@ wait_for_android_js_boot() {
     sleep "$poll_s"
   done
 
-  echo "Timed out waiting for $label (${max_ms}ms) — continuing"
+  echo "Timed out waiting for $label (${max_ms}ms)"
   dump_tracebud_logcat "Logcat after $label timeout"
+  if [[ "$require_success" == "1" ]]; then
+    return 1
+  fi
   return 0
 }
 
@@ -120,7 +133,7 @@ if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
   echo "==> Post-seed warm-up launch (RN boot after SQLite patch)"
   adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
     adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
-  wait_for_android_js_boot "bootstrap warm-up" || true
+  MAESTRO_BOOT_REQUIRE_SUCCESS=1 wait_for_android_js_boot "bootstrap warm-up"
 fi
 
 adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true

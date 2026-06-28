@@ -16,6 +16,14 @@ export EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL="${EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL:
 echo "==> expo prebuild (android)"
 npx expo prebuild --platform android --no-install
 
+# New Architecture adds heavy dex work on x86_64 CI emulators — disable for Maestro APK only.
+GRADLE_PROPS="$ROOT/android/gradle.properties"
+if [[ -f "$GRADLE_PROPS" ]]; then
+  sed -i.bak 's/newArchEnabled=true/newArchEnabled=false/' "$GRADLE_PROPS" 2>/dev/null || \
+    sed -i '' 's/newArchEnabled=true/newArchEnabled=false/' "$GRADLE_PROPS"
+  echo "==> Maestro CI: newArchEnabled=false in android/gradle.properties"
+fi
+
 GRADLE_FILE="$ROOT/android/app/build.gradle"
 echo "==> Force JS embed in debug APK (debug variant skips bundling by default)"
 MAESTRO_GRADLE_FILE="$GRADLE_FILE" node <<'NODE'
