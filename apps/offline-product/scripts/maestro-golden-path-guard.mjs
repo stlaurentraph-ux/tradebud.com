@@ -200,6 +200,13 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('x86_64')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must build x86_64 APK for CI emulator');
   }
+  if (!assembleScript.includes('MAESTRO_CI')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must set MAESTRO_CI=1 to disable OTA checks');
+  }
+  const iosAssemble = readOffline(manifest.iosSimulatorAssemblyScript);
+  if (!iosAssemble.includes('MAESTRO_CI')) {
+    throw new Error(`${manifest.iosSimulatorAssemblyScript} must set MAESTRO_CI=1 to disable OTA checks`);
+  }
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);
   }

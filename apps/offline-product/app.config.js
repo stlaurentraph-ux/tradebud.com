@@ -154,6 +154,7 @@ module.exports = ({ config }) => {
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim() || undefined,
     expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID?.trim() || undefined,
   };
+  const maestroCi = process.env.MAESTRO_CI === '1';
   const extra = {
     ...(appJson.expo.extra ?? {}),
     ...(config.extra ?? {}),
@@ -169,5 +170,14 @@ module.exports = ({ config }) => {
     android,
     plugins,
     extra,
+    updates: {
+      ...(appJson.expo.updates ?? {}),
+      ...(maestroCi
+        ? {
+            enabled: false,
+            checkAutomatically: 'NEVER',
+          }
+        : {}),
+    },
   };
 };

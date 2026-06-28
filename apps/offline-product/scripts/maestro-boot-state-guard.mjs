@@ -52,7 +52,7 @@ function main() {
     if (!registryTs.includes(`export const MAESTRO_BOOT_READY_TEST_ID = '${profile.bootReadyTestId}'`)) {
       issues.push('maestroBootStateRegistry.ts bootReadyTestId must match JSON profile');
     }
-    if (!signInCtx.includes('MAESTRO_BOOT_READY_TEST_ID')) {
+  if (!signInCtx.includes('MAESTRO_BOOT_READY_TEST_ID') && !read('app/_layout.tsx').includes('MaestroBootReadyMarker')) {
       issues.push('SignInSheetContext must render MAESTRO_BOOT_READY_TEST_ID when boot is interactive');
     }
     for (const testId of profile.flowTestIds ?? []) {

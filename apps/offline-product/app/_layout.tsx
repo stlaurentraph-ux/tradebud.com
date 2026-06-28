@@ -9,6 +9,7 @@ import { ConsentPushBridge } from '@/components/ConsentPushBridge';
 import { AppErrorBoundary } from '@/components/observability/AppErrorBoundary';
 import { PushRegistrationBridge } from '@/components/PushRegistrationBridge';
 import { SplashGate } from '@/components/layout/SplashGate';
+import { MaestroBootReadyMarker } from '@/components/layout/MaestroBootReadyMarker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
 import { initObservability } from '@/features/observability/initObservability';
@@ -30,6 +31,7 @@ export default function RootLayout() {
     <AppErrorBoundary>
       <LanguageProvider>
         <AppStateProvider>
+          <MaestroBootReadyMarker />
           <SplashGate>
             <SignInProvider>
               <AutoPlotUploadBridge />

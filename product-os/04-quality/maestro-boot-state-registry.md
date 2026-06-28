@@ -34,7 +34,7 @@ This registry is the single contract for **profile → settings → seed script 
 
 Debug+simulator Xcode builds skip JS bundling (`SKIP_BUNDLING=1` in Expo `.xcode.env`). CI assemble uses **Release** configuration and verifies `main.jsbundle` is embedded before Maestro runs.
 
-Android `assembleDebug` also skips JS embed unless `debuggableVariants = []` is set in `app/build.gradle` after prebuild. CI verifies `assets/index.android.bundle` in the APK.
+Android `assembleDebug` also skips JS embed unless `debuggableVariants = []` is set in `app/build.gradle` after prebuild. CI verifies `assets/index.android.bundle` in the APK. **`MAESTRO_CI=1`** disables Expo Updates `ON_LOAD` checks in assembled binaries.
 
 ### Android emulator DB seed
 
@@ -44,7 +44,7 @@ CI uses `adb root` + `/data/data/com.tracebud.app/…` for locate/patch. **Write
 
 | testID | When visible |
 |--------|----------------|
-| `maestro-boot-ready` | `authReady && !welcomeVisible` — iOS 24×24 @ 0.01 opacity; Android 48×48 @ opacity 1 (Maestro UiAutomator) |
+| `maestro-boot-ready` | `isAppReady && !bootError && welcome dismissed` — `MaestroBootReadyMarker` in root layout (Android uses visible Text) |
 
 Golden path flow waits on `maestro-boot-ready` before navigating tabs.
 

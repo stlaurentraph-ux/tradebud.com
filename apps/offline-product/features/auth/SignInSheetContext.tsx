@@ -43,7 +43,6 @@ import { CreateAccountWizard } from '@/components/auth/CreateAccountWizard';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
 import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { WelcomeAccountModal } from '@/components/auth/WelcomeAccountModal';
-import { MAESTRO_BOOT_READY_TEST_ID } from '@/features/testing/maestroBootStateRegistry';
 import { fetchPlotsForFarmer } from '@/features/api/postPlot';
 import { clearFieldProducerBootstrapCache } from '@/features/api/fieldAppBootstrap';
 import { showOAuthSignInFailureAlert } from '@/features/auth/oauthSignInAlerts';
@@ -752,25 +751,6 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   return (
     <SignInSheetContext.Provider value={signInSheetContextValue}>
       {children}
-      {authReady && !welcomeVisible ? (
-        <View
-          testID={MAESTRO_BOOT_READY_TEST_ID}
-          accessibilityLabel="Maestro boot ready"
-          accessible
-          importantForAccessibility="yes"
-          collapsable={false}
-          pointerEvents="none"
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: Platform.OS === 'android' ? 48 : 24,
-            height: Platform.OS === 'android' ? 48 : 24,
-            opacity: Platform.OS === 'android' ? 1 : 0.01,
-            backgroundColor: Platform.OS === 'android' ? 'rgba(10,127,89,0.04)' : 'transparent',
-          }}
-        />
-      ) : null}
       <WelcomeAccountModal
         visible={welcomeVisible}
         title={t('welcome_account_title')}

@@ -240,7 +240,6 @@ function sqlFile(dbPath, statement) {
 }
 
 function applySettingsOnHost(dbPath, settings) {
-  sqlFile(dbPath, 'PRAGMA journal_mode = WAL;');
   for (const [key, value] of Object.entries(settings)) {
     const escaped = String(value).replace(/'/g, "''");
     sqlFile(
