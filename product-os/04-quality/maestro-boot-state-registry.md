@@ -38,13 +38,13 @@ Android `assembleDebug` also skips JS embed unless `debuggableVariants = []` is 
 
 ### Android emulator DB seed
 
-CI uses `adb root` + `/data/data/com.tracebud.app/…` for locate/patch (run-as fallback). Bootstrap waits for `pidof com.tracebud.app` before seeding; provisions a minimal `settings` table if SQLite init is slow on cold emulators.
+CI uses `adb root` + `/data/data/com.tracebud.app/…` for locate/patch. **Writes use `run-as cp`** (or root + `chown` to app uid) so SQLite stays readable. Bootstrap waits for `pidof com.tracebud.app` before seeding. Assemble targets **x86_64** for the GitHub emulator.
 
 ### Boot-ready testID
 
 | testID | When visible |
 |--------|----------------|
-| `maestro-boot-ready` | `authReady && !welcomeVisible` — 24×24pt, low opacity; must not use `opacity: 0` (Maestro visibility) |
+| `maestro-boot-ready` | `authReady && !welcomeVisible` — iOS 24×24 @ 0.01 opacity; Android 48×48 @ opacity 1 (Maestro UiAutomator) |
 
 Golden path flow waits on `maestro-boot-ready` before navigating tabs.
 

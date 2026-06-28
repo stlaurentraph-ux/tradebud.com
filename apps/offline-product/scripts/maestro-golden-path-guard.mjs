@@ -197,6 +197,9 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('index.android.bundle')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must verify embedded index.android.bundle in APK');
   }
+  if (!assembleScript.includes('x86_64')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must build x86_64 APK for CI emulator');
+  }
   if (!workflow.includes('MAESTRO_SEED_SKIP')) {
     throw new Error(`${manifest.workflowFile} golden path jobs must set MAESTRO_SEED_SKIP=1`);
   }

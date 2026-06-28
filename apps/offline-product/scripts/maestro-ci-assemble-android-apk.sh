@@ -32,9 +32,9 @@ NODE
 echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
 npx expo export:embed --eager --platform android --dev false
 
-echo "==> gradle assembleDebug"
+echo "==> gradle assembleDebug (x86_64 for CI emulator)"
 cd android
-./gradlew assembleDebug --no-daemon -q
+./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures=x86_64
 
 APK_PATH="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 if [[ ! -f "$APK_PATH" ]]; then
@@ -45,6 +45,12 @@ fi
 if ! unzip -l "$APK_PATH" | grep -qE 'assets/index.android.bundle|\.hbc'; then
   echo "::error::Missing embedded JS bundle (index.android.bundle) in $APK_PATH — debug APK will not boot offline without debuggableVariants = []."
   unzip -l "$APK_PATH" | head -40 || true
+  exit 1
+fi
+
+if ! unzip -l "$APK_PATH" | grep -q 'lib/x86_64/'; then
+  echo "::error::Missing lib/x86_64 native libs in $APK_PATH — CI emulator requires x86_64 ABI."
+  unzip -l "$APK_PATH" | grep 'lib/' | head -20 || true
   exit 1
 fi
 

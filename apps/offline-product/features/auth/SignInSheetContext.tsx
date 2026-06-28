@@ -756,8 +756,19 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         <View
           testID={MAESTRO_BOOT_READY_TEST_ID}
           accessibilityLabel="Maestro boot ready"
+          accessible
+          importantForAccessibility="yes"
+          collapsable={false}
           pointerEvents="none"
-          style={{ position: 'absolute', top: 0, left: 0, width: 24, height: 24, opacity: 0.01 }}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: Platform.OS === 'android' ? 48 : 24,
+            height: Platform.OS === 'android' ? 48 : 24,
+            opacity: Platform.OS === 'android' ? 1 : 0.01,
+            backgroundColor: Platform.OS === 'android' ? 'rgba(10,127,89,0.04)' : 'transparent',
+          }}
         />
       ) : null}
       <WelcomeAccountModal
