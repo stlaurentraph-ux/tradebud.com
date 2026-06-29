@@ -278,8 +278,8 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
       console.log(
         `DB found but settings table not yet ready (attempt ${attempts}, ${elapsedS}s elapsed) — waiting for migrations...`,
       );
-      if (stalledMs >= 90_000) {
-        console.log('Settings table still missing after 90s — provisioning full boot schema');
+      if (stalledMs >= 30_000) {
+        console.log('Settings table still missing after 30s — provisioning full boot schema');
         break;
       }
     } else {

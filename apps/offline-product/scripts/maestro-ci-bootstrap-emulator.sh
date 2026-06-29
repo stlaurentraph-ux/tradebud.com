@@ -105,7 +105,7 @@ dump_tracebud_logcat() {
 
 wait_for_android_js_boot() {
   local label="${1:-JS boot}"
-  const max_ms="${MAESTRO_BOOT_WAIT_MS:-7200000}"
+  local max_ms="${MAESTRO_BOOT_WAIT_MS:-7200000}"
   local poll_s="${MAESTRO_BOOT_POLL_S:-5}"
   local deadline=$(( $(date +%s) + max_ms / 1000 ))
 
