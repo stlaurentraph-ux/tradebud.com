@@ -22,6 +22,15 @@ appId: com.tracebud.app
     timeout: 60000
 - tapOn:
     id: "tab-settings"
+# iOS 26 (macos-latest = macOS 26) has different safe-area/font metrics that can push
+# the Backup card below the fold. Scroll until it is in view before asserting.
+- scrollUntilVisible:
+    element:
+      id: "settings-cloud-parity-section"
+    direction: DOWN
+    timeout: 15000
+    speed: 40
+    visibilityPercentage: 20
 - assertVisible:
     text: ".*Backup.*"
 - assertVisible:
