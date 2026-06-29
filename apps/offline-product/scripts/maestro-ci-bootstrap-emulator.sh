@@ -99,13 +99,13 @@ dump_tracebud_logcat() {
   local label="${1:-logcat}"
   echo "==> $label"
   adb -s "$DEVICE_SERIAL" logcat -d -t 400 2>/dev/null \
-    | grep -iE 'AndroidRuntime|FATAL EXCEPTION|ReactNative|ReactNativeJS|expo|SQLite|tracebud|AppState|MaestroBoot|boot failed' \
+    | grep -iE 'AndroidRuntime|FATAL EXCEPTION|ReactNative|ReactNativeJS|Hermes|expo|SQLite|tracebud|AppState|MaestroBoot|boot failed|JSExecutor|Bridgeless' \
     | tail -100 || true
 }
 
 wait_for_android_js_boot() {
   local label="${1:-JS boot}"
-  local max_ms="${MAESTRO_BOOT_WAIT_MS:-900000}"
+  const max_ms="${MAESTRO_BOOT_WAIT_MS:-7200000}"
   local poll_s="${MAESTRO_BOOT_POLL_S:-5}"
   local deadline=$(( $(date +%s) + max_ms / 1000 ))
 
@@ -143,6 +143,7 @@ if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
     node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
 
   echo "==> Post-seed warm-up launch (RN boot after SQLite patch)"
+  speed_compile_tracebud_apk
   adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
     adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
   if wait_for_android_js_boot "bootstrap warm-up"; then

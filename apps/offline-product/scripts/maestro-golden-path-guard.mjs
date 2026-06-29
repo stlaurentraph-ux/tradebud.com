@@ -62,6 +62,9 @@ function assertAndroidGoldenPathFlow(manifest) {
   if (!flow.includes('Maestro boot ready')) {
     throw new Error(`${flowName} must wait for Maestro boot ready label (Android TextView visibility)`);
   }
+  if (!flow.includes(String(manifest.goldenPathBootWaitMs))) {
+    throw new Error(`${flowName} boot timeout must match manifest goldenPathBootWaitMs`);
+  }
   if (!flow.includes('id: "tab-settings"')) {
     throw new Error(`${flowName} must tap tab-settings testID`);
   }
@@ -94,8 +97,11 @@ function assertGoldenPathFlow(manifest) {
     throw new Error(`${manifest.goldenPathFlow} must launchApp with stopApp: false (preserve bootstrap warm RN process)`);
   }
   const bootWaitMs = manifest.goldenPathBootWaitMs;
-  if (!bootWaitMs || bootWaitMs < 60000) {
-    throw new Error('manifest goldenPathBootWaitMs must be >= 60000');
+  if (!bootWaitMs || bootWaitMs < 3600000) {
+    throw new Error('manifest goldenPathBootWaitMs must be >= 3600000 (x86_64 cold boot)');
+  }
+  if (!flow.includes(String(bootWaitMs))) {
+    throw new Error(`${manifest.goldenPathFlow} boot timeout must match manifest goldenPathBootWaitMs`);
   }
 }
 

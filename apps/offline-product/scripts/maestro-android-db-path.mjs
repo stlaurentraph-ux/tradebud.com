@@ -259,27 +259,39 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
     }
   };
 
+  let settingsNotReadySince = null;
+
   while (Date.now() - started < waitMs) {
     attempts += 1;
     const dbPath = findAndroidTracebudDb(serial);
     if (dbPath) {
       if (androidDbSettingsTableReady(serial, dbPath)) {
+        settingsNotReadySince = null;
         console.log(
           `Found tracebud_offline.db with settings table after ${attempts} attempt(s): ${dbPath}`,
         );
         return dbPath;
       }
+      if (!settingsNotReadySince) settingsNotReadySince = Date.now();
+      const stalledMs = Date.now() - settingsNotReadySince;
       const elapsedS = Math.round((Date.now() - started) / 1000);
       console.log(
         `DB found but settings table not yet ready (attempt ${attempts}, ${elapsedS}s elapsed) — waiting for migrations...`,
       );
-    } else if (Date.now() - started > waitMs / 2) {
-      maybeRelaunchForDb();
+      if (stalledMs >= 90_000) {
+        console.log('Settings table still missing after 90s — provisioning full boot schema');
+        break;
+      }
+    } else {
+      settingsNotReadySince = null;
+      if (Date.now() - started > waitMs / 2) {
+        maybeRelaunchForDb();
+      }
     }
     sleepMs(pollMs);
   }
 
-  if (androidProcessRunning(serial)) {
+  if (androidProcessRunning(serial) || findAndroidTracebudDb(serial)) {
     console.log('SQLite wait timed out — force-stopping app and provisioning full boot schema');
     try {
       sh(`adb -s ${JSON.stringify(serial)} shell am force-stop ${APP_ID}`);

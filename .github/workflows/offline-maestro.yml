@@ -232,13 +232,13 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
       )
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 360
     env:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
       MAESTRO_SEED_SKIP: '1'
       MAESTRO_SEED_DB_WAIT_MS: '180000'
-      MAESTRO_BOOT_WAIT_MS: '1200000'
-      MAESTRO_CI_RETRY_ATTEMPTS: '2'
+      MAESTRO_BOOT_WAIT_MS: '7200000'
+      MAESTRO_CI_RETRY_ATTEMPTS: '1'
       GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8'
       MAESTRO_ANDROID_APK_PATH: ${{ github.workspace }}/apps/offline-product/android/app/build/outputs/apk/debug/app-debug.apk
       EXPO_PUBLIC_API_URL: https://api.tracebud.com/api
@@ -309,6 +309,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           ram-size: 4096M
+          cores: 4
           emulator-boot-timeout: 1800
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
           script: cd apps/offline-product && npm run qa:maestro:golden-path:android

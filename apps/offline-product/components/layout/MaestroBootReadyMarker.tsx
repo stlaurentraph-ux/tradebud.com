@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Platform, Pressable, Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import {
   MAESTRO_BOOT_READY_TEST_ID,
@@ -56,34 +56,27 @@ export function MaestroBootReadyMarker() {
   // a TextView with label text is required for Maestro extendedWaitUntil visible.
   if (MAESTRO_CI_BUILD && Platform.OS === 'android') {
     return (
-      <Pressable
+      <Text
         testID={MAESTRO_BOOT_READY_TEST_ID}
         accessibilityLabel={MAESTRO_BOOT_READY_LABEL}
-        accessibilityRole="button"
         accessible
         importantForAccessibility="yes"
-        collapsable={false}
         style={{
           position: 'absolute',
           bottom: 96,
           alignSelf: 'center',
+          color: '#FFFFFF',
+          backgroundColor: '#0A7F59',
+          paddingHorizontal: 12,
+          paddingVertical: 8,
+          fontSize: 14,
+          fontWeight: '600',
           zIndex: 99999,
           elevation: 99999,
         }}
       >
-        <Text
-          style={{
-            color: '#FFFFFF',
-            backgroundColor: '#0A7F59',
-            paddingHorizontal: 12,
-            paddingVertical: 8,
-            fontSize: 14,
-            fontWeight: '600',
-          }}
-        >
-          {MAESTRO_BOOT_READY_LABEL}
-        </Text>
-      </Pressable>
+        {MAESTRO_BOOT_READY_LABEL}
+      </Text>
     );
   }
 

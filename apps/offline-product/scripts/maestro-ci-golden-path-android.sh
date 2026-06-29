@@ -52,7 +52,8 @@ run_maestro_with_retry() {
         wait_for_android_js_boot "pre-Maestro re-warm" || echo "==> Re-warm timed out — Maestro extendedWaitUntil will handle slow boot"
       fi
     else
-      stabilize_adb full
+      stabilize_adb light
+      speed_compile_tracebud_apk
       adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
       sleep 2
     fi
