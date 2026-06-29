@@ -156,7 +156,7 @@ fi
 if [[ "${MAESTRO_KEEP_WARM_PROCESS:-1}" == "1" && "${MAESTRO_BOOT_WARMED:-0}" == "1" ]]; then
   echo "==> Sending Tracebud to background (keep warm JS process for Maestro launchApp)"
   adb -s "$DEVICE_SERIAL" shell input keyevent 3 2>/dev/null || true
-elif [[ "${MAESTRO_BOOT_WARMED:-0}" == "0" && adb -s "$DEVICE_SERIAL" shell pidof "$APP_ID" 2>/dev/null | grep -q . ]]; then
+elif [[ "${MAESTRO_BOOT_WARMED:-0}" == "0" ]] && adb -s "$DEVICE_SERIAL" shell pidof "$APP_ID" 2>/dev/null | grep -q .; then
   echo "==> Warm-up incomplete but Tracebud still running — leaving process for Maestro cold attach"
 else
   adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
