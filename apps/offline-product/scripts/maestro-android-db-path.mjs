@@ -206,6 +206,30 @@ function provisionMinimalAndroidDb(serial, absPath) {
   return null;
 }
 
+/**
+ * Pull the DB to a temp file and check whether the `settings` table exists.
+ * Returns true only when the file is readable and migrations have completed.
+ */
+function androidDbSettingsTableReady(serial, dbPath) {
+  const tmpPath = path.join(
+    os.tmpdir(),
+    `tracebud-maestro-check-${process.pid}-${Date.now()}.db`,
+  );
+  try {
+    readDbToHost(serial, dbPath, tmpPath);
+    const tables = sh(`sqlite3 ${JSON.stringify(tmpPath)} ".tables"`);
+    return tables.includes('settings');
+  } catch {
+    return false;
+  } finally {
+    try {
+      fs.unlinkSync(tmpPath);
+    } catch {
+      // ignore
+    }
+  }
+}
+
 export function waitForAndroidTracebudDb(serial, options = {}) {
   const waitMs = Number(options.waitMs ?? process.env.MAESTRO_SEED_DB_WAIT_MS ?? 120_000);
   const pollMs = Number(options.pollMs ?? 500);
@@ -217,8 +241,16 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
     attempts += 1;
     const dbPath = findAndroidTracebudDb(serial);
     if (dbPath) {
-      console.log(`Found tracebud_offline.db after ${attempts} attempt(s): ${dbPath}`);
-      return dbPath;
+      if (androidDbSettingsTableReady(serial, dbPath)) {
+        console.log(
+          `Found tracebud_offline.db with settings table after ${attempts} attempt(s): ${dbPath}`,
+        );
+        return dbPath;
+      }
+      const elapsedS = Math.round((Date.now() - started) / 1000);
+      console.log(
+        `DB found but settings table not yet ready (attempt ${attempts}, ${elapsedS}s elapsed) — waiting for migrations...`,
+      );
     }
     sleepMs(pollMs);
   }
