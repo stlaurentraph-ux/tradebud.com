@@ -23,6 +23,7 @@ jobs:
       field_auth: ${{ steps.filter.outputs.field_auth }}
       marketing: ${{ steps.filter.outputs.marketing }}
       offline: ${{ steps.filter.outputs.offline }}
+      founder_os: ${{ steps.filter.outputs.founder_os }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -55,7 +56,13 @@ jobs:
               - 'supabase/README.md'
               - 'tracebud-backend/sql/**'
               - '.redocly.yaml'
-              - 'product-os/**'
+              - 'product-os/04-quality/golden-staging-tenant.json'
+              - 'product-os/04-quality/golden-staging-tenant.md'
+              - 'product-os/04-quality/release-health-gate.json'
+              - 'product-os/04-quality/release-health-gate.md'
+              - 'product-os/04-quality/weekly-health-automation.json'
+              - 'product-os/04-quality/ci-secrets-and-fixtures.md'
+              - 'product-os/05-decisions/**'
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
@@ -114,11 +121,28 @@ jobs:
               - '.github/workflows/pr-labeler.yml'
             offline:
               - 'apps/offline-product/**'
+              - 'product-os/04-quality/maestro-*.json'
+              - 'product-os/04-quality/maestro-*.md'
+              - 'product-os/04-quality/offline-automation-runbook.md'
+              - 'product-os/04-quality/field-app-regression-ledger.md'
+              - 'product-os/04-quality/farmer-artifact-sync-registry.md'
+              - 'product-os/04-quality/field-role-permission-registry.md'
+              - 'product-os/04-quality/field-state-transition-registry.md'
+              - '.github/workflows/offline-maestro.yml'
+              - '.github/workflows/offline-maestro-nightly.yml'
+              - '.github/workflows/offline-mobile-slo-gate.yml'
+              - '.github/workflows/offline-ota-production-gate.yml'
               - 'package.json'
               - 'package-lock.json'
               - '.github/workflows/ci.yml'
               - '.github/labeler.yml'
               - '.github/workflows/pr-labeler.yml'
+            founder_os:
+              - 'apps/founder-os/**'
+              - 'automation/n8n/founder-os/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
 
   contracts:
     name: Contracts (OpenAPI lint)
@@ -168,6 +192,9 @@ jobs:
 
       - name: PR labeler guard
         run: npm run pr:labeler:assert
+
+      - name: CI path-filter guard
+        run: npm run ci:path-filter:assert
 
       - name: Validate OpenAPI governance README commands
         run: |
@@ -896,6 +923,8 @@ jobs:
 
   founder-os:
     name: Founder OS lint, typecheck, and build
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.founder_os == 'true'
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
@@ -920,23 +949,15 @@ jobs:
   field-auth:
     name: Field auth lint, typecheck, tests, and build
     needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.field_auth == 'true'
     runs-on: ubuntu-latest
     env:
       NEXT_PUBLIC_SENTRY_ENABLED: "0"
-      CI_RUN: ${{ github.event_name != 'pull_request' || needs.changes.outputs.field_auth == 'true' }}
     steps:
-      - name: Report path-filter skip (PR)
-        if: env.CI_RUN != 'true'
-        run: |
-          echo "Skipping field-auth CI — no matching paths in this PR."
-          echo "Watched: apps/field-auth/**, packages/**, package.json, package-lock.json, .github/workflows/ci.yml"
-
       - name: Checkout
-        if: env.CI_RUN == 'true'
         uses: actions/checkout@v5
 
       - name: Use Node 20
-        if: env.CI_RUN == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -944,33 +965,23 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        if: env.CI_RUN == 'true'
         run: npm ci
 
       - name: Lint, typecheck, test, and build
-        if: env.CI_RUN == 'true'
         run: npx turbo run lint typecheck test build --filter=field-auth
 
   marketing:
     name: Marketing site lint, typecheck, i18n, and build
     needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.marketing == 'true'
     runs-on: ubuntu-latest
     env:
-      CI_RUN: ${{ github.event_name != 'pull_request' || needs.changes.outputs.marketing == 'true' }}
       NEXT_PUBLIC_SENTRY_ENABLED: "0"
     steps:
-      - name: Report path-filter skip (PR)
-        if: env.CI_RUN != 'true'
-        run: |
-          echo "Skipping marketing CI — no matching paths in this PR."
-          echo "Watched: apps/marketing/**, packages/**, package.json, package-lock.json, .github/workflows/ci.yml"
-
       - name: Checkout
-        if: env.CI_RUN == 'true'
         uses: actions/checkout@v5
 
       - name: Use Node 20
-        if: env.CI_RUN == 'true'
         uses: actions/setup-node@v5
         with:
           node-version: 20
@@ -978,104 +989,83 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install dependencies
-        if: env.CI_RUN == 'true'
         run: npm ci
 
       - name: Lint, typecheck, and build
-        if: env.CI_RUN == 'true'
         run: npx turbo run lint typecheck build --filter=tracebud-marketing
 
       - name: Sentry environment tag guard
-        if: env.CI_RUN == 'true'
         run: npm run sentry:env:assert
 
       - name: Marketing i18n parity
-        if: env.CI_RUN == 'true'
         run: npm run i18n:parity:assert -w tracebud-marketing
 
       - name: Marketing routes publication guard
-        if: env.CI_RUN == 'true'
         run: npm run routes:publication:assert -w tracebud-marketing
 
       - name: Marketing analytics slice guard
-        if: env.CI_RUN == 'true'
         run: npm run analytics:slice:assert -w tracebud-marketing
 
       - name: Marketing structural contract guards
-        if: env.CI_RUN == 'true'
         run: npm run qa:structural:ci -w tracebud-marketing
 
       - name: Marketing insights markdown lint
-        if: env.CI_RUN == 'true'
         run: npm run insights:lint:assert -w tracebud-marketing
 
       - name: Marketing email template render smoke manifest guard
-        if: env.CI_RUN == 'true'
         run: npm run email:templates:smoke:assert -w tracebud-marketing
 
       - name: Marketing email template render smoke
-        if: env.CI_RUN == 'true'
         run: npm run email:templates:smoke -w tracebud-marketing
 
       - name: Marketing PNG size budget
-        if: env.CI_RUN == 'true'
         run: npm run png:size:assert -w tracebud-marketing
 
       - name: Marketing API trace size guard
-        if: env.CI_RUN == 'true'
         run: npm run api:trace:size:assert -w tracebud-marketing
 
       - name: Marketing Playwright manifest guard
-        if: env.CI_RUN == 'true'
         run: npm run e2e:golden-paths:assert -w tracebud-marketing
 
       - name: Marketing a11y routes manifest guard
-        if: env.CI_RUN == 'true'
         run: npm run a11y:routes:assert -w tracebud-marketing
 
       - name: Marketing Lighthouse budget manifest guard
-        if: env.CI_RUN == 'true'
         run: npm run lighthouse:budgets:assert -w tracebud-marketing
 
       - name: Marketing SEO smoke manifest guard
-        if: env.CI_RUN == 'true'
         run: npm run seo:smoke:assert -w tracebud-marketing
 
       - name: Install Playwright Chromium
-        if: env.CI_RUN == 'true'
         run: npx playwright install --with-deps chromium
         working-directory: apps/marketing
 
       - name: Marketing Playwright golden paths
-        if: env.CI_RUN == 'true'
         run: npm run e2e:golden-paths -w tracebud-marketing
         env:
           CI: true
 
       - name: Marketing axe-core a11y routes
-        if: env.CI_RUN == 'true'
         run: npm run a11y:routes -w tracebud-marketing
         env:
           CI: true
 
       - name: Marketing Lighthouse LCP/CLS budgets
-        if: env.CI_RUN == 'true'
         run: npm run lighthouse:budgets -w tracebud-marketing
         env:
           CI: true
 
       - name: Marketing SEO smoke (sitemap, robots, canonical)
-        if: env.CI_RUN == 'true'
         run: npm run seo:smoke -w tracebud-marketing
         env:
           CI: true
 
       - name: Marketing Playwright preview manifest guard
-        if: env.CI_RUN == 'true' && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         run: npm run e2e:preview:assert -w tracebud-marketing
 
       - name: Marketing Playwright against Vercel preview
-        if: env.CI_RUN == 'true' && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         run: npm run e2e:preview -w tracebud-marketing
         env:
           CI: true

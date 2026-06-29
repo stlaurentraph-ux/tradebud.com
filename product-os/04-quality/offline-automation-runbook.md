@@ -83,8 +83,8 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 | Job | Platform | When | Command |
 |-----|----------|------|---------|
 | **Local prepush** | dev machine | **Before push** (Maestro paths) | `npm run qa:maestro:prepush` / `:full` on macOS |
-| Expo `app` (Linux) | ubuntu | Every offline PR / push | `npm run qa:maestro:preflight` |
-| `offline-maestro.yml` | ubuntu + macos | PR (Maestro paths) + manual dispatch | preflight; cost-gated E2E |
+| Expo `app` (Linux) | ubuntu | Offline / Maestro path changes on PR | `npm run qa:maestro:preflight` + path-filtered Expo job |
+| `offline-maestro.yml` | ubuntu + macos | Maestro paths on PR (cost-gated) | preflight; cost-gated E2E |
 | `offline-maestro.yml` → **golden path** | macos + android | PR / push to `main` | `settings-sync-smoke.yaml` |
 
 **Prepush (mandatory before push):**

@@ -72,3 +72,18 @@ Workflow: `.github/workflows/offline-maestro.yml`
 - Check **GitHub → Settings → Billing → Actions** monthly
 - Prefer local `prepush:full` over repeated PR pushes
 - Use `gh run list --workflow=offline-maestro.yml` to see run count
+
+---
+
+## CI noise reduction (path filters)
+
+| Change | Effect |
+|--------|--------|
+| **Founder OS** path-filtered | No longer runs on every PR push |
+| **Contracts** no longer uses blanket `product-os/**` | Maestro doc edits skip OpenAPI contract job |
+| **Offline filter** includes `product-os/04-quality/maestro-*` | Maestro manifest edits still run Expo CI |
+| **field-auth / marketing** job-level `if:` | Skipped jobs don't spin runners |
+| **Uptime probes** every **6h** (was 30 min) | ~48 runs/day → 4 runs/day |
+| **Deploy smokes** concurrency | Duplicate production webhooks collapse |
+
+Guard: `npm run ci:path-filter:assert`

@@ -2,8 +2,8 @@ name: Synthetic uptime probes
 
 on:
   schedule:
-    # Every 30 minutes — independent of deploy pipeline (slice 2.8)
-    - cron: '*/30 * * * *'
+    # Every 6 hours — independent of deploy pipeline (slice 2.8; was */30 — cost/noise reduction)
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       marketing_base_url:

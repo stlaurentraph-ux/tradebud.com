@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Synthetic uptime probes (slice 2.8). Scheduled independently of deploy pipeline.",
+  "description": "Synthetic uptime probes (slice 2.8). Scheduled every 6 hours, independent of deploy pipeline.",
   "probes": [
     {
       "id": "marketing-locale-root",
