@@ -67,6 +67,9 @@ function assertGoldenPathFlow(manifest) {
   if (!flow.includes('clearState: false')) {
     throw new Error(`${manifest.goldenPathFlow} must launchApp with clearState: false (bootstrap reinstalls)`);
   }
+  if (!flow.includes('stopApp: false')) {
+    throw new Error(`${manifest.goldenPathFlow} must launchApp with stopApp: false (preserve bootstrap warm RN process)`);
+  }
   const bootWaitMs = manifest.goldenPathBootWaitMs;
   if (!bootWaitMs || bootWaitMs < 60000) {
     throw new Error('manifest goldenPathBootWaitMs must be >= 60000');

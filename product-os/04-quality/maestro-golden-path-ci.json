@@ -16,7 +16,7 @@
   "androidApkAssemblyScript": "scripts/maestro-ci-assemble-android-apk.sh",
   "iosSimulatorAssemblyScript": "scripts/maestro-ci-assemble-ios-simulator.sh",
   "androidEmulator": {
-    "apiLevel": 34,
+    "apiLevel": 33,
     "profile": "pixel_6",
     "driverStartupTimeoutMs": 300000,
     "emulatorOptions": "-no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim"

@@ -2,8 +2,10 @@ appId: com.tracebud.app
 ---
 # Settings → Backup section (Sync now when signed in, sign-in CTA otherwise).
 # Bootstrap uninstall/reinstalls the app; avoid clearState so SQLite init from bootstrap survives.
+# stopApp: false keeps the warmed RN process from bootstrap (cold x86_64 boot is ~15+ min).
 - launchApp:
     clearState: false
+    stopApp: false
 - waitForAnimationToEnd
 # First-launch welcome sheet blocks tab bar until dismissed (optional when boot profile seeded).
 - tapOn:

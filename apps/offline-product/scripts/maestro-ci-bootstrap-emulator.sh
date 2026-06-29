@@ -105,7 +105,6 @@ wait_for_android_js_boot() {
   local max_ms="${MAESTRO_BOOT_WAIT_MS:-900000}"
   local poll_s="${MAESTRO_BOOT_POLL_S:-5}"
   local deadline=$(( $(date +%s) + max_ms / 1000 ))
-  local require_success="${MAESTRO_BOOT_REQUIRE_SUCCESS:-0}"
 
   echo "==> Waiting for $label (logcat MaestroBoot / RN main, up to ${max_ms}ms)"
   adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true

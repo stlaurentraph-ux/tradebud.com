@@ -18,6 +18,13 @@ if [[ ! -f "$FLOW_PATH" ]]; then
 fi
 
 stabilize_adb() {
+  local mode="${1:-full}"
+  if [[ "$mode" == "light" ]]; then
+    echo "==> Light adb settle (preserve warm Tracebud process)"
+    adb -s "$DEVICE_SERIAL" wait-for-device
+    adb -s "$DEVICE_SERIAL" shell 'while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done' 2>/dev/null || true
+    return
+  fi
   echo "==> Stabilizing adb before Maestro"
   adb kill-server 2>/dev/null || true
   sleep 2
@@ -31,14 +38,15 @@ run_maestro_with_retry() {
   local attempts="${MAESTRO_CI_RETRY_ATTEMPTS:-2}"
   local n=1
   while [[ "$n" -le "$attempts" ]]; do
-    echo "==> Maestro attempt $n/$attempts"
-    stabilize_adb
-    if [[ "$n" -gt 1 || "${MAESTRO_BOOT_WARMED:-0}" != "1" ]]; then
-      adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
-      sleep 2
-    else
-      echo "==> Attempt 1: keeping warmed Tracebud process (bootstrap already reached JS boot)"
+    echo "==> Maestro attempt $n/$attempts (bootWarmed=${MAESTRO_BOOT_WARMED:-0})"
+    if [[ "$n" -eq 1 && "${MAESTRO_BOOT_WARMED:-0}" == "1" ]]; then
+      stabilize_adb light
+      echo "==> Foreground warmed Tracebud (launchApp uses stopApp: false)"
       adb -s "$DEVICE_SERIAL" shell am start -n "$MAESTRO_APP_ID/.MainActivity" 2>/dev/null || true
+      sleep 3
+    else
+      stabilize_adb full
+      adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
       sleep 2
     fi
     if maestro test --device "$DEVICE_SERIAL" "$FLOW_PATH"; then
@@ -57,7 +65,6 @@ run_maestro_with_retry() {
 echo "==> Running Maestro golden path (Android): $GOLDEN_FLOW"
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
 
-stabilize_adb
 if ! run_maestro_with_retry; then
   exit 1
 fi
