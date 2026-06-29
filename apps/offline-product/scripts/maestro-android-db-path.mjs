@@ -158,12 +158,15 @@ function pushDbViaRunAs(serial, relPath, hostDbPath, label) {
     );
   }
   sh(
+    `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`run-as ${APP_ID} rm -f ${relPath} ${relPath}-wal ${relPath}-shm`)}`,
+  );
+  sh(
     `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`run-as ${APP_ID} cp /data/local/tmp/${label}.db ${relPath}`)}`,
   );
 }
 
-/** Last-resort: app data dir exists but SQLite never appeared (slow RN boot on CI). */
-function provisionMinimalAndroidDb(serial, absPath) {
+/** Last-resort: overwrite partial/empty SQLite with full boot schema (CI slow RN boot). */
+function provisionAndroidBootDb(serial, absPath) {
   const tmpPath = path.join(os.tmpdir(), `tracebud-maestro-provision-${process.pid}-${Date.now()}.db`);
   if (!fs.existsSync(BOOT_SCHEMA_SQL)) {
     throw new Error(`Missing Android boot schema SQL at ${BOOT_SCHEMA_SQL}`);
@@ -171,15 +174,10 @@ function provisionMinimalAndroidDb(serial, absPath) {
   sh(`sqlite3 ${JSON.stringify(tmpPath)} < ${JSON.stringify(BOOT_SCHEMA_SQL)}`);
   const relPath = absPath.replace(`${androidDataRoot()}/`, '');
 
-  if (shellTestFile(serial, absPath) || relPathExistsRunAs(serial, relPath)) {
-    fs.unlinkSync(tmpPath);
-    return absPath;
-  }
-
   try {
     pushDbViaRunAs(serial, relPath, tmpPath, 'tracebud-maestro-provision');
     fs.unlinkSync(tmpPath);
-    if (relPathExistsRunAs(serial, relPath)) {
+    if (relPathExistsRunAs(serial, relPath) && androidDbSettingsTableReady(serial, relPath)) {
       console.log(`Provisioned full boot schema DB via run-as at ${relPath}`);
       return relPath;
     }
@@ -192,6 +190,9 @@ function provisionMinimalAndroidDb(serial, absPath) {
     tryEnableAdbRoot(serial);
     sh(`adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`mkdir -p ${dirAbs}`)}`);
     sh(
+      `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`rm -f ${absPath} ${absPath}-wal ${absPath}-shm`)}`,
+    );
+    sh(
       `adb -s ${JSON.stringify(serial)} push ${JSON.stringify(tmpPath)} /data/local/tmp/tracebud-maestro-provision.db`,
     );
     sh(
@@ -199,7 +200,7 @@ function provisionMinimalAndroidDb(serial, absPath) {
     );
     fixRootCopiedDbOwnership(serial, absPath);
     fs.unlinkSync(tmpPath);
-    if (relPathExistsRunAs(serial, relPath)) {
+    if (shellTestFile(serial, absPath) && androidDbSettingsTableReady(serial, absPath)) {
       console.log(`Provisioned full boot schema DB at ${absPath} (ownership fixed)`);
       return absPath;
     }
@@ -279,7 +280,14 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
   }
 
   if (androidProcessRunning(serial)) {
-    const provisioned = provisionMinimalAndroidDb(serial, defaultAbs);
+    console.log('SQLite wait timed out — force-stopping app and provisioning full boot schema');
+    try {
+      sh(`adb -s ${JSON.stringify(serial)} shell am force-stop ${APP_ID}`);
+    } catch {
+      // continue
+    }
+    sleepMs(2000);
+    const provisioned = provisionAndroidBootDb(serial, defaultAbs);
     if (provisioned) return provisioned;
   }
 
@@ -337,9 +345,19 @@ function writeHostDbToDevice(serial, dbPath, tmpPath) {
   fixRootCopiedDbOwnership(serial, absPath);
 }
 
+function ensureHostBootSchema(dbPath) {
+  sh(`sqlite3 ${JSON.stringify(dbPath)} < ${JSON.stringify(BOOT_SCHEMA_SQL)}`);
+}
+
 export function applyAndroidBootSettings(serial, dbPath, settings) {
   const tmpPath = path.join(os.tmpdir(), `tracebud-maestro-${process.pid}-${Date.now()}.db`);
   readDbToHost(serial, dbPath, tmpPath);
+  try {
+    sh(`sqlite3 ${JSON.stringify(tmpPath)} ${JSON.stringify('SELECT 1 FROM settings LIMIT 1')}`);
+  } catch {
+    console.log('Host DB missing settings table — applying boot schema before seed');
+    ensureHostBootSchema(tmpPath);
+  }
   applySettingsOnHost(tmpPath, settings);
   writeHostDbToDevice(serial, dbPath, tmpPath);
   fs.unlinkSync(tmpPath);
