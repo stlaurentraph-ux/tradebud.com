@@ -39,14 +39,37 @@ function assertManifestShape(manifest) {
   if (manifest.schemaVersion !== 1 || manifest.slice !== 'H25') {
     throw new Error('manifest must be schemaVersion 1 slice H25');
   }
-  if (!manifest.workflowFile || !manifest.goldenPathFlow) {
-    throw new Error('manifest must define workflowFile and goldenPathFlow');
+  if (!manifest.workflowFile || !manifest.goldenPathFlow || !manifest.goldenPathFlowAndroid) {
+    throw new Error('manifest must define workflowFile, goldenPathFlow, and goldenPathFlowAndroid');
   }
   if (!manifest.goldenPathBootProfile) {
     throw new Error('manifest must define goldenPathBootProfile');
   }
   if (!manifest.ciTriggers?.includes('pull_request')) {
     throw new Error('manifest must include pull_request trigger for golden path');
+  }
+}
+
+function assertAndroidGoldenPathFlow(manifest) {
+  const flowName = manifest.goldenPathFlowAndroid;
+  const flow = readOffline(`.maestro/flows/${flowName}`);
+  if (!flow.includes('extendedWaitUntil')) {
+    throw new Error(`${flowName} must wait for boot before tapping tabs`);
+  }
+  if (!flow.includes('id: "maestro-boot-ready"')) {
+    throw new Error(`${flowName} must wait for maestro-boot-ready testID`);
+  }
+  if (!flow.includes('Maestro boot ready')) {
+    throw new Error(`${flowName} must wait for Maestro boot ready label (Android TextView visibility)`);
+  }
+  if (!flow.includes('id: "tab-settings"')) {
+    throw new Error(`${flowName} must tap tab-settings testID`);
+  }
+  if (!flow.includes('clearState: false')) {
+    throw new Error(`${flowName} must launchApp with clearState: false`);
+  }
+  if (!flow.includes('stopApp: true')) {
+    throw new Error(`${flowName} must launchApp with stopApp: true (reliable cold start on CI emulator)`);
   }
 }
 
@@ -140,6 +163,12 @@ function assertAndroidRunner(manifest) {
   }
   if (bootstrap.includes('expo run:android')) {
     throw new Error('Android golden-path bootstrap must not fall back to expo run:android');
+  }
+  if (!androidGolden.includes('settings-sync-smoke-android.yaml')) {
+    throw new Error('Android golden path must default to settings-sync-smoke-android.yaml');
+  }
+  if (!readOffline('scripts/maestro-android-db-path.mjs').includes('maestro-android-boot-schema.sql')) {
+    throw new Error('Android DB seed must use maestro-android-boot-schema.sql for provision fallback');
   }
   if (!androidGolden.includes('--device')) {
     throw new Error('Android golden path must pass --device to maestro test');
@@ -313,6 +342,7 @@ function main() {
   assertManifestShape(manifest);
   assertFlowsBaseline(manifest);
   assertGoldenPathFlow(manifest);
+  assertAndroidGoldenPathFlow(manifest);
   assertGoldenPathScripts();
   assertBootstrapInitLaunch();
   assertIosAssembly(manifest);

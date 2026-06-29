@@ -1,0 +1,31 @@
+appId: com.tracebud.app
+---
+# Android CI golden path — cold start (stopApp: true) when bootstrap warm-up fails on x86_64.
+# Waits on visible TextView label (UiAutomator) and testID anchor.
+- launchApp:
+    clearState: false
+    stopApp: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "welcome-account-skip"
+    optional: true
+- extendedWaitUntil:
+    visible: "Maestro boot ready"
+    timeout: 1200000
+- extendedWaitUntil:
+    visible:
+      id: "maestro-boot-ready"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 60000
+- tapOn:
+    id: "tab-settings"
+- assertVisible:
+    text: ".*Backup.*"
+- assertVisible:
+    text: ".*Sync now.*|.*Sign in to back up.*"
+- tapOn:
+    id: "settings-sync-now"
+    optional: true

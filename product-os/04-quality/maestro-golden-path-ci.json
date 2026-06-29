@@ -3,6 +3,7 @@
   "slice": "H25",
   "flowsBaseline": "qa/automation-baselines/maestro-flows.json",
   "goldenPathFlow": "settings-sync-smoke.yaml",
+  "goldenPathFlowAndroid": "settings-sync-smoke-android.yaml",
   "workflowFile": ".github/workflows/offline-maestro.yml",
   "iosJobName": "Maestro golden path (macOS)",
   "androidJobName": "Maestro golden path (Android)",
@@ -19,7 +20,7 @@
     "apiLevel": 33,
     "profile": "pixel_6",
     "driverStartupTimeoutMs": 300000,
-    "emulatorOptions": "-no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim"
+    "emulatorOptions": "-no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096"
   },
   "costGate": {
     "platformGateScript": "scripts/maestro-ci-platform-gate.mjs",

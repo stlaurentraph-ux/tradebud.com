@@ -10,7 +10,7 @@ export MAESTRO_SEED_SKIP="${MAESTRO_SEED_SKIP:-1}"
 # shellcheck source=./maestro-ci-bootstrap-emulator.sh
 source "$ROOT/scripts/maestro-ci-bootstrap-emulator.sh"
 
-GOLDEN_FLOW="${MAESTRO_GOLDEN_FLOW:-settings-sync-smoke.yaml}"
+GOLDEN_FLOW="${MAESTRO_GOLDEN_FLOW:-settings-sync-smoke-android.yaml}"
 FLOW_PATH=".maestro/flows/$GOLDEN_FLOW"
 if [[ ! -f "$FLOW_PATH" ]]; then
   echo "Golden flow missing: $FLOW_PATH"

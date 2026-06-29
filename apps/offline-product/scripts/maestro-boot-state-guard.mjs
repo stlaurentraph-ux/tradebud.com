@@ -46,6 +46,8 @@ function main() {
   const iosBootstrap = read('scripts/maestro-ci-bootstrap-simulator.sh');
   const androidBootstrap = read('scripts/maestro-ci-bootstrap-emulator.sh');
   const flow = read(`.maestro/flows/${manifest.goldenPathFlow ?? 'settings-sync-smoke.yaml'}`);
+  const androidFlowName = manifest.goldenPathFlowAndroid ?? 'settings-sync-smoke-android.yaml';
+  const androidFlow = read(`.maestro/flows/${androidFlowName}`);
   const registryMd = readRepo('product-os/04-quality/maestro-boot-state-registry.md');
 
   if (profile) {
@@ -56,13 +58,13 @@ function main() {
       issues.push('SignInSheetContext must render MAESTRO_BOOT_READY_TEST_ID when boot is interactive');
     }
     for (const testId of profile.flowTestIds ?? []) {
-      if (!flow.includes(`id: "${testId}"`)) {
-        issues.push(`${manifest.goldenPathFlow} must reference flowTestId ${testId}`);
+      if (!flow.includes(`id: "${testId}"`) && !androidFlow.includes(`id: "${testId}"`)) {
+        issues.push(`${manifest.goldenPathFlow} or ${androidFlowName} must reference flowTestId ${testId}`);
       }
     }
     for (const testId of profile.optionalFlowTestIds ?? []) {
-      if (!flow.includes(testId)) {
-        issues.push(`${manifest.goldenPathFlow} must reference optionalFlowTestId ${testId}`);
+      if (!flow.includes(testId) && !androidFlow.includes(testId)) {
+        issues.push(`${manifest.goldenPathFlow} or ${androidFlowName} must reference optionalFlowTestId ${testId}`);
       }
     }
     for (const [key, value] of Object.entries(profile.settings ?? {})) {

@@ -5,8 +5,12 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { sh, sleepMs } from './maestro-ios-db-path.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const BOOT_SCHEMA_SQL = path.join(__dirname, 'maestro-android-boot-schema.sql');
 
 const APP_ID = 'com.tracebud.app';
 
@@ -161,9 +165,10 @@ function pushDbViaRunAs(serial, relPath, hostDbPath, label) {
 /** Last-resort: app data dir exists but SQLite never appeared (slow RN boot on CI). */
 function provisionMinimalAndroidDb(serial, absPath) {
   const tmpPath = path.join(os.tmpdir(), `tracebud-maestro-provision-${process.pid}-${Date.now()}.db`);
-  sh(
-    `sqlite3 ${JSON.stringify(tmpPath)} ${JSON.stringify('CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);')}`,
-  );
+  if (!fs.existsSync(BOOT_SCHEMA_SQL)) {
+    throw new Error(`Missing Android boot schema SQL at ${BOOT_SCHEMA_SQL}`);
+  }
+  sh(`sqlite3 ${JSON.stringify(tmpPath)} < ${JSON.stringify(BOOT_SCHEMA_SQL)}`);
   const relPath = absPath.replace(`${androidDataRoot()}/`, '');
 
   if (shellTestFile(serial, absPath) || relPathExistsRunAs(serial, relPath)) {
@@ -175,7 +180,7 @@ function provisionMinimalAndroidDb(serial, absPath) {
     pushDbViaRunAs(serial, relPath, tmpPath, 'tracebud-maestro-provision');
     fs.unlinkSync(tmpPath);
     if (relPathExistsRunAs(serial, relPath)) {
-      console.log(`Provisioned minimal boot DB via run-as at ${relPath}`);
+      console.log(`Provisioned full boot schema DB via run-as at ${relPath}`);
       return relPath;
     }
   } catch {
@@ -195,7 +200,7 @@ function provisionMinimalAndroidDb(serial, absPath) {
     fixRootCopiedDbOwnership(serial, absPath);
     fs.unlinkSync(tmpPath);
     if (relPathExistsRunAs(serial, relPath)) {
-      console.log(`Provisioned minimal boot DB at ${absPath} (ownership fixed)`);
+      console.log(`Provisioned full boot schema DB at ${absPath} (ownership fixed)`);
       return absPath;
     }
   } catch {
@@ -235,7 +240,23 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
   const pollMs = Number(options.pollMs ?? 500);
   const started = Date.now();
   let attempts = 0;
+  let relaunched = false;
   const defaultAbs = toAndroidDbAbsPath(REL_CANDIDATES[0]);
+
+  const maybeRelaunchForDb = () => {
+    if (relaunched || !androidProcessRunning(serial)) return;
+    relaunched = true;
+    console.log('DB still missing — relaunching Tracebud once before schema provision');
+    try {
+      sh(
+        `adb -s ${JSON.stringify(serial)} shell am start -W -n ${APP_ID}/.MainActivity`,
+      );
+    } catch {
+      sh(
+        `adb -s ${JSON.stringify(serial)} shell monkey -p ${APP_ID} -c android.intent.category.LAUNCHER 1`,
+      );
+    }
+  };
 
   while (Date.now() - started < waitMs) {
     attempts += 1;
@@ -251,6 +272,8 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
       console.log(
         `DB found but settings table not yet ready (attempt ${attempts}, ${elapsedS}s elapsed) — waiting for migrations...`,
       );
+    } else if (Date.now() - started > waitMs / 2) {
+      maybeRelaunchForDb();
     }
     sleepMs(pollMs);
   }

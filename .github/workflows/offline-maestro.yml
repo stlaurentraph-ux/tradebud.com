@@ -309,7 +309,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           emulator-boot-timeout: 1800
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
           script: cd apps/offline-product && npm run qa:maestro:golden-path:android
 
   maestro-macos:

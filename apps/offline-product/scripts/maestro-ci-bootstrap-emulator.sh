@@ -20,6 +20,9 @@ if ! command -v adb >/dev/null 2>&1; then
 fi
 
 adb wait-for-device
+adb start-server 2>/dev/null || true
+sleep 2
+adb wait-for-device
 DEVICE_SERIAL="$(adb devices | awk 'NR>1 && $2=="device" { print $1; exit }')"
 if [[ -z "$DEVICE_SERIAL" ]]; then
   echo "No connected Android device/emulator."
@@ -109,10 +112,14 @@ wait_for_android_js_boot() {
   echo "==> Waiting for $label (logcat MaestroBoot / RN main, up to ${max_ms}ms)"
   adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
 
+  local boot_pattern='MaestroBoot|\[MaestroBoot\]|ReactNativeJS|ReactNative|Hermes|Running application "main"|Running "main" with|AppState.*ready|expo\.modules'
+
   while [[ "$(date +%s)" -lt "$deadline" ]]; do
-    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE 'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|Running application "main"|Running "main" with'; then
-      echo "$label complete"
-      return 0
+    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi "$boot_pattern"; then
+      if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi 'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|Running application "main"|Running "main" with|\[MaestroBoot\] app state ready bootError=false|\[MaestroBoot\] marker visible'; then
+        echo "$label complete"
+        return 0
+      fi
     fi
     if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE 'FATAL EXCEPTION.*com\.tracebud\.app'; then
       echo "App crashed during $label"
@@ -149,6 +156,8 @@ fi
 if [[ "${MAESTRO_KEEP_WARM_PROCESS:-1}" == "1" && "${MAESTRO_BOOT_WARMED:-0}" == "1" ]]; then
   echo "==> Sending Tracebud to background (keep warm JS process for Maestro launchApp)"
   adb -s "$DEVICE_SERIAL" shell input keyevent 3 2>/dev/null || true
+elif [[ "${MAESTRO_BOOT_WARMED:-0}" == "0" && adb -s "$DEVICE_SERIAL" shell pidof "$APP_ID" 2>/dev/null | grep -q . ]]; then
+  echo "==> Warm-up incomplete but Tracebud still running — leaving process for Maestro cold attach"
 else
   adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
 fi
