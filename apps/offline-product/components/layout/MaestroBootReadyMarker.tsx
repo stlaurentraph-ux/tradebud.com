@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Platform, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 
 import {
   MAESTRO_BOOT_READY_TEST_ID,
@@ -9,6 +9,7 @@ import { useAppState } from '@/features/state/AppStateContext';
 import { getSetting } from '@/features/state/persistence';
 
 const MAESTRO_CI_BUILD = process.env.EXPO_PUBLIC_MAESTRO_CI === '1';
+const MAESTRO_BOOT_READY_LABEL = 'Maestro boot ready';
 
 /**
  * Maestro CI anchor — rendered last in the root flex tree so Android paints it above app chrome.
@@ -51,40 +52,52 @@ export function MaestroBootReadyMarker() {
 
   if (!visible) return null;
 
-  const androidCi = MAESTRO_CI_BUILD && Platform.OS === 'android';
+  // Android UiAutomator treats empty ViewGroups as invisible even with opaque bg;
+  // a TextView with label text is required for Maestro extendedWaitUntil visible.
+  if (MAESTRO_CI_BUILD && Platform.OS === 'android') {
+    return (
+      <Text
+        testID={MAESTRO_BOOT_READY_TEST_ID}
+        accessibilityLabel={MAESTRO_BOOT_READY_LABEL}
+        accessible
+        importantForAccessibility="yes"
+        style={{
+          position: 'absolute',
+          top: 56,
+          left: 16,
+          color: '#FFFFFF',
+          backgroundColor: '#0A7F59',
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          fontSize: 14,
+          fontWeight: '600',
+          zIndex: 99999,
+          elevation: 99999,
+        }}
+      >
+        {MAESTRO_BOOT_READY_LABEL}
+      </Text>
+    );
+  }
 
   return (
     <View
       testID={MAESTRO_BOOT_READY_TEST_ID}
-      accessibilityLabel="Maestro boot ready"
+      accessibilityLabel={MAESTRO_BOOT_READY_LABEL}
       accessible
       importantForAccessibility="yes"
       collapsable={false}
       pointerEvents="box-none"
-      style={
-        androidCi
-          ? {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: 48,
-              height: 48,
-              zIndex: 99999,
-              elevation: 99999,
-              opacity: 1,
-              backgroundColor: '#0A7F59',
-            }
-          : {
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: 24,
-              height: 24,
-              zIndex: 99999,
-              elevation: 99999,
-              opacity: 0.01,
-            }
-      }
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: 24,
+        height: 24,
+        zIndex: 99999,
+        elevation: 99999,
+        opacity: 0.01,
+      }}
     />
   );
 }

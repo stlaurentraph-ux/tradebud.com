@@ -76,10 +76,16 @@ function decidePlatform({ eventName, paths, prNumber, iosGreen, androidGreen }) 
 
   const { ios, android, shared } = paths;
   const androidOnly = android && !ios && !shared;
-  const iosOnly = ios && !android && !shared;
+  const sharedOnly = shared && !ios && !android;
 
-  if (ios || shared) {
-    return { run: true, reason: 'paths_ios_or_shared' };
+  if (ios) {
+    return { run: true, reason: 'paths_ios' };
+  }
+  if (sharedOnly && iosGreen) {
+    return { run: false, reason: 'ios_already_green_shared_only_delta' };
+  }
+  if (shared) {
+    return { run: true, reason: 'paths_shared' };
   }
   if (androidOnly && iosGreen) {
     return { run: false, reason: 'ios_already_green_android_only_delta' };
@@ -97,9 +103,16 @@ function decideAndroid({ eventName, paths, androidGreen }) {
 
   const { ios, android, shared } = paths;
   const iosOnly = ios && !android && !shared;
+  const sharedOnly = shared && !ios && !android;
 
-  if (android || shared) {
-    return { run: true, reason: 'paths_android_or_shared' };
+  if (android) {
+    return { run: true, reason: 'paths_android' };
+  }
+  if (sharedOnly && androidGreen) {
+    return { run: false, reason: 'android_already_green_shared_only_delta' };
+  }
+  if (shared) {
+    return { run: true, reason: 'paths_shared' };
   }
   if (iosOnly && androidGreen) {
     return { run: false, reason: 'android_already_green_ios_only_delta' };
