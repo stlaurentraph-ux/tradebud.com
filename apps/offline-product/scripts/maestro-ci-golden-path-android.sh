@@ -33,8 +33,14 @@ run_maestro_with_retry() {
   while [[ "$n" -le "$attempts" ]]; do
     echo "==> Maestro attempt $n/$attempts"
     stabilize_adb
-    adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
-    sleep 2
+    if [[ "$n" -gt 1 || "${MAESTRO_BOOT_WARMED:-0}" != "1" ]]; then
+      adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
+      sleep 2
+    else
+      echo "==> Attempt 1: keeping warmed Tracebud process (bootstrap already reached JS boot)"
+      adb -s "$DEVICE_SERIAL" shell am start -n "$MAESTRO_APP_ID/.MainActivity" 2>/dev/null || true
+      sleep 2
+    fi
     if maestro test --device "$DEVICE_SERIAL" "$FLOW_PATH"; then
       return 0
     fi

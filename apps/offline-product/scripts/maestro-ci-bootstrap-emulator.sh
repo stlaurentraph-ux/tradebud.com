@@ -142,10 +142,20 @@ if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
   echo "==> Post-seed warm-up launch (RN boot after SQLite patch)"
   adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
     adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
-  wait_for_android_js_boot "bootstrap warm-up" || echo "Bootstrap warm-up incomplete — Maestro will cold-start with extended boot wait"
+  if wait_for_android_js_boot "bootstrap warm-up"; then
+    export MAESTRO_BOOT_WARMED=1
+  else
+    echo "Bootstrap warm-up incomplete — Maestro will cold-start with extended boot wait"
+    export MAESTRO_BOOT_WARMED=0
+  fi
 fi
 
-adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
+if [[ "${MAESTRO_KEEP_WARM_PROCESS:-1}" == "1" && "${MAESTRO_BOOT_WARMED:-0}" == "1" ]]; then
+  echo "==> Sending Tracebud to background (keep warm JS process for Maestro launchApp)"
+  adb -s "$DEVICE_SERIAL" shell input keyevent 3 2>/dev/null || true
+else
+  adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
+fi
 
 if [[ "${MAESTRO_LOGCAT_ON_BOOTSTRAP:-1}" == "1" ]]; then
   dump_tracebud_logcat "Logcat after bootstrap seed"

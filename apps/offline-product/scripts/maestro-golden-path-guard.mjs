@@ -126,6 +126,9 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('dump_tracebud_logcat')) {
     throw new Error('Android bootstrap must dump logcat after seed for Maestro diagnostics');
   }
+  if (!bootstrap.includes('MAESTRO_BOOT_WARMED')) {
+    throw new Error('Android bootstrap must track MAESTRO_BOOT_WARMED after JS warm-up');
+  }
   if (!androidGolden.includes('dump_tracebud_logcat')) {
     throw new Error('Android golden path must dump logcat on Maestro failure');
   }
