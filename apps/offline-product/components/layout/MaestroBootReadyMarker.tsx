@@ -11,7 +11,7 @@ import { getSetting } from '@/features/state/persistence';
 const MAESTRO_CI_BUILD = process.env.EXPO_PUBLIC_MAESTRO_CI === '1';
 
 /**
- * Maestro CI anchor — sibling to SplashGate inside a flex root (Android needs a sized parent).
+ * Maestro CI anchor — rendered last in the root flex tree so Android paints it above app chrome.
  * CI APKs (EXPO_PUBLIC_MAESTRO_CI) show the marker when SQLite boot succeeds; retail builds
  * also require the welcome sheet to be dismissed.
  */
@@ -51,20 +51,28 @@ export function MaestroBootReadyMarker() {
 
   if (!visible) return null;
 
+  const androidCi = MAESTRO_CI_BUILD && Platform.OS === 'android';
+
   return (
     <View
-      pointerEvents="none"
+      testID={MAESTRO_BOOT_READY_TEST_ID}
+      accessibilityLabel="Maestro boot ready"
+      accessible
+      importantForAccessibility="yes"
       collapsable={false}
+      pointerEvents="box-none"
       style={
-        Platform.OS === 'android'
+        androidCi
           ? {
               position: 'absolute',
               top: 0,
               left: 0,
-              right: 0,
-              bottom: 0,
-              zIndex: 9999,
-              elevation: 9999,
+              width: 48,
+              height: 48,
+              zIndex: 99999,
+              elevation: 99999,
+              opacity: 1,
+              backgroundColor: '#0A7F59',
             }
           : {
               position: 'absolute',
@@ -72,25 +80,11 @@ export function MaestroBootReadyMarker() {
               left: 0,
               width: 24,
               height: 24,
+              zIndex: 99999,
+              elevation: 99999,
+              opacity: 0.01,
             }
       }
-    >
-      <View
-        testID={MAESTRO_BOOT_READY_TEST_ID}
-        accessibilityLabel="Maestro boot ready"
-        accessible
-        importantForAccessibility="yes"
-        collapsable={false}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: Platform.OS === 'android' ? 48 : 24,
-          height: Platform.OS === 'android' ? 48 : 24,
-          opacity: Platform.OS === 'android' ? 1 : 0.01,
-          backgroundColor: Platform.OS === 'android' ? 'rgba(10,127,89,0.12)' : 'transparent',
-        }}
-      />
-    </View>
+    />
   );
 }

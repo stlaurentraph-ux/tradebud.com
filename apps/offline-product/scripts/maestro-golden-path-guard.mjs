@@ -225,6 +225,11 @@ function assertWorkflow(manifest) {
   if (!rootLayout.includes('MaestroBootReadyMarker') || !rootLayout.includes('flex: 1')) {
     throw new Error('app/_layout.tsx must wrap MaestroBootReadyMarker in flex:1 root for Android visibility');
   }
+  const splashClose = rootLayout.indexOf('</SplashGate>');
+  const markerMount = rootLayout.lastIndexOf('<MaestroBootReadyMarker');
+  if (splashClose === -1 || markerMount === -1 || markerMount < splashClose) {
+    throw new Error('app/_layout.tsx must render MaestroBootReadyMarker after SplashGate (top z-order on Android)');
+  }
   const iosAssemble = readOffline(manifest.iosSimulatorAssemblyScript);
   if (!iosAssemble.includes('MAESTRO_CI')) {
     throw new Error(`${manifest.iosSimulatorAssemblyScript} must set MAESTRO_CI=1 to disable OTA checks`);

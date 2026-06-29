@@ -33,7 +33,6 @@ export default function RootLayout() {
       <LanguageProvider>
         <AppStateProvider>
           <View style={{ flex: 1 }}>
-            <MaestroBootReadyMarker />
             <SplashGate>
               <SignInProvider>
                 <AutoPlotUploadBridge />
@@ -55,6 +54,7 @@ export default function RootLayout() {
                 </ThemeProvider>
               </SignInProvider>
             </SplashGate>
+            <MaestroBootReadyMarker />
           </View>
         </AppStateProvider>
       </LanguageProvider>

@@ -34,6 +34,7 @@ yarn-error.*
 # local env files
 .env*.local
 local/sentry-auth.env
+local/google-play-service-account.json
 scripts/oauth.env
 
 # typescript
