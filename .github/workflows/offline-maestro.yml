@@ -31,6 +31,9 @@ on:
       - 'apps/offline-product/qa/automation-baselines/maestro-boot-state.json'
       - 'product-os/04-quality/maestro-boot-state-registry.md'
       - 'product-os/04-quality/maestro-golden-path-ci.json'
+      - 'apps/offline-product/app/_layout.tsx'
+      - 'apps/offline-product/components/layout/MaestroBootReadyMarker.tsx'
+      - 'apps/offline-product/features/state/AppStateContext.tsx'
       - '.github/workflows/offline-maestro.yml'
   workflow_dispatch:
     inputs:
@@ -49,6 +52,10 @@ on:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
+concurrency:
+  group: offline-maestro-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   maestro-preflight:
@@ -80,13 +87,80 @@ jobs:
       - name: Maestro wiring preflight
         run: npm run qa:maestro:preflight
 
-  maestro-golden-path:
-    name: Maestro golden path (macOS)
+  maestro-cost-gate:
+    name: Maestro platform cost gate
     needs: maestro-preflight
     if: >
       github.event_name == 'pull_request' ||
       github.event_name == 'push' ||
       (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
+    runs-on: ubuntu-latest
+    outputs:
+      run_ios: ${{ steps.gate.outputs.run_ios }}
+      run_android: ${{ steps.gate.outputs.run_android }}
+      skip_reason_ios: ${{ steps.gate.outputs.skip_reason_ios }}
+      skip_reason_android: ${{ steps.gate.outputs.skip_reason_android }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Paths filter (PR)
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            ios:
+              - 'apps/offline-product/scripts/maestro-ci-assemble-ios-simulator.sh'
+              - 'apps/offline-product/scripts/maestro-ci-golden-path.sh'
+              - 'apps/offline-product/scripts/maestro-ci-bootstrap-simulator.sh'
+              - 'apps/offline-product/scripts/seed-maestro-simulator.mjs'
+            android:
+              - 'apps/offline-product/scripts/maestro-ci-assemble-android-apk.sh'
+              - 'apps/offline-product/scripts/maestro-ci-golden-path-android.sh'
+              - 'apps/offline-product/scripts/maestro-ci-bootstrap-emulator.sh'
+              - 'apps/offline-product/scripts/seed-maestro-boot-profile.mjs'
+            shared:
+              - 'apps/offline-product/.maestro/**'
+              - 'apps/offline-product/qa/automation-baselines/maestro-flows.json'
+              - 'apps/offline-product/qa/automation-baselines/maestro-boot-state.json'
+              - 'apps/offline-product/components/layout/MaestroBootReadyMarker.tsx'
+              - 'apps/offline-product/app/_layout.tsx'
+              - 'apps/offline-product/features/state/AppStateContext.tsx'
+              - 'apps/offline-product/features/testing/maestroBootStateRegistry.ts'
+              - 'product-os/04-quality/maestro-boot-state-registry.md'
+              - 'product-os/04-quality/maestro-golden-path-ci.json'
+              - '.github/workflows/offline-maestro.yml'
+
+      - name: Decide platforms
+        id: gate
+        working-directory: apps/offline-product
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          MAESTRO_PATH_IOS: ${{ steps.filter.outputs.ios }}
+          MAESTRO_PATH_ANDROID: ${{ steps.filter.outputs.android }}
+          MAESTRO_PATH_SHARED: ${{ steps.filter.outputs.shared }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            node ./scripts/maestro-ci-platform-gate.mjs
+          else
+            echo "run_ios=true" >> "$GITHUB_OUTPUT"
+            echo "run_android=true" >> "$GITHUB_OUTPUT"
+            echo "skip_reason_ios=full_matrix" >> "$GITHUB_OUTPUT"
+            echo "skip_reason_android=full_matrix" >> "$GITHUB_OUTPUT"
+          fi
+
+  maestro-golden-path:
+    name: Maestro golden path (macOS)
+    needs: maestro-cost-gate
+    if: >
+      needs.maestro-cost-gate.outputs.run_ios == 'true' &&
+      (
+        github.event_name == 'pull_request' ||
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
+      )
     runs-on: macos-latest
     timeout-minutes: 120
     env:
@@ -144,11 +218,14 @@ jobs:
 
   maestro-golden-path-android:
     name: Maestro golden path (Android)
-    needs: maestro-preflight
+    needs: maestro-cost-gate
     if: >
-      github.event_name == 'pull_request' ||
-      github.event_name == 'push' ||
-      (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
+      needs.maestro-cost-gate.outputs.run_android == 'true' &&
+      (
+        github.event_name == 'pull_request' ||
+        github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
+      )
     runs-on: ubuntu-latest
     timeout-minutes: 180
     env:

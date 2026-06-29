@@ -175,6 +175,25 @@ function assertWorkflow(manifest) {
   if (!workflow.includes(manifest.androidJobName)) {
     throw new Error(`${manifest.workflowFile} must define ${manifest.androidJobName} job`);
   }
+  if (!workflow.includes('maestro-cost-gate')) {
+    throw new Error(`${manifest.workflowFile} must define maestro-cost-gate job (H25 cost guard)`);
+  }
+  if (!workflow.includes('maestro-ci-platform-gate.mjs')) {
+    throw new Error(`${manifest.workflowFile} must run maestro-ci-platform-gate.mjs on pull_request`);
+  }
+  if (!workflow.includes('cancel-in-progress: true')) {
+    throw new Error(`${manifest.workflowFile} must cancel superseded Maestro runs (concurrency)`);
+  }
+  if (!workflow.includes('needs.maestro-cost-gate.outputs.run_ios')) {
+    throw new Error(`${manifest.workflowFile} macOS golden path must honor cost gate run_ios`);
+  }
+  if (!workflow.includes('needs.maestro-cost-gate.outputs.run_android')) {
+    throw new Error(`${manifest.workflowFile} Android golden path must honor cost gate run_android`);
+  }
+  const platformGate = readOffline(manifest.costGate?.platformGateScript ?? 'scripts/maestro-ci-platform-gate.mjs');
+  if (!platformGate.includes('ios_already_green_android_only_delta')) {
+    throw new Error('maestro-ci-platform-gate.mjs must skip iOS when already green on android-only PR delta');
+  }
   if (!workflow.includes('pull_request')) {
     throw new Error(`${manifest.workflowFile} golden path must run on pull_request`);
   }

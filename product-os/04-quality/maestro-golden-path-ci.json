@@ -20,5 +20,12 @@
     "profile": "pixel_6",
     "driverStartupTimeoutMs": 300000,
     "emulatorOptions": "-no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim"
+  },
+  "costGate": {
+    "platformGateScript": "scripts/maestro-ci-platform-gate.mjs",
+    "cancelInProgressConcurrency": true,
+    "skipIosWhenPrGreenAndAndroidOnly": true,
+    "skipAndroidWhenPrGreenAndIosOnly": true,
+    "fullMatrixOnPushToMain": true
   }
 }
