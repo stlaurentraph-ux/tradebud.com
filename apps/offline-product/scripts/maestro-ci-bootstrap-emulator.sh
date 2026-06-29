@@ -125,10 +125,7 @@ wait_for_android_js_boot() {
 
   echo "Timed out waiting for $label (${max_ms}ms)"
   dump_tracebud_logcat "Logcat after $label timeout"
-  if [[ "$require_success" == "1" ]]; then
-    return 1
-  fi
-  return 0
+  return 1
 }
 
 if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
