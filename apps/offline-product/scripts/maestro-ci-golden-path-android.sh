@@ -43,7 +43,14 @@ run_maestro_with_retry() {
       stabilize_adb light
       echo "==> Foreground warmed Tracebud (launchApp uses stopApp: false)"
       adb -s "$DEVICE_SERIAL" shell am start -n "$MAESTRO_APP_ID/.MainActivity" 2>/dev/null || true
-      sleep 3
+      sleep 5
+      # The Maestro CLI startup gap (~6-9 min) gives the OS time to kill the app under memory
+      # pressure. If the process is gone, wait for a fresh JS boot so the flow's
+      # extendedWaitUntil does not race against a cold start.
+      if ! adb -s "$DEVICE_SERIAL" shell pidof "$MAESTRO_APP_ID" 2>/dev/null | grep -q .; then
+        echo "==> App process not found — waiting for fresh JS boot before Maestro"
+        wait_for_android_js_boot "pre-Maestro re-warm" || echo "==> Re-warm timed out — Maestro extendedWaitUntil will handle slow boot"
+      fi
     else
       stabilize_adb full
       adb -s "$DEVICE_SERIAL" shell am force-stop "$MAESTRO_APP_ID" 2>/dev/null || true
