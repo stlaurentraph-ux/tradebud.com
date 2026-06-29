@@ -31,6 +31,21 @@ npm run qa:structural
 npm run qa:automation:phase1
 ```
 
+## Maestro changes — prepush before GitHub (H25 cost)
+
+Runbook: `product-os/04-quality/maestro-ci-cost-runbook.md`  
+Cursor rule: `.cursor/rules/maestro-ci-cost.mdc`
+
+**Before pushing** any change under `.maestro/`, `scripts/maestro*`, boot marker, or `offline-maestro.yml`:
+
+```bash
+cd apps/offline-product
+npm run qa:maestro:prepush          # mandatory (~2 min, any OS)
+npm run qa:maestro:prepush:full     # macOS before push when E2E/boot/flow changed
+```
+
+Do not use repeated GitHub macOS runs as the first test loop.
+
 Structural contracts runbook: `product-os/04-quality/structural-contracts-runbook.md`  
 Cross-device sync rule: `.cursor/rules/cross-device-sync.mdc`
 

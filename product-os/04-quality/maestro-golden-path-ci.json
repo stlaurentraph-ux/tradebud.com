@@ -27,5 +27,7 @@
     "skipIosWhenPrGreenAndAndroidOnly": true,
     "skipAndroidWhenPrGreenAndIosOnly": true,
     "fullMatrixOnPushToMain": true
-  }
+  },
+  "prepushScript": "scripts/maestro-prepush.sh",
+  "prepushRunbook": "product-os/04-quality/maestro-ci-cost-runbook.md"
 }

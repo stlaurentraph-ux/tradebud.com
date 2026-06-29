@@ -1,5 +1,10 @@
 name: Offline Maestro
 
+# Cost hygiene (H25): run locally before push — see product-os/04-quality/maestro-ci-cost-runbook.md
+#   npm run qa:maestro:prepush        (static, any OS)
+#   npm run qa:maestro:prepush:full   (macOS + local iOS golden path)
+# PR: maestro-cost-gate skips macOS when already green + android-only delta; concurrency cancels stale runs.
+
 on:
   push:
     branches: [main, master]

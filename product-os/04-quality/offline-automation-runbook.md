@@ -78,13 +78,24 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 
 ## Maestro CI (1.O.3+)
 
+**Cost runbook (H25):** `product-os/04-quality/maestro-ci-cost-runbook.md` — local prepush before GitHub macOS/Android.
+
 | Job | Platform | When | Command |
 |-----|----------|------|---------|
+| **Local prepush** | dev machine | **Before push** (Maestro paths) | `npm run qa:maestro:prepush` / `:full` on macOS |
 | Expo `app` (Linux) | ubuntu | Every offline PR / push | `npm run qa:maestro:preflight` |
-| `offline-maestro.yml` | ubuntu + macos | PR (Maestro paths) + manual dispatch | preflight; optional E2E on macOS |
-| `offline-maestro.yml` → **golden path** | macos | **Push to `main`** (offline paths) | `settings-sync-smoke.yaml` via `qa:maestro:golden-path` |
+| `offline-maestro.yml` | ubuntu + macos | PR (Maestro paths) + manual dispatch | preflight; cost-gated E2E |
+| `offline-maestro.yml` → **golden path** | macos + android | PR / push to `main` | `settings-sync-smoke.yaml` |
 
-**Manual macOS E2E:** GitHub Actions → **Offline Maestro (macOS)** → `workflow_dispatch` with `run_golden_path=true` or `run_flows=true`.
+**Prepush (mandatory before push):**
+
+```bash
+cd apps/offline-product
+npm run qa:maestro:prepush          # static + regression (~2 min)
+npm run qa:maestro:prepush:full     # + local iOS golden path on macOS
+```
+
+**Manual macOS E2E:** GitHub Actions → **Offline Maestro** → `workflow_dispatch` with `run_golden_path=true`.
 
 **Golden path on PR + `main` (H25):** both platforms build from the checked-out commit (`maestro-ci-assemble-*`). Boot state is defined in `maestro-boot-state-registry.md` / `maestro-boot-state.json` — profile `golden_path_minimal` seeds locale + welcome dismissed and the flow waits on `maestro-boot-ready`. Guard: `maestro-boot-state-guard.mjs`.
 

@@ -53,6 +53,7 @@ PR title tags: `[guardrails]`, `[fix]`, or `[marketing]` / `[dashboard]` / `[off
 | App | Command |
 |-----|---------|
 | offline | `cd apps/offline-product && npm run qa:regression && npm run qa:automation:phase1` |
+| offline (Maestro paths) | `cd apps/offline-product && npm run qa:maestro:prepush` (+ `qa:maestro:prepush:full` on macOS before push) |
 | marketing | `npm run lint -w tracebud-marketing && npm run build -w tracebud-marketing` (→ `check:marketing` after 0.M.3) |
 | dashboard | `npm run lint -w dashboard-product && npm test -w dashboard-product` (+ build when 0.2 lands) |
 | backend | `npm run lint -w tracebud-backend && npm test -w tracebud-backend` |

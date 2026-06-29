@@ -23,6 +23,7 @@ const guards = [
   'plot-list-thumbnail-guard.mjs',
   'sqlite-at-rest-guard.mjs',
   'maestro-golden-path-guard.mjs',
+  'maestro-prepush-guard.mjs',
   'maestro-boot-state-guard.mjs',
 ];
 

@@ -29,6 +29,7 @@ Lane 2 maintenance — fix a reported regression only. No feature work.
 - [ ] Root cause identified (symptom vs cause documented in PR)
 - [ ] Minimal fix applied
 - [ ] `npm run lint` + `npm test` (+ `npm run build` if dashboard/marketing/backend touched) pass for affected workspace
+- [ ] Offline Maestro CI: `cd apps/offline-product && npm run qa:maestro:prepush` before push; `qa:maestro:prepush:full` on macOS when E2E/boot changed (`maestro-ci-cost-runbook.md`)
 - [ ] New test or regression guard if this bug class could recur
 - [ ] `product-os/06-status/daily-log.md` updated if user-visible behavior changed
 

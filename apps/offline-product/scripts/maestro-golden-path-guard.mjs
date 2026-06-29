@@ -290,13 +290,21 @@ function assertWorkflow(manifest) {
   }
 }
 
-function assertPackageScripts() {
+function assertPackageScripts(manifest) {
   const pkg = JSON.parse(readOffline('package.json'));
   if (!pkg.scripts?.['qa:maestro:golden-path:android']) {
     throw new Error('package.json must define qa:maestro:golden-path:android');
   }
   if (!pkg.scripts?.['qa:maestro:golden-path:assert']) {
     throw new Error('package.json must define qa:maestro:golden-path:assert');
+  }
+  for (const script of ['qa:maestro:prepush', 'qa:maestro:prepush:full', 'qa:maestro:prepush:assert']) {
+    if (!pkg.scripts?.[script]) {
+      throw new Error(`package.json must define ${script} (H25 cost prepush)`);
+    }
+  }
+  if (!manifest.prepushScript || !manifest.prepushRunbook) {
+    throw new Error('manifest must define prepushScript and prepushRunbook');
   }
 }
 
@@ -310,7 +318,7 @@ function main() {
   assertIosAssembly(manifest);
   assertAndroidRunner(manifest);
   assertWorkflow(manifest);
-  assertPackageScripts();
+  assertPackageScripts(manifest);
   console.log('Maestro golden path CI guard passed (H25).');
 }
 
