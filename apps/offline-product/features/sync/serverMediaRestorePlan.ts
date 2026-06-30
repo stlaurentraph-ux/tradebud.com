@@ -11,6 +11,7 @@ import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocal
 import type { Plot } from '@/features/state/AppStateContext';
 import type { AuditLogRow } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import {
+  capacityCappedMissing,
   latestAuditPhotosByServerPlot,
   localPhotoMatches,
   photoStorageKey,
@@ -118,6 +119,16 @@ function registerSeenMediaKey(seenKeys: Set<string>, key: string, storagePath?: 
   if (path) seenKeys.add(`path:${path}`);
 }
 
+type ScopeMediaGap = {
+  serverCount: number;
+  unmatched: number;
+  localCount: number;
+};
+
+function cappedScopePending(gap: ScopeMediaGap): number {
+  return capacityCappedMissing(gap.unmatched, gap.serverCount, gap.localCount);
+}
+
 /** Dry-run of restoreLocalPlotPhotosFromServerAudit — counts rows Sync now would still pull. */
 export async function planPendingAuditMediaRestore(params: {
   auditRows: readonly AuditLogRow[];
@@ -127,13 +138,14 @@ export async function planPendingAuditMediaRestore(params: {
   seenStoragePaths?: Set<string>;
 }): Promise<number> {
   const seenKeys = params.seenStoragePaths ?? new Set<string>();
-  let pending = 0;
   const { groundTruth, landTitle } = latestAuditPhotosByServerPlot(params.auditRows);
 
   async function countKind(
     kind: 'ground_truth' | 'land_title',
     latestByServerPlot: Map<string, AuditPhotoPayload[]>,
   ) {
+    const gapsByLocalPlot = new Map<string, ScopeMediaGap>();
+
     for (const [serverPlotId, photos] of latestByServerPlot) {
       const localPlotId = resolveLocalPlotIdForServerPlot({
         serverPlotId,
@@ -147,6 +159,14 @@ export async function planPendingAuditMediaRestore(params: {
         kind === 'ground_truth' ? await loadPhotosForPlot(localPlotId).catch(() => []) : [];
       const existingTitle =
         kind === 'land_title' ? await loadTitlePhotosForPlot(localPlotId).catch(() => []) : [];
+      const localCount =
+        kind === 'ground_truth' ? existingGround.length : existingTitle.length;
+      const gap = gapsByLocalPlot.get(localPlotId) ?? {
+        serverCount: 0,
+        unmatched: 0,
+        localCount,
+      };
+      gap.localCount = Math.max(gap.localCount, localCount);
 
       for (const photo of photos) {
         const key = photoStorageKey(photo);
@@ -159,15 +179,22 @@ export async function planPendingAuditMediaRestore(params: {
             : titlePhotoStored(existingTitle, photo.storagePath, remoteUri);
 
         registerSeenMediaKey(seenKeys, key, photo.storagePath);
-        if (stored) continue;
-        pending += 1;
+        gap.serverCount += 1;
+        if (!stored) gap.unmatched += 1;
       }
+      gapsByLocalPlot.set(localPlotId, gap);
     }
+
+    let pending = 0;
+    for (const gap of gapsByLocalPlot.values()) {
+      pending += cappedScopePending(gap);
+    }
+    return pending;
   }
 
-  await countKind('ground_truth', groundTruth);
-  await countKind('land_title', landTitle);
-  return pending;
+  const groundPending = await countKind('ground_truth', groundTruth);
+  const landPending = await countKind('land_title', landTitle);
+  return groundPending + landPending;
 }
 
 /** Dry-run of restoreLocalEvidenceFromServer — uses producer/profile scope for farmer docs. */
@@ -205,7 +232,24 @@ export async function planPendingEvidenceRestore(params: {
     }
   }
 
-  let pending = 0;
+  const gapsByTarget = new Map<string, ScopeMediaGap>();
+  const mediaCache = new Map<
+    string,
+    Promise<{ titlePhotos: Awaited<ReturnType<typeof loadTitlePhotosForPlot>>; evidenceItems: Awaited<ReturnType<typeof loadEvidenceForPlot>> }>
+  >();
+
+  async function loadTargetMedia(targetPlotId: string) {
+    let cached = mediaCache.get(targetPlotId);
+    if (!cached) {
+      cached = Promise.all([
+        loadTitlePhotosForPlot(targetPlotId).catch(() => []),
+        loadEvidenceForPlot(targetPlotId).catch(() => []),
+      ]).then(([titlePhotos, evidenceItems]) => ({ titlePhotos, evidenceItems }));
+      mediaCache.set(targetPlotId, cached);
+    }
+    return cached;
+  }
+
   for (const candidate of candidates) {
     const localPlotId = resolveLocalPlotIdForServerPlot({
       serverPlotId: candidate.serverPlotId,
@@ -221,15 +265,25 @@ export async function planPendingEvidenceRestore(params: {
       localPlotId,
     });
 
-    const [titlePhotos, evidenceItems] = await Promise.all([
-      loadTitlePhotosForPlot(targetPlotId).catch(() => []),
-      loadEvidenceForPlot(targetPlotId).catch(() => []),
-    ]);
+    const { titlePhotos, evidenceItems } = await loadTargetMedia(targetPlotId);
+    const gap = gapsByTarget.get(targetPlotId) ?? {
+      serverCount: 0,
+      unmatched: 0,
+      localCount: titlePhotos.length + evidenceItems.length,
+    };
+    gap.localCount = Math.max(gap.localCount, titlePhotos.length + evidenceItems.length);
 
-    if (storagePathStored(candidate.storagePath, titlePhotos, evidenceItems)) continue;
-    pending += 1;
+    gap.serverCount += 1;
+    if (!storagePathStored(candidate.storagePath, titlePhotos, evidenceItems)) {
+      gap.unmatched += 1;
+    }
+    gapsByTarget.set(targetPlotId, gap);
   }
 
+  let pending = 0;
+  for (const gap of gapsByTarget.values()) {
+    pending += cappedScopePending(gap);
+  }
   return pending;
 }
 

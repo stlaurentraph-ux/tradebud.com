@@ -159,6 +159,28 @@ describe('countPendingServerMediaRestore', () => {
     expect(missing).toBe(2);
   });
 
+  it('does not flag tenure land titles when local title count already matches (generic uris)', async () => {
+    mocks.loadTitlePhotosForPlot.mockResolvedValue([
+      { id: 1, plotId: 'local-1', uri: 'file:///var/mobile/restore-111.jpg', takenAt: 1_700_000_000_000 },
+      { id: 2, plotId: 'local-1', uri: 'file:///var/mobile/restore-222.jpg', takenAt: 1_700_000_100_000 },
+    ]);
+    mocks.loadEvidenceForPlot.mockResolvedValue([]);
+    mocks.fetchPlotTenureVerification.mockResolvedValue([
+      { storage_path: 'farmer/plot/uuid-a.jpg', mime_type: 'image/jpeg', evidence_label: 'title' },
+      { storage_path: 'farmer/plot/uuid-b.jpg', mime_type: 'image/jpeg', evidence_label: 'title' },
+    ]);
+
+    const missing = await countPendingServerMediaRestore({
+      apiFarmerId: 'farmer-1',
+      localPlots: [localPlot],
+      auditRows: [],
+      backendPlots: [{ id: 'server-1', client_plot_id: 'local-1' }],
+      plotServerLinks: { 'local-1': 'server-1' },
+    });
+
+    expect(missing).toBe(0);
+  });
+
   it('returns 0 when audit rows are null (parity skips measured media gap)', async () => {
     const missing = await countPendingServerMediaRestore({
       apiFarmerId: 'farmer-1',
