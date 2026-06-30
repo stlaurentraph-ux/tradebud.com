@@ -145,6 +145,10 @@ export function reconcilePlotServerLinks(
 ): PlotServerLinks {
   const next: PlotServerLinks = { ...existing };
   const localPlotIds = new Set(localPlots.map((plot) => plot.id));
+  // Global claim map: a server plot id can be linked to at most one local plot.
+  // Without this, two local plots can both match the same orphan server row
+  // (e.g. same name/area) and overwrite each other's link on every sync (C6).
+  const claimedServerIds = new Set<string>();
 
   for (const localPlot of localPlots) {
     const persisted = next[localPlot.id]?.trim();
@@ -160,7 +164,10 @@ export function reconcilePlotServerLinks(
       const stillValid =
         stillOnServer &&
         canTrustPersistedPlotServerLink(row, localPlot.id, persisted, localPlotIds);
-      if (stillValid) continue;
+      if (stillValid) {
+        claimedServerIds.add(persisted);
+        continue;
+      }
       delete next[localPlot.id];
     }
 
@@ -168,7 +175,14 @@ export function reconcilePlotServerLinks(
       localPlotIds,
     });
     if (resolved) {
+      if (claimedServerIds.has(resolved)) {
+        // Another local plot already claimed this server id in this pass —
+        // do not double-link. The unlinked local plot will retry on the next
+        // sync once the claimed plot is uploaded or the server row is gone.
+        continue;
+      }
       next[localPlot.id] = resolved;
+      claimedServerIds.add(resolved);
     }
   }
 

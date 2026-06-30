@@ -25,6 +25,10 @@ function main() {
   const orchestrator = read('features/sync/restoreFarmerCloudState.ts');
   const queue = read('features/sync/processPendingSyncQueue.ts');
   const prefs = read('features/sync/syncFieldDevicePreferences.ts');
+  const localMedia = read('features/sync/measureCloudParityArtifacts.ts');
+  const serverMediaPlan = read('features/sync/serverMediaRestorePlan.ts');
+  const serverMediaMissing = read('features/sync/countServerMediaMissingOnDevice.ts');
+  const paritySummary = read('features/sync/measureCloudParitySummary.ts');
 
   const restoreModules = extractNames(registry, 'FARMER_ARTIFACT_RESTORE_MODULES');
   const uploadActions = extractNames(registry, 'PENDING_SYNC_UPLOAD_ACTION_TYPES');
@@ -54,6 +58,25 @@ function main() {
     if (!queue.includes(`'${actionType}'`)) {
       issues.push(`processPendingSyncQueue missing ${actionType}`);
     }
+  }
+
+  // Producer evidence scope symmetry (Bundle 6): both the local-media count and
+  // the server-media-missing count must include producer-scoped evidence
+  // (profile:{farmerId}). If only one side counts it, the parity gap is wrong.
+  if (!localMedia.includes('producerEvidenceScopeId')) {
+    issues.push('countLocalMediaArtifacts must include producer-scoped evidence (producerEvidenceScopeId)');
+  }
+  if (!serverMediaPlan.includes('producerEvidenceScopeId')) {
+    issues.push('serverMediaRestorePlan must include producer-scoped evidence (producerEvidenceScopeId)');
+  }
+  // countServerMediaMissingOnDevice must delegate to the SSOT plan, not recompute.
+  if (!serverMediaMissing.includes('countPendingServerMediaRestore')) {
+    issues.push('countServerMediaMissingOnDevice must delegate to countPendingServerMediaRestore (SSOT)');
+  }
+  // measureCloudParitySummary must wire the measured media gap (restore-mirroring)
+  // rather than a naive count.
+  if (!paritySummary.includes('countServerMediaMissingOnDevice')) {
+    issues.push('measureCloudParitySummary must wire countServerMediaMissingOnDevice as measuredMediaGap');
   }
 
   const mdPath = path.join(root, '../../product-os/04-quality/farmer-artifact-sync-registry.md');

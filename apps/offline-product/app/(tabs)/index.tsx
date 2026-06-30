@@ -26,6 +26,8 @@ import { fetchServerPlotListForUi } from '@/features/sync/serverPlotListCache';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import { loadAllPlotReadinessStates } from '@/features/compliance/loadPlotReadiness';
 import { listUnsyncedLocalPlots } from '@/features/sync/plotServerSync';
+import { subscribeSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
+import { syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -43,8 +45,16 @@ export default function HomeScreen() {
     pending: number;
   } | null>(null);
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
+  const [backgroundSyncWarning, setBackgroundSyncWarning] = useState<string | null>(null);
   const readinessRefreshGenRef = useRef(0);
   const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
+
+  useEffect(() => {
+    return subscribeSyncOperationOutcome((outcome) => {
+      if (outcome.source !== 'background') return;
+      setBackgroundSyncWarning(syncTimedOutMessage(t, 'default'));
+    });
+  }, [t]);
 
   const refreshPlotReadiness = useCallback(async () => {
     if (plots.length === 0) {
@@ -402,6 +412,17 @@ export default function HomeScreen() {
             </View>
           ))}
         </View>
+
+        {backgroundSyncWarning ? (
+          <Card variant="outlined" style={styles.actionRequired}>
+            <View style={styles.actionHeader}>
+              <Ionicons name="sync-circle-outline" size={22} color="#D97706" />
+              <ThemedText type="defaultSemiBold" style={styles.actionTitle}>
+                {backgroundSyncWarning}
+              </ThemedText>
+            </View>
+          </Card>
+        ) : null}
 
         {actionRequired ? (
           <Card variant="outlined" style={styles.actionRequired}>

@@ -20,7 +20,7 @@ import {
   countDeliveryReceiptsForPlots,
   normalizeLocalDeliveryReceipts,
 } from '@/features/harvest/localDeliveryReceipts';
-import { loadAllLocalDeliveryReceipts, loadPlotServerLinks } from '@/features/state/persistence';
+import { loadAllLocalDeliveryReceipts, loadPendingSyncActions, loadPlotServerLinks } from '@/features/state/persistence';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
 import { Colors } from '@/constants/theme';
@@ -74,6 +74,8 @@ export default function PlotsScreen() {
   const [deliveryCountByPlotId, setDeliveryCountByPlotId] = useState<Record<string, number>>({});
   const [photoCountByPlotId, setPhotoCountByPlotId] = useState<Record<string, number>>({});
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});
+  const [plotServerLinks, setPlotServerLinks] = useState<Record<string, string>>({});
+  const [pendingSyncPlotIds, setPendingSyncPlotIds] = useState<Set<string>>(new Set());
   const [selectedPlotId, setSelectedPlotId] = useState<string | undefined>(plots[0]?.id);
   /** One-shot section from Home (vouchers/documents); cleared after first plot open. */
   const [pickerIntent, setPickerIntent] = useState<PlotPickerIntent | null>(null);
@@ -97,6 +99,7 @@ export default function PlotsScreen() {
         .then((catalog) => {
           setBackendPlots(catalog.backendPlots);
           setVouchers(catalog.vouchers);
+          setPlotServerLinks(catalog.plotServerLinks);
           setDeliveryCountByPlotId(
             countDeliveryReceiptsForPlots({
               plots,
@@ -114,6 +117,7 @@ export default function PlotsScreen() {
               loadAllLocalDeliveryReceipts(),
               loadPlotServerLinks(),
             ]);
+            setPlotServerLinks(plotServerLinks);
             const deviceReceipts = normalizeLocalDeliveryReceipts(localRows, t);
             setDeliveryCountByPlotId(
               countDeliveryReceiptsForPlots({
@@ -135,6 +139,23 @@ export default function PlotsScreen() {
     (plot: Plot) => deliveryCountByPlotId[plot.id] ?? 0,
     [deliveryCountByPlotId],
   );
+
+  const refreshPendingSyncPlotIds = useCallback(async () => {
+    const rows = await loadPendingSyncActions().catch(() => []);
+    const ids = new Set<string>();
+    for (const row of rows) {
+      try {
+        const payload = JSON.parse(row.payloadJson) as Record<string, unknown>;
+        const plotId = String(payload?.plotId ?? '');
+        if (plotId && !plotId.startsWith('profile:')) {
+          ids.add(plotId);
+        }
+      } catch {
+        // Ignore malformed rows — they are dropped by the queue processor.
+      }
+    }
+    setPendingSyncPlotIds(ids);
+  }, []);
 
   // Capture Home deep-link intent once, then drop sticky ?focus= from the tab URL.
   useEffect(() => {
@@ -191,7 +212,8 @@ export default function PlotsScreen() {
       return;
     }
     void refreshPlotDeliveryData(false);
-  }, [farmer?.id, refreshPlotDeliveryData]);
+    void refreshPendingSyncPlotIds();
+  }, [farmer?.id, refreshPlotDeliveryData, refreshPendingSyncPlotIds]);
 
   useFocusEffect(
     useCallback(() => {
@@ -218,9 +240,12 @@ export default function PlotsScreen() {
 
   useEffect(() => {
     return subscribeServerPlotSyncChanged(() => {
-      void reloadFromDisk().then(() => refreshPlotDeliveryData(true));
+      void reloadFromDisk().then(() => {
+        void refreshPlotDeliveryData(true);
+        void refreshPendingSyncPlotIds();
+      });
     });
-  }, [reloadFromDisk, refreshPlotDeliveryData]);
+  }, [reloadFromDisk, refreshPlotDeliveryData, refreshPendingSyncPlotIds]);
 
   useFocusEffect(
     useCallback(() => {
@@ -282,6 +307,9 @@ export default function PlotsScreen() {
           const isComplete = status === 'Compliant';
           const uploadBlock = getPlotUploadGeometryBlock(plot, plots, t);
           const needsBoundaryFix = uploadBlock != null;
+          const hasServerLink = Boolean(plotServerLinks[plot.id]?.trim());
+          const hasPendingQueueRows = pendingSyncPlotIds.has(plot.id);
+          const isUnsynced = !hasServerLink || hasPendingQueueRows;
           const statusLabel = needsBoundaryFix
             ? t('plot_needs_boundary_fix')
             : isComplete
@@ -314,6 +342,11 @@ export default function PlotsScreen() {
                       <Badge variant={badgeVariant} size="sm">
                         {statusLabel}
                       </Badge>
+                      {isUnsynced ? (
+                        <Badge variant="default" size="sm">
+                          {t('plot_unsynced_badge')}
+                        </Badge>
+                      ) : null}
                     </View>
                     <PlotListAreaCaption plot={plot} tr={t} />
                     <View style={styles.plotMetaRow}>

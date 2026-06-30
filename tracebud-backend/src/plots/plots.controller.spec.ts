@@ -48,6 +48,7 @@ function makeServiceMock(): jest.Mocked<
     | 'getComplianceHistory'
     | 'getDeforestationDecisionHistory'
     | 'getGeometryHistory'
+    | 'listTenureVerification'
     | 'runComplianceCheck'
     | 'createAssignment'
     | 'completeAssignment'
@@ -72,6 +73,7 @@ function makeServiceMock(): jest.Mocked<
     getComplianceHistory: jest.fn(),
     getDeforestationDecisionHistory: jest.fn(),
     getGeometryHistory: jest.fn(),
+    listTenureVerification: jest.fn(),
     runComplianceCheck: jest.fn(),
     createAssignment: jest.fn(),
     completeAssignment: jest.fn(),
@@ -612,10 +614,18 @@ describe('PlotsController scope boundaries', () => {
         payload: { plotId: 'plot_1', cutoffDate: '2020-12-31', verdict: 'no_deforestation_detected' },
       },
     ] as any);
-    const controller = makePlotsController(service);
+    const consent = makeConsentMock();
+    const controller = makePlotsController(service, consent);
 
-    const result = await controller.deforestationDecisionHistory('plot_1');
+    const result = await controller.deforestationDecisionHistory('plot_1', {
+      user: {
+        id: 'exp_1',
+        email: 'exporter@example.com',
+        app_metadata: { tenant_id: 'tenant_1', role: 'exporter' },
+      },
+    });
 
+    expect(consent.canTenantAccessPlot).toHaveBeenCalledWith('plot_1', 'tenant_1');
     expect(service.getDeforestationDecisionHistory).toHaveBeenCalledWith('plot_1');
     expect(result).toEqual(
       expect.arrayContaining([
@@ -624,5 +634,84 @@ describe('PlotsController scope boundaries', () => {
         }),
       ]),
     );
+  });
+
+  it('rejects cross-tenant deforestation decision history read (B1)', async () => {
+    const service = makeServiceMock();
+    const consent = makeConsentMock();
+    consent.canTenantAccessPlot.mockResolvedValue(false);
+    const controller = makePlotsController(service, consent);
+
+    await expect(
+      controller.deforestationDecisionHistory('plot_1', {
+        user: {
+          id: 'exp_2',
+          email: 'exporter@other.com',
+          app_metadata: { tenant_id: 'tenant_2', role: 'exporter' },
+        },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(consent.canTenantAccessPlot).toHaveBeenCalledWith('plot_1', 'tenant_2');
+    expect(service.getDeforestationDecisionHistory).not.toHaveBeenCalled();
+  });
+
+  it('rejects cross-tenant compliance history read (B1)', async () => {
+    const service = makeServiceMock();
+    const consent = makeConsentMock();
+    consent.canTenantAccessPlot.mockResolvedValue(false);
+    const controller = makePlotsController(service, consent);
+
+    await expect(
+      controller.complianceHistory('plot_1', {
+        user: {
+          id: 'exp_2',
+          email: 'exporter@other.com',
+          app_metadata: { tenant_id: 'tenant_2', role: 'exporter' },
+        },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(consent.canTenantAccessPlot).toHaveBeenCalledWith('plot_1', 'tenant_2');
+    expect(service.getComplianceHistory).not.toHaveBeenCalled();
+  });
+
+  it('rejects cross-tenant tenure verification read (B1)', async () => {
+    const service = makeServiceMock();
+    const consent = makeConsentMock();
+    consent.canTenantAccessPlot.mockResolvedValue(false);
+    const controller = makePlotsController(service, consent);
+
+    await expect(
+      controller.tenureVerification('plot_1', {
+        user: {
+          id: 'exp_2',
+          email: 'exporter@other.com',
+          app_metadata: { tenant_id: 'tenant_2', role: 'exporter' },
+        },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(consent.canTenantAccessPlot).toHaveBeenCalledWith('plot_1', 'tenant_2');
+    expect(service.listTenureVerification).not.toHaveBeenCalled();
+  });
+
+  it('rejects farmer reading another farmer plot tenure verification (B1)', async () => {
+    const service = makeServiceMock();
+    service.isPlotOwnedByUser.mockResolvedValue(false);
+    const controller = makePlotsController(service);
+
+    await expect(
+      controller.tenureVerification('plot_1', {
+        user: {
+          id: 'farmer_2',
+          email: 'farmer@other.com',
+          app_metadata: { role: 'farmer' },
+        },
+      }),
+    ).rejects.toThrow(ForbiddenException);
+
+    expect(service.isPlotOwnedByUser).toHaveBeenCalledWith('plot_1', 'farmer_2');
+    expect(service.listTenureVerification).not.toHaveBeenCalled();
   });
 });

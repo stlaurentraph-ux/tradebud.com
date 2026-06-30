@@ -237,11 +237,38 @@ export class HarvestController {
   @ApiOperation({
     summary: 'Lookup voucher by QR reference',
     description:
-      'Used by the offline app to validate a voucher QR code and see whether it is active/used and which DDS package (if any) it belongs to.',
+      'Used by the offline app to validate a voucher QR code and see whether it is active/used and which DDS package (if any) it belongs to. Scope: farmer callers must own the voucher farmer profile; tenant dashboard callers must have consent access.',
   })
   @ApiQuery({ name: 'qrRef', required: true, description: 'Voucher qr_code_ref (e.g. V-ABC12345)' })
-  async getVoucherByQr(@Query('qrRef') qrRef: string) {
-    return this.harvestService.getVoucherByQrRef(qrRef);
+  async getVoucherByQr(@Query('qrRef') qrRef: string, @Req() req: any) {
+    await assertTenantClaimOrFieldActor(this.pool, req.user);
+    const lookup = await this.harvestService.getVoucherByQrRef(qrRef);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const userId = req.user?.id as string | undefined;
+    if (role === 'farmer') {
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.harvestService.isFarmerOwnedByUser(
+        lookup.voucher.farmerId,
+        userId,
+      );
+      if (!owned) {
+        throw new ForbiddenException('Voucher scope violation');
+      }
+    } else {
+      const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+      if (tenantId) {
+        const allowed = await this.consentService.canTenantAccessVoucher(
+          lookup.voucher.id,
+          tenantId,
+        );
+        if (!allowed) {
+          throw new ForbiddenException('CONSENT_REQUIRED');
+        }
+      }
+    }
+    return lookup;
   }
 
   @Post('vouchers/claim')

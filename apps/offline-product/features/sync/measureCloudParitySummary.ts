@@ -1,5 +1,5 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
-import { loadLocalDeliveryReceiptsForFarmer } from '@/features/state/persistence';
+import { loadLocalDeliveryReceiptsForFarmer, loadPlotServerLinks } from '@/features/state/persistence';
 import {
   countServerPlotsForPostAuthRestore,
   countServerVouchersForPostAuthRestore,
@@ -11,6 +11,13 @@ import {
   fetchCloudParityAuditRows,
 } from '@/features/sync/measureCloudParityArtifacts';
 import { loadPlotMappingDraft } from '@/features/state/persistence';
+import {
+  countServerMediaMissingOnDevice,
+} from '@/features/sync/countServerMediaMissingOnDevice';
+import {
+  fetchBackendPlotsForSyncScope,
+  prepareFieldSyncContext,
+} from '@/features/sync/resolveFieldSyncScope';
 import {
   formatCloudParityHint,
   formatCloudParityHints,
@@ -31,7 +38,6 @@ export async function measureCloudParitySummary(params: {
   localFarmer?: FarmerProfile;
 }): Promise<CloudParitySummary> {
   const profileFarmerId = params.profileFarmerId.trim();
-  const localPlotCount = params.localPlots.length;
 
   if (!profileFarmerId) {
     return summarizeCloudParityCounts(
@@ -49,6 +55,18 @@ export async function measureCloudParitySummary(params: {
     );
   }
 
+  // Resolve scope first so apiFarmerId / ownedFarmerIds are available for
+  // producer-scoped local counts and the restore-mirroring media parity SSOT.
+  let scope = { farmerId: profileFarmerId, ownedFarmerIds: [profileFarmerId] };
+  try {
+    scope = await prepareFieldSyncContext({
+      profileFarmerId,
+      localPlots: params.localPlots,
+    });
+  } catch {
+    // keep default scope
+  }
+
   const [localReceiptRows, serverPlotCount, serverVoucherCount, localMedia, auditRows, localDraft] =
     await Promise.all([
       loadLocalDeliveryReceiptsForFarmer(profileFarmerId).catch(() => []),
@@ -60,7 +78,7 @@ export async function measureCloudParitySummary(params: {
         profileFarmerId,
         localPlots: params.localPlots,
       }),
-      countLocalMediaArtifacts(params.localPlots),
+      countLocalMediaArtifacts(params.localPlots, { apiFarmerId: scope.farmerId }),
       fetchCloudParityAuditRows({
         profileFarmerId,
         localPlots: params.localPlots,
@@ -68,19 +86,7 @@ export async function measureCloudParitySummary(params: {
       loadPlotMappingDraft(profileFarmerId).catch(() => null),
     ]);
 
-  let ownedFarmerIds: string[] = [profileFarmerId];
-  if (auditRows != null) {
-    try {
-      const { prepareFieldSyncContext } = await import('@/features/sync/resolveFieldSyncScope');
-      const scope = await prepareFieldSyncContext({
-        profileFarmerId,
-        localPlots: params.localPlots,
-      });
-      ownedFarmerIds = scope.ownedFarmerIds;
-    } catch {
-      // keep default
-    }
-  }
+  const ownedFarmerIds = scope.ownedFarmerIds;
 
   const serverEvidenceDocs =
     auditRows != null
@@ -90,6 +96,32 @@ export async function measureCloudParitySummary(params: {
           localPlots: params.localPlots,
         })
       : null;
+
+  // Restore-mirroring media gap: when audit rows are available, count exactly
+  // what Sync now would still pull, mirroring restoreLocalPlotPhotosFromServerAudit
+  // + restoreLocalEvidenceFromServer (including producer evidence under
+  // profile:{farmerId}). This is the SSOT — the brown banner cannot lie.
+  let measuredMediaGap: number | undefined;
+  if (auditRows != null) {
+    try {
+      const [backendPlots, plotServerLinks] = await Promise.all([
+        fetchBackendPlotsForSyncScope({
+          farmerId: scope.farmerId,
+          ownedFarmerIds,
+        }).catch(() => [] as readonly unknown[]),
+        loadPlotServerLinks().catch(() => ({} as Record<string, string>)),
+      ]);
+      measuredMediaGap = await countServerMediaMissingOnDevice({
+        apiFarmerId: scope.farmerId,
+        localPlots: params.localPlots,
+        auditRows,
+        backendPlots,
+        plotServerLinks: plotServerLinks as Record<string, string>,
+      });
+    } catch {
+      measuredMediaGap = undefined;
+    }
+  }
 
   return summarizeCloudParityCounts(
     buildExtendedCountsFromAudit({
@@ -102,6 +134,7 @@ export async function measureCloudParitySummary(params: {
       serverEvidenceDocs,
       localFarmer: params.localFarmer,
       localHasWalkDraft: localDraft != null,
+      measuredMediaGap,
     }),
   );
 }

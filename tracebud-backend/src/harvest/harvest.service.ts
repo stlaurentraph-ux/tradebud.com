@@ -292,17 +292,29 @@ export class HarvestService {
     const transactionId = randomUUID();
     const insertRes = await this.pool.query(
       `
-        INSERT INTO harvest_transaction (
-          id,
-          farmer_id,
-          plot_id,
-          kg,
-          harvest_date,
-          created_by,
-          client_event_id
+        WITH ins AS (
+          INSERT INTO harvest_transaction (
+            id,
+            farmer_id,
+            plot_id,
+            kg,
+            harvest_date,
+            created_by,
+            client_event_id
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (farmer_id, client_event_id) WHERE client_event_id IS NOT NULL
+          DO NOTHING
+          RETURNING *
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
-        RETURNING *
+        SELECT * FROM ins
+        UNION ALL
+        SELECT ht.* FROM harvest_transaction ht
+        WHERE ht.farmer_id = $2
+          AND ht.client_event_id = $7
+          AND ht.client_event_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM ins)
+        LIMIT 1
       `,
       [
         transactionId,
@@ -316,6 +328,20 @@ export class HarvestService {
     );
 
     const tx = insertRes.rows[0];
+    const isReplay = tx.id !== transactionId;
+
+    if (isReplay) {
+      // Idempotent replay of a client_event_id we already stored — return the
+      // existing voucher tied to that transaction instead of duplicating it.
+      const existingVoucher = await this.pool.query(
+        `SELECT * FROM voucher WHERE transaction_id = $1 LIMIT 1`,
+        [tx.id],
+      );
+      return {
+        transaction: tx,
+        voucher: existingVoucher.rows[0] ?? null,
+      };
+    }
 
     const qrRef = `V-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
     const deliveryRecipient = await resolveVoucherDeliveryRecipient(this.pool, {

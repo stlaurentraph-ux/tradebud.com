@@ -12,7 +12,6 @@ import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerS
 import { mapPasswordSignInError, normalizeSignInErrorCode } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
-import { runAutoBackup } from '@/features/sync/runAutoBackup';
 
 export type SignInSyncResult =
   | { ok: true; missingName?: boolean; apiUnreachable?: boolean }
@@ -72,12 +71,10 @@ export async function signInAndSyncPlots(params: {
     const code = normalizeSignInErrorCode(res.message);
     return { ok: false, message: code === res.message ? res.message : code };
   }
-  if (params.farmerId && params.localPlots) {
-    await runAutoBackup({
-      farmerId: params.farmerId,
-      localPlots: params.localPlots,
-    });
-  }
+  // Post-auth auto-backup is triggered solely by `offerBackupAfterAuth` in
+  // SignInSheetContext (U5) — running it here too caused a duplicate backup on
+  // password sign-in. The OAuth path below preserves its own trigger because
+  // OAuth completion does not always route through the sign-in sheet callback.
   return { ok: true };
 }
 

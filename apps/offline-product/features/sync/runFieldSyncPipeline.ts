@@ -180,11 +180,14 @@ export async function runFieldSyncPipeline(
   }
 
   // Reconcile local↔server plot ids before pulling receipts, evidence, or declarations.
-  await warmPlotServerLinksForSync({
+  const warmResult = await warmPlotServerLinksForSync({
     farmerId: apiFarmerId,
     ownedFarmerIds: farmerScopeIds,
     localPlots: activePlots,
   });
+  if (warmResult.fetchFailed) {
+    outcome.plotsFetchFailed = true;
+  }
 
   const receiptRestoreResult = await restoreLocalDeliveryReceiptsFromServer({
     apiFarmerId,
@@ -236,11 +239,14 @@ export async function runFieldSyncPipeline(
   }
 
   reportSyncStepStart('plot_upload', { plotCount: activePlots.length });
-  await warmPlotServerLinksForSync({
+  const warmUploadResult = await warmPlotServerLinksForSync({
     farmerId: apiFarmerId,
     ownedFarmerIds: farmerScopeIds,
     localPlots: activePlots,
   });
+  if (warmUploadResult.fetchFailed) {
+    outcome.plotsFetchFailed = true;
+  }
 
   const selectedTypes =
     selectedQueueActionTypes.length > 0 ? selectedQueueActionTypes : allQueueActionTypes;
@@ -331,15 +337,25 @@ export async function runFieldSyncPipeline(
 
   if (activePlots.length > 0) {
     const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
-    await enqueuePlotDependentSyncForLinkedPlots({
+    const plotDependentError = await enqueuePlotDependentSyncForLinkedPlots({
       farmerId: apiFarmerId,
       farmer: syncFarmer,
       plots: activePlots,
       plotServerLinks,
-    }).catch(() => undefined);
+    }).catch((error: unknown) => {
+      // Surface enqueue failure — a silent swallow here leaves the queue empty
+      // and the farmer believes everything is backed up when it is not.
+      console.warn('[sync] enqueuePlotDependentSyncForLinkedPlots failed', error);
+      outcome.enqueueFailed = true;
+      return undefined;
+    });
+    void plotDependentError;
   }
 
-  await enqueueFarmerCloudSyncActions(syncFarmer).catch(() => undefined);
+  await enqueueFarmerCloudSyncActions(syncFarmer).catch((error: unknown) => {
+    console.warn('[sync] enqueueFarmerCloudSyncActions failed', error);
+    outcome.enqueueFailed = true;
+  });
 
   let queueFirstError: string | undefined;
 

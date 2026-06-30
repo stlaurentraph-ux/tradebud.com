@@ -1,4 +1,79 @@
-### 2026-06-26 (Lane 2 fix — Railway deploy pg TLS bundle in Docker image)
+### 2026-06-30 (Lane 1 guardrail — Bundle 6 sync-parity-guard producer evidence symmetry)
+- **Context**: The parity gap could silently regress if one side of the local/server media count dropped producer-scoped evidence while the other kept it. No guard asserted the symmetry.
+- **Fixes**:
+  - `sync-parity-guard.mjs` now asserts:
+    - `measureCloudParityArtifacts.ts` references `producerEvidenceScopeId` (local side counts producer evidence).
+    - `serverMediaRestorePlan.ts` references `producerEvidenceScopeId` (server side counts producer evidence).
+    - `countServerMediaMissingOnDevice.ts` delegates to `countPendingServerMediaRestore` (SSOT, no recompute).
+    - `measureCloudParitySummary.ts` wires `countServerMediaMissingOnDevice` as the measured media gap.
+- **Verify**: `node ./scripts/sync-parity-guard.mjs` OK; `npm run qa:structural` all guards OK; `npm run qa:regression` 517 tests pass, 0 failed.
+- **Branch**: `feature/sync-diagnosis-fixes`.
+
+### 2026-06-30 (Lane 3 feature — Bundle 5 UI honesty pass)
+- **Context**: My Plots showed no unsynced signal; plot checklist sync row marked done with only a server link (ignored pending queue); background sync timeouts were silent on Home; password sign-in triggered a duplicate auto-backup; plot detail hid the geometry-block reason; Settings read a stale `queueLastError` after Sync now.
+- **Fixes**:
+  - `explore.tsx` (U2): My Plots card shows an "Unsynced" badge when `!plotServerLinks[plot.id]` or the pending queue has rows for that plot. Loads `plotServerLinks` + `pendingSyncPlotIds` in the catalog effect and refreshes on `subscribeServerPlotSyncChanged`.
+  - `plotChecklist.ts` (U3): `computePlotReadinessChecklist` accepts `hasPendingQueueRows?`; `syncOk = isSyncedToServer && !hasPendingQueueRows`. `plot/[id].tsx` loads pending rows for the open plot and passes the flag to both checklist computations. Test added.
+  - `index.tsx` (U4): Home subscribes to `subscribeSyncOperationOutcome` and renders a persistent warning card when a background sync times out.
+  - `signInSync.ts` (U5): removed the duplicate `runAutoBackup` call in the password sign-in path — `offerBackupAfterAuth` in `SignInSheetContext` is the single post-auth trigger. Removed unused import.
+  - `plot/[id].tsx` + `plotDetailScreenStyles.ts` (U6): plot detail now renders the `uploadGeometryBlock.message` in a warning banner when present (not just the badge label).
+  - `settings.tsx` (U9): `runSyncNow` re-reads pending sync rows after the run and passes the fresh `queueLastError`/`queueLastErrorActionType` into `resolveSyncAttentionMessage` instead of the stale closure value.
+  - `en.json`: added `plot_unsynced_badge`.
+  - U7 (dead i18n removal: `last_sync_*`, `settings_data_on_device`, `settings_sync_waiting` across 16 locale files + canonical overrides): deferred — coordinated multi-file removal that risks the i18n parity/rebuild guard; tracked as a follow-up cleanup.
+- **Verify**: `npm run qa:regression` — 517 tests pass (113 files), lint + typecheck clean, structural guards OK.
+- **Branch**: `feature/sync-diagnosis-fixes`.
+
+### 2026-06-30 (Lane 3 feature — Bundle 4 plot link collision + HLC intent)
+- **Context**: Two local plots could both match the same orphan server row and overwrite each other's link on every sync (C6). HLC was stored in audit payloads but never used for server-side conflict resolution (B4/B5).
+- **Fixes**:
+  - `plotServerLink.ts`: `reconcilePlotServerLinks` maintains a `claimedServerIds` set — a server plot id links to at most one local plot per pass; persisted links claim their id too (C6/I3).
+  - `plotServerLink.test.ts`: two-locals-collision + persisted-id-not-stolen tests.
+  - `TRACEBUD_V1_2_EUDR_SPEC.md` §18.5: documented v1.6 HLC is queue-only ordering metadata; server-side sync-envelope conflict resolution is append-only audit replay ordered by server `timestamp`; `plot_legal_synced` is audit-only; server-side HLC LWW deferred to v1.7 (B4/B5 option b).
+  - `architecture-constraints.mdc`: clarified HLC rule to reference §18.5.
+- **Verify**: `npm run qa:structural` all guards OK; `npm run qa:regression` 504 tests pass, 0 failed.
+- **Branch**: `feature/sync-diagnosis-fixes`.
+
+### 2026-06-30 (Lane 3 feature — Bundle 3 pipeline error propagation + queue tests)
+- **Context**: Sync pipeline swallowed enqueue errors, silently no-ops on plot-link fetch failure, double-counted land-title evidence, and the queue processor had zero integration tests (I1).
+- **Fixes**:
+  - `plotServerSync.ts`: `warmPlotServerLinksForSync` returns `{ fetchFailed }` instead of silent return; both call sites in `runFieldSyncPipeline.ts` set `outcome.plotsFetchFailed` (C3).
+  - `runFieldSyncPipeline.ts`: `enqueuePlotDependentSyncForLinkedPlots` + `enqueueFarmerCloudSyncActions` errors now log + set `outcome.enqueueFailed`; `formatSyncNowUserMessage.ts` surfaces `enqueueFailed` in the farmer-facing message (C4).
+  - `pendingSyncDedup.ts`: consent dedup key now reads `grantId` (primary) + `requestId`/`consentRequestId` (legacy) — fixes duplicate consent rows (C5).
+  - `restoreFarmerCloudState.ts`: `evidenceRestored` no longer adds `photos.landTitleRestored` (land titles already counted in `evidence.restoredCount`) (C7).
+  - `settings.tsx`: manual sync timeout now emits `emitSyncOperationOutcome({ kind: 'timeout', source: 'manual' })` at both catch sites (C11).
+  - `processPendingSyncQueue.test.ts` (new, I1): harvest blocked without link, producer evidence routing, invalid payload drop, mid-drain API failure.
+  - `pendingSyncDedup.test.ts`: consent grantId dedup tests.
+- **Verify**: `npm run qa:regression` — 514 tests pass (113 files), `npm run lint` clean, structural guards OK.
+- **Branch**: `feature/sync-diagnosis-fixes`.
+
+### 2026-06-30 (Lane 2/3 fix — Bundle 2 backend auth + harvest idempotency)
+- **Context**: Backend sync API had three high-severity holes: unauthenticated plot history GETs, global voucher QR lookup, and no server-side harvest idempotency despite a client comment claiming it.
+- **Fixes**:
+  - `plots.controller.ts`: `tenure-verification`, `compliance-history`, `deforestation-decision-history` GETs now require tenant/field-actor auth + farmer ownership or tenant consent access (B1).
+  - `harvest.controller.ts`: `vouchers/by-qr` now requires farmer ownership of the voucher's farmer profile or tenant consent access (B2).
+  - `harvest.service.ts`: `create` uses `INSERT ... ON CONFLICT (farmer_id, client_event_id) DO NOTHING` + existing-voucher lookup; replay returns the original voucher without duplicating (B3).
+  - `tb_v16_060_harvest_transaction_client_event_id_unique.sql`: partial UNIQUE index on `(farmer_id, client_event_id) WHERE client_event_id IS NOT NULL`.
+  - `plots.service.ts`: `isSyncAuditEnvelopeDuplicate` pre-SELECT dedup guards `plot_photos_synced`, `plot_legal_synced`, `plot_evidence_synced` audit inserts (B7).
+  - `processPendingSyncQueue.ts`: corrected the idempotency comment to reference the new server-side UNIQUE constraint.
+  - `harvest.service.spec.ts`: re-POST idempotency test; `plots.controller.spec.ts`: cross-tenant 403 + farmer ownership denial tests.
+- **Verify**: `npm run lint -w tracebud-backend` clean; targeted jest (harvest|plots.controller|plots.service|sync-envelope) — 115 passed, 19 skipped (DB int specs), 0 failed.
+- **Ops**: apply `tb_v16_060_harvest_transaction_client_event_id_unique.sql` on production DB before deploy.
+- **Branch**: `feature/sync-diagnosis-fixes`.
+
+### 2026-06-30 (Lane 3 feature — Bundle 1 parity honesty)
+- **Context**: Cloud parity banner could show "Backup complete" (green) while brown restore hints were simultaneously visible. Local media count omitted producer-scoped evidence under `profile:{farmerId}`, and parity was not refreshed after background `emitServerPlotSyncChanged`.
+- **Fixes**:
+  - `settings.tsx`: subscribe `refreshCloudParity` to `subscribeServerPlotSyncChanged` with 500ms debounce; downgrade green success banner styling and status pill to "Restore available" when `cloudParityNeedsRestore`.
+  - `backupStatusDisplay.ts`: new `cloudParityNeedsRestore` input → `backup_pill_restore_available` label.
+  - `measureCloudParityArtifacts.ts`: `countLocalMediaArtifacts` now accepts `{ apiFarmerId }` and includes producer evidence via `producerEvidenceScopeId`.
+  - `measureCloudParitySummary.ts`: resolve `prepareFieldSyncContext` before media count; wire `countServerMediaMissingOnDevice` (restore-mirroring SSOT) as `measuredMediaGap`.
+  - `measureCloudParitySummaryLogic.ts`: `ExtendedCloudParityCounts` gains `measuredMediaGap?`; `extendedParityGaps` uses it to override naive media gap when audit rows available.
+  - `serverMediaRestorePlan.test.ts`: audit-null fallback path returns 0.
+  - `farmer-artifact-sync-registry.md`: documented parity↔restore SSOT rule + banner honesty.
+- **Verify**: `npm run qa:regression` (508 tests pass), `npm run qa:structural` (all guards OK), `npm run lint` clean.
+- **Branch**: `feature/sync-diagnosis-fixes`.
+
+
 - **Context**: Railway redeploy after Upstash env var change failed healthcheck — runtime container lacked `certs/rds-global-bundle.pem` (H4 pg TLS).
 - **Fixes**: Dockerfile runner stage copies `certs/`; `pg-ssl-config-guard` asserts COPY wiring.
 - **Branch**: `fix/backend-docker-pg-ssl-certs` → PR #335.
