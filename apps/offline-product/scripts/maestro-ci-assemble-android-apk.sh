@@ -50,7 +50,6 @@ const upsert = (key, value) => {
   if (re.test(source)) source = source.replace(re, `${key}=${value}`);
   else source += `\n${key}=${value}\n`;
 };
-upsert('newArchEnabled', 'false');
 upsert('hermesEnabled', 'true');
 const ciJvmArgs = 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8';
 if (/^org\.gradle\.jvmargs=/m.test(source)) {
@@ -68,9 +67,10 @@ npx expo export:embed --eager --platform android --dev false
 # Release assemble OOMs on GHA (Metaspace) — debug + embedded bundle is the CI path.
 export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8}"
 
-echo "==> gradle assembleDebug (x86_64 for CI emulator)"
+MAESTRO_ANDROID_ABI="${MAESTRO_ANDROID_ABI:-arm64-v8a}"
+echo "==> gradle assembleDebug (${MAESTRO_ANDROID_ABI} for CI emulator)"
 cd android
-./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures=x86_64
+./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures="$MAESTRO_ANDROID_ABI"
 
 APK_PATH="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 if [[ ! -f "$APK_PATH" ]]; then
@@ -84,8 +84,8 @@ if ! unzip -l "$APK_PATH" | grep -qE 'assets/index.android.bundle|\.hbc'; then
   exit 1
 fi
 
-if ! unzip -l "$APK_PATH" | grep -q 'lib/x86_64/'; then
-  echo "::error::Missing lib/x86_64 native libs in $APK_PATH — CI emulator requires x86_64 ABI."
+if ! unzip -l "$APK_PATH" | grep -q "lib/${MAESTRO_ANDROID_ABI}/"; then
+  echo "::error::Missing lib/${MAESTRO_ANDROID_ABI} native libs in $APK_PATH — CI emulator requires ${MAESTRO_ANDROID_ABI} ABI."
   unzip -l "$APK_PATH" | grep 'lib/' | head -20 || true
   exit 1
 fi

@@ -98,7 +98,7 @@ function assertGoldenPathFlow(manifest) {
   }
   const bootWaitMs = manifest.goldenPathBootWaitMs;
   if (!bootWaitMs || bootWaitMs < 3600000) {
-    throw new Error('manifest goldenPathBootWaitMs must be >= 3600000 (x86_64 cold boot)');
+    throw new Error('manifest goldenPathBootWaitMs must be >= 3600000 (CI cold boot)');
   }
   if (!flow.includes(String(bootWaitMs))) {
     throw new Error(`${manifest.goldenPathFlow} boot timeout must match manifest goldenPathBootWaitMs`);
@@ -158,8 +158,8 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('MAESTRO_ANDROID_FORCE_PROVISION')) {
     throw new Error('Android bootstrap must force-provision SQLite before first RN launch');
   }
-  if (!readOffline('app.config.js').includes('newArchEnabled: false')) {
-    throw new Error('app.config.js must disable newArchEnabled when MAESTRO_CI=1');
+  if (!readOffline('app.config.js').includes('reactCompiler: false')) {
+    throw new Error('app.config.js must disable reactCompiler when MAESTRO_CI=1');
   }
   if (!bootstrap.includes('dump_tracebud_logcat')) {
     throw new Error('Android bootstrap must dump logcat after seed for Maestro diagnostics');
@@ -210,6 +210,7 @@ function assertIosAssembly(manifest) {
 
 function assertWorkflow(manifest) {
   const workflow = readRepo(manifest.workflowFile);
+  const workflowBody = workflow;
   if (!workflow.includes(manifest.iosJobName)) {
     throw new Error(`${manifest.workflowFile} must define ${manifest.iosJobName} job`);
   }
@@ -248,7 +249,7 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_DRIVER_STARTUP_TIMEOUT`);
   }
   if (!workflow.includes('emulator-options')) {
-    throw new Error(`${manifest.workflowFile} Android job must set emulator-options for software GPU`);
+    throw new Error(`${manifest.workflowFile} Android job must set emulator-options for GPU host`);
   }
   if (!workflow.includes('maestro-ci-assemble-android-apk.sh')) {
     throw new Error(`${manifest.workflowFile} must assemble Android APK via maestro-ci-assemble-android-apk.sh`);
@@ -272,8 +273,8 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('index.android.bundle')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must verify embedded index.android.bundle in APK');
   }
-  if (!assembleScript.includes('x86_64')) {
-    throw new Error('maestro-ci-assemble-android-apk.sh must build x86_64 APK for CI emulator');
+  if (!assembleScript.includes('MAESTRO_ANDROID_ABI') || !assembleScript.includes('arm64-v8a')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must default to arm64-v8a APK for CI emulator');
   }
   if (!assembleScript.includes('MAESTRO_CI')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must set MAESTRO_CI=1 to disable OTA checks');
@@ -317,12 +318,17 @@ function assertWorkflow(manifest) {
   if (!iosTimeout || iosTimeout < 120) {
     throw new Error('manifest iosTimeoutMinutes must be >= 120');
   }
+  if (!workflow.includes('maestro-golden-path-android')) {
+    throw new Error(`${manifest.workflowFile} must define Android golden path job`);
+  }
+  if (!workflow.includes('runs-on: macos-latest') || !workflowBody.includes('arch: arm64-v8a')) {
+    throw new Error(`${manifest.workflowFile} Android job must use macos-latest + arm64-v8a emulator`);
+  }
   const emulatorOptions = manifest.androidEmulator?.emulatorOptions;
-  if (!emulatorOptions || !workflow.includes('swiftshader_indirect')) {
-    throw new Error('workflow emulator-options must use swiftshader_indirect (manifest parity)');
+  if (!emulatorOptions || !workflow.includes('-gpu host')) {
+    throw new Error('workflow emulator-options must use -gpu host on macOS ARM (manifest parity)');
   }
 
-  const workflowBody = workflow;
   if (
     !workflowBody.includes("github.event_name == 'pull_request'") ||
     !workflowBody.includes('maestro-golden-path:')

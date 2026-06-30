@@ -166,7 +166,14 @@ module.exports = ({ config }) => {
   return {
     ...appJson.expo,
     ...config,
-    ...(maestroCi ? { newArchEnabled: false } : {}),
+    ...(maestroCi
+      ? {
+          experiments: {
+            ...(appJson.expo.experiments ?? {}),
+            reactCompiler: false,
+          },
+        }
+      : {}),
     ios,
     android,
     plugins,

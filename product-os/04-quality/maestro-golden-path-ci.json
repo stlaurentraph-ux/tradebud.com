@@ -20,7 +20,9 @@
     "apiLevel": 33,
     "profile": "pixel_6",
     "driverStartupTimeoutMs": 300000,
-    "emulatorOptions": "-no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096"
+    "emulatorArch": "arm64-v8a",
+    "emulatorRunner": "macos-latest",
+    "emulatorOptions": "-no-snapshot-save -no-window -gpu host -noaudio -no-boot-anim"
   },
   "costGate": {
     "platformGateScript": "scripts/maestro-ci-platform-gate.mjs",
