@@ -1,6 +1,6 @@
 appId: com.tracebud.app
 ---
-# Android CI golden path — cold start on x86_64 (Hermes verify can exceed 20 min).
+# Android CI golden path — in-app bundled SQLite + fail-fast JS boot on macos-15-intel x86_64.
 # Waits on visible TextView label + testID; tab bar once boot profile is seeded.
 - launchApp:
     clearState: false
@@ -11,7 +11,7 @@ appId: com.tracebud.app
     optional: true
 - extendedWaitUntil:
     visible: ".*Maestro boot ready.*"
-    timeout: 7200000
+    timeout: 2700000
 - extendedWaitUntil:
     visible:
       id: "maestro-boot-ready"

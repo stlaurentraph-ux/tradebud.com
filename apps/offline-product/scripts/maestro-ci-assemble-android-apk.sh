@@ -61,6 +61,9 @@ fs.writeFileSync(propsPath, source);
 NODE
 fi
 
+echo "==> Generate Maestro CI boot SQLite asset (in-app seed — no host adb)"
+node ./scripts/generate-maestro-ci-boot-db.mjs
+
 echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
 npx expo export:embed --eager --platform android --dev false
 
@@ -90,4 +93,10 @@ if ! unzip -l "$APK_PATH" | grep -q "lib/${MAESTRO_ANDROID_ABI}/"; then
   exit 1
 fi
 
-echo "Android debug APK ready (embedded bundle verified): $APK_PATH"
+if ! unzip -l "$APK_PATH" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
+  echo "::error::Missing assets/maestro/tracebud_offline.db in $APK_PATH — in-app Maestro seed requires bundled DB."
+  unzip -l "$APK_PATH" | grep -i maestro || true
+  exit 1
+fi
+
+echo "Android debug APK ready (embedded bundle + Maestro boot DB verified): $APK_PATH"

@@ -42,6 +42,16 @@ if [[ ! -f "$APK_PATH" ]]; then
   exit 1
 fi
 
+preflight_maestro_apk() {
+  echo "==> Preflight: bundled Maestro boot DB in APK"
+  if ! unzip -l "$APK_PATH" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
+    echo "::error::APK missing assets/maestro/tracebud_offline.db — assemble must run generate-maestro-ci-boot-db.mjs"
+    exit 1
+  fi
+}
+
+preflight_maestro_apk
+
 echo "==> Removing previous Tracebud install"
 adb -s "$DEVICE_SERIAL" shell pm clear "$APP_ID" 2>/dev/null || true
 adb -s "$DEVICE_SERIAL" shell pm uninstall --user 0 "$APP_ID" 2>/dev/null || \
@@ -88,52 +98,79 @@ dump_tracebud_logcat() {
     | tail -100 || true
 }
 
+logcat_has_js_boot_signal() {
+  adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi \
+    'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|MaestroBoot.*copied bundled|\[MaestroBoot\] app state ready bootError=false|\[MaestroBoot\] marker visible|Running application "main"|Running "main" with|ReactNativeJS'
+}
+
 wait_for_android_js_boot() {
   local label="${1:-JS boot}"
-  local max_ms="${MAESTRO_BOOT_WAIT_MS:-7200000}"
+  local max_ms="${MAESTRO_BOOT_WAIT_MS:-2700000}"
+  local fail_fast_ms="${MAESTRO_JS_BOOT_FAIL_FAST_MS:-1800000}"
   local poll_s="${MAESTRO_BOOT_POLL_S:-5}"
-  local deadline=$(( $(date +%s) + max_ms / 1000 ))
+  local started_at
+  started_at="$(date +%s)"
+  local deadline=$(( started_at + max_ms / 1000 ))
+  local fail_fast_deadline=$(( started_at + fail_fast_ms / 1000 ))
+  local strict_fail="${MAESTRO_JS_BOOT_FAIL_FAST:-1}"
 
-  echo "==> Waiting for $label (logcat MaestroBoot / RN main, up to ${max_ms}ms)"
+  echo "==> Waiting for $label (max ${max_ms}ms, fail-fast ${fail_fast_ms}ms if no JS signals)"
   adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
 
   while [[ "$(date +%s)" -lt "$deadline" ]]; do
-    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi 'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|Running application "main"|Running "main" with|\[MaestroBoot\] app state ready bootError=false|\[MaestroBoot\] marker visible'; then
+    if logcat_has_js_boot_signal; then
       echo "$label complete"
       return 0
     fi
     if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE 'FATAL EXCEPTION.*com\.tracebud\.app'; then
-      echo "App crashed during $label"
+      echo "::error::App crashed during $label"
       dump_tracebud_logcat "Logcat after crash during $label"
+      return 1
+    fi
+    if [[ "$strict_fail" == "1" && "$(date +%s)" -ge "$fail_fast_deadline" ]] && ! logcat_has_js_boot_signal; then
+      echo "::error::Fail-fast: no JS boot signals within ${fail_fast_ms}ms during $label"
+      dump_tracebud_logcat "Logcat after fail-fast $label"
       return 1
     fi
     sleep "$poll_s"
   done
 
-  echo "Timed out waiting for $label (${max_ms}ms)"
+  echo "::error::Timed out waiting for $label (${max_ms}ms)"
   dump_tracebud_logcat "Logcat after $label timeout"
   return 1
 }
 
-if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
-  echo "==> Applying golden-path boot profile (force-provision SQLite before first RN launch)"
+if [[ "${MAESTRO_ANDROID_IN_APP_DB_SEED:-1}" == "1" ]]; then
+  echo "==> Maestro golden path uses in-app bundled SQLite (skip host adb seed)"
+  speed_compile_tracebud_apk
+  adb -s "$DEVICE_SERIAL" shell am start -n "$APP_ID/.MainActivity" 2>/dev/null || \
+    adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+
+  bootstrap_warm_ms="${MAESTRO_BOOTSTRAP_WARM_MS:-1200000}"
+  if MAESTRO_BOOT_WAIT_MS="$bootstrap_warm_ms" wait_for_android_js_boot "bootstrap warm-up"; then
+    export MAESTRO_BOOT_WARMED=1
+  else
+    echo "::error::Bootstrap warm-up failed — aborting Android golden path (no multi-hour Maestro wait)"
+    exit 1
+  fi
+elif [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
+  echo "==> Legacy host adb seed (MAESTRO_ANDROID_IN_APP_DB_SEED=0)"
   MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \
     MAESTRO_BOOT_PLATFORM=android \
     MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL" \
     MAESTRO_ANDROID_FORCE_PROVISION=1 \
     node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
 
-  echo "==> Post-seed launch (first RN boot with seeded SQLite)"
   speed_compile_tracebud_apk
   adb -s "$DEVICE_SERIAL" shell am start -n "$APP_ID/.MainActivity" 2>/dev/null || \
     adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
 
-  bootstrap_warm_ms="${MAESTRO_BOOTSTRAP_WARM_MS:-900000}"
+  bootstrap_warm_ms="${MAESTRO_BOOTSTRAP_WARM_MS:-1200000}"
   if MAESTRO_BOOT_WAIT_MS="$bootstrap_warm_ms" wait_for_android_js_boot "bootstrap warm-up"; then
     export MAESTRO_BOOT_WARMED=1
   else
-    echo "Bootstrap warm-up incomplete (${bootstrap_warm_ms}ms cap) — Maestro extendedWaitUntil handles cold boot"
-    export MAESTRO_BOOT_WARMED=0
+    echo "::error::Bootstrap warm-up failed"
+    exit 1
   fi
 fi
 
@@ -147,7 +184,7 @@ else
 fi
 
 if [[ "${MAESTRO_LOGCAT_ON_BOOTSTRAP:-1}" == "1" ]]; then
-  dump_tracebud_logcat "Logcat after bootstrap seed"
+  dump_tracebud_logcat "Logcat after bootstrap"
 fi
 
 echo "Android bootstrap ready for Maestro (flow uses launchApp clearState: false)."

@@ -23,6 +23,7 @@ echo "    Rule: do not push Maestro changes until this passes; use :full on macO
 echo ""
 
 echo "==> Tier 1: Maestro static wiring"
+node ./scripts/generate-maestro-ci-boot-db.mjs
 npm run qa:maestro:preflight
 npm run qa:maestro:golden-path:assert
 npm run qa:maestro:prepush:assert

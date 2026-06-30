@@ -97,8 +97,8 @@ function assertGoldenPathFlow(manifest) {
     throw new Error(`${manifest.goldenPathFlow} must launchApp with stopApp: false (preserve bootstrap warm RN process)`);
   }
   const bootWaitMs = manifest.goldenPathBootWaitMs;
-  if (!bootWaitMs || bootWaitMs < 3600000) {
-    throw new Error('manifest goldenPathBootWaitMs must be >= 3600000 (CI cold boot)');
+  if (!bootWaitMs || bootWaitMs < 1800000) {
+    throw new Error('manifest goldenPathBootWaitMs must be >= 1800000 (45m fail-fast CI cap)');
   }
   if (!flow.includes(String(bootWaitMs))) {
     throw new Error(`${manifest.goldenPathFlow} boot timeout must match manifest goldenPathBootWaitMs`);
@@ -118,10 +118,17 @@ function assertBootstrapInitLaunch() {
   }
   const androidBootstrap = readOffline('scripts/maestro-ci-bootstrap-emulator.sh');
   if (
+    !androidBootstrap.includes('MAESTRO_ANDROID_IN_APP_DB_SEED') &&
     !androidBootstrap.includes('force-provision SQLite before first RN launch') &&
     !androidBootstrap.includes('initialize local SQLite')
   ) {
     throw new Error('Android bootstrap must seed SQLite before first RN launch');
+  }
+  if (!androidBootstrap.includes('in-app bundled SQLite')) {
+    throw new Error('Android bootstrap must default to in-app Maestro DB seed');
+  }
+  if (!androidBootstrap.includes('MAESTRO_JS_BOOT_FAIL_FAST')) {
+    throw new Error('Android bootstrap must fail fast when JS boot stalls');
   }
 }
 
@@ -156,7 +163,13 @@ function assertAndroidRunner(manifest) {
     throw new Error('Android bootstrap must honor MAESTRO_ANDROID_APK_PATH for prebuilt APK');
   }
   if (!bootstrap.includes('MAESTRO_ANDROID_FORCE_PROVISION')) {
-    throw new Error('Android bootstrap must force-provision SQLite before first RN launch');
+    throw new Error('Android bootstrap must support legacy force-provision when in-app seed disabled');
+  }
+  if (!readOffline('features/state/persistence.native.ts').includes('maestroCiBootDatabase.native')) {
+    throw new Error('persistence.native.ts must copy bundled Maestro boot DB when EXPO_PUBLIC_MAESTRO_CI=1');
+  }
+  if (!readOffline('scripts/generate-maestro-ci-boot-db.mjs').includes('goldenPathBootProfile')) {
+    throw new Error('generate-maestro-ci-boot-db.mjs must build golden-path boot DB from baseline');
   }
   if (!readOffline('app.config.js').includes('reactCompiler: false')) {
     throw new Error('app.config.js must disable reactCompiler when MAESTRO_CI=1');
@@ -279,6 +292,12 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('MAESTRO_CI')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must set MAESTRO_CI=1 to disable OTA checks');
   }
+  if (!assembleScript.includes('generate-maestro-ci-boot-db.mjs')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must generate bundled Maestro boot DB asset');
+  }
+  if (!assembleScript.includes('maestro/tracebud_offline.db')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must verify assets/maestro/tracebud_offline.db in APK');
+  }
   if (!assembleScript.includes('EXPO_PUBLIC_MAESTRO_CI')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must set EXPO_PUBLIC_MAESTRO_CI=1 for CI boot marker');
   }
@@ -307,6 +326,26 @@ function assertWorkflow(manifest) {
   const bootDbWaitMs = manifest.bootDbWaitMs;
   if (!bootDbWaitMs || bootDbWaitMs < 120000) {
     throw new Error('manifest bootDbWaitMs must be >= 120000');
+  }
+  if (!workflow.includes('MAESTRO_ANDROID_IN_APP_DB_SEED')) {
+    throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_ANDROID_IN_APP_DB_SEED=1`);
+  }
+  if (!workflow.includes('MAESTRO_JS_BOOT_FAIL_FAST_MS')) {
+    throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_JS_BOOT_FAIL_FAST_MS`);
+  }
+  const androidTimeout = manifest.androidJobTimeoutMinutes;
+  if (!androidTimeout || androidTimeout > 90) {
+    throw new Error('manifest androidJobTimeoutMinutes must be <= 90 (fail-fast cost cap)');
+  }
+  if (!workflow.includes(`timeout-minutes: ${androidTimeout}`)) {
+    throw new Error(`${manifest.workflowFile} Android job timeout must match manifest androidJobTimeoutMinutes`);
+  }
+  const bootstrapWarmMs = manifest.androidBootstrapWarmMs;
+  if (!bootstrapWarmMs || bootstrapWarmMs > 1200000) {
+    throw new Error('manifest androidBootstrapWarmMs must be <= 1200000');
+  }
+  if (!workflow.includes(String(bootstrapWarmMs))) {
+    throw new Error('workflow MAESTRO_BOOTSTRAP_WARM_MS must match manifest androidBootstrapWarmMs');
   }
   if (!workflow.includes('timeout-minutes: 120') || !workflow.includes('maestro-golden-path:')) {
     throw new Error(`${manifest.workflowFile} macOS golden path must allow 120m timeout`);
