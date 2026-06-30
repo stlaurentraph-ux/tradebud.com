@@ -397,7 +397,7 @@ jobs:
           script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android-smoke.sh
 
       - name: Save emulator AVD snapshot
-        if: success()
+        if: success() && steps.avd-snapshot-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ~/.android/avd
@@ -498,7 +498,7 @@ jobs:
           script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android.sh
 
       - name: Save emulator AVD snapshot
-        if: success()
+        if: success() && steps.avd-snapshot-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ~/.android/avd
