@@ -1092,6 +1092,7 @@
   "sync_result_ground_truth_restored": "Downloaded {n} field photo(s) from Tracebud",
   "sync_result_photos_and_documents_restored": "Downloaded {photos} field photo(s) and {documents} document(s) from Tracebud",
   "sync_result_restore_partial_failed": "Some items could not download from Tracebud. Tap Sync now to try again.",
+  "sync_result_cloud_media_pending": "Tracebud still has {n} photo or document(s) to download. Check your connection and tap Sync now again.",
   "sync_result_evidence_partial_failed": "Some documents could not download from Tracebud. Tap Sync now to try again.",
   "sync_result_declarations_partial_failed": "Some declarations could not download from Tracebud. Tap Sync now to try again.",
   "sync_result_evidence_restored": "Downloaded {n} document(s) from Tracebud",

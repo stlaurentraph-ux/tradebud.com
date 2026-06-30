@@ -23,11 +23,14 @@ export function resolveLocalPlotIdForServerPlot(params: {
   for (const raw of params.backendPlots) {
     const row = raw as BackendPlotRow;
     if (String(row.id ?? '').trim() !== serverPlotId) continue;
+
+    for (const plot of params.localPlots) {
+      if (backendRowMatchesLocalClientId(row, plot.id)) return plot.id;
+    }
+
     const clientId = backendRowClientPlotId(row);
-    if (clientId) {
-      const byClient = params.localPlots.find((plot) => plot.id === clientId);
-      if (byClient) return byClient.id;
-      if (backendRowMatchesLocalClientId(row, clientId)) return clientId;
+    if (clientId && params.localPlots.some((plot) => plot.id === clientId)) {
+      return clientId;
     }
   }
 

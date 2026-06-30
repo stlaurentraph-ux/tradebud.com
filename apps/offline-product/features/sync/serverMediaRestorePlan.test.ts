@@ -19,7 +19,7 @@ vi.mock('@/features/state/persistence', () => ({
   loadEvidenceForPlot: mocks.loadEvidenceForPlot,
 }));
 
-import { countPendingServerMediaRestore } from './serverMediaRestorePlan';
+import { buildMediaRestoreServerPlotIds, countPendingServerMediaRestore } from './serverMediaRestorePlan';
 
 const localPlot = {
   id: 'local-1',
@@ -192,5 +192,59 @@ describe('countPendingServerMediaRestore', () => {
 
     expect(missing).toBe(0);
     expect(mocks.fetchPlotSyncedEvidence).not.toHaveBeenCalled();
+  });
+});
+
+describe('buildMediaRestoreServerPlotIds', () => {
+  it('skips server plots with no resolvable on-device plot', () => {
+    const ids = buildMediaRestoreServerPlotIds({
+      localPlots: [localPlot],
+      plotServerLinks: { 'local-1': 'server-1' },
+      backendPlots: [
+        { id: 'server-1', client_plot_id: 'local-1' },
+        { id: 'server-orphan', client_plot_id: 'missing-local-9999999999999' },
+      ],
+    });
+
+    expect(ids).toEqual(new Set(['server-1']));
+  });
+});
+
+describe('countPendingServerMediaRestore rekey suffix', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.loadPhotosForPlot.mockResolvedValue([]);
+    mocks.fetchPlotSyncedEvidence.mockResolvedValue([]);
+    mocks.fetchPlotTenureVerification.mockResolvedValue([]);
+  });
+
+  it('measures tenure gap against the rekeyed local plot id', async () => {
+    const localPlotId = 'dcdd88e5-13e6-45d6-8e09-e6f1968e7e17-1781682185168';
+    const serverPlotId = '686b9ff6-acf7-40ff-9bb0-2d96f060bb78';
+    const staleClientPlotId = '66b5dafa-30be-4acb-a9c5-4e5c1ea22455-1781682185168';
+
+    mocks.loadTitlePhotosForPlot.mockResolvedValue([]);
+    mocks.loadEvidenceForPlot.mockResolvedValue([]);
+    mocks.fetchPlotTenureVerification.mockResolvedValue([
+      { storage_path: 'farmer/plot/title-a.jpg', mime_type: 'image/jpeg', evidence_label: 'title' },
+      { storage_path: 'farmer/plot/title-b.jpg', mime_type: 'image/jpeg', evidence_label: 'title' },
+    ]);
+
+    const missing = await countPendingServerMediaRestore({
+      apiFarmerId: 'dcdd88e5-13e6-45d6-8e09-e6f1968e7e17',
+      localPlots: [
+        {
+          ...localPlot,
+          id: localPlotId,
+          farmerId: 'dcdd88e5-13e6-45d6-8e09-e6f1968e7e17',
+        },
+      ],
+      auditRows: [],
+      backendPlots: [{ id: serverPlotId, client_plot_id: staleClientPlotId }],
+      plotServerLinks: { [localPlotId]: serverPlotId },
+    });
+
+    expect(missing).toBe(2);
+    expect(mocks.loadTitlePhotosForPlot).toHaveBeenCalledWith(localPlotId);
   });
 });

@@ -77,6 +77,7 @@ import { subscribeSyncOperationOutcome, emitSyncOperationOutcome } from '@/featu
 import { syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { resolveSyncOpenPlotId, resolveSyncSupportMailto } from '@/features/sync/formatSyncNowUserMessage';
 import { resolveSyncAttentionMessage } from '@/features/sync/resolveSyncAttentionMessage';
+import { reconcileCloudMediaAfterSync } from '@/features/sync/reconcileCloudMediaAfterSync';
 import { resolveBackupStatusDisplay } from '@/features/sync/backupStatusDisplay';
 import {
   primaryGeometryBlockForWhy,
@@ -489,14 +490,25 @@ export default function SettingsScreen() {
 
   const refreshCloudParity = useCallback(
     async (plotSnapshot?: Plot[]) => {
-      if (!isSignedIn || !farmer?.id) {
+      if (!isSignedIn) {
+        setCloudParityHints([]);
+        return;
+      }
+      const diskState = await loadAppState().catch(() => ({
+        farmer,
+        plots: plotSnapshot ?? plots,
+      }));
+      const activeFarmer = diskState.farmer ?? farmer;
+      const activePlots =
+        plotSnapshot ?? (diskState.plots.length > 0 ? diskState.plots : plots);
+      if (!activeFarmer?.id) {
         setCloudParityHints([]);
         return;
       }
       const summary = await measureCloudParitySummary({
-        profileFarmerId: farmer.id,
-        localPlots: plotSnapshot ?? plots,
-        localFarmer: farmer,
+        profileFarmerId: activeFarmer.id,
+        localPlots: activePlots,
+        localFarmer: activeFarmer,
       }).catch(() => null);
       setCloudParityHints(summary ? formatCloudParityHints(summary, t) : []);
     },
@@ -1125,17 +1137,42 @@ export default function SettingsScreen() {
 
             await reloadFromDisk();
             diskState = await loadAppState().catch(() => ({ plots: syncPlots }));
+            syncFarmer = diskState.farmer ?? syncFarmer;
+            syncPlots = diskState.plots.length > 0 ? diskState.plots : syncPlots;
+
+            const mediaReconcile = await reconcileCloudMediaAfterSync({
+              apiFarmerId,
+              ownedFarmerIds: farmerScopeIds,
+              localFarmer: syncFarmer,
+              localPlots: syncPlots,
+            }).catch(() => null);
+            if (mediaReconcile) {
+              diskState = {
+                farmer: mediaReconcile.localFarmer ?? syncFarmer,
+                plots: mediaReconcile.localPlots,
+              };
+              syncFarmer = diskState.farmer ?? syncFarmer;
+              syncPlots = diskState.plots;
+              if (mediaReconcile.mediaRetry?.downloadFailed) {
+                outcome.evidenceDownloadFailed =
+                  (outcome.evidenceDownloadFailed ?? 0) + mediaReconcile.mediaRetry.downloadFailed;
+              }
+            }
+
             const freshPending = await refreshSyncMetrics({
               forcePlotFetch: true,
               farmerId: apiFarmerId,
               ownedFarmerIds: farmerScopeIds,
-              plots: diskState.plots.length > 0 ? diskState.plots : syncPlots,
+              plots: syncPlots,
             });
-            await refreshCloudParity(
-              diskState.plots.length > 0 ? diskState.plots : syncPlots,
+            setCloudParityHints(
+              mediaReconcile
+                ? formatCloudParityHints(mediaReconcile.summary, t)
+                : [],
             );
-
-            // U9: re-read the latest queue error from fresh rows — the closure
+            if (!mediaReconcile) {
+              await refreshCloudParity(syncPlots);
+            }
             // `queueLastError` was captured before the sync and is stale.
             const freshQueueRows = await loadPendingSyncActions().catch(() => []);
             const freshLatestErrored = [...freshQueueRows]
@@ -1160,6 +1197,7 @@ export default function SettingsScreen() {
               },
               t,
               syncOutcome: outcome,
+              remainingCloudMediaGap: mediaReconcile?.summary.mediaGap ?? 0,
               queueLastError: freshQueueLastError,
               queueLastErrorActionType: freshQueueLastErrorActionType,
               plotsFetchFailed:
@@ -1241,6 +1279,7 @@ export default function SettingsScreen() {
       freezeSyncMetricsDisplayRef.current = false;
       setSyncNowBusy(false);
       await refreshSyncMetrics({ forcePlotFetch: true });
+      await refreshCloudParity();
     }
   };
 

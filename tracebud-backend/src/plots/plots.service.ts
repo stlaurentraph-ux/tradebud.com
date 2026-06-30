@@ -1,4 +1,11 @@
-import { Injectable, BadRequestException, ForbiddenException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  InternalServerErrorException,
+  Inject,
+} from '@nestjs/common';
+import { createSupabaseServerClient } from '../auth/supabase-server.client';
 import { Pool } from 'pg';
 import { resolveFarmerIdsForTenant, isFarmerInTenant } from '../common/tenant-farmer-scope';
 import {
@@ -31,6 +38,7 @@ import {
 
 /** CRM-seeded plots — never absorb a field-app upload reconcile. */
 const CRM_DEMO_PLOT_IDS = ['39d548f9-1ef4-449b-9ebd-fd244ae5d69e'];
+const EVIDENCE_SIGNED_URL_TTL_SECONDS = 60 * 60;
 import { GfwService } from '../compliance/gfw.service';
 import {
   buildGroundTruthPhotoVerification,
@@ -1214,6 +1222,59 @@ export class PlotsService {
 
   async listSyncedEvidence(plotId: string) {
     return this.evidenceDocuments.listSyncedDocumentsForPlot(plotId);
+  }
+
+  /** Service-role signed URL for farmer-owned plot evidence (cross-device restore). */
+  async createFarmerPlotEvidenceSignedUrl(
+    plotId: string,
+    storagePath: string,
+  ): Promise<{ signed_url: string; expires_in: number }> {
+    const normalized = storagePath.trim().replace(/^\/+/, '').replace(/^plot-evidence\//, '');
+    if (!normalized || normalized.includes('..')) {
+      throw new BadRequestException('Invalid evidence storage path.');
+    }
+
+    const linked = await this.pool.query<{ ok: boolean }>(
+      `
+        SELECT EXISTS (
+          SELECT 1
+          FROM plot_tenure_verification
+          WHERE plot_id = $1::uuid
+            AND trim(storage_path) = $2
+        )
+        OR EXISTS (
+          SELECT 1
+          FROM evidence_documents
+          WHERE plot_id = $1::uuid
+            AND trim(file_storage_key) = $2
+        ) AS ok
+      `,
+      [plotId, normalized],
+    );
+    if (!linked.rows[0]?.ok) {
+      throw new ForbiddenException('Evidence file is not registered for this plot.');
+    }
+
+    const supabaseUrl = process.env.SUPABASE_URL?.trim();
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new InternalServerErrorException('Evidence storage signing is not configured.');
+    }
+
+    const bucket = process.env.EVIDENCE_STORAGE_BUCKET?.trim() || 'plot-evidence';
+    const supabase = createSupabaseServerClient(supabaseUrl, serviceRoleKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    });
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(normalized, EVIDENCE_SIGNED_URL_TTL_SECONDS);
+
+    if (error || !data?.signedUrl) {
+      throw new BadRequestException(error?.message ?? 'Could not create signed URL for evidence file.');
+    }
+
+    return { signed_url: data.signedUrl, expires_in: EVIDENCE_SIGNED_URL_TTL_SECONDS };
   }
 
   async listTenureReviewQueue(

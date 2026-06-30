@@ -27,7 +27,12 @@ export type SyncAttentionContext = {
     | 'unsyncedPlotCount'
     | 'blockedPlots'
     | 'supportMailto'
+    | 'evidenceDownloadFailed'
+    | 'evidenceFetchFailed'
+    | 'declarationsFetchFailed'
   >;
+  /** Measured after sync — photos/docs still on cloud that restore did not pull down. */
+  remainingCloudMediaGap?: number;
   queueLastError?: string | null;
   queueLastErrorActionType?: PendingSyncAction['actionType'] | null;
   plotsFetchFailed?: boolean;
@@ -79,6 +84,28 @@ export function resolveSyncAttentionMessage(ctx: SyncAttentionContext): SyncAtte
   }
 
   if (total <= 0) {
+    const partialRestoreFailed =
+      syncOutcome?.evidenceFetchFailed === true ||
+      syncOutcome?.declarationsFetchFailed === true ||
+      (syncOutcome?.evidenceDownloadFailed ?? 0) > 0;
+    if (partialRestoreFailed) {
+      if (syncOutcome?.declarationsFetchFailed && !syncOutcome?.evidenceFetchFailed) {
+        return { message: t('sync_result_declarations_partial_failed'), kind: 'error' };
+      }
+      if (syncOutcome?.evidenceFetchFailed && !syncOutcome?.declarationsFetchFailed) {
+        return { message: t('sync_result_evidence_partial_failed'), kind: 'error' };
+      }
+      return { message: t('sync_result_restore_partial_failed'), kind: 'error' };
+    }
+
+    const remainingMedia = ctx.remainingCloudMediaGap ?? 0;
+    if (remainingMedia > 0) {
+      return {
+        message: t('sync_result_cloud_media_pending', { n: remainingMedia }),
+        kind: 'error',
+      };
+    }
+
     return { message: t('sync_result_complete'), kind: 'success' };
   }
 

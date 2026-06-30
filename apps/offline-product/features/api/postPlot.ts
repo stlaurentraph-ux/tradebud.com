@@ -717,6 +717,37 @@ export async function fetchPlotTenureVerification(
     .filter((row): row is PlotTenureVerificationRecord => row != null);
 }
 
+export async function fetchPlotEvidenceSignedUrl(
+  plotId: string,
+  storagePath: string,
+): Promise<string | null> {
+  const accessToken = await getAccessTokenFromSupabase();
+  const normalizedPlotId = plotId.trim();
+  const normalizedPath = storagePath.trim();
+  if (!accessToken || !normalizedPlotId || !normalizedPath) {
+    return null;
+  }
+
+  const params = new URLSearchParams({ storagePath: normalizedPath });
+  const baseUrl = `${API_BASE_URL}/v1/plots/${encodeURIComponent(normalizedPlotId)}/evidence-signed-url?${params.toString()}`;
+  const res = await tracebudFetchWithTimeout(
+    cacheBustUrl(baseUrl),
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        ...TRACEBUD_NO_CACHE_HEADERS,
+      },
+    },
+    15_000,
+  );
+  if (res == null || !isSuccessfulApiResponse(res.status)) {
+    return null;
+  }
+  const body = (await res.json().catch(() => null)) as { signed_url?: string } | null;
+  const signedUrl = body?.signed_url?.trim();
+  return signedUrl || null;
+}
+
 export type PlotSyncedEvidenceRecord = {
   id: string;
   evidence_kind: string;

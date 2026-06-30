@@ -49,6 +49,7 @@ function makeServiceMock(): jest.Mocked<
     | 'getDeforestationDecisionHistory'
     | 'getGeometryHistory'
     | 'listTenureVerification'
+    | 'createFarmerPlotEvidenceSignedUrl'
     | 'runComplianceCheck'
     | 'createAssignment'
     | 'completeAssignment'
@@ -74,6 +75,7 @@ function makeServiceMock(): jest.Mocked<
     getDeforestationDecisionHistory: jest.fn(),
     getGeometryHistory: jest.fn(),
     listTenureVerification: jest.fn(),
+    createFarmerPlotEvidenceSignedUrl: jest.fn(),
     runComplianceCheck: jest.fn(),
     createAssignment: jest.fn(),
     completeAssignment: jest.fn(),
@@ -713,5 +715,37 @@ describe('PlotsController scope boundaries', () => {
 
     expect(service.isPlotOwnedByUser).toHaveBeenCalledWith('plot_1', 'farmer_2');
     expect(service.listTenureVerification).not.toHaveBeenCalled();
+  });
+
+  it('allows farmer to sign evidence for an owned plot', async () => {
+    const service = makeServiceMock();
+    service.isPlotOwnedByUser.mockResolvedValue(true);
+    service.createFarmerPlotEvidenceSignedUrl.mockResolvedValue({
+      signed_url: 'https://example.com/signed',
+      expires_in: 3600,
+    });
+    const controller = makePlotsController(service);
+
+    await expect(
+      controller.farmerEvidenceSignedUrl(
+        'plot_1',
+        'auth-user/plot/land_title/file.jpg',
+        {
+          user: {
+            id: 'farmer_1',
+            email: 'hector@tracebud.com',
+            app_metadata: { role: 'farmer' },
+          },
+        },
+      ),
+    ).resolves.toEqual({
+      signed_url: 'https://example.com/signed',
+      expires_in: 3600,
+    });
+
+    expect(service.createFarmerPlotEvidenceSignedUrl).toHaveBeenCalledWith(
+      'plot_1',
+      'auth-user/plot/land_title/file.jpg',
+    );
   });
 });

@@ -1,5 +1,6 @@
 import { downloadEvidenceFileFromStorage } from '@/features/evidence/downloadEvidenceFromStorage';
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
+import { plotIdsSharingMediaScope } from '@/features/plots/plotMediaScope';
 import type { Plot } from '@/features/state/AppStateContext';
 import { fetchMergedAuditEventsForFarmer } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
@@ -64,6 +65,7 @@ function parseTakenAtMs(raw: unknown): number {
 async function downloadAuditPhotoUri(params: {
   photo: GroundTruthPhotoPayload;
   localPlotId: string;
+  serverPlotId: string;
   kind: 'ground_truth' | 'land_title';
 }): Promise<{ ok: true; uri: string; storagePath: string | null } | { ok: false }> {
   const storagePath = params.photo.storagePath?.trim();
@@ -81,6 +83,7 @@ async function downloadAuditPhotoUri(params: {
     kind: params.kind,
     mimeType: params.photo.mimeType ?? null,
     label: params.photo.label ?? `${params.kind}_photo`,
+    serverPlotId: params.serverPlotId,
   });
   if (!download.ok) {
     if (remoteUri) return { ok: true, uri: remoteUri, storagePath };
@@ -102,7 +105,22 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
   localPlots: Plot[];
 }): Promise<RestoreLocalPlotPhotosFromAuditResult> {
   const apiFarmerId = params.apiFarmerId.trim();
-  if (!apiFarmerId || params.localPlots.length === 0) {
+  if (!apiFarmerId) {
+    return {
+      groundTruthRestored: 0,
+      landTitleRestored: 0,
+      fetchFailed: false,
+      downloadFailed: 0,
+      skippedUnlinked: 0,
+    };
+  }
+
+  const backendPlots = await fetchBackendPlotsForSyncScope({
+    farmerId: apiFarmerId,
+    ownedFarmerIds: params.ownedFarmerIds,
+  }).catch(() => []);
+
+  if (params.localPlots.length === 0 && backendPlots.length === 0) {
     return {
       groundTruthRestored: 0,
       landTitleRestored: 0,
@@ -133,10 +151,6 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
     string,
     string
   >;
-  const backendPlots = await fetchBackendPlotsForSyncScope({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: params.ownedFarmerIds,
-  }).catch(() => []);
 
   const { groundTruth: latestGroundTruth, landTitle: latestLandTitle } =
     latestAuditPhotosByServerPlot(auditRows);
@@ -163,8 +177,21 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
         continue;
       }
 
-      const existingGround = kind === 'ground_truth' ? await loadPhotosForPlot(localPlotId) : [];
-      const existingTitle = kind === 'land_title' ? await loadTitlePhotosForPlot(localPlotId) : [];
+      const scopedPlotIds = plotIdsSharingMediaScope(localPlotId, backendPlots);
+      const existingGround =
+        kind === 'ground_truth'
+          ? (
+              await Promise.all(scopedPlotIds.map((plotId) => loadPhotosForPlot(plotId).catch(() => [])))
+            ).flat()
+          : [];
+      const existingTitle =
+        kind === 'land_title'
+          ? (
+              await Promise.all(
+                scopedPlotIds.map((plotId) => loadTitlePhotosForPlot(plotId).catch(() => [])),
+              )
+            ).flat()
+          : [];
       const seenKeys = new Set<string>();
 
       for (const photo of photos) {
@@ -181,7 +208,12 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
           continue;
         }
 
-        const downloaded = await downloadAuditPhotoUri({ photo, localPlotId, kind });
+        const downloaded = await downloadAuditPhotoUri({
+          photo,
+          localPlotId,
+          serverPlotId,
+          kind,
+        });
         if (!downloaded.ok) {
           downloadFailed += 1;
           continue;

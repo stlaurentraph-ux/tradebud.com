@@ -8,6 +8,7 @@ import {
   producerEvidenceScopeId,
 } from '@/features/evidence/evidenceScope';
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
+import { plotIdsSharingMediaScope } from '@/features/plots/plotMediaScope';
 import type { Plot } from '@/features/state/AppStateContext';
 import type { AuditLogRow } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import {
@@ -48,7 +49,14 @@ export function buildMediaRestoreServerPlotIds(params: {
   }
   for (const row of params.backendPlots) {
     const serverPlotId = String((row as { id?: string }).id ?? '').trim();
-    if (serverPlotId) linkedServerPlotIds.add(serverPlotId);
+    if (!serverPlotId || linkedServerPlotIds.has(serverPlotId)) continue;
+    const localPlotId = resolveLocalPlotIdForServerPlot({
+      serverPlotId,
+      localPlots: params.localPlots,
+      plotServerLinks: params.plotServerLinks,
+      backendPlots: params.backendPlots,
+    });
+    if (localPlotId) linkedServerPlotIds.add(serverPlotId);
   }
   return linkedServerPlotIds;
 }
@@ -155,10 +163,21 @@ export async function planPendingAuditMediaRestore(params: {
       });
       if (!localPlotId) continue;
 
+      const scopedPlotIds = plotIdsSharingMediaScope(localPlotId, params.backendPlots);
       const existingGround =
-        kind === 'ground_truth' ? await loadPhotosForPlot(localPlotId).catch(() => []) : [];
+        kind === 'ground_truth'
+          ? (
+              await Promise.all(scopedPlotIds.map((plotId) => loadPhotosForPlot(plotId).catch(() => [])))
+            ).flat()
+          : [];
       const existingTitle =
-        kind === 'land_title' ? await loadTitlePhotosForPlot(localPlotId).catch(() => []) : [];
+        kind === 'land_title'
+          ? (
+              await Promise.all(
+                scopedPlotIds.map((plotId) => loadTitlePhotosForPlot(plotId).catch(() => [])),
+              )
+            ).flat()
+          : [];
       const localCount =
         kind === 'ground_truth' ? existingGround.length : existingTitle.length;
       const gap = gapsByLocalPlot.get(localPlotId) ?? {
@@ -238,14 +257,27 @@ export async function planPendingEvidenceRestore(params: {
     Promise<{ titlePhotos: Awaited<ReturnType<typeof loadTitlePhotosForPlot>>; evidenceItems: Awaited<ReturnType<typeof loadEvidenceForPlot>> }>
   >();
 
-  async function loadTargetMedia(targetPlotId: string) {
-    let cached = mediaCache.get(targetPlotId);
+  async function loadTargetMedia(targetPlotId: string, localPlotId: string) {
+    const cacheKey = `${localPlotId}::${targetPlotId}`;
+    let cached = mediaCache.get(cacheKey);
     if (!cached) {
-      cached = Promise.all([
-        loadTitlePhotosForPlot(targetPlotId).catch(() => []),
-        loadEvidenceForPlot(targetPlotId).catch(() => []),
-      ]).then(([titlePhotos, evidenceItems]) => ({ titlePhotos, evidenceItems }));
-      mediaCache.set(targetPlotId, cached);
+      cached =
+        targetPlotId === localPlotId
+          ? (async () => {
+              const scopedPlotIds = plotIdsSharingMediaScope(localPlotId, params.backendPlots);
+              const titlePhotos: Awaited<ReturnType<typeof loadTitlePhotosForPlot>> = [];
+              const evidenceItems: Awaited<ReturnType<typeof loadEvidenceForPlot>> = [];
+              for (const plotId of scopedPlotIds) {
+                titlePhotos.push(...(await loadTitlePhotosForPlot(plotId).catch(() => [])));
+                evidenceItems.push(...(await loadEvidenceForPlot(plotId).catch(() => [])));
+              }
+              return { titlePhotos, evidenceItems };
+            })()
+          : Promise.all([
+              loadTitlePhotosForPlot(targetPlotId).catch(() => []),
+              loadEvidenceForPlot(targetPlotId).catch(() => []),
+            ]).then(([titlePhotos, evidenceItems]) => ({ titlePhotos, evidenceItems }));
+      mediaCache.set(cacheKey, cached);
     }
     return cached;
   }
@@ -265,7 +297,7 @@ export async function planPendingEvidenceRestore(params: {
       localPlotId,
     });
 
-    const { titlePhotos, evidenceItems } = await loadTargetMedia(targetPlotId);
+    const { titlePhotos, evidenceItems } = await loadTargetMedia(targetPlotId, localPlotId);
     const gap = gapsByTarget.get(targetPlotId) ?? {
       serverCount: 0,
       unmatched: 0,

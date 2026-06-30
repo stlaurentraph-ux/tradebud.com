@@ -1,4 +1,4 @@
-import { Body, Controller, ForbiddenException, Get, Inject, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, ForbiddenException, Get, Inject, Param, Patch, Post, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiParam, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { Pool } from 'pg';
 import { resolveFieldActorRole, assertTenantClaimOrFieldActor } from '../auth/field-app-auth';
@@ -656,6 +656,38 @@ export class PlotsController {
       await this.enforcePlotTenantAccess(id, req);
     }
     return this.plotsService.listTenureVerification(id);
+  }
+
+  @Get(':id/evidence-signed-url')
+  @ApiOperation({
+    summary: 'Sign a plot evidence storage object for farmer cross-device restore',
+    description:
+      'Returns a short-lived read URL when the storage path is registered on this plot.',
+  })
+  @ApiParam({ name: 'id', description: 'Plot ID' })
+  async farmerEvidenceSignedUrl(
+    @Param('id') id: string,
+    @Query('storagePath') storagePath: string | undefined,
+    @Req() req: any,
+  ) {
+    await this.requireTenantClaimOrFieldActor(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const userId = req.user?.id as string | undefined;
+    if (role === 'farmer') {
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+      if (!owned) {
+        throw new ForbiddenException('Plot scope violation');
+      }
+    } else {
+      throw new ForbiddenException('This endpoint is for field-app farmers only.');
+    }
+    if (!storagePath?.trim()) {
+      throw new BadRequestException('storagePath query parameter is required.');
+    }
+    return this.plotsService.createFarmerPlotEvidenceSignedUrl(id, storagePath);
   }
 
   @Get(':id/synced-evidence')

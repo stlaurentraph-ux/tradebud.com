@@ -41,6 +41,42 @@ describe('resolveSyncAttentionMessage', () => {
     });
   });
 
+  it('returns media pending when cloud parity gap remains after sync', () => {
+    expect(
+      resolveSyncAttentionMessage({
+        pending: {
+          total: 0,
+          unsyncedPlotCount: 0,
+          queuePendingCount: 0,
+          unsyncedPlotNames: [],
+        },
+        t,
+        remainingCloudMediaGap: 2,
+      }),
+    ).toEqual({
+      message: 'sync_result_cloud_media_pending:{"n":2}',
+      kind: 'error',
+    });
+  });
+
+  it('returns partial failed when restore downloads fail with empty queue', () => {
+    expect(
+      resolveSyncAttentionMessage({
+        pending: {
+          total: 0,
+          unsyncedPlotCount: 0,
+          queuePendingCount: 0,
+          unsyncedPlotNames: [],
+        },
+        t,
+        syncOutcome: { evidenceDownloadFailed: 2 },
+      }),
+    ).toEqual({
+      message: 'sync_result_restore_partial_failed',
+      kind: 'error',
+    });
+  });
+
   it('prefers explicit sync failure reason', () => {
     expect(
       resolveSyncAttentionMessage({

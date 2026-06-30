@@ -9,9 +9,11 @@ import {
   producerEvidenceScopeId,
 } from '@/features/evidence/evidenceScope';
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
+import { plotIdsSharingMediaScope } from '@/features/plots/plotMediaScope';
 import type { Plot } from '@/features/state/AppStateContext';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import { storagePathStored } from '@/features/sync/mediaPhotoMatch';
+import { buildMediaRestoreServerPlotIds } from '@/features/sync/serverMediaRestorePlan';
 import {
   loadEvidenceForPlot,
   loadPlotServerLinks,
@@ -132,15 +134,11 @@ export async function restoreLocalEvidenceFromServer(params: {
     ownedFarmerIds: params.ownedFarmerIds,
   }).catch(() => []);
 
-  const linkedServerPlotIds = new Set<string>();
-  for (const plot of params.localPlots) {
-    const serverPlotId = plotServerLinks[plot.id]?.trim();
-    if (serverPlotId) linkedServerPlotIds.add(serverPlotId);
-  }
-  for (const row of backendPlots) {
-    const serverPlotId = String((row as { id?: string }).id ?? '').trim();
-    if (serverPlotId) linkedServerPlotIds.add(serverPlotId);
-  }
+  const linkedServerPlotIds = buildMediaRestoreServerPlotIds({
+    localPlots: params.localPlots,
+    plotServerLinks,
+    backendPlots,
+  });
 
   if (linkedServerPlotIds.size === 0) {
     return { restoredCount: 0, fetchFailed: false, skippedUnlinked: 0, downloadFailed: 0 };
@@ -174,6 +172,44 @@ export async function restoreLocalEvidenceFromServer(params: {
     }
   }
 
+  const mediaCache = new Map<
+    string,
+    Promise<{ titlePhotos: Awaited<ReturnType<typeof loadTitlePhotosForPlot>>; evidenceItems: Awaited<ReturnType<typeof loadEvidenceForPlot>> }>
+  >();
+
+  async function loadScopedTargetMedia(localPlotId: string) {
+    let cached = mediaCache.get(localPlotId);
+    if (!cached) {
+      cached = (async () => {
+        const scopedPlotIds = plotIdsSharingMediaScope(localPlotId, backendPlots);
+        const titlePhotos: Awaited<ReturnType<typeof loadTitlePhotosForPlot>> = [];
+        const evidenceItems: Awaited<ReturnType<typeof loadEvidenceForPlot>> = [];
+        for (const plotId of scopedPlotIds) {
+          titlePhotos.push(...(await loadTitlePhotosForPlot(plotId).catch(() => [])));
+          evidenceItems.push(...(await loadEvidenceForPlot(plotId).catch(() => [])));
+        }
+        return { titlePhotos, evidenceItems };
+      })();
+      mediaCache.set(localPlotId, cached);
+    }
+    return cached;
+  }
+
+  async function loadTargetMedia(targetPlotId: string, localPlotId: string) {
+    if (targetPlotId === localPlotId) {
+      return loadScopedTargetMedia(localPlotId);
+    }
+    let cached = mediaCache.get(targetPlotId);
+    if (!cached) {
+      cached = Promise.all([
+        loadTitlePhotosForPlot(targetPlotId).catch(() => []),
+        loadEvidenceForPlot(targetPlotId).catch(() => []),
+      ]).then(([titlePhotos, evidenceItems]) => ({ titlePhotos, evidenceItems }));
+      mediaCache.set(targetPlotId, cached);
+    }
+    return cached;
+  }
+
   for (const candidate of candidates) {
     const localPlotId = resolveLocalPlotIdForServerPlot({
       serverPlotId: candidate.serverPlotId,
@@ -192,10 +228,7 @@ export async function restoreLocalEvidenceFromServer(params: {
       localPlotId,
     });
 
-    const [titlePhotos, evidenceItems] = await Promise.all([
-      loadTitlePhotosForPlot(targetPlotId),
-      loadEvidenceForPlot(targetPlotId),
-    ]);
+    const { titlePhotos, evidenceItems } = await loadTargetMedia(targetPlotId, localPlotId);
 
     if (storagePathStored(candidate.storagePath, titlePhotos, evidenceItems)) {
       continue;
@@ -208,6 +241,7 @@ export async function restoreLocalEvidenceFromServer(params: {
       kind: normalizedKind,
       mimeType: candidate.mimeType,
       label: candidate.label,
+      serverPlotId: candidate.serverPlotId,
     });
 
     let persistedUri: string;
@@ -217,7 +251,9 @@ export async function restoreLocalEvidenceFromServer(params: {
         download.localUri.startsWith('file://') ? download.localUri : download.remoteUrl;
       persistedStoragePath = download.storagePath;
     } else {
-      const signedUrl = await signEvidenceStorageUrl(candidate.storagePath);
+      const signedUrl = await signEvidenceStorageUrl(candidate.storagePath, {
+        serverPlotId: candidate.serverPlotId,
+      });
       if (!signedUrl) {
         downloadFailed += 1;
         continue;
