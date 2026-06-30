@@ -147,6 +147,53 @@ function fixRootCopiedDbOwnership(serial, absPath) {
   );
 }
 
+/** CI Maestro APK sets debuggable false (embedded bundle) — seed via adb root on emulators. */
+export function canRunAsApp(serial) {
+  try {
+    sh(
+      `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`run-as ${APP_ID} true`)}`,
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function ensureAppDataDir(serial, relDir = 'files/SQLite') {
+  const absDir = toAndroidDbAbsPath(relDir);
+  if (tryEnableAdbRoot(serial)) {
+    sh(`adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`mkdir -p ${absDir}`)}`);
+    return;
+  }
+  if (canRunAsApp(serial)) {
+    sh(
+      `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`run-as ${APP_ID} mkdir -p ${relDir}`)}`,
+    );
+    return;
+  }
+  throw new Error(
+    `Cannot create ${relDir} for ${APP_ID} — adb root unavailable and APK is not debuggable`,
+  );
+}
+
+function pushDbViaRoot(serial, absPath, hostDbPath, label) {
+  const dirAbs = path.posix.dirname(absPath);
+  if (!tryEnableAdbRoot(serial)) {
+    throw new Error('adb root unavailable for DB push');
+  }
+  sh(`adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`mkdir -p ${dirAbs}`)}`);
+  sh(
+    `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`rm -f ${absPath} ${absPath}-wal ${absPath}-shm`)}`,
+  );
+  sh(
+    `adb -s ${JSON.stringify(serial)} push ${JSON.stringify(hostDbPath)} /data/local/tmp/${label}.db`,
+  );
+  sh(
+    `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`cp /data/local/tmp/${label}.db ${absPath}`)}`,
+  );
+  fixRootCopiedDbOwnership(serial, absPath);
+}
+
 function pushDbViaRunAs(serial, relPath, hostDbPath, label) {
   const dirRel = path.posix.dirname(relPath);
   sh(
@@ -174,36 +221,40 @@ function provisionAndroidBootDb(serial, absPath) {
   sh(`sqlite3 ${JSON.stringify(tmpPath)} < ${JSON.stringify(BOOT_SCHEMA_SQL)}`);
   const relPath = absPath.replace(`${androidDataRoot()}/`, '');
 
-  try {
+  const tryRootFirst = !canRunAsApp(serial);
+  const rootPush = () => {
+    pushDbViaRoot(serial, absPath, tmpPath, 'tracebud-maestro-provision');
+    fs.unlinkSync(tmpPath);
+    if (shellTestFile(serial, absPath) && androidDbSettingsTableReady(serial, absPath)) {
+      console.log(`Provisioned full boot schema DB at ${absPath} (ownership fixed)`);
+      return absPath;
+    }
+    return null;
+  };
+  const runAsPush = () => {
     pushDbViaRunAs(serial, relPath, tmpPath, 'tracebud-maestro-provision');
     fs.unlinkSync(tmpPath);
     if (relPathExistsRunAs(serial, relPath) && androidDbSettingsTableReady(serial, relPath)) {
       console.log(`Provisioned full boot schema DB via run-as at ${relPath}`);
       return relPath;
     }
+    return null;
+  };
+
+  try {
+    const provisioned = tryRootFirst ? rootPush() : runAsPush();
+    if (provisioned) return provisioned;
   } catch {
-    // fall through to root + chown
+    // fall through to alternate path
+  }
+
+  if (!fs.existsSync(tmpPath)) {
+    sh(`sqlite3 ${JSON.stringify(tmpPath)} < ${JSON.stringify(BOOT_SCHEMA_SQL)}`);
   }
 
   try {
-    const dirAbs = path.posix.dirname(absPath);
-    tryEnableAdbRoot(serial);
-    sh(`adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`mkdir -p ${dirAbs}`)}`);
-    sh(
-      `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`rm -f ${absPath} ${absPath}-wal ${absPath}-shm`)}`,
-    );
-    sh(
-      `adb -s ${JSON.stringify(serial)} push ${JSON.stringify(tmpPath)} /data/local/tmp/tracebud-maestro-provision.db`,
-    );
-    sh(
-      `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`cp /data/local/tmp/tracebud-maestro-provision.db ${absPath}`)}`,
-    );
-    fixRootCopiedDbOwnership(serial, absPath);
-    fs.unlinkSync(tmpPath);
-    if (shellTestFile(serial, absPath) && androidDbSettingsTableReady(serial, absPath)) {
-      console.log(`Provisioned full boot schema DB at ${absPath} (ownership fixed)`);
-      return absPath;
-    }
+    const provisioned = tryRootFirst ? runAsPush() : rootPush();
+    if (provisioned) return provisioned;
   } catch {
     // exhausted
   }
@@ -255,9 +306,7 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
       // app may not be running yet
     }
     sleepMs(1000);
-    sh(
-      `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`run-as ${APP_ID} mkdir -p files/SQLite`)}`,
-    );
+    ensureAppDataDir(serial, 'files/SQLite');
     const provisioned = provisionAndroidBootDb(serial, defaultAbs);
     if (provisioned) return provisioned;
     throw new Error('Force-provision of Android boot schema failed');
@@ -343,35 +392,44 @@ function applySettingsOnHost(dbPath, settings) {
 
 function readDbToHost(serial, dbPath, tmpPath) {
   const absPath = toAndroidDbAbsPath(dbPath);
-  if (absPath.startsWith('/') && shellTestFile(serial, absPath)) {
+  if (tryEnableAdbRoot(serial) && shellTestFile(serial, absPath)) {
     sh(
       `adb -s ${JSON.stringify(serial)} exec-out cat ${JSON.stringify(absPath)} > ${JSON.stringify(tmpPath)}`,
     );
     return;
   }
   const relPath = absPath.replace(`${androidDataRoot()}/`, '');
-  sh(
-    `adb -s ${JSON.stringify(serial)} exec-out run-as ${APP_ID} cat ${relPath} > ${JSON.stringify(tmpPath)}`,
-  );
+  if (canRunAsApp(serial)) {
+    sh(
+      `adb -s ${JSON.stringify(serial)} exec-out run-as ${APP_ID} cat ${relPath} > ${JSON.stringify(tmpPath)}`,
+    );
+    return;
+  }
+  throw new Error(`Cannot read ${absPath} — adb root unavailable and APK is not debuggable`);
 }
 
 function writeHostDbToDevice(serial, dbPath, tmpPath) {
   const absPath = toAndroidDbAbsPath(dbPath);
   const relPath = absPath.replace(`${androidDataRoot()}/`, '');
-  try {
+  const tryRootFirst = !canRunAsApp(serial);
+
+  const rootWrite = () => {
+    pushDbViaRoot(serial, absPath, tmpPath, 'tracebud-maestro-seed');
+  };
+  const runAsWrite = () => {
     pushDbViaRunAs(serial, relPath, tmpPath, 'tracebud-maestro-seed');
+  };
+
+  try {
+    if (tryRootFirst) rootWrite();
+    else runAsWrite();
     return;
   } catch {
-    // fall back to root copy + ownership fix for emulators where run-as cp fails
+    // fall back to alternate path
   }
-  tryEnableAdbRoot(serial);
-  sh(
-    `adb -s ${JSON.stringify(serial)} push ${JSON.stringify(tmpPath)} /data/local/tmp/tracebud-maestro-seed.db`,
-  );
-  sh(
-    `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`cp /data/local/tmp/tracebud-maestro-seed.db ${absPath}`)}`,
-  );
-  fixRootCopiedDbOwnership(serial, absPath);
+
+  if (tryRootFirst) runAsWrite();
+  else rootWrite();
 }
 
 function ensureHostBootSchema(dbPath) {
