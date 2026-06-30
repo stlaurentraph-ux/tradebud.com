@@ -4,13 +4,19 @@ import type { Plot } from '@/features/state/AppStateContext';
 import { fetchMergedAuditEventsForFarmer } from '@/features/sync/fetchMergedAuditEventsForFarmer';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
 import {
+  latestAuditPhotosByServerPlot,
+  localPhotoMatches,
+  photoStorageKey,
+  titlePhotoStored,
+  type AuditPhotoPayload,
+} from '@/features/sync/mediaPhotoMatch';
+import {
   loadPhotosForPlot,
   loadPlotServerLinks,
   loadTitlePhotosForPlot,
   persistPlotTitlePhoto,
   upsertPlotGroundPhoto,
   type PlotPhoto,
-  type PlotTitlePhoto,
 } from '@/features/state/persistence';
 
 export type RestoreLocalGroundTruthPhotosResult = {
@@ -28,16 +34,19 @@ export type RestoreLocalPlotPhotosFromAuditResult = {
   skippedUnlinked: number;
 };
 
-type GroundTruthPhotoPayload = {
-  storagePath?: string;
-  uri?: string;
+type GroundTruthPhotoPayload = AuditPhotoPayload & {
   mimeType?: string | null;
-  takenAt?: number | string;
   latitude?: number | null;
   longitude?: number | null;
-  direction?: PlotPhoto['direction'];
   label?: string | null;
 };
+
+function normalizeDirection(raw: unknown): PlotPhoto['direction'] {
+  if (raw === 'north' || raw === 'east' || raw === 'south' || raw === 'west') {
+    return raw;
+  }
+  return null;
+}
 
 function parseTakenAtMs(raw: unknown): number {
   if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
@@ -50,51 +59,6 @@ function parseTakenAtMs(raw: unknown): number {
     return Number.isFinite(ms) ? ms : Date.now();
   }
   return Date.now();
-}
-
-function normalizeDirection(raw: unknown): PlotPhoto['direction'] {
-  if (raw === 'north' || raw === 'east' || raw === 'south' || raw === 'west') {
-    return raw;
-  }
-  return null;
-}
-
-function photoStorageKey(photo: GroundTruthPhotoPayload): string {
-  const path = photo.storagePath?.trim();
-  if (path) return `path:${path}`;
-  const uri = photo.uri?.trim();
-  if (uri) return `uri:${uri}`;
-  return '';
-}
-
-function localPhotoMatches(
-  existing: PlotPhoto,
-  candidate: GroundTruthPhotoPayload,
-  persistedUri: string,
-): boolean {
-  const path = candidate.storagePath?.trim();
-  if (path && existing.uri.includes(path)) return true;
-  const uri = candidate.uri?.trim();
-  if (uri && existing.uri.trim() === uri) return true;
-  if (existing.uri.trim() === persistedUri.trim()) return true;
-  if (
-    candidate.direction &&
-    existing.direction === candidate.direction &&
-    Math.abs(existing.takenAt - parseTakenAtMs(candidate.takenAt)) < 60_000
-  ) {
-    return true;
-  }
-  return false;
-}
-
-function titlePhotoStored(
-  existing: readonly PlotTitlePhoto[],
-  storagePath: string | undefined,
-  uri: string,
-): boolean {
-  const path = storagePath?.trim();
-  if (path && existing.some((row) => row.storagePath?.trim() === path)) return true;
-  return existing.some((row) => row.uri.trim() === uri.trim());
 }
 
 async function downloadAuditPhotoUri(params: {
@@ -174,23 +138,8 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
     ownedFarmerIds: params.ownedFarmerIds,
   }).catch(() => []);
 
-  const latestGroundTruth = new Map<string, GroundTruthPhotoPayload[]>();
-  const latestLandTitle = new Map<string, GroundTruthPhotoPayload[]>();
-  for (const row of auditRows) {
-    if (row.event_type !== 'plot_photos_synced' || !row.payload) continue;
-    const kind = row.payload.kind;
-    if (kind !== 'ground_truth' && kind !== 'land_title') continue;
-    const serverPlotId = String(row.payload.plotId ?? '').trim();
-    if (!serverPlotId) continue;
-    const targetMap = kind === 'ground_truth' ? latestGroundTruth : latestLandTitle;
-    if (targetMap.has(serverPlotId)) continue;
-    const photos = row.payload.photos;
-    if (!Array.isArray(photos) || photos.length === 0) continue;
-    targetMap.set(
-      serverPlotId,
-      photos.filter((photo): photo is GroundTruthPhotoPayload => photo != null && typeof photo === 'object'),
-    );
-  }
+  const { groundTruth: latestGroundTruth, landTitle: latestLandTitle } =
+    latestAuditPhotosByServerPlot(auditRows);
 
   let groundTruthRestored = 0;
   let landTitleRestored = 0;
@@ -222,6 +171,15 @@ export async function restoreLocalPlotPhotosFromServerAudit(params: {
         const key = photoStorageKey(photo);
         if (!key || seenKeys.has(key)) continue;
         seenKeys.add(key);
+
+        const remoteUri = photo.uri?.trim() ?? '';
+        if (kind === 'ground_truth') {
+          if (existingGround.some((row) => localPhotoMatches(row, photo, remoteUri))) {
+            continue;
+          }
+        } else if (titlePhotoStored(existingTitle, photo.storagePath, remoteUri)) {
+          continue;
+        }
 
         const downloaded = await downloadAuditPhotoUri({ photo, localPlotId, kind });
         if (!downloaded.ok) {

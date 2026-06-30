@@ -18,7 +18,7 @@ vi.mock('@/features/state/persistence', () => ({
   savePlotServerLink: mocks.savePlotServerLink,
 }));
 
-import { restoreLocalPlotsFromServer } from './restoreLocalPlotsFromServer';
+import { countPendingServerPlotsRestore, restoreLocalPlotsFromServer } from './restoreLocalPlotsFromServer';
 
 const { fetchBackendPlotsForSyncScope, loadPlotServerLinks, persistPlots, savePlotServerLink } =
   mocks;
@@ -119,5 +119,40 @@ describe('restoreLocalPlotsFromServer', () => {
     expect(result.fetchFailed).toBe(true);
     expect(result.restoredCount).toBe(0);
     expect(result.mergedPlots).toEqual(localPlots);
+  });
+});
+
+describe('countPendingServerPlotsRestore', () => {
+  it('does not count server-only demo plots or plots already linked locally', () => {
+    const localPlots: Plot[] = [
+      {
+        id: 'local-1',
+        farmerId: 'farmer-1',
+        name: 'Mine',
+        createdAt: 1,
+        areaSquareMeters: 1000,
+        areaHectares: 0.1,
+        kind: 'polygon',
+        points: [{ latitude: 1, longitude: 2 }],
+        landTenureDeclared: true,
+        noDeforestationDeclared: true,
+      },
+    ];
+    const pending = countPendingServerPlotsRestore({
+      apiFarmerId: 'farmer-1',
+      localPlots,
+      plotServerLinks: { 'local-1': 'server-linked' },
+      backendPlots: [
+        { id: 'server-linked', client_plot_id: 'local-1', name: 'Mine', geometry: polygonGeometry },
+        { id: 'demo-plot', name: 'Plot 3', kind: 'point', area_ha: 0 },
+        {
+          id: 'server-new',
+          name: 'Remote',
+          client_plot_id: 'remote-client',
+          geometry: polygonGeometry,
+        },
+      ],
+    });
+    expect(pending).toBe(1);
   });
 });
