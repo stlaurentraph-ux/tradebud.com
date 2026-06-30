@@ -195,12 +195,19 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
         if (!cancelled) {
           setBootError(true);
         }
-        if (__DEV__) {
+        // In Maestro CI builds, Sentry upload is disabled (SENTRY_DISABLE_AUTO_UPLOAD=true,
+        // EXPO_PUBLIC_SENTRY_ENABLED=0), so the error would be completely invisible and
+        // Maestro would hang for 15+ minutes waiting for a boot marker that never appears.
+        // Always log the boot error in CI so it surfaces in logcat artifacts.
+        const isCiBuild = process.env.EXPO_PUBLIC_MAESTRO_CI === '1';
+        if (__DEV__ || isCiBuild) {
           console.warn('[AppState] boot failed', error);
         }
-        void import('@/features/observability/sentryClient')
-          .then((module) => module.reportErrorToSentry(error, { scope: 'app_state_boot' }))
-          .catch(() => undefined);
+        if (!isCiBuild) {
+          void import('@/features/observability/sentryClient')
+            .then((module) => module.reportErrorToSentry(error, { scope: 'app_state_boot' }))
+            .catch(() => undefined);
+        }
       } finally {
         if (!cancelled) {
           setIsAppReady(true);
