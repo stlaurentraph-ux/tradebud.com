@@ -249,7 +249,7 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_DRIVER_STARTUP_TIMEOUT`);
   }
   if (!workflow.includes('emulator-options')) {
-    throw new Error(`${manifest.workflowFile} Android job must set emulator-options for GPU host`);
+    throw new Error(`${manifest.workflowFile} Android job must set emulator-options for software GPU`);
   }
   if (!workflow.includes('maestro-ci-assemble-android-apk.sh')) {
     throw new Error(`${manifest.workflowFile} must assemble Android APK via maestro-ci-assemble-android-apk.sh`);
@@ -325,8 +325,8 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} Android job must use macos-latest + arm64-v8a emulator`);
   }
   const emulatorOptions = manifest.androidEmulator?.emulatorOptions;
-  if (!emulatorOptions || !workflow.includes('-gpu host')) {
-    throw new Error('workflow emulator-options must use -gpu host on macOS ARM (manifest parity)');
+  if (!emulatorOptions || !workflow.includes('swiftshader_indirect')) {
+    throw new Error('workflow emulator-options must use swiftshader_indirect on macOS ARM (manifest parity)');
   }
 
   if (
