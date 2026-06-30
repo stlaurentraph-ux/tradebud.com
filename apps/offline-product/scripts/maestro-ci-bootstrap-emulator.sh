@@ -51,10 +51,16 @@ fi
 
 preflight_maestro_apk() {
   echo "==> Preflight: bundled Maestro boot DB in APK ($APK_PATH)"
-  if ! unzip -l "$APK_PATH" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
+  # Capture unzip output once to avoid SIGPIPE false-negative:
+  # with set -o pipefail, `unzip -l | grep -q` can return non-zero because
+  # grep -q exits early (match found) → unzip gets SIGPIPE (exit 141) →
+  # pipefail returns the rightmost non-zero → false "missing DB" on macOS.
+  local apk_list
+  apk_list="$(unzip -l "$APK_PATH" 2>/dev/null || true)"
+  if ! printf '%s\n' "$apk_list" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
     echo "::error::APK missing assets/maestro/tracebud_offline.db — assemble must run generate-maestro-ci-boot-db.mjs"
     echo "==> APK contents (maestro/assets):"
-    unzip -l "$APK_PATH" 2>/dev/null | grep -iE 'maestro|assets/|\.db$' || echo "  (unzip failed or no matching entries)"
+    printf '%s\n' "$apk_list" | grep -iE 'maestro|assets/|\.db$' || echo "  (unzip failed or no matching entries)"
     exit 1
   fi
 }
