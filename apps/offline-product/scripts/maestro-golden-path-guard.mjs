@@ -273,8 +273,8 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('index.android.bundle')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must verify embedded index.android.bundle in APK');
   }
-  if (!assembleScript.includes('MAESTRO_ANDROID_ABI') || !assembleScript.includes('arm64-v8a')) {
-    throw new Error('maestro-ci-assemble-android-apk.sh must default to arm64-v8a APK for CI emulator');
+  if (!assembleScript.includes('MAESTRO_ANDROID_ABI') || !assembleScript.includes('x86_64')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must default to x86_64 APK for CI emulator');
   }
   if (!assembleScript.includes('MAESTRO_CI')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must set MAESTRO_CI=1 to disable OTA checks');
@@ -321,12 +321,17 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('maestro-golden-path-android')) {
     throw new Error(`${manifest.workflowFile} must define Android golden path job`);
   }
-  if (!workflow.includes('runs-on: macos-latest') || !workflowBody.includes('arch: arm64-v8a')) {
-    throw new Error(`${manifest.workflowFile} Android job must use macos-latest + arm64-v8a emulator`);
+  const androidRunner = manifest.androidEmulator?.emulatorRunner;
+  const androidArch = manifest.androidEmulator?.emulatorArch;
+  if (!androidRunner || !workflow.includes(`runs-on: ${androidRunner}`)) {
+    throw new Error(`${manifest.workflowFile} Android job must use ${androidRunner ?? 'manifest emulatorRunner'}`);
+  }
+  if (!androidArch || !workflowBody.includes(`arch: ${androidArch}`)) {
+    throw new Error(`${manifest.workflowFile} Android job must use ${androidArch ?? 'manifest emulatorArch'} emulator`);
   }
   const emulatorOptions = manifest.androidEmulator?.emulatorOptions;
   if (!emulatorOptions || !workflow.includes('swiftshader_indirect')) {
-    throw new Error('workflow emulator-options must use swiftshader_indirect on macOS ARM (manifest parity)');
+    throw new Error('workflow emulator-options must use swiftshader_indirect (manifest parity)');
   }
 
   if (

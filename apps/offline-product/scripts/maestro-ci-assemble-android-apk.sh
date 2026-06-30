@@ -67,7 +67,7 @@ npx expo export:embed --eager --platform android --dev false
 # Release assemble OOMs on GHA (Metaspace) — debug + embedded bundle is the CI path.
 export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8}"
 
-MAESTRO_ANDROID_ABI="${MAESTRO_ANDROID_ABI:-arm64-v8a}"
+MAESTRO_ANDROID_ABI="${MAESTRO_ANDROID_ABI:-x86_64}"
 echo "==> gradle assembleDebug (${MAESTRO_ANDROID_ABI} for CI emulator)"
 cd android
 ./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures="$MAESTRO_ANDROID_ABI"
