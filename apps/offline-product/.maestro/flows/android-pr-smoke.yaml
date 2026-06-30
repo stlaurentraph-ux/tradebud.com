@@ -10,7 +10,7 @@ appId: com.tracebud.app
     optional: true
 - extendedWaitUntil:
     visible: ".*Maestro boot ready.*"
-    timeout: 1800000
+    timeout: 900000
 - extendedWaitUntil:
     visible:
       id: "maestro-boot-ready"

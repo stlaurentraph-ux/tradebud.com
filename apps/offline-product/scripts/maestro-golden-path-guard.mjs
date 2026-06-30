@@ -305,8 +305,21 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('maestro-ci-collect-android-debug-artifacts.sh') && !workflow.includes('ci-artifacts/maestro-android')) {
     throw new Error(`${manifest.workflowFile} Android jobs must upload Maestro debug artifacts on failure`);
   }
-  if (!workflow.includes('qa:maestro:golden-path:android:smoke')) {
-    throw new Error(`${manifest.workflowFile} must run qa:maestro:golden-path:android:smoke on PR`);
+  const assembleJobName = manifest.androidAssembleJobName;
+  if (!assembleJobName || !workflow.includes(assembleJobName)) {
+    throw new Error(`${manifest.workflowFile} must define ${assembleJobName ?? 'androidAssembleJobName'} job`);
+  }
+  if (!workflow.includes('maestro-android-apk')) {
+    throw new Error(`${manifest.workflowFile} must upload/download maestro-android-apk artifact`);
+  }
+  if (!workflow.includes('maestro-android-assemble')) {
+    throw new Error(`${manifest.workflowFile} must define maestro-android-assemble job`);
+  }
+  if (!workflow.includes('needs: [maestro-cost-gate, maestro-android-assemble]')) {
+    throw new Error(`${manifest.workflowFile} Android smoke/golden must depend on maestro-android-assemble`);
+  }
+  if (!workflow.includes('maestro-ci-golden-path-android-smoke.sh')) {
+    throw new Error(`${manifest.workflowFile} must run maestro-ci-golden-path-android-smoke.sh on PR`);
   }
   if (!workflow.includes('maestro-cost-gate')) {
     throw new Error(`${manifest.workflowFile} must define maestro-cost-gate job (H25 cost guard)`);
@@ -339,8 +352,8 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('android-emulator-runner')) {
     throw new Error(`${manifest.workflowFile} must use android-emulator-runner for Android lane`);
   }
-  if (!workflow.includes('qa:maestro:golden-path:android')) {
-    throw new Error(`${manifest.workflowFile} must run qa:maestro:golden-path:android`);
+  if (!workflow.includes('maestro-ci-golden-path-android.sh')) {
+    throw new Error(`${manifest.workflowFile} must run maestro-ci-golden-path-android.sh for golden path`);
   }
   if (!workflow.includes('MAESTRO_DRIVER_STARTUP_TIMEOUT')) {
     throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_DRIVER_STARTUP_TIMEOUT`);
@@ -360,6 +373,12 @@ function assertWorkflow(manifest) {
   }
   if (!assembleScript.includes('assembleDebug')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must run gradle assembleDebug');
+  }
+  if (!assembleScript.includes('--build-cache')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must enable Gradle build cache');
+  }
+  if (!assembleScript.includes('org.gradle.parallel')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must enable Gradle parallel builds');
   }
   if (!assembleScript.includes('MaxMetaspaceSize=1024m')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must raise Gradle MaxMetaspaceSize for CI assemble');
@@ -418,8 +437,15 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} Android job must set MAESTRO_JS_BOOT_FAIL_FAST_MS`);
   }
   const androidTimeout = manifest.androidJobTimeoutMinutes;
-  if (!androidTimeout || androidTimeout > 90) {
-    throw new Error('manifest androidJobTimeoutMinutes must be <= 90 (fail-fast cost cap)');
+  if (!androidTimeout || androidTimeout > 80) {
+    throw new Error('manifest androidJobTimeoutMinutes must be <= 80 (emulator-only after split assemble)');
+  }
+  const assembleTimeout = manifest.androidAssembleJobTimeoutMinutes;
+  if (!assembleTimeout || assembleTimeout > 50) {
+    throw new Error('manifest androidAssembleJobTimeoutMinutes must be <= 50');
+  }
+  if (!workflow.includes(`timeout-minutes: ${assembleTimeout}`)) {
+    throw new Error(`${manifest.workflowFile} Android assemble job timeout must match manifest androidAssembleJobTimeoutMinutes`);
   }
   const smokeTimeout = manifest.androidSmokeJobTimeoutMinutes;
   if (!smokeTimeout || smokeTimeout > 35) {
@@ -436,7 +462,21 @@ function assertWorkflow(manifest) {
     throw new Error('manifest androidBootstrapWarmMs must be <= 1200000');
   }
   if (!workflow.includes(String(bootstrapWarmMs))) {
-    throw new Error('workflow MAESTRO_BOOTSTRAP_WARM_MS must match manifest androidBootstrapWarmMs');
+    throw new Error('workflow MAESTRO_BOOTSTRAP_WARM_MS must match manifest androidBootstrapWarmMs for golden path');
+  }
+  const smokeBootstrapWarmMs = manifest.androidSmokeBootstrapWarmMs;
+  if (!smokeBootstrapWarmMs || smokeBootstrapWarmMs > 900000) {
+    throw new Error('manifest androidSmokeBootstrapWarmMs must be <= 900000');
+  }
+  if (!workflow.includes(String(smokeBootstrapWarmMs))) {
+    throw new Error('workflow smoke MAESTRO_BOOTSTRAP_WARM_MS must match manifest androidSmokeBootstrapWarmMs');
+  }
+  const smokeFailFastMs = manifest.androidSmokeJsBootFailFastMs;
+  if (!smokeFailFastMs || smokeFailFastMs > 900000) {
+    throw new Error('manifest androidSmokeJsBootFailFastMs must be <= 900000');
+  }
+  if (!workflow.includes(String(smokeFailFastMs))) {
+    throw new Error('workflow smoke MAESTRO_JS_BOOT_FAIL_FAST_MS must match manifest androidSmokeJsBootFailFastMs');
   }
   if (!workflow.includes('timeout-minutes: 120') || !workflow.includes('maestro-golden-path:')) {
     throw new Error(`${manifest.workflowFile} macOS golden path must allow 120m timeout`);

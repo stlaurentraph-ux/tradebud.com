@@ -43,7 +43,8 @@ on:
       - 'apps/offline-product/app/_layout.tsx'
       - 'apps/offline-product/components/layout/MaestroBootReadyMarker.tsx'
       - 'apps/offline-product/features/state/persistence.native.ts'
-      - 'apps/offline-product/features/testing/maestroCiBootDatabase.native.ts'
+      - 'apps/offline-product/features/testing/maestroCiBootDatabase.android.ts'
+      - 'apps/offline-product/features/testing/maestroCiBootDatabase.ts'
       - 'apps/offline-product/assets/maestro/**'
   workflow_dispatch:
     inputs:
@@ -232,29 +233,17 @@ jobs:
       - name: Run Maestro golden path
         run: npm run qa:maestro:golden-path
 
-  maestro-android-smoke:
-    name: Maestro Android smoke (PR)
+  maestro-android-assemble:
+    name: Maestro Android APK assemble
     needs: maestro-cost-gate
-    if: >
-      needs.maestro-cost-gate.outputs.run_android_smoke == 'true' &&
-      github.event_name == 'pull_request'
+    if: needs.maestro-cost-gate.outputs.run_android == 'true'
     runs-on: macos-15-intel
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
-      MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
-      MAESTRO_SEED_SKIP: '1'
-      MAESTRO_ANDROID_IN_APP_DB_SEED: '1'
-      MAESTRO_JS_BOOT_FAIL_FAST: '1'
-      MAESTRO_SEED_DB_WAIT_MS: '180000'
-      MAESTRO_BOOT_WAIT_MS: '1800000'
-      MAESTRO_BOOTSTRAP_WARM_MS: '900000'
-      MAESTRO_JS_BOOT_FAIL_FAST_MS: '1200000'
-      MAESTRO_CI_RETRY_ATTEMPTS: '1'
       MAESTRO_ANDROID_ABI: x86_64
-      MAESTRO_CI_ARTIFACT_DIR: ${{ github.workspace }}/apps/offline-product/ci-artifacts/maestro-android
+      EXPO_PUBLIC_MAESTRO_CI: '1'
       EXPO_PUBLIC_SENTRY_ENABLED: '0'
       GRADLE_OPTS: '-Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8'
-      MAESTRO_ANDROID_APK_PATH: ${{ github.workspace }}/apps/offline-product/android/app/build/outputs/apk/debug/app-debug.apk
       EXPO_PUBLIC_API_URL: https://api.tracebud.com/api
       EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
       EXPO_PUBLIC_OAUTH_BRIDGE_URL: https://app.tracebud.com/auth/callback
@@ -289,15 +278,6 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Install Maestro CLI
-        run: |
-          set -euo pipefail
-          curl -Ls "https://get.maestro.mobile.dev" | bash
-          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
-
-      - name: Maestro wiring preflight
-        run: npm run qa:maestro:preflight
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
@@ -307,12 +287,69 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-maestro-${{ runner.os }}-${{ hashFiles('apps/offline-product/package-lock.json') }}
+            apps/offline-product/android/.gradle
+          key: gradle-maestro-${{ runner.os }}-${{ hashFiles('apps/offline-product/package-lock.json', 'apps/offline-product/android/**/*.gradle*', 'apps/offline-product/android/gradle.properties') }}
           restore-keys: |
             gradle-maestro-${{ runner.os }}-
 
-      - name: Assemble debug APK (outside emulator)
+      - name: Assemble debug APK (parallel job — smoke/golden download artifact)
         run: bash ./scripts/maestro-ci-assemble-android-apk.sh
+
+      - name: Upload Maestro Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: maestro-android-apk
+          path: apps/offline-product/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 3
+
+  maestro-android-smoke:
+    name: Maestro Android smoke (PR)
+    needs: [maestro-cost-gate, maestro-android-assemble]
+    if: >
+      needs.maestro-cost-gate.outputs.run_android_smoke == 'true' &&
+      github.event_name == 'pull_request'
+    runs-on: macos-15-intel
+    timeout-minutes: 30
+    env:
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
+      MAESTRO_SEED_SKIP: '1'
+      MAESTRO_ANDROID_IN_APP_DB_SEED: '1'
+      MAESTRO_JS_BOOT_FAIL_FAST: '1'
+      MAESTRO_SEED_DB_WAIT_MS: '120000'
+      MAESTRO_BOOT_WAIT_MS: '900000'
+      MAESTRO_BOOTSTRAP_WARM_MS: '600000'
+      MAESTRO_JS_BOOT_FAIL_FAST_MS: '600000'
+      MAESTRO_CI_RETRY_ATTEMPTS: '1'
+      MAESTRO_ANDROID_ABI: x86_64
+      MAESTRO_CI_ARTIFACT_DIR: ${{ github.workspace }}/apps/offline-product/ci-artifacts/maestro-android
+      EXPO_PUBLIC_SENTRY_ENABLED: '0'
+      MAESTRO_ANDROID_APK_PATH: ${{ github.workspace }}/apps/offline-product/android/app/build/outputs/apk/debug/app-debug.apk
+      EXPO_PUBLIC_API_URL: https://api.tracebud.com/api
+      EXPO_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      EXPO_PUBLIC_OAUTH_BRIDGE_URL: https://app.tracebud.com/auth/callback
+      EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL: https://app.tracebud.com/auth/confirm
+      SENTRY_DISABLE_AUTO_UPLOAD: 'true'
+    defaults:
+      run:
+        working-directory: apps/offline-product
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Download Maestro Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: maestro-android-apk
+          path: apps/offline-product/android/app/build/outputs/apk/debug
+
+      - name: Install Maestro CLI
+        run: |
+          set -euo pipefail
+          curl -Ls "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Run Maestro Android PR smoke on emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -324,9 +361,9 @@ jobs:
           disable-animations: true
           ram-size: 4096M
           cores: 4
-          emulator-boot-timeout: 1800
+          emulator-boot-timeout: 900
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
-          script: cd apps/offline-product && npm run qa:maestro:golden-path:android:smoke
+          script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android-smoke.sh
 
       - name: Upload Android Maestro debug artifacts
         if: failure()
@@ -338,7 +375,7 @@ jobs:
 
   maestro-golden-path-android:
     name: Maestro golden path (Android)
-    needs: maestro-cost-gate
+    needs: [maestro-cost-gate, maestro-android-assemble]
     if: >
       needs.maestro-cost-gate.outputs.run_android_golden == 'true' &&
       (
@@ -346,7 +383,7 @@ jobs:
         (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
       )
     runs-on: macos-15-intel
-    timeout-minutes: 90
+    timeout-minutes: 75
     env:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: '300000'
       MAESTRO_SEED_SKIP: '1'
@@ -374,27 +411,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
-      - name: Use Node 20
-        uses: actions/setup-node@v5
+      - name: Download Maestro Android APK
+        uses: actions/download-artifact@v4
         with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: |
-            package-lock.json
-            apps/offline-product/package-lock.json
-
-      - name: Install root dependencies
-        working-directory: .
-        run: npm ci
-
-      - name: Install offline app dependencies
-        run: npm ci
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: 17
+          name: maestro-android-apk
+          path: apps/offline-product/android/app/build/outputs/apk/debug
 
       - name: Install Maestro CLI
         run: |
@@ -402,24 +423,8 @@ jobs:
           curl -Ls "https://get.maestro.mobile.dev" | bash
           echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
 
-      - name: Maestro wiring preflight
-        run: npm run qa:maestro:preflight
-
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-maestro-${{ runner.os }}-${{ hashFiles('apps/offline-product/package-lock.json') }}
-          restore-keys: |
-            gradle-maestro-${{ runner.os }}-
-
-      - name: Assemble debug APK (outside emulator)
-        run: bash ./scripts/maestro-ci-assemble-android-apk.sh
 
       - name: Run Maestro golden path on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
@@ -433,7 +438,7 @@ jobs:
           cores: 4
           emulator-boot-timeout: 1800
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
-          script: cd apps/offline-product && npm run qa:maestro:golden-path:android
+          script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android.sh
 
       - name: Upload Android Maestro debug artifacts
         if: failure()

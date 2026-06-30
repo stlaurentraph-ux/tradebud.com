@@ -51,6 +51,9 @@ const upsert = (key, value) => {
   else source += `\n${key}=${value}\n`;
 };
 upsert('hermesEnabled', 'true');
+upsert('org.gradle.parallel', 'true');
+upsert('org.gradle.caching', 'true');
+upsert('org.gradle.configureondemand', 'true');
 const ciJvmArgs = 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8';
 if (/^org\.gradle\.jvmargs=/m.test(source)) {
   source = source.replace(/^org\.gradle\.jvmargs=.*$/m, ciJvmArgs);
@@ -83,7 +86,7 @@ export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspa
 MAESTRO_ANDROID_ABI="${MAESTRO_ANDROID_ABI:-x86_64}"
 echo "==> gradle assembleDebug (${MAESTRO_ANDROID_ABI} for CI emulator)"
 cd android
-./gradlew assembleDebug --no-daemon -q -PreactNativeArchitectures="$MAESTRO_ANDROID_ABI"
+./gradlew assembleDebug --no-daemon --build-cache --parallel -q -PreactNativeArchitectures="$MAESTRO_ANDROID_ABI"
 
 APK_PATH="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 if [[ ! -f "$APK_PATH" ]]; then

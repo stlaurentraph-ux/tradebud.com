@@ -60,8 +60,10 @@ Legacy host seed (`MAESTRO_ANDROID_IN_APP_DB_SEED=0`) uses `seed-maestro-boot-pr
 
 | Trigger | Job | Flow |
 |---------|-----|------|
-| `pull_request` | `Maestro Android smoke (PR)` | `android-pr-smoke.yaml` (boot marker + `tab-settings`) |
-| `push` / `workflow_dispatch` | `Maestro golden path (Android)` | `settings-sync-smoke-android.yaml` |
+| `pull_request` | `Maestro Android APK assemble` (parallel) + `Maestro Android smoke (PR)` | `android-pr-smoke.yaml` |
+| `push` / `workflow_dispatch` | assemble artifact + `Maestro golden path (Android)` | `settings-sync-smoke-android.yaml` |
+
+Smoke job downloads the prebuilt APK (no Gradle in the 30m emulator cap). Assemble runs in a separate 45m job with Gradle cache.
 
 ### Thin boot (`EXPO_PUBLIC_MAESTRO_CI=1`)
 
