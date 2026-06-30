@@ -1,10 +1,9 @@
 appId: com.tracebud.app
 ---
-# Android CI golden path — in-app bundled SQLite + fail-fast JS boot on macos-15-intel x86_64.
-# Waits on visible TextView label + testID; tab bar once boot profile is seeded.
+# Android CI golden path — warm RN process from bootstrap; stopApp: false matches iOS golden path.
 - launchApp:
     clearState: false
-    stopApp: true
+    stopApp: false
 - waitForAnimationToEnd
 - tapOn:
     id: "welcome-account-skip"

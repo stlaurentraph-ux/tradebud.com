@@ -72,6 +72,12 @@ function assertAndroidSmokeFlow(manifest) {
   if (flow.includes('settings-sync-now')) {
     throw new Error(`${flowName} must not tap settings-sync-now (smoke only)`);
   }
+  if (!flow.includes('clearState: false')) {
+    throw new Error(`${flowName} must launchApp with clearState: false`);
+  }
+  if (!flow.includes('stopApp: true')) {
+    throw new Error(`${flowName} must launchApp with stopApp: true (smoke cold start on CI emulator)`);
+  }
 }
 
 function assertAndroidGoldenPathFlow(manifest) {
@@ -95,8 +101,8 @@ function assertAndroidGoldenPathFlow(manifest) {
   if (!flow.includes('clearState: false')) {
     throw new Error(`${flowName} must launchApp with clearState: false`);
   }
-  if (!flow.includes('stopApp: true')) {
-    throw new Error(`${flowName} must launchApp with stopApp: true (reliable cold start on CI emulator)`);
+  if (!flow.includes('stopApp: false')) {
+    throw new Error(`${flowName} must launchApp with stopApp: false (preserve bootstrap warm RN process)`);
   }
 }
 
@@ -150,6 +156,9 @@ function assertBootstrapInitLaunch() {
   }
   if (!androidBootstrap.includes('in-app bundled SQLite')) {
     throw new Error('Android bootstrap must default to in-app Maestro DB seed');
+  }
+  if (!androidBootstrap.includes('MAESTRO_SKIP_BOOTSTRAP_WARM')) {
+    throw new Error('Android bootstrap must support MAESTRO_SKIP_BOOTSTRAP_WARM for PR smoke');
   }
   if (!androidBootstrap.includes('MAESTRO_JS_BOOT_FAIL_FAST')) {
     throw new Error('Android bootstrap must fail fast when JS boot stalls');
@@ -395,6 +404,9 @@ function assertWorkflow(manifest) {
   if (!assembleScript.includes('MAESTRO_CI')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must set MAESTRO_CI=1 to disable OTA checks');
   }
+  if (!assembleScript.includes('Reusing cached android/')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must skip expo prebuild when android/ cache exists');
+  }
   if (!assembleScript.includes('generate-maestro-ci-boot-db.mjs')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must generate bundled Maestro boot DB asset');
   }
@@ -465,10 +477,16 @@ function assertWorkflow(manifest) {
     throw new Error('workflow MAESTRO_BOOTSTRAP_WARM_MS must match manifest androidBootstrapWarmMs for golden path');
   }
   const smokeBootstrapWarmMs = manifest.androidSmokeBootstrapWarmMs;
-  if (!smokeBootstrapWarmMs || smokeBootstrapWarmMs > 900000) {
+  if (manifest.androidSmokeSkipBootstrapWarm) {
+    if (!workflow.includes('MAESTRO_SKIP_BOOTSTRAP_WARM')) {
+      throw new Error(`${manifest.workflowFile} Android smoke must set MAESTRO_SKIP_BOOTSTRAP_WARM=1`);
+    }
+    if (smokeBootstrapWarmMs) {
+      throw new Error('manifest must not set androidSmokeBootstrapWarmMs when androidSmokeSkipBootstrapWarm is true');
+    }
+  } else if (!smokeBootstrapWarmMs || smokeBootstrapWarmMs > 900000) {
     throw new Error('manifest androidSmokeBootstrapWarmMs must be <= 900000');
-  }
-  if (!workflow.includes(String(smokeBootstrapWarmMs))) {
+  } else if (!workflow.includes(String(smokeBootstrapWarmMs))) {
     throw new Error('workflow smoke MAESTRO_BOOTSTRAP_WARM_MS must match manifest androidSmokeBootstrapWarmMs');
   }
   const smokeFailFastMs = manifest.androidSmokeJsBootFailFastMs;
@@ -482,7 +500,20 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} macOS golden path must allow 120m timeout`);
   }
   if (!workflow.includes('Cache Gradle')) {
-    throw new Error(`${manifest.workflowFile} Android job must cache Gradle`);
+    throw new Error(`${manifest.workflowFile} Android assemble job must cache Gradle`);
+  }
+  if (!workflow.includes('Restore android prebuild cache')) {
+    throw new Error(`${manifest.workflowFile} Android assemble must restore android prebuild cache`);
+  }
+  if (!workflow.includes('maestro-avd-snapshot')) {
+    throw new Error(`${manifest.workflowFile} Android emulator jobs must cache AVD snapshots`);
+  }
+  if (!workflow.includes('maestro-ci-resolve-emulator-options.sh')) {
+    throw new Error(`${manifest.workflowFile} must resolve emulator options via maestro-ci-resolve-emulator-options.sh`);
+  }
+  const assembleRunner = manifest.androidAssembleRunner;
+  if (!assembleRunner || !workflow.includes(`runs-on: ${assembleRunner}`)) {
+    throw new Error(`${manifest.workflowFile} Android assemble must use ${assembleRunner ?? 'manifest androidAssembleRunner'}`);
   }
   const iosTimeout = manifest.iosTimeoutMinutes;
   if (!iosTimeout || iosTimeout < 120) {
@@ -493,15 +524,19 @@ function assertWorkflow(manifest) {
   }
   const androidRunner = manifest.androidEmulator?.emulatorRunner;
   const androidArch = manifest.androidEmulator?.emulatorArch;
-  if (!androidRunner || !workflow.includes(`runs-on: ${androidRunner}`)) {
-    throw new Error(`${manifest.workflowFile} Android job must use ${androidRunner ?? 'manifest emulatorRunner'}`);
+  if (!androidRunner || !workflowBody.includes(`runs-on: ${androidRunner}`)) {
+    throw new Error(`${manifest.workflowFile} Android emulator jobs must use ${androidRunner ?? 'manifest emulatorRunner'}`);
   }
   if (!androidArch || !workflowBody.includes(`arch: ${androidArch}`)) {
     throw new Error(`${manifest.workflowFile} Android job must use ${androidArch ?? 'manifest emulatorArch'} emulator`);
   }
   const emulatorOptions = manifest.androidEmulator?.emulatorOptions;
-  if (!emulatorOptions || !workflow.includes('swiftshader_indirect')) {
-    throw new Error('workflow emulator-options must use swiftshader_indirect (manifest parity)');
+  const resolveEmulatorOpts = readOffline('scripts/maestro-ci-resolve-emulator-options.sh');
+  if (!emulatorOptions || !resolveEmulatorOpts.includes('swiftshader_indirect')) {
+    throw new Error('maestro-ci-resolve-emulator-options.sh must use swiftshader_indirect (manifest parity)');
+  }
+  if (!workflow.includes('emulator_opts.outputs.options')) {
+    throw new Error(`${manifest.workflowFile} must pass resolved emulator options to android-emulator-runner`);
   }
 
   if (

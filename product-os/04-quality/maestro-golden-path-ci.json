@@ -18,13 +18,15 @@
   "goldenPathBootWaitMs": 2700000,
   "bootDbWaitMs": 180000,
   "androidAssembleJobTimeoutMinutes": 45,
+  "androidAssembleRunner": "ubuntu-latest",
   "androidJobTimeoutMinutes": 75,
   "androidSmokeJobTimeoutMinutes": 30,
   "androidSmokeBootWaitMs": 900000,
-  "androidSmokeBootstrapWarmMs": 600000,
+  "androidSmokeSkipBootstrapWarm": true,
   "androidSmokeJsBootFailFastMs": 600000,
   "androidBootstrapWarmMs": 1200000,
   "androidJsBootFailFastMs": 1800000,
+  "androidEmulatorSnapshotName": "maestro_ci_boot",
   "androidApkAssemblyScript": "scripts/maestro-ci-assemble-android-apk.sh",
   "iosSimulatorAssemblyScript": "scripts/maestro-ci-assemble-ios-simulator.sh",
   "androidEmulator": {
@@ -33,7 +35,7 @@
     "driverStartupTimeoutMs": 300000,
     "emulatorArch": "x86_64",
     "emulatorRunner": "macos-15-intel",
-    "emulatorOptions": "-no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096"
+    "emulatorOptions": "-no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096"
   },
   "costGate": {
     "platformGateScript": "scripts/maestro-ci-platform-gate.mjs",

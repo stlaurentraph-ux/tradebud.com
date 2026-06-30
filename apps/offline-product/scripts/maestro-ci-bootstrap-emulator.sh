@@ -142,16 +142,20 @@ wait_for_android_js_boot() {
 
 if [[ "${MAESTRO_ANDROID_IN_APP_DB_SEED:-1}" == "1" ]]; then
   echo "==> Maestro golden path uses in-app bundled SQLite (skip host adb seed)"
-  speed_compile_tracebud_apk
-  adb -s "$DEVICE_SERIAL" shell am start -n "$APP_ID/.MainActivity" 2>/dev/null || \
-    adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
-
-  bootstrap_warm_ms="${MAESTRO_BOOTSTRAP_WARM_MS:-1200000}"
-  if MAESTRO_BOOT_WAIT_MS="$bootstrap_warm_ms" wait_for_android_js_boot "bootstrap warm-up"; then
-    export MAESTRO_BOOT_WARMED=1
+  if [[ "${MAESTRO_SKIP_BOOTSTRAP_WARM:-}" == "1" ]]; then
+    echo "==> Skip bootstrap JS warm (smoke cold start — Maestro flow owns boot wait)"
+    adb -s "$DEVICE_SERIAL" shell am force-stop "$APP_ID" 2>/dev/null || true
   else
-    echo "::error::Bootstrap warm-up failed — aborting Android golden path (no multi-hour Maestro wait)"
-    exit 1
+    adb -s "$DEVICE_SERIAL" shell am start -n "$APP_ID/.MainActivity" 2>/dev/null || \
+      adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
+
+    bootstrap_warm_ms="${MAESTRO_BOOTSTRAP_WARM_MS:-1200000}"
+    if MAESTRO_BOOT_WAIT_MS="$bootstrap_warm_ms" wait_for_android_js_boot "bootstrap warm-up"; then
+      export MAESTRO_BOOT_WARMED=1
+    else
+      echo "::error::Bootstrap warm-up failed — aborting Android golden path (no multi-hour Maestro wait)"
+      exit 1
+    fi
   fi
 elif [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
   echo "==> Legacy host adb seed (MAESTRO_ANDROID_IN_APP_DB_SEED=0)"
@@ -187,4 +191,4 @@ if [[ "${MAESTRO_LOGCAT_ON_BOOTSTRAP:-1}" == "1" ]]; then
   dump_tracebud_logcat "Logcat after bootstrap"
 fi
 
-echo "Android bootstrap ready for Maestro (flow uses launchApp clearState: false)."
+echo "Android bootstrap ready for Maestro (smoke: cold start; golden: warm attach when MAESTRO_BOOT_WARMED=1)."

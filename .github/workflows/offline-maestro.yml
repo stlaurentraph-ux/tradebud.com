@@ -237,7 +237,7 @@ jobs:
     name: Maestro Android APK assemble
     needs: maestro-cost-gate
     if: needs.maestro-cost-gate.outputs.run_android == 'true'
-    runs-on: macos-15-intel
+    runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
       MAESTRO_ANDROID_ABI: x86_64
@@ -281,18 +281,26 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Restore android prebuild cache
+        uses: actions/cache@v4
+        with:
+          path: apps/offline-product/android
+          key: android-prebuild-${{ hashFiles('apps/offline-product/package-lock.json', 'apps/offline-product/app.config.js', 'apps/offline-product/app.json', 'apps/offline-product/eas.json') }}
+          restore-keys: |
+            android-prebuild-
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            apps/offline-product/android/.gradle
           key: gradle-maestro-${{ runner.os }}-${{ hashFiles('apps/offline-product/package-lock.json', 'apps/offline-product/android/**/*.gradle*', 'apps/offline-product/android/gradle.properties') }}
           restore-keys: |
             gradle-maestro-${{ runner.os }}-
 
       - name: Assemble debug APK (parallel job — smoke/golden download artifact)
+        working-directory: apps/offline-product
         run: bash ./scripts/maestro-ci-assemble-android-apk.sh
 
       - name: Upload Maestro Android APK
@@ -301,6 +309,10 @@ jobs:
           name: maestro-android-apk
           path: apps/offline-product/android/app/build/outputs/apk/debug/app-debug.apk
           retention-days: 3
+
+      - name: Strip Gradle outputs for prebuild cache
+        working-directory: apps/offline-product
+        run: rm -rf android/app/build android/.gradle
 
   maestro-android-smoke:
     name: Maestro Android smoke (PR)
@@ -314,10 +326,10 @@ jobs:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
       MAESTRO_SEED_SKIP: '1'
       MAESTRO_ANDROID_IN_APP_DB_SEED: '1'
+      MAESTRO_SKIP_BOOTSTRAP_WARM: '1'
       MAESTRO_JS_BOOT_FAIL_FAST: '1'
       MAESTRO_SEED_DB_WAIT_MS: '120000'
       MAESTRO_BOOT_WAIT_MS: '900000'
-      MAESTRO_BOOTSTRAP_WARM_MS: '600000'
       MAESTRO_JS_BOOT_FAIL_FAST_MS: '600000'
       MAESTRO_CI_RETRY_ATTEMPTS: '1'
       MAESTRO_ANDROID_ABI: x86_64
@@ -351,6 +363,25 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Restore emulator AVD snapshot
+        id: avd-snapshot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/avd
+          key: maestro-avd-snapshot-api33-pixel6-x86_64-${{ hashFiles('product-os/04-quality/maestro-golden-path-ci.json') }}
+          restore-keys: |
+            maestro-avd-snapshot-api33-pixel6-x86_64-
+
+      - name: Resolve emulator options
+        id: emulator_opts
+        env:
+          MAESTRO_EMULATOR_SNAPSHOT_CACHE_HIT: ${{ steps.avd-snapshot-cache.outputs.cache-hit }}
+          MAESTRO_EMULATOR_SNAPSHOT_NAME: maestro_ci_boot
+        run: |
+          set -euo pipefail
+          opts="$(bash apps/offline-product/scripts/maestro-ci-resolve-emulator-options.sh)"
+          echo "options=${opts}" >> "$GITHUB_OUTPUT"
+
       - name: Run Maestro Android PR smoke on emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -362,8 +393,15 @@ jobs:
           ram-size: 4096M
           cores: 4
           emulator-boot-timeout: 900
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
+          emulator-options: ${{ steps.emulator_opts.outputs.options }}
           script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android-smoke.sh
+
+      - name: Save emulator AVD snapshot
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.android/avd
+          key: maestro-avd-snapshot-api33-pixel6-x86_64-${{ hashFiles('product-os/04-quality/maestro-golden-path-ci.json') }}
 
       - name: Upload Android Maestro debug artifacts
         if: failure()
@@ -426,6 +464,25 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Restore emulator AVD snapshot
+        id: avd-snapshot-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/avd
+          key: maestro-avd-snapshot-api33-pixel6-x86_64-${{ hashFiles('product-os/04-quality/maestro-golden-path-ci.json') }}
+          restore-keys: |
+            maestro-avd-snapshot-api33-pixel6-x86_64-
+
+      - name: Resolve emulator options
+        id: emulator_opts
+        env:
+          MAESTRO_EMULATOR_SNAPSHOT_CACHE_HIT: ${{ steps.avd-snapshot-cache.outputs.cache-hit }}
+          MAESTRO_EMULATOR_SNAPSHOT_NAME: maestro_ci_boot
+        run: |
+          set -euo pipefail
+          opts="$(bash apps/offline-product/scripts/maestro-ci-resolve-emulator-options.sh)"
+          echo "options=${opts}" >> "$GITHUB_OUTPUT"
+
       - name: Run Maestro golden path on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -437,8 +494,15 @@ jobs:
           ram-size: 4096M
           cores: 4
           emulator-boot-timeout: 1800
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -memory 4096
+          emulator-options: ${{ steps.emulator_opts.outputs.options }}
           script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android.sh
+
+      - name: Save emulator AVD snapshot
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.android/avd
+          key: maestro-avd-snapshot-api33-pixel6-x86_64-${{ hashFiles('product-os/04-quality/maestro-golden-path-ci.json') }}
 
       - name: Upload Android Maestro debug artifacts
         if: failure()

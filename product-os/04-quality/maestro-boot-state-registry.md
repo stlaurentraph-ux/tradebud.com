@@ -74,6 +74,9 @@ Smoke job downloads the prebuilt APK (no Gradle in the 30m emulator cap). Assemb
 - Defer `AutoPlotUploadBridge`, push, and consent bridges via `MaestroCiLayoutBridges`
 - No-op `initObservability` session analytics
 
+**PR smoke:** `MAESTRO_SKIP_BOOTSTRAP_WARM=1` + `stopApp: true` — single cold Maestro launch.  
+**Full golden:** bootstrap warm + `stopApp: false` — reuse RN process (matches iOS).
+
 ### Boot-ready testID
 
 | testID | When visible |

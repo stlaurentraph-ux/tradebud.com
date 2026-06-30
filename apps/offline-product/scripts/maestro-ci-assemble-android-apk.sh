@@ -15,7 +15,11 @@ export EXPO_PUBLIC_OAUTH_BRIDGE_URL="${EXPO_PUBLIC_OAUTH_BRIDGE_URL:-https://app
 export EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL="${EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL:-https://app.tracebud.com/auth/confirm}"
 
 echo "==> expo prebuild (android)"
-npx expo prebuild --platform android --no-install
+if [[ -f android/app/build.gradle && "${MAESTRO_FORCE_PREBUILD:-}" != "1" ]]; then
+  echo "==> Reusing cached android/ tree (skip expo prebuild)"
+else
+  npx expo prebuild --platform android --no-install
+fi
 
 GRADLE_FILE="$ROOT/android/app/build.gradle"
 echo "==> Force JS embed in debug APK (debug variant skips bundling by default)"
