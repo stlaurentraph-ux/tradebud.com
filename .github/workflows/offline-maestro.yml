@@ -297,9 +297,9 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-maestro-${{ runner.os }}-${{ hashFiles('apps/offline-product/package-lock.json', 'apps/offline-product/android/**/*.gradle*', 'apps/offline-product/android/gradle.properties') }}
+          key: gradle-maestro-v2-${{ runner.os }}-${{ hashFiles('apps/offline-product/package-lock.json', 'apps/offline-product/android/**/*.gradle*', 'apps/offline-product/android/gradle.properties') }}
           restore-keys: |
-            gradle-maestro-${{ runner.os }}-
+            gradle-maestro-v2-${{ runner.os }}-
 
       - name: Assemble debug APK (parallel job — smoke/golden download artifact)
         working-directory: apps/offline-product
