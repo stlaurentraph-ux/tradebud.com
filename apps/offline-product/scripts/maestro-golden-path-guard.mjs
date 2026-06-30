@@ -203,8 +203,15 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('MAESTRO_ANDROID_FORCE_PROVISION')) {
     throw new Error('Android bootstrap must support legacy force-provision when in-app seed disabled');
   }
-  if (!readOffline('features/state/persistence.native.ts').includes('maestroCiBootDatabase.native')) {
+  if (!readOffline('features/state/persistence.native.ts').includes('maestroCiBootDatabase')) {
     throw new Error('persistence.native.ts must copy bundled Maestro boot DB when EXPO_PUBLIC_MAESTRO_CI=1');
+  }
+  if (!readOffline('features/testing/maestroCiBootDatabase.android.ts').includes('maestro/tracebud_offline.db')) {
+    throw new Error('maestroCiBootDatabase.android.ts must load boot DB from APK native assets');
+  }
+  const androidAssemble = readOffline('scripts/maestro-ci-assemble-android-apk.sh');
+  if (!androidAssemble.includes('android/app/src/main/assets/maestro/tracebud_offline.db')) {
+    throw new Error('maestro-ci-assemble-android-apk.sh must copy boot DB into Android native assets');
   }
   if (!readOffline('scripts/generate-maestro-ci-boot-db.mjs').includes('goldenPathBootProfile')) {
     throw new Error('generate-maestro-ci-boot-db.mjs must build golden-path boot DB from baseline');

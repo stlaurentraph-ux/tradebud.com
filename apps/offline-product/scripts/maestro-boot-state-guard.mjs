@@ -83,9 +83,9 @@ function main() {
       androidBootstrap.includes('MAESTRO_ANDROID_IN_APP_DB_SEED') &&
       androidBootstrap.includes('in-app bundled SQLite');
     if (androidUsesInAppSeed) {
-      const bootDbNative = read('features/testing/maestroCiBootDatabase.native.ts');
+      const bootDbNative = read('features/testing/maestroCiBootDatabase.android.ts');
       if (!bootDbNative.includes('tracebud_offline.db')) {
-        issues.push('maestroCiBootDatabase.native.ts must copy bundled tracebud_offline.db');
+        issues.push('maestroCiBootDatabase.android.ts must copy bundled tracebud_offline.db');
       }
       const generateDb = read('scripts/generate-maestro-ci-boot-db.mjs');
       if (!generateDb.includes('goldenPathBootProfile') || !generateDb.includes('profile.settings')) {

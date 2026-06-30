@@ -43,7 +43,7 @@ Default CI path (`MAESTRO_ANDROID_IN_APP_DB_SEED=1`):
 
 1. `generate-maestro-ci-boot-db.mjs` applies `golden_path_minimal` settings at assemble time.
 2. APK bundles `assets/maestro/tracebud_offline.db`.
-3. `maestroCiBootDatabase.native.ts` copies the bundled DB before `initDatabase()` when `EXPO_PUBLIC_MAESTRO_CI=1`.
+3. `maestroCiBootDatabase.android.ts` copies from `android/app/src/main/assets/maestro/tracebud_offline.db` before `initDatabase()` when `EXPO_PUBLIC_MAESTRO_CI=1`.
 4. Bootstrap **skips** host `adb` seed and warms JS only.
 
 Legacy host seed (`MAESTRO_ANDROID_IN_APP_DB_SEED=0`) uses `seed-maestro-boot-profile.mjs` via `adb root` + `run-as cp` when needed.

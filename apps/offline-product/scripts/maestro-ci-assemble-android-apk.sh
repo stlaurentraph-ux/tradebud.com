@@ -64,6 +64,16 @@ fi
 echo "==> Generate Maestro CI boot SQLite asset (in-app seed — no host adb)"
 node ./scripts/generate-maestro-ci-boot-db.mjs
 
+MAESTRO_BOOT_DB_SRC="$ROOT/assets/maestro/tracebud_offline.db"
+MAESTRO_BOOT_DB_DST="$ROOT/android/app/src/main/assets/maestro/tracebud_offline.db"
+if [[ ! -f "$MAESTRO_BOOT_DB_SRC" ]]; then
+  echo "::error::Missing generated Maestro boot DB at $MAESTRO_BOOT_DB_SRC"
+  exit 1
+fi
+mkdir -p "$(dirname "$MAESTRO_BOOT_DB_DST")"
+cp "$MAESTRO_BOOT_DB_SRC" "$MAESTRO_BOOT_DB_DST"
+echo "==> Copied Maestro boot DB into Android native assets"
+
 echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
 npx expo export:embed --eager --platform android --dev false
 
