@@ -4,6 +4,7 @@ name: Offline Maestro
 #   npm run qa:maestro:prepush        (static, any OS)
 #   npm run qa:maestro:prepush:full   (macOS + local iOS golden path)
 # PR: maestro-cost-gate skips macOS when already green + android-only delta; concurrency cancels stale runs.
+# H11/H12: boot-error fail-fast marker + CI error logging + macOS scroll timeout bump.
 
 on:
   push:
