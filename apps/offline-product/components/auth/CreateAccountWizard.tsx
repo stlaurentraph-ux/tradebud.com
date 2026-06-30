@@ -19,6 +19,7 @@ import { Brand, Spacing } from '@/constants/theme';
 import { formatSignInErrorMessage } from '@/features/auth/mapAuthError';
 import { resolveFarmerDisplayName } from '@/features/auth/farmerProfileBootstrap';
 import { ensureFarmerOAuthProfile } from '@/features/auth/oauthSession';
+import type { AccountSwitchResolution } from '@/features/auth/accountSwitchLocalState';
 import {
   signUpWithEmailAndSyncPlots,
   signUpWithOAuthAndSyncPlots,
@@ -27,7 +28,6 @@ import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import type { Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useAppColors, useThemedStyles } from '@/features/theme/useThemedStyles';
-import type { UploadUnsyncedPlotsResult } from '@/features/sync/plotServerSync';
 
 type WizardStep = 'method' | 'email' | 'name';
 
@@ -36,7 +36,7 @@ type CreateAccountWizardProps = {
   farmerId?: string;
   localPlots?: Plot[];
   onClose: () => void;
-  onSuccess: (sync: UploadUnsyncedPlotsResult | null) => void;
+  onSuccess: (options?: { accountSwitch?: AccountSwitchResolution }) => void;
   onSignInInstead: () => void;
 };
 
@@ -59,6 +59,9 @@ export function CreateAccountWizard({
   const [hint, setHint] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [oauthBusy, setOauthBusy] = useState<OAuthProvider | null>(null);
+  const [oauthAccountSwitch, setOauthAccountSwitch] = useState<AccountSwitchResolution | undefined>(
+    undefined,
+  );
 
   const reset = useCallback(() => {
     setStep('method');
@@ -68,6 +71,7 @@ export function CreateAccountWizard({
     setHint(null);
     setBusy(false);
     setOauthBusy(null);
+    setOauthAccountSwitch(undefined);
   }, []);
 
   useEffect(() => {
@@ -87,9 +91,9 @@ export function CreateAccountWizard({
     return formatSignInErrorMessage(t, code);
   };
 
-  const finishSuccess = (sync: UploadUnsyncedPlotsResult | null) => {
+  const finishSuccess = (accountSwitch?: AccountSwitchResolution) => {
     onClose();
-    onSuccess(sync);
+    onSuccess({ accountSwitch });
   };
 
   const handleEmailSignUp = async () => {
@@ -108,7 +112,7 @@ export function CreateAccountWizard({
         setHint(resolveMessage(result.message));
         return;
       }
-      finishSuccess(null);
+      finishSuccess(result.accountSwitch);
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
@@ -131,12 +135,13 @@ export function CreateAccountWizard({
         return;
       }
       if (result.missingName) {
+        setOauthAccountSwitch(result.accountSwitch);
         setOauthBusy(null);
         setStep('name');
         return;
       }
       setOauthBusy(null);
-      finishSuccess(null);
+      finishSuccess(result.accountSwitch);
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
@@ -153,7 +158,7 @@ export function CreateAccountWizard({
     setHint(null);
     try {
       await ensureFarmerOAuthProfile(fullName.trim());
-      finishSuccess(null);
+      finishSuccess(oauthAccountSwitch);
     } catch (e) {
       setHint(formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e)));
     } finally {
@@ -268,6 +273,8 @@ export function CreateAccountWizard({
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry
+                  showPasswordA11yLabel={t('password_show_a11y')}
+                  hidePasswordA11yLabel={t('password_hide_a11y')}
                   placeholder="••••••••"
                   dense
                 />

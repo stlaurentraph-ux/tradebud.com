@@ -245,10 +245,7 @@ export function photoForDirection(
   photos: PlotPhoto[],
   direction: GroundTruthPhotoDirection,
 ): PlotPhoto | undefined {
-  const tagged = photos.find((p) => normalizePhotoDirection(p.direction) === direction);
-  if (tagged) return tagged;
-  const idx = GROUND_TRUTH_DIRECTIONS.indexOf(direction);
-  return idx >= 0 ? photos[idx] : undefined;
+  return photos.find((p) => normalizePhotoDirection(p.direction) === direction);
 }
 
 export function isGroundTruthPhotoAfterCutoff(photo: PlotPhoto): boolean {
@@ -348,7 +345,7 @@ export function headingDeltaToDirection(
 export function isFacingDirection(
   currentHeadingDeg: number | null,
   direction: GroundTruthPhotoDirection,
-  toleranceDeg = 25,
+  toleranceDeg = 35,
 ): boolean {
   if (currentHeadingDeg == null || !Number.isFinite(currentHeadingDeg)) return true;
   return Math.abs(headingDeltaToDirection(currentHeadingDeg, direction)) <= toleranceDeg;

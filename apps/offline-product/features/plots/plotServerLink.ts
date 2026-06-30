@@ -68,17 +68,27 @@ export function resolveBackendPlotMetaForLocal(
   let serverId: string | null = null;
   const persisted = links?.[localPlot.id]?.trim();
   if (persisted) {
-    const row = (backendRows as { id?: unknown }[]).find(
-      (entry) => String(entry?.id ?? '') === persisted,
-    );
-    if (row) serverId = persisted;
+    const row = (backendRows as {
+      id?: unknown;
+      name?: string;
+      client_plot_id?: string | null;
+      kind?: unknown;
+      area_ha?: unknown;
+    }[]).find((entry) => String(entry?.id ?? '') === persisted);
+    if (
+      row &&
+      canTrustPersistedPlotServerLink(row, localPlot.id, persisted, new Set([localPlot.id]))
+    ) {
+      serverId = persisted;
+    }
   }
   if (!serverId) {
-    const hit = findBackendPlotForLocal(localPlot, backendRows);
-    serverId =
-      hit != null && (hit as { id?: unknown }).id != null
-        ? String((hit as { id: unknown }).id)
-        : null;
+    const byClientId = (backendRows as { id?: unknown; client_plot_id?: string | null; name?: string }[]).find(
+      (row) => backendRowMatchesLocalClientId(row, localPlot.id),
+    );
+    if (byClientId?.id != null) {
+      serverId = String(byClientId.id);
+    }
   }
   if (!serverId) return empty;
 

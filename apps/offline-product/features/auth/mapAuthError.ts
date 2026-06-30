@@ -48,6 +48,13 @@ export function mapSetPasswordError(
   if (msg.includes('session') || msg.includes('jwt') || code === 'session_not_found') {
     return 'settings_password_sign_in_required';
   }
+  if (
+    msg.includes('reauthenticate') ||
+    msg.includes('recent login') ||
+    code === 'reauthentication_needed'
+  ) {
+    return 'settings_password_sign_in_required';
+  }
   return 'sign_in_failed';
 }
 

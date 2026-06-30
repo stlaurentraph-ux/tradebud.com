@@ -3,6 +3,7 @@ import { Image, Linking, Pressable, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { DocumentListRow } from '@/components/evidence/DocumentListRow';
+import { InlineSyncNowCallout } from '@/components/sync/InlineSyncNowCallout';
 import { ThemedText } from '@/components/themed-text';
 import { Card } from '@/components/ui/card';
 import { Brand } from '@/constants/theme';
@@ -35,6 +36,9 @@ type PlotLandPapersCardProps = {
   notSyncedHint?: string | null;
   syncMessage?: string | null;
   syncTone?: 'success' | 'error' | 'info';
+  showSyncAction?: boolean;
+  onSyncNow?: () => void;
+  syncBusy?: boolean;
 };
 
 export function PlotLandPapersCard({
@@ -50,6 +54,9 @@ export function PlotLandPapersCard({
   notSyncedHint,
   syncMessage,
   syncTone = 'info',
+  showSyncAction = false,
+  onSyncNow,
+  syncBusy = false,
 }: PlotLandPapersCardProps) {
   const colors = useAppColors();
   const styles = useThemedStyles(createPlotLandPapersCardStyles);
@@ -188,25 +195,45 @@ export function PlotLandPapersCard({
       />
 
       {notSyncedHint ? (
-        <ThemedText type="caption" style={styles.syncHint}>
-          {notSyncedHint}
-        </ThemedText>
+        showSyncAction && onSyncNow ? (
+          <InlineSyncNowCallout
+            message={notSyncedHint}
+            tone="info"
+            onSyncNow={onSyncNow}
+            busy={syncBusy}
+            testID="plot-land-not-synced-callout"
+          />
+        ) : (
+          <ThemedText type="caption" style={styles.syncHint}>
+            {notSyncedHint}
+          </ThemedText>
+        )
       ) : null}
 
       {syncMessage ? (
-        <ThemedText
-          type="caption"
-          style={[
-            styles.syncFeedback,
-            syncTone === 'success'
-              ? styles.syncFeedbackSuccess
-              : syncTone === 'error'
-                ? styles.syncFeedbackError
-                : styles.syncFeedbackInfo,
-          ]}
-        >
-          {syncMessage}
-        </ThemedText>
+        showSyncAction && onSyncNow ? (
+          <InlineSyncNowCallout
+            message={syncMessage}
+            tone={syncTone}
+            onSyncNow={onSyncNow}
+            busy={syncBusy}
+            testID="plot-land-sync-callout"
+          />
+        ) : (
+          <ThemedText
+            type="caption"
+            style={[
+              styles.syncFeedback,
+              syncTone === 'success'
+                ? styles.syncFeedbackSuccess
+                : syncTone === 'error'
+                  ? styles.syncFeedbackError
+                  : styles.syncFeedbackInfo,
+            ]}
+          >
+            {syncMessage}
+          </ThemedText>
+        )
       ) : null}
     </Card>
   );

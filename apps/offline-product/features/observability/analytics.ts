@@ -10,6 +10,7 @@ export const ANALYTICS_EVENTS = {
   SESSION_START: 'session_start',
   SIGN_IN_SUCCESS: 'sign_in_success',
   SIGN_IN_FAILURE: 'sign_in_failure',
+  ACCOUNT_SWITCH_LOCAL_RESET: 'account_switch_local_reset',
   OAUTH_SIGN_IN_STARTED: 'oauth_sign_in_started',
   OAUTH_CALLBACK_STARTED: 'oauth_callback_started',
   OAUTH_CALLBACK_SUCCESS: 'oauth_callback_success',

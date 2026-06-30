@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
+import { Alert, BackHandler, Keyboard, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { StackGradientHeader } from '@/components/layout/StackGradientHeader';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -47,6 +47,7 @@ import {
 import { PlotEvidencePanel } from '@/components/evidence/PlotEvidencePanel';
 import { DocumentPreviewModal } from '@/components/evidence/DocumentPreviewModal';
 import { PlotLandPapersCard } from '@/components/evidence/PlotLandPapersCard';
+import { InlineSyncNowCallout } from '@/components/sync/InlineSyncNowCallout';
 import { PlotTenureStatusCard } from '@/components/compliance/PlotTenureStatusCard';
 import { PlotComplianceStatusCards } from '@/components/compliance/PlotComplianceStatusCards';
 import { PlotMapPreview } from '@/components/plot-map/PlotMapPreview';
@@ -961,6 +962,12 @@ export default function PlotDetailScreen() {
     }
   }, []);
 
+  const openPlotSyncNow = useCallback(() => {
+    router.push('/(tabs)/settings?focus=backup&syncNow=1');
+  }, []);
+
+  const showPlotSyncAction = hasSyncAuthSession();
+
   const notifyDocSync = useCallback((message: string, tone: 'success' | 'error' | 'info' = 'error') => {
     setDocSyncMessage(message);
     setDocSyncTone(tone);
@@ -1211,8 +1218,22 @@ export default function PlotDetailScreen() {
       setActive(null);
       return;
     }
+    if (from === 'record') {
+      router.replace('/(tabs)/explore');
+      return;
+    }
     router.back();
   }, [active, from]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+        handleHeaderBack();
+        return true;
+      });
+      return () => subscription.remove();
+    }, [handleHeaderBack]),
+  );
 
   const confirmDeletePlot = useCallback(() => {
     if (!plot) return;
@@ -1489,6 +1510,7 @@ export default function PlotDetailScreen() {
           deforestationScreening={backendPlotMeta.deforestationScreening}
           sinaphOverlap={overlapFlags.sinaph}
           indigenousOverlap={overlapFlags.indigenous}
+          plotRegisteredAtMs={plot?.createdAt}
         />
 
         <Pressable style={[styles.navCard, active === 'photos' && styles.navCardSelected]} onPress={() => setActive('photos')}>
@@ -1547,12 +1569,22 @@ export default function PlotDetailScreen() {
         ) : null}
 
         {active === 'photos' && plot ? (
-          <PhotoVaultPanel
-            plot={plot}
-            photos={photos}
-            onPhotosChange={setPhotos}
-            t={t}
-          />
+          <>
+            {!backendPlotId && showPlotSyncAction && photos.length > 0 ? (
+              <InlineSyncNowCallout
+                message={t('plot_documents_plot_not_synced_hint')}
+                tone="info"
+                onSyncNow={openPlotSyncNow}
+                testID="plot-photos-sync-callout"
+              />
+            ) : null}
+            <PhotoVaultPanel
+              plot={plot}
+              photos={photos}
+              onPhotosChange={setPhotos}
+              t={t}
+            />
+          </>
         ) : null}
 
         {active === 'documents' && plot ? (
@@ -1649,6 +1681,8 @@ export default function PlotDetailScreen() {
                   }
                   syncMessage={docSyncMessage}
                   syncTone={docSyncTone}
+                  showSyncAction={showPlotSyncAction}
+                  onSyncNow={openPlotSyncNow}
                 />
               </>
             )}

@@ -160,7 +160,7 @@ const fsAny = FileSystem as unknown as {
 
 export default function SettingsScreen() {
   const { languageCode, openLanguagePicker, t } = useLanguage();
-  const params = useLocalSearchParams<{ focus?: string }>();
+  const params = useLocalSearchParams<{ focus?: string; syncNow?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const syncSectionY = useRef(0);
   const { farmer, farmerDisplayName, plots, setFarmer, updateFarmerProfilePhoto, reloadFromDisk } =
@@ -1243,6 +1243,18 @@ export default function SettingsScreen() {
       await refreshSyncMetrics({ forcePlotFetch: true });
     }
   };
+
+  const syncNowTriggeredRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (params.syncNow !== '1' || syncNowTriggeredRef.current) return;
+      syncNowTriggeredRef.current = true;
+      const timer = setTimeout(() => {
+        void runSyncNow();
+      }, 280);
+      return () => clearTimeout(timer);
+    }, [params.syncNow]),
+  );
 
   return (
     <ThemedView style={styles.container}>

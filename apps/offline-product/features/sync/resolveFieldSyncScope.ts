@@ -82,12 +82,18 @@ export async function resolveFieldSyncScope(params: {
 
   await bootstrapFieldAppProducer({ farmerId: profileFarmerId }).catch(() => undefined);
 
-  const ownedFarmerIds = uniqueIds([
+  const apiOwned = uniqueIds([
     ...(await fetchOwnedFarmerIdsFromApi()),
     ...getBootstrapOwnedFarmerIds(),
+  ]);
+  const localCandidates = uniqueIds([
     profileFarmerId,
     ...params.localPlots.map((plot) => plot.farmerId ?? ''),
   ]);
+  const ownedFarmerIds =
+    apiOwned.length > 0
+      ? uniqueIds([...apiOwned, ...localCandidates.filter((id) => apiOwned.includes(id))])
+      : localCandidates;
 
   let apiFarmerId = profileFarmerId;
   let bestPlotCount = -1;

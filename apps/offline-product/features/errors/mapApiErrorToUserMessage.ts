@@ -91,7 +91,11 @@ export function mapSyncActionErrorMessage(
 ): string {
   const trimmed = raw?.trim() ?? '';
 
-  if (/session expired|401|unauthorized|jwt|sign in again|sign_in_session_expired/i.test(trimmed)) {
+  if (
+    /session expired|401|unauthorized|invalid token|missing bearer|jwt|sign in again|sign_in_session_expired/i.test(
+      trimmed,
+    )
+  ) {
     return t('sync_session_expired_short');
   }
   if (/no access token available/i.test(trimmed)) {

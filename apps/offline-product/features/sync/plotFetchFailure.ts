@@ -10,6 +10,8 @@ export function isPlotFetchAuthFailure(error: unknown): boolean {
     message.includes('no access token') ||
     message.includes('sign_in_session_expired') ||
     message.includes('unauthorized') ||
+    message.includes('invalid token') ||
+    message.includes('missing bearer') ||
     /\b401\b/.test(message) ||
     message.includes('jwt')
   );

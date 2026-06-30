@@ -124,7 +124,7 @@ export function computePlotReadinessChecklist(params: {
     isSyncedToServer: params.isSyncedToServer,
     tenureVerifications: params.tenureVerifications,
   });
-  const landOk = hasLandDocuments && tenureParseGate !== 'blocked';
+  const landOk = tenureParseGate === 'cleared';
   const needsFpic = flags?.indigenous_overlap === true;
   const needsPermit = flags?.sinaph_overlap === true;
   const producerKinds = params.producerEvidenceKinds ?? [];

@@ -8,13 +8,24 @@ import {
 } from '@/features/api/syncAuthSession';
 import { bootstrapFieldAppProducer } from '@/features/api/fieldAppBootstrap';
 import type { Plot } from '@/features/state/AppStateContext';
+import {
+  resolveAccountSwitchLocalState,
+  type AccountSwitchResolution,
+} from '@/features/auth/accountSwitchLocalState';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import { mapPasswordSignInError, normalizeSignInErrorCode } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
 
 export type SignInSyncResult =
-  | { ok: true; missingName?: boolean; apiUnreachable?: boolean }
+  | {
+      ok: true;
+      missingName?: boolean;
+      apiUnreachable?: boolean;
+      accountSwitch?: AccountSwitchResolution;
+      /** @deprecated Use accountSwitch.clearedStaleLocalData */
+      localStateReset?: boolean;
+    }
   | { ok: false; message: string };
 
 export { clearPersistedSyncAuth };
@@ -48,9 +59,13 @@ export async function signInAndSyncPlots(params: {
 
   await saveAndApplyPasswordSession(email, params.password, data.session);
 
-  if (params.farmerId) {
+  const accountSwitch = await resolveAccountSwitchLocalState(email);
+  const farmerId = accountSwitch.clearedStaleLocalData ? undefined : params.farmerId;
+  const localPlots = accountSwitch.clearedStaleLocalData ? undefined : params.localPlots;
+
+  if (farmerId) {
     const bootstrap = await bootstrapFieldAppProducer({
-      farmerId: params.farmerId,
+      farmerId,
     });
     if (!bootstrap.ok) {
       await clearPersistedSyncAuth();
@@ -65,7 +80,12 @@ export async function signInAndSyncPlots(params: {
       res.message.toLowerCase().includes('failed to fetch') ||
       res.message.toLowerCase().includes('tracebud api returned');
     if (unreachable) {
-      return { ok: true, apiUnreachable: true };
+      return {
+        ok: true,
+        apiUnreachable: true,
+        accountSwitch,
+        localStateReset: accountSwitch.clearedStaleLocalData,
+      };
     }
     await clearPersistedSyncAuth();
     const code = normalizeSignInErrorCode(res.message);
@@ -75,7 +95,11 @@ export async function signInAndSyncPlots(params: {
   // SignInSheetContext (U5) — running it here too caused a duplicate backup on
   // password sign-in. The OAuth path below preserves its own trigger because
   // OAuth completion does not always route through the sign-in sheet callback.
-  return { ok: true };
+  return {
+    ok: true,
+    accountSwitch,
+    localStateReset: accountSwitch.clearedStaleLocalData,
+  };
 }
 
 export async function signInWithOAuthAndSyncPlots(params: {

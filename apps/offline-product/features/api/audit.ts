@@ -4,6 +4,7 @@
  */
 
 import { getAccessTokenFromSupabase } from './auth';
+import { isFarmerScopeViolationMessage } from './farmerScopeErrors';
 import { logError } from '@/features/errors/ErrorLogger';
 import { getTracebudApiBaseUrl } from './runtimeGuards';
 
@@ -34,12 +35,17 @@ export async function fetchAuditForFarmer(farmerId: string) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
-    logError(new Error(body.message ?? `Audit fetch error: ${res.status}`), {
-      context: 'fetchAudit',
-      statusCode: res.status,
-      farmerId,
-    });
-    throw new Error(body.message ?? `Audit fetch error: ${res.status}`);
+    const message =
+      messageFromBackendJson(body) ?? `Audit fetch error: ${res.status}`;
+    const scopeViolation = res.status === 403 && isFarmerScopeViolationMessage(message);
+    if (!scopeViolation) {
+      logError(new Error(message), {
+        context: 'fetchAudit',
+        statusCode: res.status,
+        farmerId,
+      });
+    }
+    throw new Error(message);
   }
 
   return res.json();

@@ -28,6 +28,10 @@ function stepLabelKey(step: SyncFailureStep): string {
 
 /** Farmer-facing primary line for a typed sync failure. */
 export function formatSyncFailureUserMessage(failure: SyncFailure, t: TranslateFn): string {
+  if (failure.cause === 'auth' || failure.cause === 'not_signed_in') {
+    return t('sync_session_expired_short');
+  }
+
   if (failure.step === 'token_refresh') {
     if (failure.cause === 'network' || failure.cause === 'timeout') {
       return t('sync_auth_refresh_failed');

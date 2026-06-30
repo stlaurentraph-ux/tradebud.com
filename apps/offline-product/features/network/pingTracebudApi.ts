@@ -23,7 +23,12 @@ async function pingHealthOnce(): Promise<boolean> {
   return res != null && isSuccessfulApiResponse(res.status);
 }
 
-/** True when an authenticated Tracebud GET returns any HTTP status (transport reached the API). */
+/** True when the API accepted the bearer token (2xx/304) or rejected scope (403), not 401. */
+export function isAcceptedSyncAccessTokenResponse(status: number): boolean {
+  return isSuccessfulApiResponse(status) || status === 403;
+}
+
+/** True when an authenticated Tracebud GET accepts the bearer token. */
 async function probeAuthenticatedTracebudApi(accessToken: string): Promise<boolean> {
   const base = getTracebudApiBaseUrl();
   const res = await tracebudFetchWithTimeout(
@@ -37,7 +42,14 @@ async function probeAuthenticatedTracebudApi(accessToken: string): Promise<boole
     },
     PING_TIMEOUT_MS,
   );
-  return res != null && res.status > 0;
+  return res != null && isAcceptedSyncAccessTokenResponse(res.status);
+}
+
+/** Confirms a Supabase access token is still valid for Tracebud API calls. */
+export async function probeSyncAccessTokenAccepted(accessToken: string): Promise<boolean> {
+  const token = accessToken.trim();
+  if (!token) return false;
+  return probeAuthenticatedTracebudApi(token);
 }
 
 /** True when the Tracebud API health endpoint responds (no auth required). */

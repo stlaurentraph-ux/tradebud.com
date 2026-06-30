@@ -38,4 +38,16 @@ for (const decorator of ['@IsEmail()', '@IsIn([', '@IsNotEmpty()']) {
   }
 }
 
+const createPlotDto = read('src/plots/dto/create-plot.dto.ts');
+if (!createPlotDto.includes('geometry!:') || !createPlotDto.includes('@Allow()')) {
+  console.error('validation-pipe-guard: CreatePlotDto.geometry must use @Allow() for GeoJSON whitelist');
+  process.exit(1);
+}
+
+const updatePlotGeometryDto = read('src/plots/dto/update-plot-geometry.dto.ts');
+if (!updatePlotGeometryDto.includes('geometry!:') || !updatePlotGeometryDto.includes('@Allow()')) {
+  console.error('validation-pipe-guard: UpdatePlotGeometryDto.geometry must use @Allow() for GeoJSON whitelist');
+  process.exit(1);
+}
+
 console.log('validation-pipe-guard: OK');

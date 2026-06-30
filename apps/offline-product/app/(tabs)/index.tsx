@@ -63,7 +63,7 @@ export default function HomeScreen() {
       return;
     }
     const gen = ++readinessRefreshGenRef.current;
-    const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer);
+    const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer, plotServerLinks);
     if (gen !== readinessRefreshGenRef.current) return;
 
     const compliant = results.filter((r) => r.done).length;
@@ -83,7 +83,7 @@ export default function HomeScreen() {
       ? t('home_action_plot_photos', { name: plot.name })
       : t('home_action_plot_setup', { name: plot.name });
     setActionRequired({ message, plotId: plot.id });
-  }, [plots, backendPlots, farmer, t]);
+  }, [plots, backendPlots, farmer, plotServerLinks, t]);
 
   const refreshBackendPlots = useCallback(
     async (force = false) => {

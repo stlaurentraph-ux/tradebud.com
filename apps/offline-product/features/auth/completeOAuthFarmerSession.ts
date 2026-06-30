@@ -5,6 +5,7 @@ import {
   saveAndApplyOAuthSyncAuth,
   testBackendLogin,
 } from '@/features/api/syncAuthSession';
+import { resolveAccountSwitchLocalState } from '@/features/auth/accountSwitchLocalState';
 import { ensureFarmerOAuthProfile, getFieldAppEmailFromSession, getNameFromSession } from '@/features/auth/oauthSession';
 import { fieldAppBlocksDashboardOAuthSignIn } from '@/features/auth/fieldAppEligibility';
 import type { SignInSyncResult } from '@/features/auth/signInSync';
@@ -103,12 +104,21 @@ export async function completeOAuthFarmerSession(params: {
     params.session.expires_at,
   );
 
+  const accountSwitch = await resolveAccountSwitchLocalState(email);
+  const farmerId = accountSwitch.clearedStaleLocalData ? undefined : params.farmerId;
+  const localPlots = accountSwitch.clearedStaleLocalData ? undefined : params.localPlots;
+
   void runPostOAuthConnectTasks({
     fullName: nameFromSession,
     session: params.session,
-    farmerId: params.farmerId,
-    localPlots: params.localPlots,
+    farmerId,
+    localPlots,
   });
 
-  return { ok: true, missingName: !nameFromSession };
+  return {
+    ok: true,
+    missingName: !nameFromSession,
+    accountSwitch,
+    localStateReset: accountSwitch.clearedStaleLocalData,
+  };
 }

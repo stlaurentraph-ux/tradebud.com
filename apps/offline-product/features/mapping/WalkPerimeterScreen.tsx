@@ -59,6 +59,7 @@ import { listOfflineTilePacks } from '@/features/offlineTiles/offlineTiles';
 import { pingFieldMapImagery } from '@/features/network/pingFieldMapImagery';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
 import { FieldMapMountGate } from '@/components/plot-map/FieldMapMountGate';
+import { FieldMapOfflineBanner } from '@/components/mapping/FieldMapOfflineBanner';
 import { PlotBoundaryOverlays } from '@/components/plot-map/PlotBoundaryOverlays';
 import { fieldMapUsesCustomTiles, FIELD_MAP_CAPTURE_UI_PROPS, resolveFieldMapTileMode } from '@/features/mapping/fieldMapTiles';
 import { regionFromCoordinates, type MapCoordinate } from '@/features/mapping/fieldMapRegion';
@@ -113,6 +114,12 @@ function geometryQualityAlertTitle(
 type CaptureMethod = 'walk' | 'draw' | 'centroid' | 'pin';
 type CaptureMethodPage = CaptureMethod;
 
+function plotDetailAfterRecordHref(plotId: string, sub?: string): Href {
+  const params = new URLSearchParams({ from: 'record' });
+  if (sub) params.set('sub', sub);
+  return `/plot/${encodeURIComponent(plotId)}?${params.toString()}` as Href;
+}
+
 export function WalkPerimeterScreen() {
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();
@@ -153,6 +160,7 @@ export function WalkPerimeterScreen() {
   const [lowDataMap, setLowDataMap] = useState(false);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
+  const [showOfflineMapBanner, setShowOfflineMapBanner] = useState(false);
   const [plotName, setPlotName] = useState('');
   const [plotNameTouched, setPlotNameTouched] = useState(false);
   const [plotLandingNameReady, setPlotLandingNameReady] = useState(false);
@@ -162,6 +170,7 @@ export function WalkPerimeterScreen() {
   const [showCompletionPage, setShowCompletionPage] = useState(false);
   const lastRegisteredPlotIdRef = useRef<string | null>(null);
   const lastSavedPlotRef = useRef<Plot | null>(null);
+  const plotNavigationPendingRef = useRef(false);
   const [completionPhotos, setCompletionPhotos] = useState<PlotPhoto[]>([]);
   const [captureMethod, setCaptureMethod] = useState<CaptureMethod>('walk');
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -669,8 +678,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       if (plotId) {
         buttons.push({
           text: t('plot_saved_add_land_papers'),
-          onPress: () =>
-            router.replace(`/plot/${encodeURIComponent(plotId)}?sub=documents`),
+          onPress: () => navigateToPlotDetail(plotId, 'documents'),
         });
       }
       buttons.push({
@@ -705,6 +713,34 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       setCompletionPhotos([]);
     }
   }, []);
+
+  const resetRegistrationFlowState = useCallback(() => {
+    setShowCompletionPage(false);
+    setShowDetailedForm(false);
+    setSelectedMethodPage(null);
+    setAlternateCaptureOpen(false);
+    setDrawTracingActive(false);
+    setMapScrollLock(false);
+    setCompletionPhotos([]);
+    lastRegisteredPlotIdRef.current = null;
+    lastSavedPlotRef.current = null;
+    reset();
+  }, [reset]);
+
+  const navigateToPlotDetail = useCallback((plotId: string, sub?: string) => {
+    plotNavigationPendingRef.current = true;
+    router.replace(plotDetailAfterRecordHref(plotId, sub));
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        if (!plotNavigationPendingRef.current) return;
+        plotNavigationPendingRef.current = false;
+        resetRegistrationFlowState();
+      };
+    }, [resetRegistrationFlowState]),
+  );
 
   const openShortPathIfPlotSaved = useCallback(
     (newPlotId: string | undefined, savedPlot: Plot | null) => {
@@ -1079,7 +1115,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     }
     if (showDetailedForm) {
       if (editingPlot) {
-        router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
+        navigateToPlotDetail(editingPlot.id);
         return;
       }
       setShowDetailedForm(false);
@@ -1087,7 +1123,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
       return;
     }
     if (editingPlot) {
-      router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
+      navigateToPlotDetail(editingPlot.id);
       return;
     }
     navigateHome(router);
@@ -1251,6 +1287,50 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     latitude: deviceRegion?.latitude ?? mapAnchorRegion.latitude,
     longitude: deviceRegion?.longitude ?? mapAnchorRegion.longitude,
   };
+
+  useEffect(() => {
+    if (!showCapturePage || lowDataMap) {
+      setShowOfflineMapBanner(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const assessment = await assessManualTraceImageryAvailability({
+        latitude: mapCoordDisplay.latitude,
+        longitude: mapCoordDisplay.longitude,
+        lowDataMap: false,
+        activePackId: offlineTilesPackId,
+        listPacks: listOfflineTilePacks,
+        pingOnlineImagery: pingFieldMapImagery,
+      });
+      if (cancelled) return;
+      if (assessment.allowed && assessment.imagerySource === 'offline_pack' && assessment.packId) {
+        setShowOfflineMapBanner(false);
+        if (!offlineTilesEnabled || offlineTilesPackId !== assessment.packId) {
+          await setSetting('offlineTilesEnabled', '1');
+          await setSetting('offlineTilesActivePackId', assessment.packId);
+          setOfflineTilesEnabled(true);
+          setOfflineTilesPackId(assessment.packId);
+        }
+        return;
+      }
+      if (assessment.allowed && assessment.imagerySource === 'esri_online') {
+        setShowOfflineMapBanner(false);
+        return;
+      }
+      setShowOfflineMapBanner(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    showCapturePage,
+    lowDataMap,
+    mapCoordDisplay.latitude,
+    mapCoordDisplay.longitude,
+    offlineTilesEnabled,
+    offlineTilesPackId,
+  ]);
 
   const userMapPosition = useMemo((): MapCoordinate | null => {
     if (isRecording && samples.length > 0) {
@@ -1503,7 +1583,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
         geometryCapture,
       });
       Alert.alert(t('walk_plot_updated_title'), t('walk_plot_updated_point_body'));
-      router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
+      navigateToPlotDetail(editingPlot.id);
       return;
     }
 
@@ -1649,7 +1729,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
           geometryCapture,
         });
         Alert.alert(t('walk_plot_updated_title'), t('walk_plot_updated_polygon_body'));
-        router.replace(`/plot/${encodeURIComponent(editingPlot.id)}`);
+        navigateToPlotDetail(editingPlot.id);
         return;
       }
 
@@ -2387,7 +2467,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                           reset();
                           setCompletionPhotos([]);
                           if (pid) {
-                            router.replace(`/plot/${encodeURIComponent(pid)}?sub=documents`);
+                            navigateToPlotDetail(pid, 'documents');
                             return;
                           }
                           router.replace('/(tabs)/explore');
@@ -2409,7 +2489,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                           reset();
                           setCompletionPhotos([]);
                           if (pid) {
-                            router.replace(`/plot/${encodeURIComponent(pid)}`);
+                            navigateToPlotDetail(pid);
                             return;
                           }
                           router.replace('/(tabs)/explore');
@@ -2465,7 +2545,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
                         reset();
                         setCompletionPhotos([]);
                         if (pid) {
-                          router.replace(`/plot/${encodeURIComponent(pid)}`);
+                          navigateToPlotDetail(pid);
                           return;
                         }
                         router.replace('/(tabs)/explore');
@@ -2502,6 +2582,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             ) : showCapturePage && captureMethod === 'walk' ? (
               <>
                 {renderCaptureInstructionsLink()}
+                {showOfflineMapBanner ? <FieldMapOfflineBanner /> : null}
 
                 <View
                   style={[styles.walkMapPanel, { minHeight: walkMapHeight }]}
@@ -2595,6 +2676,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             ) : showCapturePage && captureMethod === 'draw' ? (
               <>
                 {renderCaptureInstructionsLink()}
+                {showOfflineMapBanner ? <FieldMapOfflineBanner /> : null}
 
                 <View
                   style={[styles.walkMapPanel, { minHeight: drawMapHeight }]}

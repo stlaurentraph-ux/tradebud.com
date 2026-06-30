@@ -55,6 +55,27 @@ describe('plotServerLink', () => {
     });
   });
 
+  it('does not attach compliance meta from display-name-only server rows', () => {
+    const backendPlots = [
+      {
+        id: 'server-old',
+        name: 'Plot 1',
+        status: 'deforestation_clear',
+        deforestation_screening: { signalTier: 'green', screenedAt: '2026-06-23T12:00:00.000Z' },
+        area_ha: 2,
+        kind: 'polygon',
+      },
+    ];
+    const plot1 = { ...localPlot, id: 'local-new', name: 'Plot 1', areaHectares: 2, kind: 'polygon' as const };
+    expect(resolveBackendPlotMetaForLocal(plot1, backendPlots, {})).toEqual({
+      id: null,
+      status: 'pending_check',
+      deforestationScreening: null,
+      sinaph: false,
+      indigenous: false,
+    });
+  });
+
   it('returns empty compliance meta for stale persisted links', () => {
     const links = { 'local-1': 'missing-on-server' };
     expect(resolveBackendPlotMetaForLocal(localPlot, [{ id: 'server-9', name: 'Other' }], links)).toEqual({

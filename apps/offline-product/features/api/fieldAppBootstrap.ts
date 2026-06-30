@@ -189,3 +189,33 @@ export async function fetchOwnedFarmerIdsFromApi(): Promise<string[]> {
     return [];
   }
 }
+
+function uniqueFarmerIds(candidates: string[]): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+  for (const raw of candidates) {
+    const id = raw.trim();
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    ordered.push(id);
+  }
+  return ordered;
+}
+
+/**
+ * Drop stale on-device farmer ids after account switch when the server exposes owned profiles.
+ * Falls back to candidates when ownership lookup is unavailable (offline / pre-bootstrap).
+ */
+export async function filterFarmerIdsToAuthScope(candidates: string[]): Promise<string[]> {
+  const normalized = uniqueFarmerIds(candidates);
+  if (normalized.length === 0) return [];
+
+  const apiOwned = uniqueFarmerIds([
+    ...(await fetchOwnedFarmerIdsFromApi()),
+    ...getBootstrapOwnedFarmerIds(),
+  ]);
+  if (apiOwned.length === 0) return normalized;
+
+  const scoped = normalized.filter((id) => apiOwned.includes(id));
+  return scoped.length > 0 ? scoped : apiOwned;
+}

@@ -2,20 +2,16 @@ import { fetchPlotTenureVerification } from '@/features/api/postPlot';
 import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { computePlotReadinessChecklist, type PlotReadinessChecklist } from '@/features/compliance/plotChecklist';
-import { findBackendPlotForLocal } from '@/features/plots/backendPlotMatch';
+import {
+  resolveBackendPlotMetaForLocal,
+  type PlotServerLinks,
+} from '@/features/plots/plotServerLink';
 import type { Plot, FarmerProfile } from '@/features/state/AppStateContext';
 import {
   loadEvidenceForPlot,
   loadPhotosForPlot,
   loadTitlePhotosForPlot,
 } from '@/features/state/persistence';
-
-type BackendPlotMatchMeta = {
-  id?: unknown;
-  sinaph_overlap?: boolean;
-  indigenous_overlap?: boolean;
-  status?: string;
-};
 
 export type PlotReadinessLoadResult = {
   plotId: string;
@@ -31,9 +27,10 @@ export async function loadPlotReadinessForLocalPlot(
   plot: Plot,
   backendPlots: unknown[],
   farmer?: { id: string; fpicConsent?: boolean; laborNoChildLabor?: boolean; laborNoForcedLabor?: boolean; selfDeclared?: boolean } | null,
+  plotServerLinks?: PlotServerLinks | null,
 ): Promise<PlotReadinessLoadResult> {
-  const backendMatch = findBackendPlotForLocal(plot, backendPlots) as BackendPlotMatchMeta | null;
-  const backendPlotId = backendMatch?.id != null ? String(backendMatch.id) : null;
+  const backendMeta = resolveBackendPlotMetaForLocal(plot, backendPlots, plotServerLinks ?? {});
+  const backendPlotId = backendMeta.id;
 
   const [photos, titleRows, evidenceRows, producerEvidenceRows, tenureVerifications] = await Promise.all([
     loadPhotosForPlot(plot.id).catch(() => []),
@@ -63,8 +60,10 @@ export async function loadPlotReadinessForLocalPlot(
     producerAttestationsComplete: hasProducerAttestationsComplete(
       farmer ? ({ ...farmer, role: 'farmer' } as FarmerProfile) : undefined,
     ),
-    isSyncedToServer: Boolean(backendMatch),
-    backendFlags: backendMatch,
+    isSyncedToServer: Boolean(backendPlotId),
+    backendFlags: backendPlotId
+      ? { sinaph_overlap: backendMeta.sinaph, indigenous_overlap: backendMeta.indigenous }
+      : null,
     tenureVerifications,
   });
 
@@ -82,6 +81,9 @@ export async function loadAllPlotReadinessStates(
   plots: Plot[],
   backendPlots: unknown[],
   farmer?: { id: string; fpicConsent?: boolean; laborNoChildLabor?: boolean; laborNoForcedLabor?: boolean; selfDeclared?: boolean } | null,
+  plotServerLinks?: PlotServerLinks | null,
 ): Promise<PlotReadinessLoadResult[]> {
-  return Promise.all(plots.map((p) => loadPlotReadinessForLocalPlot(p, backendPlots, farmer)));
+  return Promise.all(
+    plots.map((p) => loadPlotReadinessForLocalPlot(p, backendPlots, farmer, plotServerLinks)),
+  );
 }

@@ -1,11 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { Allow, IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
 
 export class UpdatePlotGeometryDto {
   @ApiProperty({
     description:
       'GeoJSON Point or Polygon in WGS84. Example: { "type": "Polygon", "coordinates": [[[-86.1,14.1],[-86.2,14.1],[-86.2,14.2],[-86.1,14.2],[-86.1,14.1]]] }',
   })
+  @Allow()
   geometry!: any;
 
   @ApiProperty({

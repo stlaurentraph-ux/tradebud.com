@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, AppState, Image, Pressable, View } from 'react-native';
+import { ActivityIndicator, Alert, AppState, Image, Pressable, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -104,6 +104,8 @@ function DirectionProgressRow({
   activeDirection,
   selectable = false,
   onSelectDirection,
+  savingDirection,
+  openingCamera,
 }: {
   photos: PlotPhoto[];
   plot: Plot;
@@ -111,6 +113,8 @@ function DirectionProgressRow({
   activeDirection?: GroundTruthPhotoDirection;
   selectable?: boolean;
   onSelectDirection?: (direction: GroundTruthPhotoDirection) => void;
+  savingDirection?: GroundTruthPhotoDirection | null;
+  openingCamera?: boolean;
 }) {
   const styles = useThemedStyles(createGroundTruthPhotoCaptureStyles);
   return (
@@ -119,10 +123,11 @@ function DirectionProgressRow({
         const photo = photoForDirection(photos, dir);
         const verified = isDirectionPhotoGeoVerified(photo, plot);
         const isActive = activeDirection === dir;
+        const isBusy = isActive && (openingCamera || savingDirection === dir);
         return (
           <Pressable
             key={dir}
-            disabled={!selectable || !onSelectDirection}
+            disabled={!selectable || !onSelectDirection || isBusy}
             onPress={() => onSelectDirection?.(dir)}
             style={[
               styles.directionChip,
@@ -130,7 +135,9 @@ function DirectionProgressRow({
               isActive && styles.directionChipActive,
             ]}
           >
-            {photo?.uri ? (
+            {isBusy ? (
+              <ActivityIndicator size="small" color={Brand.primary} />
+            ) : photo?.uri && normalizePhotoDirection(photo.direction) === dir ? (
               <Image source={{ uri: photo.uri }} style={styles.directionChipImage} />
             ) : (
               <ThemedText type="caption" style={styles.directionChipLetter}>
@@ -158,6 +165,7 @@ export function GroundTruthPhotoCapture({
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
   const [openingCamera, setOpeningCamera] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [savingDirection, setSavingDirection] = useState<GroundTruthPhotoDirection | null>(null);
   const [step, setStep] = useState<WizardStep>(() => resolveInitialStep(photos, plot));
   const [activeDirection, setActiveDirection] = useState<GroundTruthPhotoDirection>(() =>
     resolveActiveDirection(photos, plot),
@@ -236,6 +244,7 @@ export function GroundTruthPhotoCapture({
       if (saveInFlightRef.current) return;
       saveInFlightRef.current = true;
       setSavingPhoto(true);
+      setSavingDirection(snapshot.direction);
       resetCameraBusy();
 
       const takenAt = Date.now();
@@ -294,6 +303,7 @@ export function GroundTruthPhotoCapture({
       } finally {
         saveInFlightRef.current = false;
         setSavingPhoto(false);
+        setSavingDirection(null);
       }
     },
     [onPhotosChange, plot, resetCameraBusy, t],
@@ -446,6 +456,8 @@ export function GroundTruthPhotoCapture({
           activeDirection={activeDirection}
           selectable
           onSelectDirection={setActiveDirection}
+          savingDirection={savingDirection}
+          openingCamera={openingCamera}
         />
         <ThemedText type="caption" style={styles.retakeHint}>
           {t('photo_vault_retake_hint')}
@@ -508,12 +520,13 @@ export function GroundTruthPhotoCapture({
         {GROUND_TRUTH_DIRECTIONS.map((dir) => {
           const photo = photoForDirection(photos, dir);
           const verified = isDirectionPhotoGeoVerified(photo, plot);
+          const tagged = photo && normalizePhotoDirection(photo.direction) === dir;
           return (
             <View
               key={dir}
               style={[styles.summarySlot, verified && styles.summarySlotVerified]}
             >
-              {photo?.uri ? (
+              {tagged && photo?.uri ? (
                 <Image source={{ uri: photo.uri }} style={styles.summaryImage} />
               ) : (
                 <Ionicons name="image-outline" size={28} color="#9CA3AF" />

@@ -22,6 +22,8 @@ type PlotComplianceStatusCardsProps = {
   deforestationScreening: unknown;
   sinaphOverlap: boolean;
   indigenousOverlap: boolean;
+  /** When set, hide screening dates that predate this plot registration (stale server link). */
+  plotRegisteredAtMs?: number;
 };
 
 function deforestationIcon(c: AppColors, state: DeforestationUiState): {
@@ -62,24 +64,35 @@ export function PlotComplianceStatusCards({
   deforestationScreening,
   sinaphOverlap,
   indigenousOverlap,
+  plotRegisteredAtMs,
 }: PlotComplianceStatusCardsProps) {
   const colors = useAppColors();
   const styles = useThemedStyles(createPlotComplianceStatusCardsStyles);
   const { t } = useLanguage();
   const synced = Boolean(backendPlotId);
 
-  const deforestationState: DeforestationUiState = synced
-    ? deforestationUiStateFromBackendStatus(
-        resolveBackendPlotComplianceStatus({
-          status: backendStatus,
-          deforestation_screening: deforestationScreening,
-        }),
-      )
-    : 'pending';
+  const screening = synced ? parseDeforestationScreening(deforestationScreening) : null;
+  const screenedAtMs = screening?.screenedAt ? Date.parse(screening.screenedAt) : Number.NaN;
+  const screeningPredatesRegistration =
+    typeof plotRegisteredAtMs === 'number' &&
+    Number.isFinite(plotRegisteredAtMs) &&
+    Number.isFinite(screenedAtMs) &&
+    screenedAtMs + 60_000 < plotRegisteredAtMs;
+  const showScreenedAt =
+    Boolean(screening?.screenedAt) && !screeningPredatesRegistration;
+
+  const deforestationState: DeforestationUiState = !synced
+    ? 'pending'
+    : screeningPredatesRegistration
+      ? 'pending'
+      : deforestationUiStateFromBackendStatus(
+          resolveBackendPlotComplianceStatus({
+            status: backendStatus,
+            deforestation_screening: deforestationScreening,
+          }),
+        );
 
   const deforestationIconStyle = deforestationIcon(colors, deforestationState);
-  const screening = synced ? parseDeforestationScreening(deforestationScreening) : null;
-
   const protectedClear = !sinaphOverlap && !indigenousOverlap;
   const protectedIconStyle = protectedAreasIcon(colors, protectedClear, synced);
 
@@ -121,11 +134,15 @@ export function PlotComplianceStatusCards({
             <ThemedText type="default" style={styles.bodyText}>
               {deforestationBody}
             </ThemedText>
-            {screening?.screenedAt ? (
+            {showScreenedAt ? (
               <ThemedText type="caption" style={styles.meta}>
                 {t('plot_deforestation_screened_at', {
-                  date: new Date(screening.screenedAt).toLocaleDateString(),
+                  date: new Date(screening!.screenedAt!).toLocaleDateString(),
                 })}
+              </ThemedText>
+            ) : screeningPredatesRegistration ? (
+              <ThemedText type="caption" style={styles.meta}>
+                {t('plot_deforestation_rescreen_after_register')}
               </ThemedText>
             ) : null}
           </View>

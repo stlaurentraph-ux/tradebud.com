@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsIn, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import { Allow, IsArray, IsIn, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
 
 const PRODUCTION_SYSTEMS = ['monoculture', 'agroforestry', 'shade_grown', 'silvopasture'] as const;
 
@@ -32,6 +32,7 @@ export class CreatePlotDto {
     description:
       'GeoJSON Point or Polygon in WGS84. Example: { "type": "Point", "coordinates": [-87.123456, 14.123456] }',
   })
+  @Allow()
   geometry!: any;
 
   @ApiProperty({ required: false })

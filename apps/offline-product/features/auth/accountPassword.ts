@@ -36,16 +36,25 @@ export async function setAccountPasswordForCurrentUser(
       return { ok: false, message: 'settings_password_no_email' };
     }
 
-    const { error } = await client.auth.updateUser({ password: newPassword });
-    if (error) {
-      return { ok: false, message: mapSetPasswordError(error) };
+    const { error: updateError } = await client.auth.updateUser({ password: newPassword });
+    if (updateError) {
+      return { ok: false, message: mapSetPasswordError(updateError) };
     }
 
-    const session = (await client.auth.getSession()).data.session;
-    await saveAndApplyPasswordSession(email, newPassword, {
-      access_token: session?.access_token ?? '',
-      expires_at: session?.expires_at ?? null,
+    const { data: signInData, error: signInError } = await client.auth.signInWithPassword({
+      email,
+      password: newPassword,
     });
+    if (signInError || !signInData.session) {
+      return {
+        ok: false,
+        message: signInError
+          ? mapSetPasswordError(signInError)
+          : 'settings_password_sign_in_required',
+      };
+    }
+
+    await saveAndApplyPasswordSession(email, newPassword, signInData.session);
 
     return { ok: true };
   } catch (e) {

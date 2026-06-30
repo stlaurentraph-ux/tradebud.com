@@ -74,5 +74,13 @@ describe('classifySyncFailure', () => {
       cause: 'auth',
       httpStatus: 401,
     });
+    expect(
+      classifySyncFailure({
+        error: 'Invalid token',
+        step: 'plot_list',
+      }),
+    ).toMatchObject({
+      cause: 'auth',
+    });
   });
 });

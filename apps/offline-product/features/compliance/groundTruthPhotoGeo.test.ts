@@ -103,12 +103,12 @@ describe('groundTruthPhotoGeo', () => {
     expect(isPhotoStandpointReady(14.123456, -87.123456, pointPlot)).toBe(true);
   });
 
-  it('resolves photos per direction with legacy index fallback', () => {
+  it('maps photos only by explicit direction tag (no index fallback)', () => {
     const photos = [
       photo({ plotId: 'p2', uri: 'a', takenAt: Date.now(), direction: null }),
       photo({ plotId: 'p2', uri: 'b', takenAt: Date.now(), direction: 'east' }),
     ];
-    expect(photoForDirection(photos, 'north')?.uri).toBe('a');
+    expect(photoForDirection(photos, 'north')).toBeUndefined();
     expect(photoForDirection(photos, 'east')?.uri).toBe('b');
   });
 

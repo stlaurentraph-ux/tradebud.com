@@ -63,7 +63,7 @@ function classifyCause(message: string, httpStatus?: number): SyncFailureCause {
   const m = message.toLowerCase();
 
   if (
-    /sign_in_session_expired|session expired|no access token|unauthorized|\b401\b|jwt expired/i.test(
+    /sign_in_session_expired|session expired|no access token|unauthorized|invalid token|missing bearer|\b401\b|jwt expired/i.test(
       message,
     )
   ) {

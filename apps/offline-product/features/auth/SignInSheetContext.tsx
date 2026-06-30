@@ -51,6 +51,11 @@ import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
 import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerSession';
 import { alignFarmerWithAuthUser } from '@/features/auth/alignFarmerWithAuthUser';
 import {
+  accountHasCloudFieldData,
+  rememberLastAuthenticatedEmail,
+  type AccountSwitchResolution,
+} from '@/features/auth/accountSwitchLocalState';
+import {
   bootstrapFarmerProfile,
   shouldUpdateBootstrappedFarmer,
 } from '@/features/auth/farmerProfileBootstrap';
@@ -227,51 +232,60 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     [t],
   );
 
+  const reloadAfterAccountSwitch = useCallback(async () => {
+    await reloadFromDisk();
+  }, [reloadFromDisk]);
+
   const offerBackupAfterAuth = useCallback(async () => {
-    const { farmer: alignedFarmer, rekeyed } = await alignFarmerWithAuthUser(farmer, {
-      localPlots: plots,
-    });
-    const activeFarmer = alignedFarmer ?? farmer;
+    const diskState = await loadAppState().catch(() => ({ farmer, plots }));
+    const activeFarmer = diskState.farmer ?? farmer;
+    const activePlots = diskState.plots ?? plots;
     if (!activeFarmer?.id) return;
 
-    let activePlots = plots;
+    const { farmer: alignedFarmer, rekeyed } = await alignFarmerWithAuthUser(activeFarmer, {
+      localPlots: activePlots,
+    });
+    const scopedFarmer = alignedFarmer ?? activeFarmer;
+    if (!scopedFarmer?.id) return;
+
+    let scopedPlots = activePlots;
     if (rekeyed) {
-      setFarmer(activeFarmer);
+      setFarmer(scopedFarmer);
       await reloadFromDisk();
-      activePlots = (await loadAppState().catch(() => ({ plots: activePlots }))).plots;
+      scopedPlots = (await loadAppState().catch(() => ({ plots: scopedPlots }))).plots;
     }
 
     let unsynced = 0;
-    if (activePlots.length > 0) {
+    if (scopedPlots.length > 0) {
       try {
-        const backend = await fetchPlotsForFarmer(activeFarmer.id);
-        unsynced = listUnsyncedLocalPlots(activePlots, backend ?? []).length;
+        const backend = await fetchPlotsForFarmer(scopedFarmer.id);
+        unsynced = listUnsyncedLocalPlots(scopedPlots, backend ?? []).length;
       } catch {
-        unsynced = activePlots.length;
+        unsynced = scopedPlots.length;
       }
     }
 
     const pendingQueue = await loadPendingSyncActions().catch(() => []);
-    const localReceiptRows = await loadLocalDeliveryReceiptsForFarmer(activeFarmer.id).catch(
+    const localReceiptRows = await loadLocalDeliveryReceiptsForFarmer(scopedFarmer.id).catch(
       () => [],
     );
     const serverPlotCount =
-      activePlots.length === 0
+      scopedPlots.length === 0
         ? await countServerPlotsForPostAuthRestore({
-            profileFarmerId: activeFarmer.id,
-            localPlots: activePlots,
+            profileFarmerId: scopedFarmer.id,
+            localPlots: scopedPlots,
           })
         : null;
     const serverVoucherCount =
       localReceiptRows.length === 0
         ? await countServerVouchersForPostAuthRestore({
-            profileFarmerId: activeFarmer.id,
-            localPlots: activePlots,
+            profileFarmerId: scopedFarmer.id,
+            localPlots: scopedPlots,
           })
         : null;
 
     const offerInput = {
-      localPlotCount: activePlots.length,
+      localPlotCount: scopedPlots.length,
       unsyncedPlotCount: unsynced,
       pendingQueueCount: pendingQueue.length,
       serverPlotCount,
@@ -282,10 +296,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
 
     const plotCountHint = postAuthSyncPlotCountHint(offerInput);
 
-    if ((await hasDataProcessingConsent()) && activeFarmer.id) {
+    if ((await hasDataProcessingConsent()) && scopedFarmer.id) {
       const backup = await runAutoBackup({
-        farmerId: activeFarmer.id,
-        localPlots: activePlots,
+        farmerId: scopedFarmer.id,
+        localPlots: scopedPlots,
       });
       await reloadFromDisk();
       showBackupOutcomeAlert(backup);
@@ -351,21 +365,31 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   }, [backupPlotCount]);
 
   const syncLocalFarmerFromAuth = useCallback(
-    async (nameHint?: string) => {
+    async (nameHint?: string, options?: { preferDisk?: boolean }) => {
+      let baseFarmer = farmer;
+      let basePlots = plots;
+      if (options?.preferDisk) {
+        const diskState = await loadAppState().catch(() => null);
+        if (diskState) {
+          baseFarmer = diskState.farmer;
+          basePlots = diskState.plots;
+        }
+      }
+
       const { email: authEmail } = getAuthCredentials();
       const authUserId = await getAuthenticatedSupabaseUserId().catch(() => null);
-      const next = bootstrapFarmerProfile(farmer, {
+      const next = bootstrapFarmerProfile(baseFarmer, {
         name: nameHint,
         email: authEmail ?? undefined,
         preferredId: authUserId ?? undefined,
       });
-      const candidate = shouldUpdateBootstrappedFarmer(farmer, next) ? next : farmer;
+      const candidate = shouldUpdateBootstrappedFarmer(baseFarmer, next) ? next : baseFarmer;
       const { farmer: aligned, rekeyed } = await alignFarmerWithAuthUser(candidate, {
-        localPlots: plots,
+        localPlots: basePlots,
       });
       if (!aligned) return;
       const adopted = await adoptOnDeviceFarmerScope(aligned.id).catch(() => false);
-      if (rekeyed || adopted || shouldUpdateBootstrappedFarmer(farmer, aligned)) {
+      if (rekeyed || adopted || shouldUpdateBootstrappedFarmer(baseFarmer, aligned)) {
         setFarmer(aligned);
         if (rekeyed || adopted) {
           await reloadFromDisk();
@@ -373,6 +397,67 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       }
     },
     [farmer, plots, setFarmer, reloadFromDisk],
+  );
+
+  const handlePostAuthSyncOffer = useCallback(
+    async (accountSwitch?: AccountSwitchResolution) => {
+      if (!accountSwitch?.clearedStaleLocalData) {
+        void offerBackupAfterAuth();
+        return;
+      }
+
+      const diskState = await loadAppState().catch(() => ({ farmer: undefined, plots: [] }));
+      const activeFarmer = diskState.farmer ?? farmer;
+      if (!activeFarmer?.id) return;
+
+      const hasCloudData = await accountHasCloudFieldData(activeFarmer.id, diskState.plots);
+      if (!hasCloudData) {
+        return;
+      }
+
+      let unsynced = 0;
+      try {
+        const backend = await fetchPlotsForFarmer(activeFarmer.id);
+        unsynced = listUnsyncedLocalPlots(diskState.plots, backend ?? []).length;
+      } catch {
+        unsynced = diskState.plots.length;
+      }
+
+      const pendingQueue = await loadPendingSyncActions().catch(() => []);
+      const localReceiptRows = await loadLocalDeliveryReceiptsForFarmer(activeFarmer.id).catch(
+        () => [],
+      );
+      const serverPlotCount = await countServerPlotsForPostAuthRestore({
+        profileFarmerId: activeFarmer.id,
+        localPlots: diskState.plots,
+      });
+      const serverVoucherCount = await countServerVouchersForPostAuthRestore({
+        profileFarmerId: activeFarmer.id,
+        localPlots: diskState.plots,
+      });
+      const plotCountHint = postAuthSyncPlotCountHint({
+        localPlotCount: diskState.plots.length,
+        unsyncedPlotCount: unsynced,
+        pendingQueueCount: pendingQueue.length,
+        serverPlotCount,
+        localReceiptCount: localReceiptRows.length,
+        serverVoucherCount,
+      });
+
+      if ((await hasDataProcessingConsent()) && activeFarmer.id) {
+        const backup = await runAutoBackup({
+          farmerId: activeFarmer.id,
+          localPlots: diskState.plots,
+        });
+        await reloadFromDisk();
+        showBackupOutcomeAlert(backup);
+        return;
+      }
+      if (backupBusy) return;
+      setBackupPlotCount(plotCountHint);
+      setBackupModalVisible(true);
+    },
+    [backupBusy, farmer, offerBackupAfterAuth, reloadFromDisk, showBackupOutcomeAlert],
   );
 
   const adoptHydratedAuthSession = useCallback(async (): Promise<boolean> => {
@@ -386,7 +471,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     if (savedEmail) setEmail(savedEmail);
     setIsSignedIn(true);
     try {
-      await syncLocalFarmerFromAuth();
+      await syncLocalFarmerFromAuth(undefined, { preferDisk: true });
     } catch {
       // Credentials are on device; farmer alignment is best-effort on refresh.
     }
@@ -441,7 +526,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        await syncLocalFarmerFromAuth();
+        await syncLocalFarmerFromAuth(undefined, { preferDisk: true });
       } catch {
         // Credentials are on device; farmer alignment is best-effort on refresh.
       }
@@ -469,7 +554,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
             const { email: signedInEmail } = getAuthCredentials();
             if (signedInEmail) setEmail(signedInEmail);
             setIsSignedIn(true);
-            void syncLocalFarmerFromAuth();
+            void syncLocalFarmerFromAuth(undefined, { preferDisk: true });
             return;
           }
 
@@ -484,7 +569,11 @@ export function SignInProvider({ children }: { children: ReactNode }) {
           const { email: signedInEmail } = getAuthCredentials();
           if (signedInEmail) setEmail(signedInEmail);
           setIsSignedIn(true);
-          void syncLocalFarmerFromAuth();
+          if (result.accountSwitch?.clearedStaleLocalData) {
+            await reloadAfterAccountSwitch();
+          }
+          await syncLocalFarmerFromAuth(undefined, { preferDisk: true });
+          void handlePostAuthSyncOffer(result.accountSwitch);
           if (result.apiUnreachable) {
             Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
           }
@@ -494,7 +583,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
       })();
     });
     return () => sub.remove();
-  }, [farmer?.id, plots, syncLocalFarmerFromAuth, t]);
+  }, [farmer?.id, handlePostAuthSyncOffer, plots, reloadAfterAccountSwitch, syncLocalFarmerFromAuth, t]);
 
   useEffect(() => {
     if (shouldUseMaestroCiThinBoot()) {
@@ -525,10 +614,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
     setCreateWizardVisible(true);
   }, [dismissWelcome]);
 
-  const showSignUpSuccess = () => {
+  const showSignUpSuccess = (accountSwitch?: AccountSwitchResolution) => {
     setIsSignedIn(true);
     Alert.alert(t('farmer_signup_success_title'), t('farmer_signup_success_body'));
-    void offerBackupAfterAuth();
+    void handlePostAuthSyncOffer(accountSwitch);
   };
 
   const closeSignIn = useCallback(() => {
@@ -541,6 +630,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
 
   const signOutOnDevice = useCallback(async () => {
     abortSyncAuthForSignOut();
+    const { email: signedOutEmail } = getAuthCredentials();
+    if (signedOutEmail?.trim()) {
+      await rememberLastAuthenticatedEmail(signedOutEmail);
+    }
     setIsSignedIn(false);
     setEmail('');
     setPassword('');
@@ -585,20 +678,23 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         ? 'sign_in_to_sync_body'
         : 'sign_in_oauth_sub';
 
-  const finishSuccessfulSignIn = async () => {
+  const finishSuccessfulSignIn = async (options?: { accountSwitch?: AccountSwitchResolution }) => {
     if (!hasSyncAuthSession()) {
       setIsSignedIn(false);
       return;
     }
     setIsSignedIn(true);
     setPassword('');
-    await syncLocalFarmerFromAuth();
+    if (options?.accountSwitch?.clearedStaleLocalData) {
+      await reloadAfterAccountSwitch();
+    }
+    await syncLocalFarmerFromAuth(undefined, { preferDisk: true });
     closeSignIn();
     const onSuccess = onSuccessRef.current;
     if (onSuccess) {
       void Promise.resolve(onSuccess());
     }
-    void offerBackupAfterAuth();
+    void handlePostAuthSyncOffer(options?.accountSwitch);
   };
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
@@ -668,7 +764,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         return;
       }
       setOauthLoading(null);
-      await finishSuccessfulSignIn();
+      await finishSuccessfulSignIn({ accountSwitch: result.accountSwitch });
       if (result.apiUnreachable) {
         Alert.alert(t('sign_in'), t('sign_in_api_unreachable'));
       }
@@ -719,7 +815,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         return;
       }
       trackEvent(ANALYTICS_EVENTS.SIGN_IN_SUCCESS, { method: 'password' });
-      await finishSuccessfulSignIn();
+      await finishSuccessfulSignIn({ accountSwitch: result.accountSwitch });
     } catch (e) {
       const message = formatSignInErrorMessage(t, e instanceof Error ? e.message : String(e));
       setHint(message);
@@ -773,11 +869,18 @@ export function SignInProvider({ children }: { children: ReactNode }) {
         farmerId={farmer?.id}
         localPlots={plots}
         onClose={() => setCreateWizardVisible(false)}
-        onSuccess={() => {
+        onSuccess={({ accountSwitch } = {}) => {
           setCreateWizardVisible(false);
-          showSignUpSuccess();
           void refreshAuth()
-            .then(() => syncLocalFarmerFromAuth())
+            .then(async () => {
+              if (accountSwitch?.clearedStaleLocalData) {
+                await reloadAfterAccountSwitch();
+              }
+              await syncLocalFarmerFromAuth(undefined, { preferDisk: true });
+            })
+            .then(() => {
+              showSignUpSuccess(accountSwitch);
+            })
             .catch(() => undefined);
         }}
         onSignInInstead={() => {
@@ -888,6 +991,8 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    showPasswordA11yLabel={t('password_show_a11y')}
+                    hidePasswordA11yLabel={t('password_hide_a11y')}
                     placeholder="••••••••"
                     dense
                   />

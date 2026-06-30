@@ -197,6 +197,8 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
               value={password}
               onChangeText={setPassword}
               secureTextEntry
+              showPasswordA11yLabel={t('password_show_a11y')}
+              hidePasswordA11yLabel={t('password_hide_a11y')}
               autoCapitalize="none"
               autoCorrect={false}
               dense
@@ -207,6 +209,8 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
               value={confirm}
               onChangeText={setConfirm}
               secureTextEntry
+              showPasswordA11yLabel={t('password_show_a11y')}
+              hidePasswordA11yLabel={t('password_hide_a11y')}
               autoCapitalize="none"
               autoCorrect={false}
               dense

@@ -1,4 +1,6 @@
 import { fetchAuditForFarmer } from '@/features/api/audit';
+import { filterFarmerIdsToAuthScope } from '@/features/api/fieldAppBootstrap';
+import { isFarmerScopeViolationError } from '@/features/api/farmerScopeErrors';
 
 export type AuditLogRow = {
   id?: string;
@@ -6,18 +8,6 @@ export type AuditLogRow = {
   event_type?: string;
   payload?: Record<string, unknown>;
 };
-
-function uniqueIds(candidates: string[]): string[] {
-  const seen = new Set<string>();
-  const ordered: string[] = [];
-  for (const raw of candidates) {
-    const id = raw.trim();
-    if (!id || seen.has(id)) continue;
-    seen.add(id);
-    ordered.push(id);
-  }
-  return ordered;
-}
 
 /** Merge audit rows across owned farmer ids (newest first). */
 export async function fetchMergedAuditEventsForFarmer(
@@ -31,8 +21,11 @@ export async function fetchMergedAuditEventsForFarmer(
   const merged: AuditLogRow[] = [];
   let lastError: unknown = null;
   let attemptCount = 0;
+  let scopeViolationCount = 0;
 
-  for (const farmerId of uniqueIds(farmerIds)) {
+  const scopedFarmerIds = await filterFarmerIdsToAuthScope(farmerIds);
+
+  for (const farmerId of scopedFarmerIds) {
     try {
       attemptCount += 1;
       const rows = (await fetchAuditForFarmer(farmerId)) as AuditLogRow[];
@@ -45,11 +38,20 @@ export async function fetchMergedAuditEventsForFarmer(
         merged.push(row);
       }
     } catch (error) {
+      if (isFarmerScopeViolationError(error)) {
+        scopeViolationCount += 1;
+        continue;
+      }
       lastError = error;
     }
   }
 
-  if (merged.length === 0 && attemptCount > 0 && lastError != null) {
+  if (
+    merged.length === 0 &&
+    attemptCount > 0 &&
+    lastError != null &&
+    scopeViolationCount < attemptCount
+  ) {
     throw lastError instanceof Error ? lastError : new Error(String(lastError));
   }
 

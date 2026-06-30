@@ -83,5 +83,8 @@ describe('mapSyncActionErrorMessage', () => {
     expect(mapSyncActionErrorMessage('401 Unauthorized', t, 'settings')).toBe(
       'sync_session_expired_short',
     );
+    expect(mapSyncActionErrorMessage('Invalid token', t, 'settings')).toBe(
+      'sync_session_expired_short',
+    );
   });
 });

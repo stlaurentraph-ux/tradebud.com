@@ -4,6 +4,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+# Keep production API target when Metro was started with dev:metro:production.
+if [[ -f "$ROOT/.env.development.local" ]] && grep -q 'tracebud-metro-api-target' "$ROOT/.env.development.local"; then
+  PROD_API="$(grep '^EXPO_PUBLIC_API_URL=' "$ROOT/.env.development.local" | head -1 | cut -d= -f2-)"
+  if [[ -n "$PROD_API" ]]; then
+    export TRACEBUD_SKIP_LAN_API_SYNC=1
+    export EXPO_PUBLIC_API_URL="$PROD_API"
+  fi
+fi
+
 IP="$(bash ./scripts/write-xcode-lan-env.sh)"
 export REACT_NATIVE_PACKAGER_HOSTNAME="$IP"
 export SENTRY_DISABLE_AUTO_UPLOAD=true

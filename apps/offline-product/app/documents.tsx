@@ -35,6 +35,7 @@ import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 import {
   deletePlotEvidenceItem,
   loadEvidenceForPlot,
+  loadPlotServerLinks,
   persistPlotEvidenceItem,
   type PlotEvidenceItem,
   type PlotEvidenceKind,
@@ -118,7 +119,8 @@ export default function DocumentsScreen() {
       return;
     }
     const generation = ++plotReadinessGenerationRef.current;
-    const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer);
+    const links = await loadPlotServerLinks().catch(() => ({}));
+    const results = await loadAllPlotReadinessStates(plots, backendPlots, farmer, links);
     if (generation !== plotReadinessGenerationRef.current) return;
     setPlotReadiness(results);
   }, [plots, backendPlots, farmer]);

@@ -28,7 +28,7 @@ describe('resolveFieldSyncScope', () => {
 
   it('prefers the owned profile id that lists server plots', async () => {
     bootstrapFieldAppProducer.mockResolvedValue({ ok: true });
-    fetchOwnedFarmerIdsFromApi.mockResolvedValue(['device-farmer', 'linked-farmer']);
+    fetchOwnedFarmerIdsFromApi.mockResolvedValue(['linked-farmer']);
     getBootstrapOwnedFarmerIds.mockReturnValue([]);
     fetchPlotsForFarmer.mockImplementation(async (id: string) => {
       if (id === 'linked-farmer') return [{ id: 'plot-1' }];
@@ -41,12 +41,12 @@ describe('resolveFieldSyncScope', () => {
     );
     const scope = await resolveFieldSyncScope({
       profileFarmerId: 'auth-user',
-      localPlots: [{ id: 'local-1', farmerId: 'auth-user' } as any],
+      localPlots: [{ id: 'local-1', farmerId: 'device-farmer' } as any],
     });
 
     expect(scope.apiFarmerId).toBe('linked-farmer');
     expect(scope.serverPlotCount).toBe(1);
-    expect(scope.ownedFarmerIds).toContain('linked-farmer');
+    expect(scope.ownedFarmerIds).toEqual(['linked-farmer']);
 
     const rows = await fetchBackendPlotsForSyncScope({
       farmerId: 'device-farmer',

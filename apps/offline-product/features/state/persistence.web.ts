@@ -557,3 +557,27 @@ export async function deletePlotLocalData(plotId: string): Promise<void> {
   memPending = memPending.filter((a) => !a.payloadJson.includes(`"plotId":"${plotId}"`));
 }
 
+export async function resetLocalFieldProducerState(): Promise<void> {
+  memFarmer = undefined;
+  memPlots = [];
+  memPhotos = [];
+  memTitlePhotos = [];
+  memEvidence = [];
+  memLegal = {};
+  memPending = [];
+  memLocalDeliveryReceipts = [];
+  memPlotMappingDrafts = {};
+
+  const keysToDelete = Object.keys(memSettings).filter(
+    (key) =>
+      key === 'farmerProfilePhotoUri' ||
+      key === 'farmerProfilePhotoStoragePath' ||
+      key === 'dismissedDeliveryReceiptIds' ||
+      key.startsWith('audit_decl_synced:') ||
+      key.startsWith('audit_cloud_synced:'),
+  );
+  for (const key of keysToDelete) {
+    delete memSettings[key];
+  }
+}
+

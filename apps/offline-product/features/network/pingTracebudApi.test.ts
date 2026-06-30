@@ -71,6 +71,26 @@ describe('pingTracebudApi', () => {
     );
   });
 
+  it('probeTracebudApiReachable rejects invalid bearer tokens', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/health')) {
+          throw new TypeError('Network request failed');
+        }
+        return { ok: false, status: 401 };
+      }),
+    );
+
+    const { probeTracebudApiReachable, probeSyncAccessTokenAccepted } = await import(
+      '@/features/network/pingTracebudApi'
+    );
+    await expect(probeSyncAccessTokenAccepted('stale-token')).resolves.toBe(false);
+    await expect(
+      probeTracebudApiReachable({ accessToken: 'stale-token' }),
+    ).resolves.toBe(false);
+  });
+
   it('probeTracebudApiReachable falls back to authenticated GET when health fails', async () => {
     const { getAccessTokenFromSupabase } = await import('@/features/api/syncAuthSession');
     vi.mocked(getAccessTokenFromSupabase).mockResolvedValue('token-abc');

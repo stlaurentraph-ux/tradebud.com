@@ -37,7 +37,7 @@ describe('plotChecklist tenure parse gating', () => {
       tenureVerifications: [],
     });
     expect(checklist.tenureParseGate).toBe('documents_local_only');
-    expect(checklist.landOk).toBe(true);
+    expect(checklist.landOk).toBe(false);
     expect(
       resolveLandDocumentsUiStatus({
         titlePhotoCount: 1,
@@ -70,7 +70,7 @@ describe('plotChecklist tenure parse gating', () => {
         },
       ],
     });
-    expect(checklist.landOk).toBe(true);
+    expect(checklist.landOk).toBe(false);
     expect(checklist.tenureParseGate).toBe('pending');
     expect(
       resolveLandDocumentsUiStatus({
@@ -188,6 +188,6 @@ describe('plotChecklist tenure parse gating', () => {
       backendFlags: { indigenous_overlap: true },
     });
     expect(checklist.fpicOk).toBe(true);
-    expect(checklist.done).toBe(true);
+    expect(checklist.done).toBe(false);
   });
 });

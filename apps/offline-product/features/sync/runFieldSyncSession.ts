@@ -1,9 +1,11 @@
 import {
   beginSyncAccessTokenRun,
   endSyncAccessTokenRun,
+  invalidateCachedSyncAccessToken,
   verifySyncAccessToken,
   type VerifySyncAccessTokenResult,
 } from '@/features/api/syncAuthSession';
+import { probeSyncAccessTokenAccepted } from '@/features/network/pingTracebudApi';
 import { getTracebudApiBaseUrl } from '@/features/api/runtimeGuards';
 import {
   beginServerPlotFetchRun,
@@ -32,30 +34,51 @@ function failureFromVerify(result: Extract<VerifySyncAccessTokenResult, { ok: fa
  * Call `end()` in a finally block when the run finishes.
  */
 export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult> {
-  const verify = await verifySyncAccessToken().catch(
-    (): Extract<VerifySyncAccessTokenResult, { ok: false }> => ({
-      ok: false,
-      reason: 'network',
-    }),
-  );
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const verify = await verifySyncAccessToken().catch(
+      (): Extract<VerifySyncAccessTokenResult, { ok: false }> => ({
+        ok: false,
+        reason: 'network',
+      }),
+    );
 
-  if (!verify.ok) {
-    return { ok: false, failure: failureFromVerify(verify), verify };
+    if (!verify.ok) {
+      return { ok: false, failure: failureFromVerify(verify), verify };
+    }
+
+    if (await probeSyncAccessTokenAccepted(verify.token)) {
+      beginServerPlotFetchRun();
+      beginSyncAccessTokenRun(verify.token);
+
+      return {
+        ok: true,
+        session: {
+          accessToken: verify.token,
+          apiBaseUrl: getTracebudApiBaseUrl(),
+        },
+        end: () => {
+          endSyncAccessTokenRun();
+          endServerPlotFetchRun();
+        },
+      };
+    }
+
+    if (attempt === 0) {
+      invalidateCachedSyncAccessToken();
+      continue;
+    }
+
+    return {
+      ok: false,
+      failure: failureFromVerify({ ok: false, reason: 'session_expired' }),
+      verify: { ok: false, reason: 'session_expired' },
+    };
   }
 
-  beginServerPlotFetchRun();
-  beginSyncAccessTokenRun(verify.token);
-
   return {
-    ok: true,
-    session: {
-      accessToken: verify.token,
-      apiBaseUrl: getTracebudApiBaseUrl(),
-    },
-    end: () => {
-      endSyncAccessTokenRun();
-      endServerPlotFetchRun();
-    },
+    ok: false,
+    failure: failureFromVerify({ ok: false, reason: 'session_expired' }),
+    verify: { ok: false, reason: 'session_expired' },
   };
 }
 

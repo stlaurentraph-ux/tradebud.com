@@ -1437,3 +1437,39 @@ export async function collectTracebudMediaFileUris(): Promise<string[]> {
   return [...uris];
 }
 
+/** Wipe on-device producer plots, farmer profile, and queued sync after account switch. */
+export async function resetLocalFieldProducerState(): Promise<void> {
+  const db = await getDb();
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    await txn.runAsync('DELETE FROM plot_photos;');
+    await txn.runAsync('DELETE FROM plot_title_photos;');
+    await txn.runAsync('DELETE FROM plot_evidence;');
+    await txn.runAsync('DELETE FROM plot_legal;');
+    await txn.runAsync('DELETE FROM plots;');
+    await txn.runAsync('DELETE FROM plot_mapping_drafts;');
+    await txn.runAsync('DELETE FROM local_delivery_receipts;');
+    await txn.runAsync('DELETE FROM pending_sync;');
+    await txn.runAsync('DELETE FROM farmer;');
+  });
+
+  const producerSettingKeys = [
+    'farmerProfilePhotoUri',
+    'farmerProfilePhotoStoragePath',
+    'dismissedDeliveryReceiptIds',
+  ];
+  for (const key of producerSettingKeys) {
+    await deleteSetting(key).catch(() => undefined);
+  }
+
+  const scopedRows = await db.getAllAsync<{ key: string }>(
+    `SELECT key FROM settings
+     WHERE key LIKE 'audit_decl_synced:%'
+        OR key LIKE 'audit_cloud_synced:%';`,
+  );
+  for (const row of scopedRows ?? []) {
+    if (row.key?.trim()) {
+      await deleteSetting(row.key.trim()).catch(() => undefined);
+    }
+  }
+}
+
