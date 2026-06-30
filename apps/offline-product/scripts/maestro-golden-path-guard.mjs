@@ -50,6 +50,30 @@ function assertManifestShape(manifest) {
   }
 }
 
+function assertAndroidSmokeFlow(manifest) {
+  const flowName = manifest.goldenPathFlowAndroidSmoke;
+  if (!flowName) {
+    throw new Error('manifest must define goldenPathFlowAndroidSmoke');
+  }
+  const flow = readOffline(`.maestro/flows/${flowName}`);
+  const smokeWaitMs = manifest.androidSmokeBootWaitMs;
+  if (!smokeWaitMs || smokeWaitMs < 900000) {
+    throw new Error('manifest androidSmokeBootWaitMs must be >= 900000');
+  }
+  if (!flow.includes(String(smokeWaitMs))) {
+    throw new Error(`${flowName} boot timeout must match manifest androidSmokeBootWaitMs`);
+  }
+  if (!flow.includes('id: "maestro-boot-ready"')) {
+    throw new Error(`${flowName} must wait for maestro-boot-ready testID`);
+  }
+  if (!flow.includes('id: "tab-settings"')) {
+    throw new Error(`${flowName} must wait for tab-settings (smoke gate)`);
+  }
+  if (flow.includes('settings-sync-now')) {
+    throw new Error(`${flowName} must not tap settings-sync-now (smoke only)`);
+  }
+}
+
 function assertAndroidGoldenPathFlow(manifest) {
   const flowName = manifest.goldenPathFlowAndroid;
   const flow = readOffline(`.maestro/flows/${flowName}`);
@@ -135,11 +159,25 @@ function assertBootstrapInitLaunch() {
 function assertGoldenPathScripts() {
   const iosGolden = readOffline('scripts/maestro-ci-golden-path.sh');
   const androidGolden = readOffline('scripts/maestro-ci-golden-path-android.sh');
+  const androidSmoke = readOffline('scripts/maestro-ci-golden-path-android-smoke.sh');
   if (!iosGolden.includes('MAESTRO_SEED_SKIP')) {
     throw new Error('iOS golden path must default MAESTRO_SEED_SKIP=1');
   }
   if (!androidGolden.includes('MAESTRO_SEED_SKIP')) {
     throw new Error('Android golden path must default MAESTRO_SEED_SKIP=1');
+  }
+  if (!androidSmoke.includes('maestro-ci-bootstrap-emulator.sh')) {
+    throw new Error('Android smoke must reuse emulator bootstrap');
+  }
+  if (!androidSmoke.includes('android-pr-smoke.yaml')) {
+    throw new Error('Android smoke must default to android-pr-smoke.yaml');
+  }
+  const collectArtifacts = readOffline('scripts/maestro-ci-collect-android-debug-artifacts.sh');
+  if (!collectArtifacts.includes('logcat-tracebud.txt')) {
+    throw new Error('maestro-ci-collect-android-debug-artifacts.sh must capture filtered logcat');
+  }
+  if (!androidGolden.includes('maestro-ci-collect-android-debug-artifacts.sh')) {
+    throw new Error('Android golden path must collect debug artifacts on failure');
   }
 }
 
@@ -230,6 +268,22 @@ function assertWorkflow(manifest) {
   if (!workflow.includes(manifest.androidJobName)) {
     throw new Error(`${manifest.workflowFile} must define ${manifest.androidJobName} job`);
   }
+  const smokeJobName = manifest.androidSmokeJobName;
+  if (!smokeJobName || !workflow.includes(smokeJobName)) {
+    throw new Error(`${manifest.workflowFile} must define ${smokeJobName ?? 'androidSmokeJobName'} job`);
+  }
+  if (!workflow.includes('run_android_smoke')) {
+    throw new Error(`${manifest.workflowFile} must wire maestro-cost-gate run_android_smoke output`);
+  }
+  if (!workflow.includes('run_android_golden')) {
+    throw new Error(`${manifest.workflowFile} must wire maestro-cost-gate run_android_golden output`);
+  }
+  if (!workflow.includes('maestro-ci-collect-android-debug-artifacts.sh') && !workflow.includes('ci-artifacts/maestro-android')) {
+    throw new Error(`${manifest.workflowFile} Android jobs must upload Maestro debug artifacts on failure`);
+  }
+  if (!workflow.includes('qa:maestro:golden-path:android:smoke')) {
+    throw new Error(`${manifest.workflowFile} must run qa:maestro:golden-path:android:smoke on PR`);
+  }
   if (!workflow.includes('maestro-cost-gate')) {
     throw new Error(`${manifest.workflowFile} must define maestro-cost-gate job (H25 cost guard)`);
   }
@@ -246,6 +300,12 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} Android golden path must honor cost gate run_android`);
   }
   const platformGate = readOffline(manifest.costGate?.platformGateScript ?? 'scripts/maestro-ci-platform-gate.mjs');
+  if (!platformGate.includes('ANDROID_SMOKE_JOB')) {
+    throw new Error('maestro-ci-platform-gate.mjs must track Android PR smoke job for cost skip');
+  }
+  if (!platformGate.includes('run_android_golden')) {
+    throw new Error('maestro-ci-platform-gate.mjs must output run_android_golden for push/dispatch');
+  }
   if (!platformGate.includes('ios_already_green_android_only_delta')) {
     throw new Error('maestro-ci-platform-gate.mjs must skip iOS when already green on android-only PR delta');
   }
@@ -337,6 +397,13 @@ function assertWorkflow(manifest) {
   if (!androidTimeout || androidTimeout > 90) {
     throw new Error('manifest androidJobTimeoutMinutes must be <= 90 (fail-fast cost cap)');
   }
+  const smokeTimeout = manifest.androidSmokeJobTimeoutMinutes;
+  if (!smokeTimeout || smokeTimeout > 35) {
+    throw new Error('manifest androidSmokeJobTimeoutMinutes must be <= 35 (PR smoke cap)');
+  }
+  if (!workflow.includes(`timeout-minutes: ${smokeTimeout}`)) {
+    throw new Error(`${manifest.workflowFile} Android smoke job timeout must match manifest androidSmokeJobTimeoutMinutes`);
+  }
   if (!workflow.includes(`timeout-minutes: ${androidTimeout}`)) {
     throw new Error(`${manifest.workflowFile} Android job timeout must match manifest androidJobTimeoutMinutes`);
   }
@@ -404,6 +471,7 @@ function main() {
   assertManifestShape(manifest);
   assertFlowsBaseline(manifest);
   assertGoldenPathFlow(manifest);
+  assertAndroidSmokeFlow(manifest);
   assertAndroidGoldenPathFlow(manifest);
   assertGoldenPathScripts();
   assertBootstrapInitLaunch();

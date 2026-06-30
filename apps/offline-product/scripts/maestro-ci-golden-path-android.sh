@@ -6,6 +6,17 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
 export MAESTRO_SEED_SKIP="${MAESTRO_SEED_SKIP:-1}"
+export MAESTRO_CI_ARTIFACT_DIR="${MAESTRO_CI_ARTIFACT_DIR:-$ROOT/ci-artifacts/maestro-android}"
+
+collect_on_failure() {
+  local ec=$?
+  if [[ "$ec" -ne 0 ]]; then
+    bash "$ROOT/scripts/maestro-ci-collect-android-debug-artifacts.sh" || true
+  fi
+  return "$ec"
+}
+
+trap collect_on_failure EXIT
 
 # shellcheck source=./maestro-ci-bootstrap-emulator.sh
 source "$ROOT/scripts/maestro-ci-bootstrap-emulator.sh"
@@ -74,7 +85,9 @@ echo "==> Running Maestro golden path (Android): $GOLDEN_FLOW"
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
 
 if ! run_maestro_with_retry; then
+  bash "$ROOT/scripts/maestro-ci-collect-android-debug-artifacts.sh" || true
   exit 1
 fi
 
+trap - EXIT
 echo "Maestro Android golden path passed: $GOLDEN_FLOW"

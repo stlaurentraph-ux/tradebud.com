@@ -52,8 +52,9 @@ Workflow: `.github/workflows/offline-maestro.yml`
 ## Merge criteria (PR)
 
 - iOS golden path green on **some** commit on the PR (may be skipped on later android-only pushes)
-- Android golden path green on **latest** commit
-- Or: manual `workflow_dispatch` with both green on same run
+- Android **smoke** green on **latest** commit (`Maestro Android smoke (PR)`)
+- Full Android golden path green on **push to main** or `workflow_dispatch` with `run_golden_path`
+- Or: manual `workflow_dispatch` with both platforms green on same run
 
 ---
 

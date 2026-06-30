@@ -57,3 +57,6 @@ queue-i18n-smoke-previous.zip
 
 # Generated at prepush/assemble — scripts/generate-maestro-ci-boot-db.mjs
 assets/maestro/tracebud_offline.db
+
+# CI failure dumps — scripts/maestro-ci-collect-android-debug-artifacts.sh
+ci-artifacts/

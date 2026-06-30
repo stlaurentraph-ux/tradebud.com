@@ -15,7 +15,8 @@ import fs from 'node:fs';
 import { appendFileSync } from 'node:fs';
 
 const IOS_JOB = 'Maestro golden path (macOS)';
-const ANDROID_JOB = 'Maestro golden path (Android)';
+const ANDROID_SMOKE_JOB = 'Maestro Android smoke (PR)';
+const ANDROID_GOLDEN_JOB = 'Maestro golden path (Android)';
 
 function writeOutput(name, value) {
   const out = process.env.GITHUB_OUTPUT;
@@ -139,19 +140,25 @@ async function main() {
   if (eventName === 'pull_request' && prNumber) {
     [iosGreen, androidGreen] = await Promise.all([
       platformSucceededOnPr(prNumber, IOS_JOB),
-      platformSucceededOnPr(prNumber, ANDROID_JOB),
+      platformSucceededOnPr(prNumber, ANDROID_SMOKE_JOB),
     ]);
-    console.log(`[gate] PR #${prNumber} prior green: ios=${iosGreen} android=${androidGreen}`);
+    console.log(`[gate] PR #${prNumber} prior green: ios=${iosGreen} android_smoke=${androidGreen}`);
   }
 
   const ios = decidePlatform({ eventName, paths, prNumber, iosGreen, androidGreen });
   const android = decideAndroid({ eventName, paths, androidGreen });
 
+  const runAndroidSmoke = eventName === 'pull_request' && android.run;
+  const runAndroidGolden = eventName !== 'pull_request' && (eventName === 'push' || eventName === 'workflow_dispatch');
+
   console.log(`[gate] run_ios=${ios.run} (${ios.reason})`);
-  console.log(`[gate] run_android=${android.run} (${android.reason})`);
+  console.log(`[gate] run_android_smoke=${runAndroidSmoke} (${android.reason})`);
+  console.log(`[gate] run_android_golden=${runAndroidGolden} (full_matrix)`);
 
   writeOutput('run_ios', ios.run ? 'true' : 'false');
-  writeOutput('run_android', android.run ? 'true' : 'false');
+  writeOutput('run_android_smoke', runAndroidSmoke ? 'true' : 'false');
+  writeOutput('run_android_golden', runAndroidGolden ? 'true' : 'false');
+  writeOutput('run_android', runAndroidSmoke || runAndroidGolden ? 'true' : 'false');
   writeOutput('skip_reason_ios', ios.reason);
   writeOutput('skip_reason_android', android.reason);
 }
