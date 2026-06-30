@@ -59,6 +59,27 @@ function resolveRecordedAtForVoucher(
   return voucherDeliveredAtMs(voucher);
 }
 
+/** Count vouchers not already stored locally (by id or qr ref) — mirrors receipt restore. */
+export async function countPendingServerReceiptsRestore(params: {
+  vouchers: readonly unknown[];
+}): Promise<number> {
+  const existing = await loadAllLocalDeliveryReceipts().catch(() => []);
+  let pending = 0;
+  for (const voucher of params.vouchers) {
+    const id = voucherId(voucher);
+    const serverPlotId = voucherPlotId(voucher);
+    const kg = voucherKg(voucher);
+    if (!id || !serverPlotId || kg <= 0) continue;
+
+    const qr = voucherQrRef(voucher)?.trim();
+    const storedById = existing.find((row) => row.id === id);
+    const storedByQr = qr ? existing.find((row) => row.qrCodeRef?.trim() === qr) : null;
+    if (storedById || storedByQr) continue;
+    pending += 1;
+  }
+  return pending;
+}
+
 /** Writes fetched server vouchers into local SQLite (skips rows already on device). */
 export async function persistServerVouchersAsLocalReceipts(params: {
   vouchers: readonly unknown[];

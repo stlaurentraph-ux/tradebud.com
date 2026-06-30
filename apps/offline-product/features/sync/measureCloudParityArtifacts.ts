@@ -1,6 +1,7 @@
 import type { FarmerProfile, Plot } from '@/features/state/AppStateContext';
 import { hasProducerAttestationsComplete } from '@/features/compliance/farmerDeclarations';
 import { fetchPlotSyncedEvidence } from '@/features/api/postPlot';
+import { producerEvidenceScopeId } from '@/features/evidence/evidenceScope';
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
 import {
   countServerDeclarationSignals,
@@ -24,7 +25,10 @@ import type { ExtendedCloudParityCounts } from '@/features/sync/measureCloudPari
 
 export type { ExtendedCloudParityCounts } from '@/features/sync/measureCloudParitySummaryLogic';
 
-export async function countLocalMediaArtifacts(plots: Plot[]): Promise<{
+export async function countLocalMediaArtifacts(
+  plots: Plot[],
+  options?: { apiFarmerId?: string },
+): Promise<{
   groundTruth: number;
   landTitle: number;
   evidence: number;
@@ -36,6 +40,10 @@ export async function countLocalMediaArtifacts(plots: Plot[]): Promise<{
     groundTruth += (await loadPhotosForPlot(plot.id).catch(() => [])).length;
     landTitle += (await loadTitlePhotosForPlot(plot.id).catch(() => [])).length;
     evidence += (await loadEvidenceForPlot(plot.id).catch(() => [])).length;
+  }
+  const apiFarmerId = options?.apiFarmerId?.trim();
+  if (apiFarmerId) {
+    evidence += (await loadEvidenceForPlot(producerEvidenceScopeId(apiFarmerId)).catch(() => [])).length;
   }
   return { groundTruth, landTitle, evidence };
 }
@@ -121,6 +129,9 @@ export function buildExtendedCountsFromAudit(params: {
   serverEvidenceDocs: number | null;
   localFarmer?: FarmerProfile;
   localHasWalkDraft: boolean;
+  measuredMediaGap?: number;
+  measuredPlotGap?: number;
+  measuredReceiptGap?: number;
 }): ExtendedCloudParityCounts {
   const photoCounts =
     params.auditRows != null ? countServerPhotosFromAudit(params.auditRows) : null;
@@ -150,5 +161,8 @@ export function buildExtendedCountsFromAudit(params: {
     localHasWalkDraft: params.localHasWalkDraft,
     serverHasWalkDraft:
       params.auditRows != null ? serverHasActiveWalkDraft(params.auditRows) : null,
+    measuredMediaGap: params.measuredMediaGap,
+    measuredPlotGap: params.measuredPlotGap,
+    measuredReceiptGap: params.measuredReceiptGap,
   };
 }

@@ -648,3 +648,112 @@ describe('HarvestService.listFieldVouchersForAuthUser', () => {
     );
   });
 });
+
+describe('HarvestService.create — client_event_id idempotency (B3)', () => {
+  it('returns the existing voucher on a replay without duplicating it', async () => {
+    const existingTxId = 'existing-tx-id';
+    const existingVoucherId = 'existing-voucher-id';
+    const existingFarmerId = 'farmer-1';
+    const existingPlotId = 'plot-1';
+
+    const queryMock = jest.fn(async (text: string) => {
+      if (text.includes('FROM plot p')) {
+        return {
+          rows: [
+            {
+              id: existingPlotId,
+              farmer_id: existingFarmerId,
+              area_ha: 2,
+              sinaph_overlap: false,
+              indigenous_overlap: false,
+              country_code: 'BR',
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      // Idempotent INSERT CTE: the ON CONFLICT DO NOTHING path returns the
+      // pre-existing transaction row (id !== generated randomUUID).
+      if (text.includes('ON CONFLICT (farmer_id, client_event_id)')) {
+        return {
+          rows: [
+            {
+              id: existingTxId,
+              farmer_id: existingFarmerId,
+              plot_id: existingPlotId,
+              kg: 50,
+              client_event_id: 'evt-replay',
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      // Replay path: look up the existing voucher tied to the transaction.
+      if (text.includes('FROM voucher WHERE transaction_id')) {
+        return {
+          rows: [
+            {
+              id: existingVoucherId,
+              farmer_id: existingFarmerId,
+              transaction_id: existingTxId,
+              qr_code_ref: 'V-EXISTING1',
+            },
+          ],
+          rowCount: 1,
+        };
+      }
+      return { rows: [], rowCount: 0 };
+    });
+
+    const pool = { query: queryMock };
+    const service = makeHarvestService(pool as any);
+    jest.spyOn(service, 'isFarmerOwnedByUser').mockResolvedValue(true);
+    jest.spyOn(service as any, 'resolveYieldCapKgPerHa').mockResolvedValue({
+      source: 'benchmark',
+      geography: 'BR',
+      sourceType: 'benchmark',
+      benchmarkId: 'bench-1',
+      capKgPerHa: 5000,
+    });
+    jest.spyOn(service as any, 'appendYieldCapAuditEvent').mockResolvedValue(undefined);
+
+    const result = await service.create(
+      {
+        farmerId: existingFarmerId,
+        plotId: existingPlotId,
+        kg: 50,
+        harvestDate: '2026-06-30',
+        note: null,
+        hlcTimestamp: null,
+        clientEventId: 'evt-replay',
+        deliverToTenantId: null,
+        deliverToEmail: null,
+      } as any,
+      'auth-user',
+    );
+
+    expect(result.transaction.id).toBe(existingTxId);
+    expect(result.voucher).toEqual(expect.objectContaining({ id: existingVoucherId }));
+
+    // The replay path must not attempt a fresh voucher INSERT.
+    const voucherInsertCalls = queryMock.mock.calls.filter(([text]) =>
+      String(text).includes('INSERT INTO voucher'),
+    );
+    expect(voucherInsertCalls).toHaveLength(0);
+
+    // The replay path must not emit a second harvest_recorded audit row.
+    const harvestAuditCalls = queryMock.mock.calls.filter(
+      ([text]) =>
+        String(text).includes('INSERT INTO audit_log') &&
+        queryMock.mock.calls.find(([t]) => t === text) !== undefined,
+    );
+    const harvestRecordedAudits = queryMock.mock.calls.filter(
+      ([text]) =>
+        String(text).includes('INSERT INTO audit_log') &&
+        String(text).includes('$2, $3::jsonb'),
+    );
+    // Only the yield-cap audit (from the spy) should be absent here; the
+    // harvest_recorded audit INSERT must not be invoked on replay.
+    expect(harvestRecordedAudits).toHaveLength(0);
+  });
+});

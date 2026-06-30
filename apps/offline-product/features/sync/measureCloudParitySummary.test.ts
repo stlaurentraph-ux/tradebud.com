@@ -41,6 +41,23 @@ describe('extendedParityGaps', () => {
     );
     expect(gaps.mediaGap).toBe(6);
   });
+
+  it('prefers measured plot/receipt gaps over naive server-minus-local', () => {
+    const gaps = extendedParityGaps(
+      baseCounts({
+        localPlotCount: 1,
+        serverPlotCount: 3,
+        localReceiptCount: 0,
+        serverVoucherCount: 2,
+        measuredPlotGap: 0,
+        measuredReceiptGap: 0,
+        measuredMediaGap: 0,
+      }),
+    );
+    expect(gaps.plotGap).toBe(0);
+    expect(gaps.receiptGap).toBe(0);
+    expect(gaps.mediaGap).toBe(0);
+  });
 });
 
 describe('summarizeCloudParityCounts', () => {

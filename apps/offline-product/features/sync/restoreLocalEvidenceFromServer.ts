@@ -11,15 +11,14 @@ import {
 import { resolveLocalPlotIdForServerPlot } from '@/features/harvest/resolveLocalPlotIdForServerPlot';
 import type { Plot } from '@/features/state/AppStateContext';
 import { fetchBackendPlotsForSyncScope } from '@/features/sync/resolveFieldSyncScope';
+import { storagePathStored } from '@/features/sync/mediaPhotoMatch';
 import {
   loadEvidenceForPlot,
   loadPlotServerLinks,
   loadTitlePhotosForPlot,
   persistPlotEvidenceItem,
   persistPlotTitlePhoto,
-  type PlotEvidenceItem,
   type PlotEvidenceKind,
-  type PlotTitlePhoto,
 } from '@/features/state/persistence';
 
 export type RestoreLocalEvidenceResult = {
@@ -63,18 +62,6 @@ function normalizeKind(raw: string): PlotEvidenceKind | 'land_title' {
     return kind;
   }
   return 'tenure_evidence';
-}
-
-function storagePathStored(
-  storagePath: string,
-  titlePhotos: readonly PlotTitlePhoto[],
-  evidenceItems: readonly PlotEvidenceItem[],
-): boolean {
-  const trimmed = storagePath.trim();
-  return (
-    titlePhotos.some((row) => row.storagePath?.trim() === trimmed) ||
-    evidenceItems.some((row) => row.storagePath?.trim() === trimmed)
-  );
 }
 
 function candidatesFromSyncedEvidence(

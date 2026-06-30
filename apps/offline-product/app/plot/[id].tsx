@@ -117,6 +117,7 @@ export default function PlotDetailScreen() {
   const receiptRedirectRef = useRef(false);
   const [plotServerLinks, setPlotServerLinks] = useState<PlotServerLinks>({});
   const [plotServerLinksLoaded, setPlotServerLinksLoaded] = useState(false);
+  const [hasPendingQueueRows, setHasPendingQueueRows] = useState(false);
 
   const [active, setActive] = useState<Sub | null>((sub as Sub) ?? null);
   const [photos, setPhotos] = useState<PlotPhoto[]>([]);
@@ -392,13 +393,35 @@ export default function PlotDetailScreen() {
     ]),
   );
 
+  const refreshPendingQueueRows = useCallback(async () => {
+    if (!plotId) {
+      setHasPendingQueueRows(false);
+      return;
+    }
+    const rows = await loadPendingSyncActions().catch(() => []);
+    const hasRows = rows.some((row) => {
+      try {
+        const payload = JSON.parse(row.payloadJson) as Record<string, unknown>;
+        return String(payload?.plotId ?? '') === plotId;
+      } catch {
+        return false;
+      }
+    });
+    setHasPendingQueueRows(hasRows);
+  }, [plotId]);
+
   useEffect(() => {
     return subscribeServerPlotSyncChanged(() => {
       void refreshBackendPlots(true);
       void refreshTenureVerification();
       void refreshPlotLocalMedia();
+      void refreshPendingQueueRows();
     });
-  }, [refreshBackendPlots, refreshPlotLocalMedia, refreshTenureVerification]);
+  }, [refreshBackendPlots, refreshPlotLocalMedia, refreshTenureVerification, refreshPendingQueueRows]);
+
+  useEffect(() => {
+    void refreshPendingQueueRows();
+  }, [refreshPendingQueueRows]);
 
   useEffect(() => {
     if (!backendPlotId) return;
@@ -621,6 +644,7 @@ export default function PlotDetailScreen() {
         producerEvidenceKinds,
         producerAttestationsComplete,
         isSyncedToServer: Boolean(backendPlotId),
+        hasPendingQueueRows,
         tenureVerifications: visibleTenureVerifications,
         backendFlags:
           backendPlotId != null
@@ -713,6 +737,7 @@ export default function PlotDetailScreen() {
     overlapFlags.sinaph,
     backendPlotId,
     visibleTenureVerifications,
+    hasPendingQueueRows,
     t,
   ]);
 
@@ -766,6 +791,7 @@ export default function PlotDetailScreen() {
       producerEvidenceKinds,
       producerAttestationsComplete,
       isSyncedToServer: Boolean(backendPlotId),
+      hasPendingQueueRows,
       tenureVerifications: visibleTenureVerifications,
       backendFlags:
         backendPlotId != null
@@ -791,6 +817,7 @@ export default function PlotDetailScreen() {
     visibleTenureVerifications,
     overlapFlags.sinaph,
     overlapFlags.indigenous,
+    hasPendingQueueRows,
     t,
   ]);
 
@@ -1346,6 +1373,14 @@ export default function PlotDetailScreen() {
             </ThemedText>
           ) : null}
         </Card>
+
+        {needsBoundaryFix && uploadGeometryBlock ? (
+          <View style={styles.geometryBlockBanner}>
+            <ThemedText type="caption" style={styles.geometryBlockBannerText}>
+              {uploadGeometryBlock.message}
+            </ThemedText>
+          </View>
+        ) : null}
 
         {!checklistComplete && nextSetupRow ? (
           <Pressable

@@ -20,6 +20,17 @@ export type ExtendedCloudParityCounts = {
   serverHasProfilePhoto: boolean | null;
   localHasWalkDraft: boolean;
   serverHasWalkDraft: boolean | null;
+  /**
+   * Restore-mirroring media gap from `countPendingServerMediaRestore`.
+   * When defined (audit rows available), overrides the naive count-based
+   * `mediaGap` for the `needsRestore` decision and hint text, so the brown
+   * banner cannot diverge from what Sync now would actually restore.
+   */
+  measuredMediaGap?: number;
+  /** Restore-mirroring plot gap — server rows Sync now would pull, not raw count delta. */
+  measuredPlotGap?: number;
+  /** Restore-mirroring receipt gap — vouchers not yet in local SQLite. */
+  measuredReceiptGap?: number;
 };
 
 export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
@@ -30,12 +41,18 @@ export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
   profilePhotoGap: boolean;
   walkDraftGap: boolean;
 } {
-  const plotGap = gapCount(counts.serverPlotCount, counts.localPlotCount);
-  const receiptGap = gapCount(counts.serverVoucherCount, counts.localReceiptCount);
+  const plotGap =
+    counts.measuredPlotGap != null ? counts.measuredPlotGap : gapCount(counts.serverPlotCount, counts.localPlotCount);
+  const receiptGap =
+    counts.measuredReceiptGap != null
+      ? counts.measuredReceiptGap
+      : gapCount(counts.serverVoucherCount, counts.localReceiptCount);
   const groundGap = gapCount(counts.serverGroundPhotos, counts.localGroundPhotos);
   const landGap = gapCount(counts.serverLandTitlePhotos, counts.localLandTitlePhotos);
   const evidenceGap = gapCount(counts.serverEvidenceDocs, counts.localEvidenceDocs);
-  const mediaGap = groundGap + landGap + evidenceGap;
+  const naiveMediaGap = groundGap + landGap + evidenceGap;
+  const mediaGap =
+    counts.measuredMediaGap != null ? counts.measuredMediaGap : naiveMediaGap;
 
   let declarationGap = 0;
   if (counts.serverHasProducerAudit === true && !counts.localProducerComplete) {

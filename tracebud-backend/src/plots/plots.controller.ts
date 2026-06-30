@@ -594,7 +594,22 @@ export class PlotsController {
     summary: 'Get compliance history for a plot (audit trail)',
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
-  async complianceHistory(@Param('id') id: string) {
+  async complianceHistory(@Param('id') id: string, @Req() req: any) {
+    await this.requireTenantClaimOrFieldActor(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (role === 'farmer') {
+      const userId = req.user?.id as string | undefined;
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+      if (!owned) {
+        throw new ForbiddenException('Plot scope violation');
+      }
+    } else if (tenantId) {
+      await this.enforcePlotTenantAccess(id, req);
+    }
     return this.plotsService.getComplianceHistory(id);
   }
 
@@ -624,7 +639,22 @@ export class PlotsController {
       'Returns async parse status and structured extraction for tenure_evidence uploads (producer-in-possession path).',
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
-  async tenureVerification(@Param('id') id: string) {
+  async tenureVerification(@Param('id') id: string, @Req() req: any) {
+    await this.requireTenantClaimOrFieldActor(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (role === 'farmer') {
+      const userId = req.user?.id as string | undefined;
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+      if (!owned) {
+        throw new ForbiddenException('Plot scope violation');
+      }
+    } else if (tenantId) {
+      await this.enforcePlotTenantAccess(id, req);
+    }
     return this.plotsService.listTenureVerification(id);
   }
 
@@ -656,7 +686,22 @@ export class PlotsController {
     summary: 'Get historical deforestation decision history for a plot (audit trail)',
   })
   @ApiParam({ name: 'id', description: 'Plot ID' })
-  async deforestationDecisionHistory(@Param('id') id: string) {
+  async deforestationDecisionHistory(@Param('id') id: string, @Req() req: any) {
+    await this.requireTenantClaimOrFieldActor(req);
+    const role = deriveRoleFromSupabaseUser(req.user);
+    const tenantId = deriveTenantIdFromSupabaseUser(req?.user);
+    if (role === 'farmer') {
+      const userId = req.user?.id as string | undefined;
+      if (!userId) {
+        throw new ForbiddenException('Missing authenticated user');
+      }
+      const owned = await this.plotsService.isPlotOwnedByUser(id, userId);
+      if (!owned) {
+        throw new ForbiddenException('Plot scope violation');
+      }
+    } else if (tenantId) {
+      await this.enforcePlotTenantAccess(id, req);
+    }
     return this.plotsService.getDeforestationDecisionHistory(id);
   }
 

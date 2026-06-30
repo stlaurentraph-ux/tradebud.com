@@ -73,7 +73,7 @@ import {
   isPlotFetchAuthFailure,
   isPlotFetchReachabilityFailure,
 } from '@/features/sync/plotFetchFailure';
-import { subscribeSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
+import { subscribeSyncOperationOutcome, emitSyncOperationOutcome } from '@/features/sync/syncOperationOutcome';
 import { syncTimedOutMessage } from '@/features/errors/mapApiErrorToUserMessage';
 import { resolveSyncOpenPlotId, resolveSyncSupportMailto } from '@/features/sync/formatSyncNowUserMessage';
 import { resolveSyncAttentionMessage } from '@/features/sync/resolveSyncAttentionMessage';
@@ -534,11 +534,21 @@ export default function SettingsScreen() {
   );
 
   useEffect(() => {
-    return subscribeServerPlotSyncChanged(() => {
+    let parityTimer: ReturnType<typeof setTimeout> | null = null;
+    const unsubscribe = subscribeServerPlotSyncChanged(() => {
       if (freezeSyncMetricsDisplayRef.current) return;
       void refreshSyncMetrics();
+      if (parityTimer) clearTimeout(parityTimer);
+      parityTimer = setTimeout(() => {
+        parityTimer = null;
+        void refreshCloudParity();
+      }, 500);
     });
-  }, [refreshSyncMetrics]);
+    return () => {
+      if (parityTimer) clearTimeout(parityTimer);
+      unsubscribe();
+    };
+  }, [refreshSyncMetrics, refreshCloudParity]);
 
   useEffect(() => {
     return subscribeSyncQueueLock(() => {
@@ -574,6 +584,7 @@ export default function SettingsScreen() {
 
   const syncApiBaseUrl = getTracebudApiBaseUrl();
   const syncUsesLocalApi = useMemo(() => isLocalLanSyncApi(syncApiBaseUrl), [syncApiBaseUrl]);
+  const cloudParityNeedsRestore = cloudParityHints.length > 0 && isSignedIn;
   const showBackupTechDetails =
     __DEV__ ||
     syncUsesLocalApi ||
@@ -593,6 +604,7 @@ export default function SettingsScreen() {
           plotsCount: plots.length,
           hasSettledMetrics: measuredSyncPending != null,
           syncApiBaseUrl,
+          cloudParityNeedsRestore: cloudParityNeedsRestore,
         },
         t,
       ),
@@ -605,6 +617,7 @@ export default function SettingsScreen() {
       syncAccessFailure,
       syncApiBaseUrl,
       totalSyncPending,
+      cloudParityNeedsRestore,
       t,
     ],
   );
@@ -737,6 +750,8 @@ export default function SettingsScreen() {
   const backupAttentionPrimarySummary = pendingDetailMessage;
 
   const showBackupResultMessage = Boolean(syncMessage && !isSyncInProgress);
+  const showBackupSuccessStyle =
+    syncMessageKind === 'success' && !cloudParityNeedsRestore;
 
   const syncGeometryWhyBlock = useMemo(
     () => primaryGeometryBlockForWhy(measuredSyncPending?.blockedPlots),
@@ -1120,6 +1135,20 @@ export default function SettingsScreen() {
               diskState.plots.length > 0 ? diskState.plots : syncPlots,
             );
 
+            // U9: re-read the latest queue error from fresh rows — the closure
+            // `queueLastError` was captured before the sync and is stale.
+            const freshQueueRows = await loadPendingSyncActions().catch(() => []);
+            const freshLatestErrored = [...freshQueueRows]
+              .filter((row) => (row.attempts ?? 0) > 0)
+              .sort((a, b) => {
+                if ((b.attempts ?? 0) !== (a.attempts ?? 0)) {
+                  return (b.attempts ?? 0) - (a.attempts ?? 0);
+                }
+                return (b.createdAt ?? 0) - (a.createdAt ?? 0);
+              })[0];
+            const freshQueueLastError = freshLatestErrored?.lastError?.trim() || null;
+            const freshQueueLastErrorActionType = freshLatestErrored?.actionType ?? null;
+
             const attention = resolveSyncAttentionMessage({
               pending: {
                 total: freshPending?.total ?? outcome.remainingPending ?? 0,
@@ -1131,8 +1160,8 @@ export default function SettingsScreen() {
               },
               t,
               syncOutcome: outcome,
-              queueLastError,
-              queueLastErrorActionType,
+              queueLastError: freshQueueLastError,
+              queueLastErrorActionType: freshQueueLastErrorActionType,
               plotsFetchFailed:
                 freshPending?.plotsFetchFailed === true || outcome.plotsFetchFailed === true,
               syncAccessFailure,
@@ -1166,6 +1195,7 @@ export default function SettingsScreen() {
             setSyncMessageKind(attention.kind);
           } catch (e) {
             if (e instanceof SyncOperationTimeoutError) {
+              emitSyncOperationOutcome({ kind: 'timeout', source: 'manual', at: Date.now() });
               setSyncMessage(syncTimedOutMessage(t, 'settings'));
               setSyncMessageKind('error');
               return;
@@ -1195,6 +1225,7 @@ export default function SettingsScreen() {
         return;
       }
       if (e instanceof SyncOperationTimeoutError) {
+        emitSyncOperationOutcome({ kind: 'timeout', source: 'manual', at: Date.now() });
         setSyncMessage(syncTimedOutMessage(t, 'settings'));
         setSyncMessageKind('error');
         return;
@@ -1417,8 +1448,8 @@ export default function SettingsScreen() {
                       type="caption"
                       style={[
                         styles.syncHint,
-                        syncMessageKind === 'success' && styles.syncHintSuccess,
-                        syncMessageKind === 'error' && styles.syncHintError,
+                        showBackupSuccessStyle ? styles.syncHintSuccess : null,
+                        syncMessageKind === 'error' ? styles.syncHintError : null,
                       ]}
                     >
                       {syncMessage}

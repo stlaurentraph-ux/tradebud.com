@@ -43,6 +43,24 @@ describe('pendingSyncDedupKey', () => {
     );
     expect(key).toBe('harvest:harvest-p1-1');
   });
+
+  it('dedupes consent actions by grantId (C5)', () => {
+    const key = pendingSyncDedupKey(
+      'consent_approve',
+      JSON.stringify({ grantId: 'grant-1' }),
+    );
+    expect(key).toBe('consent_approve:grant-1');
+  });
+
+  it('dedupes consent deny by grantId and collapses duplicates', () => {
+    const rows = [
+      row(1, 'consent_deny', { grantId: 'grant-1', revocationReason: 'first' }),
+      row(2, 'consent_deny', { grantId: 'grant-1', revocationReason: 'second' }),
+    ];
+    const { keepIds, deleteIds } = planPendingSyncCompaction(rows);
+    expect(keepIds.size).toBe(1);
+    expect(deleteIds).toEqual([1]);
+  });
 });
 
 describe('planPendingSyncCompaction', () => {

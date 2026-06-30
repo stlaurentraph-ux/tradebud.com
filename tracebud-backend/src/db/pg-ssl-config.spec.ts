@@ -1,4 +1,4 @@
-import { resolvePgSslConfig } from './pg-ssl-config';
+import { normalizeDatabaseConnectionString, resolvePgSslConfig } from './pg-ssl-config';
 
 describe('resolvePgSslConfig', () => {
   const originalEnv = process.env;
@@ -25,9 +25,18 @@ describe('resolvePgSslConfig', () => {
     });
   });
 
-  it('verifies remote TLS in production with bundled RDS CA', () => {
+  it('enables pg libpq SSL for Supabase pooler hosts', () => {
     process.env.NODE_ENV = 'production';
-    const ssl = resolvePgSslConfig('postgresql://postgres:pw@aws-0-eu.pooler.supabase.com:6543/postgres');
+    expect(
+      resolvePgSslConfig('postgresql://postgres:pw@aws-0-eu.pooler.supabase.com:6543/postgres?pgbouncer=true'),
+    ).toBe(true);
+  });
+
+  it('verifies remote RDS TLS in production with bundled RDS CA', () => {
+    process.env.NODE_ENV = 'production';
+    const ssl = resolvePgSslConfig(
+      'postgresql://postgres:pw@tracebud.abc123.us-east-1.rds.amazonaws.com:5432/postgres',
+    );
     expect(ssl).toEqual(
       expect.objectContaining({
         rejectUnauthorized: true,
@@ -36,13 +45,31 @@ describe('resolvePgSslConfig', () => {
     );
   });
 
-  it('does not require verification outside production when CA is present', () => {
-    const ssl = resolvePgSslConfig('postgresql://postgres:pw@aws-0-eu.pooler.supabase.com:6543/postgres');
+  it('does not require verification outside production when CA is present for RDS', () => {
+    const ssl = resolvePgSslConfig(
+      'postgresql://postgres:pw@tracebud.abc123.us-east-1.rds.amazonaws.com:5432/postgres',
+    );
     expect(ssl).toEqual(
       expect.objectContaining({
         rejectUnauthorized: false,
         ca: expect.stringContaining('-----BEGIN CERTIFICATE-----'),
       }),
     );
+  });
+});
+
+describe('normalizeDatabaseConnectionString', () => {
+  it('adds libpq SSL params for Supabase pooler URLs', () => {
+    const normalized = normalizeDatabaseConnectionString(
+      'postgresql://postgres:pw@aws-1-eu-central-1.pooler.supabase.com:6543/postgres?pgbouncer=true',
+    );
+    expect(normalized).toContain('uselibpqcompat=true');
+    expect(normalized).toContain('sslmode=require');
+    expect(normalized).toContain('pgbouncer=true');
+  });
+
+  it('leaves non-Supabase URLs unchanged', () => {
+    const url = 'postgresql://postgres:pw@tracebud.abc123.us-east-1.rds.amazonaws.com:5432/postgres';
+    expect(normalizeDatabaseConnectionString(url)).toBe(url);
   });
 });

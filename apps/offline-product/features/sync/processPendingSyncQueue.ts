@@ -266,8 +266,9 @@ export async function processPendingSyncQueue(params: {
         } as Parameters<typeof postHarvestToBackend>[0]);
         const qrCodeRef = readHarvestSubmitQrCodeRef(harvestResponse);
         // Do not swallow this error: if the local receipt update fails, throw so the queue row
-        // is retained and retried (the harvest POST is idempotent via clientEventId). Otherwise
-        // the server has the harvest but the local receipt stays pendingSync forever.
+        // is retained and retried. The harvest POST is server-idempotent via the
+        // (farmer_id, client_event_id) UNIQUE constraint (migration tb_v16_060), so a replay
+        // returns the existing voucher instead of duplicating it.
         await updateLocalDeliveryReceipt(clientEventId, {
           qrCodeRef,
           pendingSync: false,

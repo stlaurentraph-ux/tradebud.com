@@ -989,6 +989,29 @@ export class PlotsService {
     });
   }
 
+  /**
+   * Idempotency guard for offline sync audit envelopes (B7). Replays of the same
+   * client_event_id from the offline queue must not create duplicate audit rows.
+   * Returns true when an existing envelope is found and the caller should skip.
+   */
+  private async isSyncAuditEnvelopeDuplicate(
+    eventType: string,
+    plotId: string,
+    clientEventId: string | null | undefined,
+  ): Promise<boolean> {
+    const trimmed = (clientEventId ?? '').trim();
+    if (!trimmed) return false;
+    const res = await this.pool.query(
+      `SELECT 1 FROM audit_log
+       WHERE event_type = $1
+         AND payload->>'plotId' = $2
+         AND payload->>'clientEventId' = $3
+       LIMIT 1`,
+      [eventType, plotId, trimmed],
+    );
+    return (res.rowCount ?? 0) > 0;
+  }
+
   async syncPhotos(
     plotId: string,
     dto: SyncPlotPhotosDto,
@@ -1010,6 +1033,13 @@ export class PlotsService {
     }
 
     const photosArray = Array.isArray(dto.photos) ? dto.photos : [];
+
+    if (
+      await this.isSyncAuditEnvelopeDuplicate('plot_photos_synced', plotId, dto.clientEventId)
+    ) {
+      // Idempotent replay — skip duplicate audit row and downstream side effects.
+      return { plotId, kind: dto.kind, count: photosArray.length, deduplicated: true };
+    }
 
     await this.pool.query(
       `
@@ -1078,6 +1108,12 @@ export class PlotsService {
       throw new BadRequestException('Plot not found');
     }
 
+    if (
+      await this.isSyncAuditEnvelopeDuplicate('plot_legal_synced', plotId, dto.clientEventId)
+    ) {
+      return { ok: true, deduplicated: true };
+    }
+
     await this.pool.query(
       `
         INSERT INTO audit_log (user_id, device_id, event_type, payload)
@@ -1124,6 +1160,12 @@ export class PlotsService {
     }
 
     const itemsArray = Array.isArray(dto.items) ? dto.items : [];
+
+    if (
+      await this.isSyncAuditEnvelopeDuplicate('plot_evidence_synced', plotId, dto.clientEventId)
+    ) {
+      return { ok: true, deduplicated: true };
+    }
 
     await this.pool.query(
       `

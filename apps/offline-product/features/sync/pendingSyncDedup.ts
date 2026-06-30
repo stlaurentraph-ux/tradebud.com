@@ -57,7 +57,11 @@ export function pendingSyncDedupKey(
     actionType === 'consent_deny' ||
     actionType === 'consent_revoke'
   ) {
-    const requestId = String(payload.requestId ?? payload.consentRequestId ?? '');
+    // Consent payloads use `grantId` (see consentActions.performConsentAction);
+    // `requestId`/`consentRequestId` are accepted for legacy parity but rarely set.
+    const requestId = String(
+      payload.grantId ?? payload.requestId ?? payload.consentRequestId ?? '',
+    );
     return requestId ? `${actionType}:${requestId}` : null;
   }
 

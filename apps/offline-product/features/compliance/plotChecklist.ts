@@ -105,6 +105,8 @@ export function computePlotReadinessChecklist(params: {
   producerAttestationsComplete?: boolean;
   /** True when a local plot is linked to a server row (name/area match or known plot id). */
   isSyncedToServer: boolean;
+  /** True when the pending sync queue still has rows targeting this plot (U3). */
+  hasPendingQueueRows?: boolean;
   backendFlags?: BackendOverlapFlags | null;
   minGroundTruthPhotos?: number;
   tenureVerifications?: PlotTenureVerificationRecord[];
@@ -131,7 +133,10 @@ export function computePlotReadinessChecklist(params: {
     evidenceHasKind(producerKinds, 'fpic_repository') ||
     params.producerAttestationsComplete === true;
   const permitOk = evidenceHasKind(params.evidenceKinds, 'protected_area_permit');
-  const syncOk = params.isSyncedToServer;
+  // U3: sync is only "done" when the plot is linked AND no queue rows still
+  // target it. A plot with a server link but pending harvest/photo/evidence
+  // rows is not actually synced.
+  const syncOk = params.isSyncedToServer && !params.hasPendingQueueRows;
   const done =
     groundOk &&
     landOk &&

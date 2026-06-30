@@ -6,6 +6,28 @@ import {
 } from './plotChecklist';
 
 describe('plotChecklist tenure parse gating', () => {
+  it('marks sync done only when linked AND no pending queue rows (U3)', () => {
+    const linked = computePlotReadinessChecklist({
+      groundTruthPhotoCount: 4,
+      titlePhotoCount: 1,
+      evidenceKinds: ['tenure_evidence'],
+      isSyncedToServer: true,
+      hasPendingQueueRows: false,
+      tenureVerifications: [],
+    });
+    expect(linked.syncOk).toBe(true);
+
+    const linkedWithQueue = computePlotReadinessChecklist({
+      groundTruthPhotoCount: 4,
+      titlePhotoCount: 1,
+      evidenceKinds: ['tenure_evidence'],
+      isSyncedToServer: true,
+      hasPendingQueueRows: true,
+      tenureVerifications: [],
+    });
+    expect(linkedWithQueue.syncOk).toBe(false);
+  });
+
   it('treats synced plot with local title photo but no server check as awaiting upload', () => {
     const checklist = computePlotReadinessChecklist({
       groundTruthPhotoCount: 4,

@@ -466,6 +466,18 @@ export function createPlotDetailScreenStyles(c: AppColors) {
     marginTop: 8,
     color: c.textMuted,
   },
+  geometryBlockBanner: {
+    marginTop: 10,
+    marginBottom: 4,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: c.surfaceAccentBorder,
+    backgroundColor: c.surfaceAccent,
+  },
+  geometryBlockBannerText: {
+    color: c.textWarningStrong,
+  },
   nextStepBanner: {
     flexDirection: 'row',
     alignItems: 'center',

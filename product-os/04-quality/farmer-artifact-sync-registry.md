@@ -62,6 +62,8 @@ Guard: `ui-reload-guard.mjs` — each screen must subscribe to sync bus and/or f
 - **Plot link gate:** without `plot_server_links`, plot-scoped restore skips (`skippedUnlinked`).
 - **Farmer scope:** always `prepareFieldSyncContext` / `ownedFarmerIds`.
 - **Offline tiles:** cross-device syncs **manifest + active pack id**; device re-downloads tiles (not full binary upload).
+- **Parity ↔ restore single source of truth:** cloud parity (`measureCloudParitySummary`) must count gaps using the **same logic** restore uses (`restoreFarmerCloudState`). Media parity is computed by `countPendingServerMediaRestore` (`serverMediaRestorePlan.ts`), which mirrors `restoreLocalPlotPhotosFromServerAudit` + `restoreLocalEvidenceFromServer` including producer evidence under `profile:{farmerId}`. Local counts (`countLocalMediaArtifacts`) must include the producer scope, not just plot-scoped rows.
+- **Banner honesty:** Settings must not show a green "Backup complete" banner while brown cloud-parity restore hints are visible. The status pill downgrades to "Restore available" when `cloudParityNeedsRestore`.
 
 ## Intentional exclusions
 

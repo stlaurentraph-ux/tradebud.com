@@ -14,6 +14,6 @@ alwaysApply: true
 - Use `GEOGRAPHY` (not `GEOMETRY`) for compliance-relevant spatial storage and area math.
 - Validate inbound polygons with `ST_MakeValid`; reject if correction changes area by more than 5%.
 - Keep lineage traversal O(1) at runtime using materialized lineage fields (for example `root_plot_ids`).
-- Use Hybrid Logical Clocks (HLC) for offline conflict ordering; do not trust client wall clocks.
+- Use Hybrid Logical Clocks (HLC) for offline conflict ordering; do not trust client wall clocks. For v1.6, HLC orders the offline pending-sync queue drain; server-side sync-envelope conflict resolution is append-only audit replay ordered by the server `timestamp` column (see `TRACEBUD_V1_2_EUDR_SPEC.md` §18.5). Server-side HLC compare for last-write-wins is deferred to v1.7.
 - Support TRACES payload chunking when size or vertex limits are exceeded.
 - Handle GDPR erasure with cryptographic shredding while preserving immutable audit references.
