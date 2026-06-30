@@ -51,16 +51,16 @@ fi
 
 preflight_maestro_apk() {
   echo "==> Preflight: bundled Maestro boot DB in APK ($APK_PATH)"
-  # Capture unzip output once to avoid SIGPIPE false-negative:
-  # with set -o pipefail, `unzip -l | grep -q` can return non-zero because
-  # grep -q exits early (match found) → unzip gets SIGPIPE (exit 141) →
-  # pipefail returns the rightmost non-zero → false "missing DB" on macOS.
+  # Grep via here-string (not a pipe) to avoid SIGPIPE false-negative under pipefail:
+  # `cmd | grep -q` makes grep -q exit early on match → upstream gets SIGPIPE →
+  # pipefail returns non-zero → false "missing DB". A here-string is a redirection,
+  # not a pipeline, so pipefail doesn't apply.
   local apk_list
   apk_list="$(unzip -l "$APK_PATH" 2>/dev/null || true)"
-  if ! printf '%s\n' "$apk_list" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
+  if ! grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db' <<< "$apk_list"; then
     echo "::error::APK missing assets/maestro/tracebud_offline.db — assemble must run generate-maestro-ci-boot-db.mjs"
     echo "==> APK contents (maestro/assets):"
-    printf '%s\n' "$apk_list" | grep -iE 'maestro|assets/|\.db$' || echo "  (unzip failed or no matching entries)"
+    grep -iE 'maestro|assets/|\.db$' <<< "$apk_list" || echo "  (unzip failed or no matching entries)"
     exit 1
   fi
 }

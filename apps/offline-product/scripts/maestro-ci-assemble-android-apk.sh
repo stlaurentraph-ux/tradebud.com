@@ -99,25 +99,27 @@ if [[ ! -f "$APK_PATH" ]]; then
   exit 1
 fi
 
-# Capture unzip listing once to avoid SIGPIPE false-negative under pipefail
-# (grep -q exits early on match → unzip gets SIGPIPE → pipefail returns non-zero).
+# Capture unzip listing once and grep via here-string (not a pipe) to avoid
+# SIGPIPE false-negative under pipefail: `cmd | grep -q` makes grep -q exit
+# early on match → upstream gets SIGPIPE → pipefail returns non-zero.
+# A here-string (<<<) is a redirection, not a pipeline, so pipefail doesn't apply.
 APK_LIST="$(unzip -l "$APK_PATH" 2>/dev/null || true)"
 
-if ! printf '%s\n' "$APK_LIST" | grep -qE 'assets/index.android.bundle|\.hbc'; then
+if ! grep -qE 'assets/index.android.bundle|\.hbc' <<< "$APK_LIST"; then
   echo "::error::Missing embedded JS bundle (index.android.bundle) in $APK_PATH — debug APK will not boot offline without debuggableVariants = []."
-  printf '%s\n' "$APK_LIST" | head -40 || true
+  grep -E '.' <<< "$APK_LIST" | head -40 || true
   exit 1
 fi
 
-if ! printf '%s\n' "$APK_LIST" | grep -q "lib/${MAESTRO_ANDROID_ABI}/"; then
+if ! grep -q "lib/${MAESTRO_ANDROID_ABI}/" <<< "$APK_LIST"; then
   echo "::error::Missing lib/${MAESTRO_ANDROID_ABI} native libs in $APK_PATH — CI emulator requires ${MAESTRO_ANDROID_ABI} ABI."
-  printf '%s\n' "$APK_LIST" | grep 'lib/' | head -20 || true
+  grep 'lib/' <<< "$APK_LIST" | head -20 || true
   exit 1
 fi
 
-if ! printf '%s\n' "$APK_LIST" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
+if ! grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db' <<< "$APK_LIST"; then
   echo "::error::Missing assets/maestro/tracebud_offline.db in $APK_PATH — in-app Maestro seed requires bundled DB."
-  printf '%s\n' "$APK_LIST" | grep -i maestro || true
+  grep -i maestro <<< "$APK_LIST" || true
   exit 1
 fi
 
