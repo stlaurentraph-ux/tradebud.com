@@ -21,7 +21,9 @@ import {
   useRef,
   useState,
 } from 'react';
+import { Platform } from 'react-native';
 import { hydrateSyncAuthFromSettings } from '@/features/api/syncAuthSession';
+import { shouldUseMaestroCiThinBoot } from '@/features/testing/maestroCiBootProfile';
 import {
   farmerProfilesEqual,
   hasProducerAttestationsComplete,
@@ -166,9 +168,12 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      let bootFailed = false;
       try {
         await initDatabase();
-        await hydrateSyncAuthFromSettings();
+        if (!shouldUseMaestroCiThinBoot()) {
+          await hydrateSyncAuthFromSettings();
+        }
         const loaded = await loadAppState();
         if (!cancelled) {
           if (loaded.farmer) {
@@ -184,6 +189,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           setBootError(false);
         }
       } catch (error) {
+        bootFailed = true;
         // A boot failure must not masquerade as a fresh install: surface it so the UI can
         // offer recovery instead of presenting empty state that could overwrite real data.
         if (!cancelled) {
@@ -198,6 +204,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       } finally {
         if (!cancelled) {
           setIsAppReady(true);
+          if (process.env.EXPO_PUBLIC_MAESTRO_CI === '1' && Platform.OS === 'android') {
+            console.warn(`[MaestroBoot] app state ready bootError=${bootFailed}`);
+          }
         }
       }
     })();

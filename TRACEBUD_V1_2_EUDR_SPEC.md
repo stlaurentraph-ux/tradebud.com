@@ -1426,6 +1426,17 @@ Provenance retained
 
 ### 18.4 Sync conflict logging
 Every conflict must write a sync_conflicts record containing entity type, entity ID, client snapshot, server snapshot, strategy applied, and resolution status.
+
+### 18.5 HLC intent for v1.6 (audit-replay restore)
+
+For v1.6 field-app scope, HLC timestamps are **queue-only ordering metadata**:
+
+- The offline SQLite pending-sync queue uses HLC to order rows for drain (`compareHlcTimestamp` in `hlc.ts`).
+- Server-side conflict resolution for sync envelopes (`plot_photos_synced`, `plot_legal_synced`, `plot_evidence_synced`, `producer_attestations_updated`) is **append-only audit replay** — the server always INSERTs and restore orders by the server wall-clock `timestamp` column, not by client HLC.
+- `plot_legal_synced` is audit-only in v1.6; it does not UPDATE `plot` cadastral columns. Restore depends entirely on audit replay. A v1.7 track may introduce server-side HLC compare for last-write-wins on photo/legal envelopes and have `plot_legal_synced` also UPDATE `plot` columns; that is deferred and must not be assumed by v1.6 client code.
+- Client HLC is preserved in audit payloads for traceability and future v1.7 conflict resolution, but no v1.6 restore path reads it for ordering.
+
+This documents the as-built behavior so the architecture-constraints rule “HLC for offline conflict ordering” is understood as **queue ordering**, not server-side LWW, for v1.6.
 ## 19. Deforestation Risk Engine
 Tracebud risk outputs are screening artifacts and evidence inputs, not legal determinations. The default risk engine profile should be explicit, versioned, and reproducible so the same inputs always generate the same screening history.[4][5]
 ### 19.1 Dataset registry

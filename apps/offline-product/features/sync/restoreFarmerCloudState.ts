@@ -87,7 +87,10 @@ export async function restoreFarmerCloudState(
 
   result.groundTruthRestored = photos.groundTruthRestored;
   result.landTitleRestored = photos.landTitleRestored;
-  result.evidenceRestored = evidence.restoredCount + photos.landTitleRestored;
+  // evidence.restoredCount already includes land_title rows (restoreLocalEvidenceFromServer
+  // normalizes land_title and increments restoredCount for them). Adding photos.landTitleRestored
+  // here would double-count land titles across the two restore paths (C7).
+  result.evidenceRestored = evidence.restoredCount;
   result.devicePreferencesRestored = devicePrefs.restored;
   result.profilePhotoRestored = profilePhoto.restored;
   result.mappingDraftRestored = mappingDraft.restored;

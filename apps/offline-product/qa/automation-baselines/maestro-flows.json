@@ -9,6 +9,8 @@
     "land-title-photo.yaml",
     "mark-three-corners.yaml",
     "settings-sync-smoke.yaml",
+    "settings-sync-smoke-android.yaml",
+    "android-pr-smoke.yaml",
     "tenure-evidence.yaml"
   ]
 }

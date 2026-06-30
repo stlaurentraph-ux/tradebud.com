@@ -42,6 +42,7 @@
     "uptime:probes:manifest:assert": "node scripts/uptime-probes-manifest-guard.mjs",
     "uptime:probes:run": "node scripts/uptime-probes-run.mjs",
     "pr:labeler:assert": "node scripts/pr-labeler-guard.mjs",
+    "ci:path-filter:assert": "node scripts/ci-path-filter-guard.mjs",
     "n8n:workflow-b:assert": "node scripts/n8n-workflow-b-guard.mjs",
     "n8n:workflow-f:assert": "node scripts/n8n-workflow-f-guard.mjs",
     "golden:staging:assert": "node scripts/golden-staging-tenant-guard.mjs",

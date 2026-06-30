@@ -11,6 +11,8 @@ export type BackupStatusDisplayInput = {
   /** When false, a background refresh is in flight — keep the last pill stable. */
   hasSettledMetrics: boolean;
   syncApiBaseUrl: string;
+  /** When true, cloud parity detected restore gaps — pill should hint restore, not "all good". */
+  cloudParityNeedsRestore?: boolean;
 };
 
 export type BackupStatusDisplay = {
@@ -69,6 +71,13 @@ export function resolveBackupStatusDisplay(
   if (input.totalSyncPending > 0) {
     return {
       label: t('backup_pill_pending'),
+      needsAttention: true,
+    };
+  }
+
+  if (input.cloudParityNeedsRestore) {
+    return {
+      label: t('backup_pill_restore_available'),
       needsAttention: true,
     };
   }

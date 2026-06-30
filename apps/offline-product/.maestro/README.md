@@ -101,6 +101,8 @@ Download **Maestro Studio** from [maestro.mobile.dev](https://maestro.mobile.dev
 
 | testID | Screen |
 |--------|--------|
+| `maestro-boot-ready` | CI boot anchor — auth ready, welcome not blocking; must stay Maestro-visible (non-zero opacity) |
+| `tab-home` | Bottom tab → Home |
 | `tab-my-plots` | Bottom tab → My Plots |
 | `tab-settings` | Bottom tab → Settings |
 | `settings-sync-now` | Settings → Sync now (signed in) |
@@ -120,6 +122,6 @@ Human smoke (GPS, camera, sync) remains mandatory — see `DEVICE_SMOKE_CHECKLIS
 ## CI (GitHub Actions)
 
 - **Linux (blocking):** `npm run qa:maestro:preflight` in the Expo `app` CI job — validates flow manifest, `appId`, and testID wiring without a simulator.
-- **macOS (optional):** workflow **Offline Maestro (macOS)** — PR preflight; **`main` push** runs golden path (`settings-sync-smoke.yaml`); manual dispatch for full flows.
+- **Offline Maestro workflow:** PR + `main` push run iOS (macOS) and Android (emulator) golden path (`settings-sync-smoke.yaml`); manual dispatch for full flows.
 
 See `product-os/04-quality/offline-automation-runbook.md` § Maestro CI.

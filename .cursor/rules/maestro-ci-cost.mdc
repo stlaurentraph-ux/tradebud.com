@@ -1,0 +1,53 @@
+---
+description: Maestro golden-path CI cost rules — local prepush before GitHub macOS/Android runs
+globs:
+  - apps/offline-product/.maestro/**
+  - apps/offline-product/scripts/maestro*
+  - apps/offline-product/scripts/*maestro*
+  - apps/offline-product/components/layout/MaestroBootReadyMarker.tsx
+  - apps/offline-product/features/testing/**
+  - .github/workflows/offline-maestro.yml
+  - product-os/04-quality/maestro*.json
+  - product-os/04-quality/maestro*.md
+---
+
+# Maestro CI cost (H25)
+
+Runbook: `product-os/04-quality/maestro-ci-cost-runbook.md`
+
+## Before pushing Maestro changes
+
+**Mandatory (all agents and humans):**
+
+```bash
+cd apps/offline-product
+npm run qa:maestro:prepush
+```
+
+**Before push on macOS (E2E / boot marker / flow changes):**
+
+```bash
+npm run qa:maestro:prepush:full
+```
+
+Do **not** push and poll GitHub as the first test loop — macOS runners are ~10× Linux minute cost.
+
+## GitHub is confirmation, not discovery
+
+| Do locally | Do on GitHub |
+|------------|--------------|
+| `qa:maestro:preflight` | Linux preflight (cheap) |
+| `qa:maestro:prepush:full` (macOS) | macOS job only when iOS delta or not yet green on PR |
+| `qa:maestro:golden-path:android` (optional) | Android emulator job (cost-gated) |
+
+## Agent rules
+
+- Run `qa:maestro:prepush` before every push touching Maestro paths
+- Run `qa:maestro:prepush:full` on macOS when changing flows, boot anchor, or CI bootstrap
+- **One push per fix** when possible — cost gate cancels superseded runs but each attempt still costs minutes
+- Use `workflow_dispatch` on `offline-maestro.yml` for final full-matrix proof before merge
+- Do not disable `maestro-cost-gate` or `cancel-in-progress` to “make CI pass faster”
+
+## Merge gate
+
+Both platforms green per `maestro-ci-cost-runbook.md` (iOS may be from an earlier PR commit if cost gate skipped macOS).

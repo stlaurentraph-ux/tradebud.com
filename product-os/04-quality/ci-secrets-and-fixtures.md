@@ -31,7 +31,7 @@ Agents: **never commit secret values.** Document names, purpose, and phase here 
 | `MARKETING_PREVIEW_BASE_URL` | 4.6 | marketing preview Playwright on PR | Optional override when Vercel PR previews are disabled |
 | `MARKETING_PREVIEW_SECRET` | 2.4 | stealth route smoke | Optional preview cookie tests |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | 2.4, 2.8, 4.6 | marketing deploy smoke, uptime probes, preview Playwright | Vercel Deployment Protection bypass for CI |
-| `EXPO_TOKEN` | 3.O.1, 4.8 | offline Maestro golden path + nightly smoke | Optional — install latest EAS `simulator` build on CI; without it, `expo run:ios` builds locally (slower) |
+| `EXPO_TOKEN` | 3.O.1, 4.8, H25 | offline Maestro golden path + nightly smoke (**blocking** on PR) | Expo access token — `eas build:run` installs latest EAS `simulator` build on macOS CI ([create](https://expo.dev/accounts/%5Baccount%5D/settings/access-tokens)). Without it, iOS golden path fails fast. |
 | `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` | 4.7, 4.O.1 | release health gate + offline mobile SLO gate | Also reused by `offline-mobile-slo-gate.yml` for `tracebud/react-native` |
 | `FIELD_TENANT_SMOKE_FARMER_A_EMAIL` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer A login — see `golden-field-tenant-smoke.md` |
 | `FIELD_TENANT_SMOKE_FARMER_A_PASSWORD` | 4.O.2 | Expo CI tenant isolation smoke (**blocking**) | Farmer A password |

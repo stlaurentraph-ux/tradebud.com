@@ -1,0 +1,38 @@
+appId: com.tracebud.app
+---
+# Android CI golden path — warm RN process from bootstrap; stopApp: false matches iOS golden path.
+- launchApp:
+    clearState: false
+    stopApp: false
+- waitForAnimationToEnd
+- tapOn:
+    id: "welcome-account-skip"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Maestro boot ready.*"
+    timeout: 2700000
+- extendedWaitUntil:
+    visible:
+      id: "maestro-boot-ready"
+    timeout: 120000
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 120000
+- tapOn:
+    id: "tab-settings"
+- scrollUntilVisible:
+    element:
+      id: "settings-cloud-parity-section"
+    direction: DOWN
+    timeout: 15000
+    speed: 40
+    visibilityPercentage: 20
+    optional: true
+- assertVisible:
+    text: ".*Backup.*"
+- assertVisible:
+    text: ".*Sync now.*|.*Sign in to back up.*"
+- tapOn:
+    id: "settings-sync-now"
+    optional: true

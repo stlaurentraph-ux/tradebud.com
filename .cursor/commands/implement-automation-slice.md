@@ -54,6 +54,10 @@ npm run check:marketing
 cd apps/offline-product
 npm run qa:regression
 npm run qa:automation:phase1
+# Maestro paths (H25 cost):
+npm run qa:maestro:prepush
+# macOS before push when E2E/CI scripts changed:
+npm run qa:maestro:prepush:full
 ```
 
 **Backend / root CI** (slices 1.D.*, workflow edits):

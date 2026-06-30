@@ -133,6 +133,10 @@ function isUuid(value: unknown): value is string {
 }
 
 export async function initDatabase() {
+  if (process.env.EXPO_PUBLIC_MAESTRO_CI === '1') {
+    const { ensureMaestroCiBootDatabase } = await import('@/features/testing/maestroCiBootDatabase');
+    await ensureMaestroCiBootDatabase();
+  }
   const db = await getDb();
   await db.execAsync(`
     PRAGMA journal_mode = WAL;

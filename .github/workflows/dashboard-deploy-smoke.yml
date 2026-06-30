@@ -1,5 +1,7 @@
 name: Dashboard post-deploy smoke
 
+# Triggered by Vercel production deployment_status; preview deploys skip the smoke job.
+
 on:
   deployment_status:
   workflow_dispatch:
@@ -25,6 +27,10 @@ on:
 
 env:
   DEPLOY_SMOKE_STRICT: ${{ github.event_name == 'workflow_dispatch' && '0' || '1' }}
+
+concurrency:
+  group: dashboard-deploy-smoke-${{ github.event.deployment.id || github.run_id }}
+  cancel-in-progress: true
 
 jobs:
   smoke:

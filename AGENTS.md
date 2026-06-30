@@ -46,6 +46,7 @@ Lane 1 guardrails: read `automation-ops-plan.md` + `agent-queue.md` + `automatio
 | App | Command |
 |-----|---------|
 | **offline** | `cd apps/offline-product && npm run qa:regression && npm run qa:automation:phase1` |
+| **offline (Maestro)** | `cd apps/offline-product && npm run qa:maestro:prepush` — `qa:maestro:prepush:full` on macOS before push (`maestro-ci-cost-runbook.md`) |
 | **marketing** | `npm run lint -w tracebud-marketing && npm run build -w tracebud-marketing` |
 | **dashboard** | `npm run lint -w dashboard-product && npm test -w dashboard-product` |
 | **backend** | `npm run lint -w tracebud-backend && npm test -w tracebud-backend` |
@@ -71,6 +72,7 @@ CI green on PR is source of truth.
 - Guardrail slices on `chore/automation-*` (one slice ID per PR)
 - Fix slices on `fix/*` (max ~200 lines)
 - Guard scripts, baselines, Maestro flows, testIDs (Lane 1)
+- Push Maestro/golden-path changes without `npm run qa:maestro:prepush` passing locally
 - `product-os/` status updates for the slice
 
 ## Quality gates (Lane 3)

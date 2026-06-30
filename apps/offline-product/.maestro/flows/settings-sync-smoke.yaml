@@ -1,9 +1,36 @@
 appId: com.tracebud.app
 ---
 # Settings → Backup section (Sync now when signed in, sign-in CTA otherwise).
-- launchApp
+# Bootstrap uninstall/reinstalls the app; avoid clearState so SQLite init from bootstrap survives.
+# stopApp: false keeps the warmed RN process from bootstrap (cold x86_64 boot is ~15+ min).
+- launchApp:
+    clearState: false
+    stopApp: false
+- waitForAnimationToEnd
+# First-launch welcome sheet blocks tab bar until dismissed (optional when boot profile seeded).
+- tapOn:
+    id: "welcome-account-skip"
+    optional: true
+# Boot profile anchor — Maestro requires non-zero opacity (not accessibility-hidden).
+- extendedWaitUntil:
+    visible:
+      id: "maestro-boot-ready"
+    timeout: 2700000
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 60000
 - tapOn:
     id: "tab-settings"
+# iOS 26 (macos-latest = macOS 26) has different safe-area/font metrics that can push
+# the Backup card below the fold. Scroll until it is in view before asserting.
+- scrollUntilVisible:
+    element:
+      id: "settings-cloud-parity-section"
+    direction: DOWN
+    timeout: 15000
+    speed: 40
+    visibilityPercentage: 20
 - assertVisible:
     text: ".*Backup.*"
 - assertVisible:

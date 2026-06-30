@@ -138,4 +138,27 @@ describe('plotServerLink', () => {
     const next = reconcilePlotServerLinks([localPlot], backendPlots, {});
     expect(next['local-1']).toBeUndefined();
   });
+
+  it('does not link two local plots to the same server id (C6/I3 collision)', () => {
+    // Two local plots with the same name/area would both fuzzy-match the same
+    // orphan server row. Only the first (in localPlots order) should claim it.
+    const backendPlots = [{ id: 'server-1', name: 'Twin Plot', area_ha: 2, kind: 'polygon' }];
+    const plotA = { id: 'local-a', name: 'Twin Plot', areaHectares: 2, kind: 'polygon' as const };
+    const plotB = { id: 'local-b', name: 'Twin Plot', areaHectares: 2, kind: 'polygon' as const };
+    const next = reconcilePlotServerLinks([plotA, plotB], backendPlots, {});
+    expect(next['local-a']).toBe('server-1');
+    expect(next['local-b']).toBeUndefined();
+  });
+
+  it('does not steal a persisted server id from another local plot', () => {
+    const backendPlots = [
+      { id: 'server-1', client_plot_id: 'local-a', name: 'Twin Plot', area_ha: 2, kind: 'polygon' },
+    ];
+    const plotA = { id: 'local-a', name: 'Twin Plot', areaHectares: 2, kind: 'polygon' as const };
+    const plotB = { id: 'local-b', name: 'Twin Plot', areaHectares: 2, kind: 'polygon' as const };
+    const next = reconcilePlotServerLinks([plotA, plotB], backendPlots, {});
+    expect(next['local-a']).toBe('server-1');
+    // local-b must not also link to server-1 — that would overwrite local-a on the next sync.
+    expect(next['local-b']).toBeUndefined();
+  });
 });

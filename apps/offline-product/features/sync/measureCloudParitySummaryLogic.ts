@@ -20,6 +20,13 @@ export type ExtendedCloudParityCounts = {
   serverHasProfilePhoto: boolean | null;
   localHasWalkDraft: boolean;
   serverHasWalkDraft: boolean | null;
+  /**
+   * Restore-mirroring media gap from `countPendingServerMediaRestore`.
+   * When defined (audit rows available), overrides the naive count-based
+   * `mediaGap` for the `needsRestore` decision and hint text, so the brown
+   * banner cannot diverge from what Sync now would actually restore.
+   */
+  measuredMediaGap?: number;
 };
 
 export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
@@ -35,7 +42,9 @@ export function extendedParityGaps(counts: ExtendedCloudParityCounts): {
   const groundGap = gapCount(counts.serverGroundPhotos, counts.localGroundPhotos);
   const landGap = gapCount(counts.serverLandTitlePhotos, counts.localLandTitlePhotos);
   const evidenceGap = gapCount(counts.serverEvidenceDocs, counts.localEvidenceDocs);
-  const mediaGap = groundGap + landGap + evidenceGap;
+  const naiveMediaGap = groundGap + landGap + evidenceGap;
+  const mediaGap =
+    counts.measuredMediaGap != null ? counts.measuredMediaGap : naiveMediaGap;
 
   let declarationGap = 0;
   if (counts.serverHasProducerAudit === true && !counts.localProducerComplete) {

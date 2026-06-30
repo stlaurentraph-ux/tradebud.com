@@ -39,6 +39,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('tab_home'),
+          tabBarButton: (props) => <HapticTab {...props} testID="tab-home" />,
           tabBarIcon: ({ color, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
               <Ionicons name={focused ? 'home' : 'home-outline'} size={26} color={color} />

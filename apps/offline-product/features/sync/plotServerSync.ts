@@ -198,9 +198,9 @@ export async function warmPlotServerLinksForSync(params: {
   farmerId: string;
   ownedFarmerIds?: string[];
   localPlots: Plot[];
-}): Promise<void> {
+}): Promise<{ fetchFailed: boolean }> {
   const farmerId = params.farmerId.trim();
-  if (!farmerId) return;
+  if (!farmerId) return { fetchFailed: false };
 
   await ensureFieldProducerBootstrapped(farmerId);
 
@@ -211,7 +211,9 @@ export async function warmPlotServerLinksForSync(params: {
       ownedFarmerIds: params.ownedFarmerIds,
     });
   } catch {
-    return;
+    // Surface fetch failure so the pipeline can set plotsFetchFailed — a silent
+    // return here would leave downstream enqueue to fail with "plot not on server".
+    return { fetchFailed: true };
   }
 
   const existing = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
@@ -222,6 +224,7 @@ export async function warmPlotServerLinksForSync(params: {
   ) {
     await persistPlotServerLinks(reconciled).catch(() => undefined);
   }
+  return { fetchFailed: false };
 }
 
 async function syncPlotDisplayNamesOnServer(params: {

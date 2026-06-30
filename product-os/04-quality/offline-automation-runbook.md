@@ -78,17 +78,28 @@ Existing steps unchanged: lint, typecheck, unit tests, `field-regression-guard.m
 
 ## Maestro CI (1.O.3+)
 
+**Cost runbook (H25):** `product-os/04-quality/maestro-ci-cost-runbook.md` — local prepush before GitHub macOS/Android.
+
 | Job | Platform | When | Command |
 |-----|----------|------|---------|
-| Expo `app` (Linux) | ubuntu | Every offline PR / push | `npm run qa:maestro:preflight` |
-| `offline-maestro.yml` | ubuntu + macos | PR (Maestro paths) + manual dispatch | preflight; optional E2E on macOS |
-| `offline-maestro.yml` → **golden path** | macos | **Push to `main`** (offline paths) | `settings-sync-smoke.yaml` via `qa:maestro:golden-path` |
+| **Local prepush** | dev machine | **Before push** (Maestro paths) | `npm run qa:maestro:prepush` / `:full` on macOS |
+| Expo `app` (Linux) | ubuntu | Offline / Maestro path changes on PR | `npm run qa:maestro:preflight` + path-filtered Expo job |
+| `offline-maestro.yml` | ubuntu + macos | Maestro paths on PR (cost-gated) | preflight; cost-gated E2E |
+| `offline-maestro.yml` → **golden path** | macos + android | PR / push to `main` | `settings-sync-smoke.yaml` |
 
-**Manual macOS E2E:** GitHub Actions → **Offline Maestro (macOS)** → `workflow_dispatch` with `run_golden_path=true` or `run_flows=true`.
+**Prepush (mandatory before push):**
 
-**Golden path on `main` (3.O.1):** pushes touching offline Maestro paths run `settings-sync-smoke.yaml` on `macos-latest`. Uses `EXPO_TOKEN` + latest EAS simulator build when set; otherwise `expo run:ios` (slower).
+```bash
+cd apps/offline-product
+npm run qa:maestro:prepush          # static + regression (~2 min)
+npm run qa:maestro:prepush:full     # + local iOS golden path on macOS
+```
 
-**Simulator seed (4.8+):** all macOS Maestro runners source `maestro-ci-bootstrap-simulator.sh`, which seeds SQLite (`Maria Santos` / `Finca Norte`) via `seed-maestro-simulator.mjs` before flows. Plot/document nightly flows assert that plot; `MAESTRO_SEED_SKIP=1` skips seed for debugging.
+**Manual macOS E2E:** GitHub Actions → **Offline Maestro** → `workflow_dispatch` with `run_golden_path=true`.
+
+**Golden path on PR + `main` (H25):** both platforms build from the checked-out commit (`maestro-ci-assemble-*`). Boot state is defined in `maestro-boot-state-registry.md` / `maestro-boot-state.json` — profile `golden_path_minimal` seeds locale + welcome dismissed and the flow waits on `maestro-boot-ready`. Guard: `maestro-boot-state-guard.mjs`.
+
+**Simulator seed (4.8+ / nightly):** macOS Maestro runners source `maestro-ci-bootstrap-simulator.sh`, which seeds SQLite (`Maria Santos` / `Finca Norte`) via `seed-maestro-simulator.mjs` before plot/document flows. Golden path uses `MAESTRO_SEED_SKIP=1` + boot profile instead of full farmer/plot seed.
 
 **Refresh flow manifest baseline:**
 

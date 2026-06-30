@@ -25,6 +25,8 @@ export type SyncNowUserOutcome = {
   queueFailed?: number;
   queueFetchFailed?: boolean;
   plotsFetchFailed?: boolean;
+  /** Plot-dependent or farmer-cloud enqueue failed during pipeline — surfaced to farmer. */
+  enqueueFailed?: boolean;
   plotsRestored?: number;
   receiptsRestored?: number;
   receiptsRequeued?: number;
@@ -116,7 +118,7 @@ export function formatSyncNowUserMessage(outcome: SyncNowUserOutcome, t: Transla
     return formatSyncFailureUserMessage(outcome.syncFailure, t);
   }
 
-  if (outcome.queueFetchFailed || outcome.plotsFetchFailed) {
+  if (outcome.queueFetchFailed || outcome.plotsFetchFailed || outcome.enqueueFailed) {
     if (remainingPending > 0) {
       const reason = outcome.failureReason?.trim();
       if (reason) return reason;

@@ -34,6 +34,7 @@ yarn-error.*
 # local env files
 .env*.local
 local/sentry-auth.env
+local/google-play-service-account.json
 scripts/oauth.env
 
 # typescript
@@ -53,3 +54,9 @@ queue-i18n-smoke-summary-previous.json
 queue-i18n-report-previous.json
 queue-i18n-artifacts.json
 queue-i18n-smoke-previous.zip
+
+# Generated at prepush/assemble — scripts/generate-maestro-ci-boot-db.mjs
+assets/maestro/tracebud_offline.db
+
+# CI failure dumps — scripts/maestro-ci-collect-android-debug-artifacts.sh
+ci-artifacts/

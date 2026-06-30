@@ -1,0 +1,21 @@
+appId: com.tracebud.app
+---
+# PR smoke — boot marker + settings tab only (no sync tap). See maestro-golden-path-ci.json androidSmokeBootWaitMs.
+- launchApp:
+    clearState: false
+    stopApp: true
+- waitForAnimationToEnd
+- tapOn:
+    id: "welcome-account-skip"
+    optional: true
+- extendedWaitUntil:
+    visible: ".*Maestro boot ready.*"
+    timeout: 900000
+- extendedWaitUntil:
+    visible:
+      id: "maestro-boot-ready"
+    timeout: 120000
+- extendedWaitUntil:
+    visible:
+      id: "tab-settings"
+    timeout: 120000

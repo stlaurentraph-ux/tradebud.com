@@ -33,6 +33,7 @@ Applies when changing CI, root scripts, queue, or automation docs. Full plan: `p
 - **Add** steps; do not remove passing checks unless replaced by equivalent stricter step.
 - Do **not** weaken `--max-warnings 0`, skip integration tests, or set `ignoreBuildErrors` without a follow-up slice to remove it.
 - **Path filters:** skip jobs on PRs only; full run on `push` to `main`.
+- **Maestro cost (H25):** agents must run `qa:maestro:prepush` before push; humans run `qa:maestro:prepush:full` on macOS. Do not weaken `maestro-cost-gate` or drop `cancel-in-progress`. Runbook: `product-os/04-quality/maestro-ci-cost-runbook.md`.
 - **Branch protection:** note in PR body `"enable required check after merge"` — do not assume checks are required until human enables 0.H.
 - **Secrets:** never commit; document new secrets in `product-os/04-quality/ci-secrets-and-fixtures.md` and `automation-ops-plan.md` §12.
 

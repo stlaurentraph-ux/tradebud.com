@@ -2,13 +2,13 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { View } from 'react-native';
 import 'react-native-reanimated';
 
-import { AutoPlotUploadBridge } from '@/components/AutoPlotUploadBridge';
-import { ConsentPushBridge } from '@/components/ConsentPushBridge';
+import { MaestroCiLayoutBridges } from '@/components/MaestroCiLayoutBridges';
 import { AppErrorBoundary } from '@/components/observability/AppErrorBoundary';
-import { PushRegistrationBridge } from '@/components/PushRegistrationBridge';
 import { SplashGate } from '@/components/layout/SplashGate';
+import { MaestroBootReadyMarker } from '@/components/layout/MaestroBootReadyMarker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
 import { initObservability } from '@/features/observability/initObservability';
@@ -30,27 +30,28 @@ export default function RootLayout() {
     <AppErrorBoundary>
       <LanguageProvider>
         <AppStateProvider>
-          <SplashGate>
-            <SignInProvider>
-              <AutoPlotUploadBridge />
-              <PushRegistrationBridge />
-              <ConsentPushBridge />
-              <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-                <Stack>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                  <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
-                  <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-                  <Stack.Screen name="documents" options={{ headerShown: false }} />
-                  <Stack.Screen name="data-sharing" options={{ headerShown: false }} />
-                  <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />
-                  <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
-                  <Stack.Screen name="offline-maps" options={{ headerShown: false }} />
-                  <Stack.Screen name="why-tracebud" options={{ headerShown: false }} />
-                </Stack>
-                <StatusBar style="auto" />
-              </ThemeProvider>
-            </SignInProvider>
-          </SplashGate>
+          <View style={{ flex: 1 }}>
+            <SplashGate>
+              <SignInProvider>
+                <MaestroCiLayoutBridges />
+                <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+                  <Stack>
+                    <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                    <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+                    <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+                    <Stack.Screen name="documents" options={{ headerShown: false }} />
+                    <Stack.Screen name="data-sharing" options={{ headerShown: false }} />
+                    <Stack.Screen name="plot/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
+                    <Stack.Screen name="offline-maps" options={{ headerShown: false }} />
+                    <Stack.Screen name="why-tracebud" options={{ headerShown: false }} />
+                  </Stack>
+                  <StatusBar style="auto" />
+                </ThemeProvider>
+              </SignInProvider>
+            </SplashGate>
+            <MaestroBootReadyMarker />
+          </View>
         </AppStateProvider>
       </LanguageProvider>
     </AppErrorBoundary>

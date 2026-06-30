@@ -67,7 +67,12 @@ export function WelcomeAccountModal({
               {signInLabel}
             </Button>
           </View>
-          <Pressable onPress={onSkip} hitSlop={12} style={styles.footerLink}>
+          <Pressable
+            testID="welcome-account-skip"
+            onPress={onSkip}
+            hitSlop={12}
+            style={styles.footerLink}
+          >
             <ThemedText type="defaultSemiBold" style={styles.footerMutedText}>
               {skipLabel}
             </ThemedText>

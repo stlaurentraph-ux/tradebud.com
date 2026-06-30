@@ -15,6 +15,7 @@ const config = getSentryExpoConfig(projectRoot);
 // root is Next.js and must not hoist a second react-native stack into Metro.
 config.watchFolders = [monorepoRoot];
 config.resolver.nodeModulesPaths = [appNodeModules];
+config.resolver.assetExts = [...(config.resolver.assetExts || []), 'db'];
 
 const defaultResolveRequest = config.resolver.resolveRequest;
 config.resolver.resolveRequest = (context, moduleName, platform) => {

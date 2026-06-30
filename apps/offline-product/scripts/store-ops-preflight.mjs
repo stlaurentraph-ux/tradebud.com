@@ -101,6 +101,19 @@ function checkEasSubmit(easJson) {
   if (!androidTrack) {
     warnings.push('eas.json missing submit.production.android.track.');
   }
+  const playKeyPath = easJson?.submit?.production?.android?.serviceAccountKeyPath;
+  if (!playKeyPath) {
+    warnings.push(
+      'eas.json missing submit.production.android.serviceAccountKeyPath (required for eas submit android).',
+    );
+  } else {
+    const playKeyFull = path.join(root, playKeyPath.replace(/^\.\//, ''));
+    if (!fs.existsSync(playKeyFull)) {
+      const msg = `Google Play service account JSON missing at ${playKeyPath}. Download from Play Console → API access, or run credentials:configure-build for android.`;
+      if (strict) issues.push(msg);
+      else warnings.push(msg);
+    }
+  }
 }
 
 function checkGoogleAssets() {

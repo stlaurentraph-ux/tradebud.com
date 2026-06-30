@@ -61,7 +61,8 @@
       },
       "android": {
         "track": "production",
-        "releaseStatus": "completed"
+        "releaseStatus": "completed",
+        "serviceAccountKeyPath": "./local/google-play-service-account.json"
       }
     }
   }
