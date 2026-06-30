@@ -800,6 +800,7 @@ jobs:
         run: npm test
 
       - name: Ensure benchmark-admin claims config exists
+        if: github.actor != 'dependabot[bot]'
         run: |
           if [ -z "$BENCHMARK_ADMIN_ROLE_CLAIMS" ]; then
             echo "BENCHMARK_ADMIN_ROLE_CLAIMS is required for benchmark-admin claim enforcement preflight."
@@ -810,6 +811,7 @@ jobs:
         run: npm run qa:structural:ci -w tracebud-backend
 
       - name: Ensure integration DB secret exists
+        if: github.actor != 'dependabot[bot]'
         run: |
           if [ -z "$TEST_DATABASE_URL" ]; then
             echo "TEST_DATABASE_URL is required for PostGIS integration tests."
@@ -817,6 +819,7 @@ jobs:
           fi
 
       - name: Ensure benchmark-admin claims config exists
+        if: github.actor != 'dependabot[bot]'
         run: |
           if [ -z "$BENCHMARK_ADMIN_ROLE_CLAIMS" ]; then
             echo "BENCHMARK_ADMIN_ROLE_CLAIMS is required for benchmark-admin claim enforcement preflight."
@@ -824,10 +827,12 @@ jobs:
           fi
 
       - name: Integration tests (PostGIS)
+        if: github.actor != 'dependabot[bot]'
         working-directory: tracebud-backend
         run: npm run test:integration
 
       - name: Ownership integration tests (required)
+        if: github.actor != 'dependabot[bot]'
         working-directory: tracebud-backend
         run: |
           set -euo pipefail
@@ -838,6 +843,7 @@ jobs:
           fi
 
       - name: Publish ownership integration summary
+        if: github.actor != 'dependabot[bot]'
         run: |
           {
             echo "## Ownership Integration Evidence"
@@ -853,6 +859,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload ownership integration log artifact
+        if: github.actor != 'dependabot[bot]'
         uses: actions/upload-artifact@v7
         with:
           name: backend-ownership-integration-log
@@ -1114,6 +1121,7 @@ jobs:
         run: npm run security:preflight
 
       - name: Production release preflight (blocking)
+        if: github.actor != 'dependabot[bot]'
         env:
           RELEASE_PREFLIGHT_STRICT: "1"
           EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -1157,6 +1165,7 @@ jobs:
         run: npm run qa:tenant-isolation:assert
 
       - name: Field tenant isolation smoke (blocking)
+        if: github.actor != 'dependabot[bot]'
         env:
           FIELD_TENANT_SMOKE_STRICT: "1"
           FIELD_TENANT_SMOKE_API_URL: ${{ secrets.FIELD_TENANT_SMOKE_API_URL }}
