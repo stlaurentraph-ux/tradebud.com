@@ -8,6 +8,7 @@ cd "$ROOT"
 export SENTRY_DISABLE_AUTO_UPLOAD="${SENTRY_DISABLE_AUTO_UPLOAD:-true}"
 export MAESTRO_CI="${MAESTRO_CI:-1}"
 export EXPO_PUBLIC_MAESTRO_CI="${EXPO_PUBLIC_MAESTRO_CI:-1}"
+export EXPO_PUBLIC_SENTRY_ENABLED="${EXPO_PUBLIC_SENTRY_ENABLED:-0}"
 export EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-https://api.tracebud.com/api}"
 export EXPO_PUBLIC_SUPABASE_URL="${EXPO_PUBLIC_SUPABASE_URL:-https://example.supabase.co}"
 export EXPO_PUBLIC_OAUTH_BRIDGE_URL="${EXPO_PUBLIC_OAUTH_BRIDGE_URL:-https://app.tracebud.com/auth/callback}"
@@ -27,15 +28,15 @@ if (!gradlePath) {
 let source = fs.readFileSync(gradlePath, 'utf8');
 if (!/debuggableVariants\s*=\s*\[\]/.test(source)) {
   source = source.replace(/react\s*\{/, 'react {\n    debuggableVariants = []');
-  fs.writeFileSync(gradlePath, source);
 }
+if (!/debug\s*\{[^}]*debuggable\s+false/.test(source)) {
+  source = source.replace(
+    /(buildTypes\s*\{\s*debug\s*\{)/,
+    '$1\n            debuggable false',
+  );
+}
+fs.writeFileSync(gradlePath, source);
 NODE
-
-echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
-npx expo export:embed --eager --platform android --dev false
-
-# Release assemble OOMs on GHA (Metaspace) — debug + embedded bundle is the CI path.
-export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8}"
 
 GRADLE_PROPS="$ROOT/android/gradle.properties"
 if [[ -f "$GRADLE_PROPS" ]]; then
@@ -44,6 +45,13 @@ const fs = require('node:fs');
 const propsPath = process.env.MAESTRO_GRADLE_PROPS;
 if (!propsPath) throw new Error('MAESTRO_GRADLE_PROPS is required');
 let source = fs.readFileSync(propsPath, 'utf8');
+const upsert = (key, value) => {
+  const re = new RegExp(`^${key}=.*$`, 'm');
+  if (re.test(source)) source = source.replace(re, `${key}=${value}`);
+  else source += `\n${key}=${value}\n`;
+};
+upsert('newArchEnabled', 'false');
+upsert('hermesEnabled', 'true');
 const ciJvmArgs = 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8';
 if (/^org\.gradle\.jvmargs=/m.test(source)) {
   source = source.replace(/^org\.gradle\.jvmargs=.*$/m, ciJvmArgs);
@@ -53,6 +61,12 @@ if (/^org\.gradle\.jvmargs=/m.test(source)) {
 fs.writeFileSync(propsPath, source);
 NODE
 fi
+
+echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
+npx expo export:embed --eager --platform android --dev false
+
+# Release assemble OOMs on GHA (Metaspace) — debug + embedded bundle is the CI path.
+export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8}"
 
 echo "==> gradle assembleDebug (x86_64 for CI emulator)"
 cd android

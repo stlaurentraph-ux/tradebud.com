@@ -117,8 +117,11 @@ function assertBootstrapInitLaunch() {
     throw new Error('iOS bootstrap must install Release simulator app when present');
   }
   const androidBootstrap = readOffline('scripts/maestro-ci-bootstrap-emulator.sh');
-  if (!androidBootstrap.includes('initialize local SQLite')) {
-    throw new Error('Android bootstrap must launch once to initialize SQLite after APK install');
+  if (
+    !androidBootstrap.includes('force-provision SQLite before first RN launch') &&
+    !androidBootstrap.includes('initialize local SQLite')
+  ) {
+    throw new Error('Android bootstrap must seed SQLite before first RN launch');
   }
 }
 
@@ -152,8 +155,11 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('MAESTRO_ANDROID_APK_PATH')) {
     throw new Error('Android bootstrap must honor MAESTRO_ANDROID_APK_PATH for prebuilt APK');
   }
-  if (!bootstrap.includes('pidof')) {
-    throw new Error('Android bootstrap must wait for Tracebud process before DB seed');
+  if (!bootstrap.includes('MAESTRO_ANDROID_FORCE_PROVISION')) {
+    throw new Error('Android bootstrap must force-provision SQLite before first RN launch');
+  }
+  if (!readOffline('app.config.js').includes('newArchEnabled: false')) {
+    throw new Error('app.config.js must disable newArchEnabled when MAESTRO_CI=1');
   }
   if (!bootstrap.includes('dump_tracebud_logcat')) {
     throw new Error('Android bootstrap must dump logcat after seed for Maestro diagnostics');

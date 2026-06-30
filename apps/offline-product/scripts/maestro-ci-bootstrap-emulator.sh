@@ -78,22 +78,7 @@ speed_compile_tracebud_apk() {
 speed_compile_tracebud_apk
 
 export MAESTRO_APP_ID="$APP_ID"
-
-# Maestro driver handshake can exceed the 15s Android default on cold CI emulators.
 export MAESTRO_DRIVER_STARTUP_TIMEOUT="${MAESTRO_DRIVER_STARTUP_TIMEOUT:-300000}"
-
-echo "==> Launching Tracebud once to initialize local SQLite"
-adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
-  adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
-
-echo "==> Waiting for Tracebud process (up to 90s)"
-for _ in $(seq 1 45); do
-  if adb -s "$DEVICE_SERIAL" shell pidof "$APP_ID" 2>/dev/null | grep -q .; then
-    echo "Tracebud process running"
-    break
-  fi
-  sleep 2
-done
 
 dump_tracebud_logcat() {
   local label="${1:-logcat}"
@@ -112,14 +97,10 @@ wait_for_android_js_boot() {
   echo "==> Waiting for $label (logcat MaestroBoot / RN main, up to ${max_ms}ms)"
   adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
 
-  local boot_pattern='MaestroBoot|\[MaestroBoot\]|ReactNativeJS|ReactNative|Hermes|Running application "main"|Running "main" with|AppState.*ready|expo\.modules'
-
   while [[ "$(date +%s)" -lt "$deadline" ]]; do
-    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi "$boot_pattern"; then
-      if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi 'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|Running application "main"|Running "main" with|\[MaestroBoot\] app state ready bootError=false|\[MaestroBoot\] marker visible'; then
-        echo "$label complete"
-        return 0
-      fi
+    if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi 'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|Running application "main"|Running "main" with|\[MaestroBoot\] app state ready bootError=false|\[MaestroBoot\] marker visible'; then
+      echo "$label complete"
+      return 0
     fi
     if adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qE 'FATAL EXCEPTION.*com\.tracebud\.app'; then
       echo "App crashed during $label"
@@ -135,21 +116,23 @@ wait_for_android_js_boot() {
 }
 
 if [[ "${MAESTRO_SEED_SKIP:-}" == "1" ]]; then
-  echo "==> Applying golden-path boot profile (polls until DB exists, up to ${MAESTRO_SEED_DB_WAIT_MS:-120000}ms)"
+  echo "==> Applying golden-path boot profile (force-provision SQLite before first RN launch)"
   MAESTRO_BOOT_PROFILE="${MAESTRO_BOOT_PROFILE:-golden_path_minimal}" \
     MAESTRO_BOOT_PLATFORM=android \
     MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL" \
-    MAESTRO_SEED_DB_WAIT_MS="${MAESTRO_SEED_DB_WAIT_MS:-120000}" \
+    MAESTRO_ANDROID_FORCE_PROVISION=1 \
     node "$ROOT/scripts/seed-maestro-boot-profile.mjs"
 
-  echo "==> Post-seed warm-up launch (RN boot after SQLite patch)"
+  echo "==> Post-seed launch (first RN boot with seeded SQLite)"
   speed_compile_tracebud_apk
-  adb -s "$DEVICE_SERIAL" shell am start -W -n "$APP_ID/.MainActivity" 2>/dev/null || \
+  adb -s "$DEVICE_SERIAL" shell am start -n "$APP_ID/.MainActivity" 2>/dev/null || \
     adb -s "$DEVICE_SERIAL" shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1 || true
-  if wait_for_android_js_boot "bootstrap warm-up"; then
+
+  bootstrap_warm_ms="${MAESTRO_BOOTSTRAP_WARM_MS:-900000}"
+  if MAESTRO_BOOT_WAIT_MS="$bootstrap_warm_ms" wait_for_android_js_boot "bootstrap warm-up"; then
     export MAESTRO_BOOT_WARMED=1
   else
-    echo "Bootstrap warm-up incomplete — Maestro will cold-start with extended boot wait"
+    echo "Bootstrap warm-up incomplete (${bootstrap_warm_ms}ms cap) — Maestro extendedWaitUntil handles cold boot"
     export MAESTRO_BOOT_WARMED=0
   fi
 fi

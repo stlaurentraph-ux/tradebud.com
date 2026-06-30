@@ -239,10 +239,29 @@ function androidDbSettingsTableReady(serial, dbPath) {
 export function waitForAndroidTracebudDb(serial, options = {}) {
   const waitMs = Number(options.waitMs ?? process.env.MAESTRO_SEED_DB_WAIT_MS ?? 120_000);
   const pollMs = Number(options.pollMs ?? 500);
+  const forceProvision =
+    options.forceProvision === true || process.env.MAESTRO_ANDROID_FORCE_PROVISION === '1';
   const started = Date.now();
   let attempts = 0;
   let relaunched = false;
+  let settingsNotReadySince = null;
   const defaultAbs = toAndroidDbAbsPath(REL_CANDIDATES[0]);
+
+  if (forceProvision) {
+    console.log('Force-provisioning Android boot schema (skip app-init DB wait)');
+    try {
+      sh(`adb -s ${JSON.stringify(serial)} shell am force-stop ${APP_ID}`);
+    } catch {
+      // app may not be running yet
+    }
+    sleepMs(1000);
+    sh(
+      `adb -s ${JSON.stringify(serial)} shell ${JSON.stringify(`run-as ${APP_ID} mkdir -p files/SQLite`)}`,
+    );
+    const provisioned = provisionAndroidBootDb(serial, defaultAbs);
+    if (provisioned) return provisioned;
+    throw new Error('Force-provision of Android boot schema failed');
+  }
 
   const maybeRelaunchForDb = () => {
     if (relaunched || !androidProcessRunning(serial)) return;
@@ -258,8 +277,6 @@ export function waitForAndroidTracebudDb(serial, options = {}) {
       );
     }
   };
-
-  let settingsNotReadySince = null;
 
   while (Date.now() - started < waitMs) {
     attempts += 1;
