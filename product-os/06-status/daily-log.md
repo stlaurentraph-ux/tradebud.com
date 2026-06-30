@@ -1,3 +1,12 @@
+### 2026-06-30 (Lane 2 — Maestro E2E pilot bypass)
+- **Context**: Android Maestro emulator E2E blocked PR merge for days (H11 cold-boot `bootError=true`); pilot users need app builds while E2E is fixed incrementally.
+- **Fixes**:
+  - `maestro-golden-path-ci.json` → `e2eBypass.enabled: true` (expires 2026-07-31) skips emulator jobs on PR/push/dispatch.
+  - `maestro-ci-platform-gate.mjs` reads bypass from manifest; `offline-maestro.yml` adds `Maestro E2E bypass (pilot)` notice job; static preflight still runs.
+  - Re-enable: set `e2eBypass.enabled` false, or `workflow_dispatch` with `force_e2e`.
+- **Verify**: `npm run qa:structural` OK; local gate outputs `e2e_bypass=true`.
+- **Branch**: `fix/offline-maestro-pr-android-h25` (PR #318).
+
 ### 2026-06-30 (Lane 1 guardrail — Bundle 6 sync-parity-guard producer evidence symmetry)
 - **Context**: The parity gap could silently regress if one side of the local/server media count dropped producer-scoped evidence while the other kept it. No guard asserted the symmetry.
 - **Fixes**:

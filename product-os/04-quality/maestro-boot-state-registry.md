@@ -82,6 +82,7 @@ Smoke job downloads the prebuilt APK (no Gradle in the 30m emulator cap). Assemb
 | testID | When visible |
 |--------|----------------|
 | `maestro-boot-ready` | `isAppReady && !bootError` — CI builds skip welcome wait; retail also requires welcome dismissed |
+| `maestro-boot-error` | `isAppReady && bootError` (CI builds only) — fail-fast anchor so Maestro flows don't wait 15+ min for `maestro-boot-ready` when SQLite/init throws |
 
 Golden path flow waits on `maestro-boot-ready` before navigating tabs. Android CI renders a labeled `Text` node (UiAutomator visibility).
 
@@ -96,3 +97,24 @@ Golden path flow waits on `maestro-boot-ready` before navigating tabs. Android C
 
 - `maestro-boot-state-guard.mjs` — JSON ↔ TS ↔ bootstrap ↔ flow ↔ app testID
 - `maestro-golden-path-guard.mjs` — H25 workflow wiring (uses manifest `goldenPathBootProfile`)
+
+## Android CI failure mode catalog (PR #318, H25)
+
+Symptom → root cause → fix → guard mapping for recurring Android Maestro failures.
+
+| ID | Symptom | Root cause | Fix | Guard |
+|----|---------|------------|-----|-------|
+| H1 | `HVF error: HV_UNSUPPORTED` / `Timeout waiting for emulator to boot` | `MAESTRO_ANDROID_ABI=arm64-v8a` on `macos-15-intel` — HVF cannot emulate arm64 on Intel | Switch to `x86_64` + `-gpu swiftshader_indirect` | Manifest `androidEmulator.emulatorArch: x86_64` + guard checks `arch: x86_64` |
+| H2 | `assertNewArchitectureEnabledTask` failed — Reanimated/Worklets require New Arch | `android/gradle.properties` missing `newArchEnabled=true` | `app.json` sets `newArchEnabled: true`; assemble script upserts it in `gradle.properties` | Assemble script `upsert('newArchEnabled', 'true')` |
+| H3 | `Missing assets/maestro/tracebud_offline.db in APK` | DB not copied to `android/app/src/main/assets/maestro/` before gradle assemble | Assemble script copies DB + preflight checks APK via `unzip -l` | Assemble script preflight |
+| H4 | `Unable to resolve module ../../assets/maestro/tracebud_offline.db` (iOS) | `generate-maestro-ci-boot-db.mjs` not run before bundle | Generator runs in assemble before `expo export:embed` | Assemble script ordering |
+| H5 | `adb run-as com.tracebud.app mkdir -p files/SQLite` failed | Legacy host-adb seed uses `run-as` which fails on CI emulator | `MAESTRO_ANDROID_IN_APP_DB_SEED=1` — DB bundled in APK, copied via `FileSystem.bundleDirectory` | Bootstrap defaults to in-app seed |
+| H6 | Bootstrap warm-up timeout → 4h31m Maestro burn | No fail-fast; Maestro waited 45m for boot marker that never appeared | `MAESTRO_JS_BOOT_FAIL_FAST=1` + `MAESTRO_JS_BOOT_FAIL_FAST_MS` — bootstrap exits 1 on timeout | Bootstrap `wait_for_android_js_boot` fail-fast logic |
+| H7 | `bash: apps/offline-product/scripts/...: No such file or directory` (exit 127) | `bash apps/offline-product/scripts/...` inside `working-directory: apps/offline-product` → doubled path | Use `bash scripts/...` (relative to working-directory) | `maestro-golden-path-guard.mjs` S1 doubled-path regex |
+| H8 | `Failure [not installed for 0]` / `DELETE_FAILED_INTERNAL_ERROR` | Intermittent adb `pm uninstall`/`pm clear` on dirty emulator | Bootstrap uses `\|\| true` fallbacks | N/A — symptom, not root cause |
+| H9 | `APK missing assets/maestro/tracebud_offline.db` (smoke) but assemble preflight passed | `actions/download-artifact@v4` with `merge-multiple:false` places APK in `maestro-android-apk/` subdirectory; bootstrap checked parent path | Set `merge-multiple: true` on download steps + bootstrap fallback to subdirectory | Download step `merge-multiple: true` + bootstrap `APK_SUBDIR` fallback |
+| H10 | `APK missing assets/maestro/tracebud_offline.db` (smoke on macOS) but DB IS in APK (diagnostic shows it); also `Missing embedded JS bundle` (assemble on Ubuntu) but bundle IS in APK | `set -o pipefail` + `cmd \| grep -q` → `grep -q` exits early on match → upstream (`unzip` on macOS, `printf` on Ubuntu) gets SIGPIPE → pipefail returns rightmost non-zero → false "missing". OS-specific: BSD unzip exits 141; GNU printf errors "Broken pipe". A captured-variable + `printf \| grep -q` fix MOVED the SIGPIPE from unzip to printf (regression on 352b911e) | Use a here-string (`grep -qE '...' <<< "$APK_LIST"`) — a redirection, not a pipeline, so pipefail doesn't apply and there is no SIGPIPE | Bootstrap + assemble preflight use `grep -q ... <<< "$APK_LIST"` |
+| H11 | Android smoke: `Assert that ".*Maestro boot ready.*" is visible... FAILED` after 15 min; logcat shows `[MaestroBoot] app state ready bootError=true` with NO error message | `AppStateContext` only logged boot errors when `__DEV__` is true; CI production builds silently swallow the error (Sentry disabled in CI) → marker stays hidden → Maestro waits full timeout with zero diagnostic | Always log boot error in Maestro CI builds (`EXPO_PUBLIC_MAESTRO_CI=1`); render `maestro-boot-error` testID marker when `bootError=true`; flows check boot-error with 30s timeout before long boot-ready wait | `AppStateContext` CI error logging + `MaestroBootReadyMarker` error branch + flow fail-fast `extendedWaitUntil` on `maestro-boot-error` |
+| H12 | macOS golden path: `Scrolling DOWN until id: settings-cloud-parity-section is visible... FAILED` (15s timeout) after boot+settings tab succeeded | iOS 26 (macos-latest) taller layout + safe-area/font metrics push Backup card further below the fold; 15s scroll timeout insufficient on CI simulator | Bump `scrollUntilVisible` timeout 15s → 30s for `settings-cloud-parity-section` | `settings-sync-smoke.yaml` scroll timeout 30000 |
+
+<!-- CI trigger: H11/H12 fail-fast verification on f0d1f96e -->

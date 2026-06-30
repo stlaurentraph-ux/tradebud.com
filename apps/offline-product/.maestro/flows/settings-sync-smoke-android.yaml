@@ -1,12 +1,19 @@
 appId: com.tracebud.app
 ---
 # Android CI golden path — warm RN process from bootstrap; stopApp: false matches iOS golden path.
+# Fail-fast: check for boot-error marker first (short timeout) so CI fails in seconds
+# when SQLite/init throws, instead of waiting 45+ min for maestro-boot-ready (never shows on error).
 - launchApp:
     clearState: false
     stopApp: false
 - waitForAnimationToEnd
 - tapOn:
     id: "welcome-account-skip"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: "maestro-boot-error"
+    timeout: 30000
     optional: true
 - extendedWaitUntil:
     visible: ".*Maestro boot ready.*"

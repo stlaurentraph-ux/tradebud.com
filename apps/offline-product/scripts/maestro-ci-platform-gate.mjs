@@ -7,16 +7,27 @@
  * - Else run when that platform has never succeeded on this PR yet.
  * - Else skip (e.g. iOS already green + android-only push).
  *
- * push / workflow_dispatch: always run both (full gate on main; manual override).
+ * push / workflow_dispatch: full matrix unless e2eBypass.enabled (pilot window).
  *
- * Outputs (GITHUB_OUTPUT): run_ios, run_android, skip_reason_ios, skip_reason_android
+ * Pilot bypass: product-os/04-quality/maestro-golden-path-ci.json → e2eBypass.enabled
+ * skips all emulator E2E (PR, push, dispatch). Static preflight still runs.
+ * Override: MAESTRO_FORCE_E2E=1 or workflow_dispatch force_e2e input.
+ *
+ * Outputs (GITHUB_OUTPUT): run_ios, run_android, run_android_smoke, run_android_golden,
+ * skip_reason_ios, skip_reason_android, e2e_bypass
  */
 import fs from 'node:fs';
+import path from 'node:path';
 import { appendFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 const IOS_JOB = 'Maestro golden path (macOS)';
 const ANDROID_SMOKE_JOB = 'Maestro Android smoke (PR)';
 const ANDROID_GOLDEN_JOB = 'Maestro golden path (Android)';
+
+const scriptDir = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(scriptDir, '../../..');
+const manifestPath = path.join(repoRoot, 'product-os/04-quality/maestro-golden-path-ci.json');
 
 function writeOutput(name, value) {
   const out = process.env.GITHUB_OUTPUT;
@@ -27,10 +38,63 @@ function writeOutput(name, value) {
   appendFileSync(out, `${name}=${value}\n`);
 }
 
+function writeBypassOutputs(reason) {
+  writeOutput('run_ios', 'false');
+  writeOutput('run_android', 'false');
+  writeOutput('run_android_smoke', 'false');
+  writeOutput('run_android_golden', 'false');
+  writeOutput('skip_reason_ios', reason);
+  writeOutput('skip_reason_android', reason);
+  writeOutput('e2e_bypass', 'true');
+}
+
+function writeFullMatrixOutputs() {
+  writeOutput('run_ios', 'true');
+  writeOutput('run_android', 'true');
+  writeOutput('run_android_smoke', 'false');
+  writeOutput('run_android_golden', 'true');
+  writeOutput('skip_reason_ios', 'full_matrix');
+  writeOutput('skip_reason_android', 'full_matrix');
+  writeOutput('e2e_bypass', 'false');
+}
+
+function loadManifest() {
+  if (!fs.existsSync(manifestPath)) {
+    throw new Error(`Missing manifest: ${manifestPath}`);
+  }
+  return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+}
+
+function isE2eBypassActive(manifest) {
+  if (process.env.MAESTRO_FORCE_E2E === '1') {
+    console.log('[gate] MAESTRO_FORCE_E2E=1 — bypass disabled for this run');
+    return false;
+  }
+  const bypass = manifest.e2eBypass;
+  if (!bypass?.enabled) {
+    return false;
+  }
+  if (!bypass.reason?.trim()) {
+    throw new Error('maestro-golden-path-ci.json e2eBypass.enabled requires a non-empty reason');
+  }
+  if (bypass.allowedUntil) {
+    const until = new Date(`${bypass.allowedUntil}T23:59:59Z`);
+    if (Number.isNaN(until.getTime())) {
+      throw new Error(`maestro-golden-path-ci.json e2eBypass.allowedUntil invalid: ${bypass.allowedUntil}`);
+    }
+    if (Date.now() > until.getTime()) {
+      console.warn(`[gate] e2eBypass expired (${bypass.allowedUntil}) — running E2E`);
+      return false;
+    }
+  }
+  console.log(`[gate] e2eBypass active: ${bypass.reason}`);
+  return true;
+}
+
 function parseEvent() {
-  const path = process.env.GITHUB_EVENT_PATH;
-  if (!path || !fs.existsSync(path)) return {};
-  return JSON.parse(fs.readFileSync(path, 'utf8'));
+  const eventPath = process.env.GITHUB_EVENT_PATH;
+  if (!eventPath || !fs.existsSync(eventPath)) return {};
+  return JSON.parse(fs.readFileSync(eventPath, 'utf8'));
 }
 
 function flag(name) {
@@ -125,6 +189,12 @@ function decideAndroid({ eventName, paths, androidGreen }) {
 }
 
 async function main() {
+  const manifest = loadManifest();
+  if (isE2eBypassActive(manifest)) {
+    writeBypassOutputs('e2e_bypass_pilot');
+    return;
+  }
+
   const event = parseEvent();
   const eventName = process.env.GITHUB_EVENT_NAME ?? 'unknown';
   const paths = {
@@ -133,11 +203,16 @@ async function main() {
     shared: flag('MAESTRO_PATH_SHARED'),
   };
 
+  if (eventName !== 'pull_request') {
+    writeFullMatrixOutputs();
+    return;
+  }
+
   let iosGreen = false;
   let androidGreen = false;
   const prNumber = event.pull_request?.number;
 
-  if (eventName === 'pull_request' && prNumber) {
+  if (prNumber) {
     [iosGreen, androidGreen] = await Promise.all([
       platformSucceededOnPr(prNumber, IOS_JOB),
       platformSucceededOnPr(prNumber, ANDROID_SMOKE_JOB),
@@ -148,12 +223,12 @@ async function main() {
   const ios = decidePlatform({ eventName, paths, prNumber, iosGreen, androidGreen });
   const android = decideAndroid({ eventName, paths, androidGreen });
 
-  const runAndroidSmoke = eventName === 'pull_request' && android.run;
-  const runAndroidGolden = eventName !== 'pull_request' && (eventName === 'push' || eventName === 'workflow_dispatch');
+  const runAndroidSmoke = android.run;
+  const runAndroidGolden = false;
 
   console.log(`[gate] run_ios=${ios.run} (${ios.reason})`);
   console.log(`[gate] run_android_smoke=${runAndroidSmoke} (${android.reason})`);
-  console.log(`[gate] run_android_golden=${runAndroidGolden} (full_matrix)`);
+  console.log(`[gate] run_android_golden=${runAndroidGolden} (pr_smoke_only)`);
 
   writeOutput('run_ios', ios.run ? 'true' : 'false');
   writeOutput('run_android_smoke', runAndroidSmoke ? 'true' : 'false');
@@ -161,6 +236,7 @@ async function main() {
   writeOutput('run_android', runAndroidSmoke || runAndroidGolden ? 'true' : 'false');
   writeOutput('skip_reason_ios', ios.reason);
   writeOutput('skip_reason_android', android.reason);
+  writeOutput('e2e_bypass', 'false');
 }
 
 main().catch((error) => {

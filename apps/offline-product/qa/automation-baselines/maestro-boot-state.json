@@ -10,7 +10,8 @@
         "account_welcome_dismissed": "1"
       },
       "bootReadyTestId": "maestro-boot-ready",
-      "optionalFlowTestIds": ["welcome-account-skip"],
+      "bootErrorTestId": "maestro-boot-error",
+      "optionalFlowTestIds": ["welcome-account-skip", "maestro-boot-error"],
       "flowTestIds": ["maestro-boot-ready", "tab-settings"],
       "buildFromCommit": true,
       "platforms": ["ios", "android"]

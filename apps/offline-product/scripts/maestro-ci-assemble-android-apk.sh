@@ -55,6 +55,7 @@ const upsert = (key, value) => {
   else source += `\n${key}=${value}\n`;
 };
 upsert('hermesEnabled', 'true');
+upsert('newArchEnabled', 'true');
 upsert('org.gradle.parallel', 'true');
 upsert('org.gradle.caching', 'true');
 upsert('org.gradle.configureondemand', 'true');
@@ -98,21 +99,27 @@ if [[ ! -f "$APK_PATH" ]]; then
   exit 1
 fi
 
-if ! unzip -l "$APK_PATH" | grep -qE 'assets/index.android.bundle|\.hbc'; then
+# Capture unzip listing once and grep via here-string (not a pipe) to avoid
+# SIGPIPE false-negative under pipefail: `cmd | grep -q` makes grep -q exit
+# early on match → upstream gets SIGPIPE → pipefail returns non-zero.
+# A here-string (<<<) is a redirection, not a pipeline, so pipefail doesn't apply.
+APK_LIST="$(unzip -l "$APK_PATH" 2>/dev/null || true)"
+
+if ! grep -qE 'assets/index.android.bundle|\.hbc' <<< "$APK_LIST"; then
   echo "::error::Missing embedded JS bundle (index.android.bundle) in $APK_PATH — debug APK will not boot offline without debuggableVariants = []."
-  unzip -l "$APK_PATH" | head -40 || true
+  grep -E '.' <<< "$APK_LIST" | head -40 || true
   exit 1
 fi
 
-if ! unzip -l "$APK_PATH" | grep -q "lib/${MAESTRO_ANDROID_ABI}/"; then
+if ! grep -q "lib/${MAESTRO_ANDROID_ABI}/" <<< "$APK_LIST"; then
   echo "::error::Missing lib/${MAESTRO_ANDROID_ABI} native libs in $APK_PATH — CI emulator requires ${MAESTRO_ANDROID_ABI} ABI."
-  unzip -l "$APK_PATH" | grep 'lib/' | head -20 || true
+  grep 'lib/' <<< "$APK_LIST" | head -20 || true
   exit 1
 fi
 
-if ! unzip -l "$APK_PATH" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
+if ! grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db' <<< "$APK_LIST"; then
   echo "::error::Missing assets/maestro/tracebud_offline.db in $APK_PATH — in-app Maestro seed requires bundled DB."
-  unzip -l "$APK_PATH" | grep -i maestro || true
+  grep -i maestro <<< "$APK_LIST" || true
   exit 1
 fi
 

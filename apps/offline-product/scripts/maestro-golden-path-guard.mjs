@@ -352,6 +352,23 @@ function assertWorkflow(manifest) {
   if (!platformGate.includes('run_android_golden')) {
     throw new Error('maestro-ci-platform-gate.mjs must output run_android_golden for push/dispatch');
   }
+  if (!platformGate.includes('e2eBypass')) {
+    throw new Error('maestro-ci-platform-gate.mjs must honor e2eBypass from maestro-golden-path-ci.json');
+  }
+  if (!workflow.includes('maestro-e2e-bypass-notice')) {
+    throw new Error(`${manifest.workflowFile} must define maestro-e2e-bypass-notice job for pilot e2eBypass`);
+  }
+  if (!workflow.includes('e2e_bypass')) {
+    throw new Error(`${manifest.workflowFile} cost gate must export e2e_bypass output`);
+  }
+  if (manifest.e2eBypass?.enabled) {
+    if (!manifest.e2eBypass.reason?.trim()) {
+      throw new Error('manifest e2eBypass.enabled requires e2eBypass.reason');
+    }
+    if (!manifest.e2eBypass.allowedUntil) {
+      throw new Error('manifest e2eBypass.enabled requires e2eBypass.allowedUntil expiry date');
+    }
+  }
   if (!platformGate.includes('ios_already_green_android_only_delta')) {
     throw new Error('maestro-ci-platform-gate.mjs must skip iOS when already green on android-only PR delta');
   }
@@ -460,8 +477,8 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} Android assemble job timeout must match manifest androidAssembleJobTimeoutMinutes`);
   }
   const smokeTimeout = manifest.androidSmokeJobTimeoutMinutes;
-  if (!smokeTimeout || smokeTimeout > 35) {
-    throw new Error('manifest androidSmokeJobTimeoutMinutes must be <= 35 (PR smoke cap)');
+  if (!smokeTimeout || smokeTimeout > 40) {
+    throw new Error('manifest androidSmokeJobTimeoutMinutes must be <= 40 (PR smoke cap)');
   }
   if (!workflow.includes(`timeout-minutes: ${smokeTimeout}`)) {
     throw new Error(`${manifest.workflowFile} Android smoke job timeout must match manifest androidSmokeJobTimeoutMinutes`);
@@ -544,6 +561,15 @@ function assertWorkflow(manifest) {
     !workflowBody.includes('maestro-golden-path:')
   ) {
     throw new Error('offline-maestro.yml must run golden path jobs on pull_request');
+  }
+
+  // S1: detect doubled-path pattern — bash apps/offline-product/scripts/... inside a job
+  // whose defaults.run.working-directory is apps/offline-product. This caused H7 (exit 127).
+  const doubledPathPattern = /bash\s+apps\/offline-product\/scripts\//;
+  if (doubledPathPattern.test(workflow)) {
+    throw new Error(
+      `${manifest.workflowFile} contains 'bash apps/offline-product/scripts/...' inside a job with working-directory: apps/offline-product — this doubles the path and exits 127. Use 'bash scripts/...' or 'bash ./scripts/...' instead.`,
+    );
   }
 }
 

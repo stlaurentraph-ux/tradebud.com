@@ -24,13 +24,23 @@ export async function ensureMaestroCiBootDatabase(): Promise<void> {
     return;
   }
 
-  const sourceUri = `${FileSystem.bundleDirectory ?? ''}${BUNDLED_BOOT_DB}`;
+  const bundleDir = FileSystem.bundleDirectory ?? null;
+  const sourceUri = `${bundleDir ?? ''}${BUNDLED_BOOT_DB}`;
+  console.warn(`[MaestroBoot] bundleDirectory=${bundleDir ?? 'null'} sourceUri=${sourceUri}`);
   const bundled = await FileSystem.getInfoAsync(sourceUri);
   if (!bundled.exists) {
-    throw new Error(`Maestro CI boot DB missing from APK assets: ${sourceUri}`);
+    throw new Error(
+      `Maestro CI boot DB missing from APK assets: sourceUri=${sourceUri} bundleDirectory=${bundleDir ?? 'null'} BUNDLED_BOOT_DB=${BUNDLED_BOOT_DB}`,
+    );
   }
 
   await FileSystem.makeDirectoryAsync(sqliteDirectory(), { intermediates: true });
-  await FileSystem.copyAsync({ from: sourceUri, to: dbPath });
+  try {
+    await FileSystem.copyAsync({ from: sourceUri, to: dbPath });
+  } catch (copyError) {
+    throw new Error(
+      `Maestro CI boot DB copy failed: from=${sourceUri} to=${dbPath} error=${String(copyError)}`,
+    );
+  }
   console.warn('[MaestroBoot] copied bundled golden-path SQLite from APK assets');
 }
