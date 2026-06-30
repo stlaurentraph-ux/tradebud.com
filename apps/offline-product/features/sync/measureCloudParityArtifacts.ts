@@ -130,6 +130,8 @@ export function buildExtendedCountsFromAudit(params: {
   localFarmer?: FarmerProfile;
   localHasWalkDraft: boolean;
   measuredMediaGap?: number;
+  measuredPlotGap?: number;
+  measuredReceiptGap?: number;
 }): ExtendedCloudParityCounts {
   const photoCounts =
     params.auditRows != null ? countServerPhotosFromAudit(params.auditRows) : null;
@@ -160,5 +162,7 @@ export function buildExtendedCountsFromAudit(params: {
     serverHasWalkDraft:
       params.auditRows != null ? serverHasActiveWalkDraft(params.auditRows) : null,
     measuredMediaGap: params.measuredMediaGap,
+    measuredPlotGap: params.measuredPlotGap,
+    measuredReceiptGap: params.measuredReceiptGap,
   };
 }

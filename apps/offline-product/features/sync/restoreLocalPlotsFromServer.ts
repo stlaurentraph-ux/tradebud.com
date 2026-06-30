@@ -39,6 +39,30 @@ function serverRowAlreadyOnDevice(
   return false;
 }
 
+/** Dry-run: server plots Sync now would still pull (mirrors restore loop, skips demo/unmapped). */
+export function countPendingServerPlotsRestore(params: {
+  apiFarmerId: string;
+  backendPlots: readonly unknown[];
+  localPlots: readonly Plot[];
+  plotServerLinks: Record<string, string>;
+}): number {
+  const apiFarmerId = params.apiFarmerId.trim();
+  const localPlotIds = new Set(params.localPlots.map((plot) => plot.id));
+  let pending = 0;
+
+  for (const rawRow of params.backendPlots) {
+    const row = rawRow as ServerPlotRowForRestore;
+    if (isServerOnlyDemoPlot(row)) continue;
+    if (serverRowAlreadyOnDevice(row, params.localPlots, params.plotServerLinks)) continue;
+
+    const mapped = mapServerPlotRowToLocalPlot(row, apiFarmerId);
+    if (!mapped || localPlotIds.has(mapped.id)) continue;
+    pending += 1;
+  }
+
+  return pending;
+}
+
 /**
  * Pulls server plots missing on this device into local SQLite (Phase 1 cloud restore).
  * Never deletes or overwrites plots already stored locally.

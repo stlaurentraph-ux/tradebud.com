@@ -4,6 +4,10 @@ import {
   countServerPlotsForPostAuthRestore,
   countServerVouchersForPostAuthRestore,
 } from '@/features/sync/postAuthSyncOffer';
+import { fetchMergedServerVouchers } from '@/features/harvest/fetchMergedServerVouchers';
+import { resolveFieldHarvestFarmerIds } from '@/features/harvest/loadFieldScopedDeliveryReceipts';
+import { countPendingServerPlotsRestore } from '@/features/sync/restoreLocalPlotsFromServer';
+import { countPendingServerReceiptsRestore } from '@/features/sync/restoreLocalDeliveryReceiptsFromServer';
 import {
   buildExtendedCountsFromAudit,
   countLocalMediaArtifacts,
@@ -97,11 +101,13 @@ export async function measureCloudParitySummary(params: {
         })
       : null;
 
-  // Restore-mirroring media gap: when audit rows are available, count exactly
-  // what Sync now would still pull, mirroring restoreLocalPlotPhotosFromServerAudit
-  // + restoreLocalEvidenceFromServer (including producer evidence under
-  // profile:{farmerId}). This is the SSOT — the brown banner cannot lie.
+  // Restore-mirroring gaps: when audit rows are available, count exactly what Sync
+  // now would still pull — not naive server-minus-local totals (which lie when the
+  // server has demo plots, unmapped geometry, or vouchers already stored under
+  // a different local id).
   let measuredMediaGap: number | undefined;
+  let measuredPlotGap: number | undefined;
+  let measuredReceiptGap: number | undefined;
   if (auditRows != null) {
     try {
       const [backendPlots, plotServerLinks] = await Promise.all([
@@ -111,6 +117,12 @@ export async function measureCloudParitySummary(params: {
         }).catch(() => [] as readonly unknown[]),
         loadPlotServerLinks().catch(() => ({} as Record<string, string>)),
       ]);
+      measuredPlotGap = countPendingServerPlotsRestore({
+        apiFarmerId: scope.farmerId,
+        backendPlots,
+        localPlots: params.localPlots,
+        plotServerLinks: plotServerLinks as Record<string, string>,
+      });
       measuredMediaGap = await countServerMediaMissingOnDevice({
         apiFarmerId: scope.farmerId,
         localPlots: params.localPlots,
@@ -118,8 +130,20 @@ export async function measureCloudParitySummary(params: {
         backendPlots,
         plotServerLinks: plotServerLinks as Record<string, string>,
       });
+      try {
+        const { voucherFarmerIds } = await resolveFieldHarvestFarmerIds({
+          profileFarmerId,
+          localPlots: params.localPlots,
+        });
+        const vouchers = await fetchMergedServerVouchers(voucherFarmerIds);
+        measuredReceiptGap = await countPendingServerReceiptsRestore({ vouchers });
+      } catch {
+        measuredReceiptGap = undefined;
+      }
     } catch {
       measuredMediaGap = undefined;
+      measuredPlotGap = undefined;
+      measuredReceiptGap = undefined;
     }
   }
 
@@ -135,6 +159,8 @@ export async function measureCloudParitySummary(params: {
       localFarmer: params.localFarmer,
       localHasWalkDraft: localDraft != null,
       measuredMediaGap,
+      measuredPlotGap,
+      measuredReceiptGap,
     }),
   );
 }
