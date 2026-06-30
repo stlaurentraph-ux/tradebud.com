@@ -1,13 +1,34 @@
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 
-import { normalizeEvidenceContentType } from '@/features/evidence/evidenceContentType';
 import {
   getAuthenticatedSupabaseClient,
 } from '@/features/api/syncAuthSession';
 
 const EVIDENCE_BUCKET = process.env.EXPO_PUBLIC_EVIDENCE_STORAGE_BUCKET ?? 'plot-evidence';
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 365;
+
+/** Sign a storage object for read access (used when durable download is unavailable). */
+export async function signEvidenceStorageUrl(storagePath: string): Promise<string | null> {
+  const trimmed = storagePath.trim();
+  if (!trimmed) return null;
+  if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY) {
+    return null;
+  }
+
+  const supabase = await getAuthenticatedSupabaseClient();
+  if (!supabase) return null;
+
+  try {
+    const { data: signed, error: signError } = await supabase.storage
+      .from(EVIDENCE_BUCKET)
+      .createSignedUrl(trimmed, SIGNED_URL_TTL_SECONDS);
+    if (signError || !signed?.signedUrl) return null;
+    return signed.signedUrl;
+  } catch {
+    return null;
+  }
+}
 
 export type EvidenceDownloadResult =
   | { ok: true; localUri: string; remoteUrl: string; storagePath: string }
@@ -48,29 +69,21 @@ export async function downloadEvidenceFileFromStorage(params: {
     return { ok: false, reason: 'not_signed_in' };
   }
 
-  const contentType = normalizeEvidenceContentType(
-    params.mimeType ?? null,
-    params.label ?? null,
-    storagePath,
-  );
-
   try {
-    const { data: signed, error: signError } = await supabase.storage
-      .from(EVIDENCE_BUCKET)
-      .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
-    if (signError || !signed?.signedUrl) {
+    const signedUrl = await signEvidenceStorageUrl(storagePath);
+    if (!signedUrl) {
       return {
         ok: false,
         reason: 'download_failed',
-        message: signError?.message ?? 'Could not sign storage URL',
+        message: 'Could not sign storage URL',
       };
     }
 
     if (Platform.OS === 'web') {
       return {
         ok: true,
-        localUri: signed.signedUrl,
-        remoteUrl: signed.signedUrl,
+        localUri: signedUrl,
+        remoteUrl: signedUrl,
         storagePath,
       };
     }
@@ -79,8 +92,8 @@ export async function downloadEvidenceFileFromStorage(params: {
     if (!root) {
       return {
         ok: true,
-        localUri: signed.signedUrl,
-        remoteUrl: signed.signedUrl,
+        localUri: signedUrl,
+        remoteUrl: signedUrl,
         storagePath,
       };
     }
@@ -89,7 +102,7 @@ export async function downloadEvidenceFileFromStorage(params: {
     const dir = `${root}evidence/${params.localPlotId}/${params.kind}/`;
     await FileSystem.makeDirectoryAsync(dir, { intermediates: true }).catch(() => undefined);
     const dest = `${dir}restore-${Date.now()}.${ext}`;
-    const download = await FileSystem.downloadAsync(signed.signedUrl, dest);
+    const download = await FileSystem.downloadAsync(signedUrl, dest);
     if (download.status < 200 || download.status >= 300) {
       return {
         ok: false,
@@ -101,7 +114,7 @@ export async function downloadEvidenceFileFromStorage(params: {
     return {
       ok: true,
       localUri: download.uri,
-      remoteUrl: signed.signedUrl,
+      remoteUrl: signedUrl,
       storagePath,
     };
   } catch (error) {

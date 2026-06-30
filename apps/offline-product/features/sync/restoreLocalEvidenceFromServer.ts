@@ -3,7 +3,7 @@ import {
   fetchPlotTenureVerification,
   type PlotSyncedEvidenceRecord,
 } from '@/features/api/postPlot';
-import { downloadEvidenceFileFromStorage } from '@/features/evidence/downloadEvidenceFromStorage';
+import { downloadEvidenceFileFromStorage, signEvidenceStorageUrl } from '@/features/evidence/downloadEvidenceFromStorage';
 import {
   isProducerEvidenceKind,
   producerEvidenceScopeId,
@@ -209,14 +209,24 @@ export async function restoreLocalEvidenceFromServer(params: {
       mimeType: candidate.mimeType,
       label: candidate.label,
     });
-    if (!download.ok) {
-      downloadFailed += 1;
-      continue;
+
+    let persistedUri: string;
+    let persistedStoragePath: string;
+    if (download.ok) {
+      persistedUri =
+        download.localUri.startsWith('file://') ? download.localUri : download.remoteUrl;
+      persistedStoragePath = download.storagePath;
+    } else {
+      const signedUrl = await signEvidenceStorageUrl(candidate.storagePath);
+      if (!signedUrl) {
+        downloadFailed += 1;
+        continue;
+      }
+      persistedUri = signedUrl;
+      persistedStoragePath = candidate.storagePath.trim();
     }
 
     const takenAt = candidate.takenAt || Date.now();
-    const persistedUri =
-      download.localUri.startsWith('file://') ? download.localUri : download.remoteUrl;
     if (
       (normalizedKind === 'land_title' || normalizedKind === 'tenure_evidence') &&
       isImageMime(candidate.mimeType, candidate.storagePath)
@@ -225,7 +235,7 @@ export async function restoreLocalEvidenceFromServer(params: {
         plotId: targetPlotId,
         uri: persistedUri,
         takenAt,
-        storagePath: download.storagePath,
+        storagePath: persistedStoragePath,
       });
     } else {
       await persistPlotEvidenceItem({
@@ -238,7 +248,7 @@ export async function restoreLocalEvidenceFromServer(params: {
         mimeType: candidate.mimeType,
         label: candidate.label,
         takenAt,
-        storagePath: download.storagePath,
+        storagePath: persistedStoragePath,
       });
     }
 
