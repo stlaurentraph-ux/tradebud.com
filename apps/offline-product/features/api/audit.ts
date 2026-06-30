@@ -3,7 +3,8 @@
  * Extracted from postPlot.ts for better separation of concerns.
  */
 
-import { getAccessTokenFromSupabase } from './auth';
+import { isAuthSessionApiFailure } from '@/features/api/authSessionErrors';
+import { getAccessTokenFromSupabase, forceSyncAccessTokenRefresh } from './syncAuthSession';
 import { isFarmerScopeViolationMessage } from './farmerScopeErrors';
 import { logError } from '@/features/errors/ErrorLogger';
 import { getTracebudApiBaseUrl } from './runtimeGuards';
@@ -21,34 +22,51 @@ function messageFromBackendJson(body: unknown): string | undefined {
   return undefined;
 }
 
-export async function fetchAuditForFarmer(farmerId: string) {
-  const accessToken = await getAccessTokenFromSupabase();
-  if (!accessToken) {
-    throw new Error('No access token available for audit log');
-  }
-
+async function requestAuditForFarmer(farmerId: string, accessToken: string) {
   const res = await fetch(`${API_BASE_URL}/v1/audit?farmerId=${encodeURIComponent(farmerId)}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
+  const body = await res.json().catch(() => ({}));
+  return { res, body };
+}
 
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
+export async function fetchAuditForFarmer(farmerId: string) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const accessToken = await getAccessTokenFromSupabase();
+    if (!accessToken) {
+      throw new Error('sign_in_session_expired');
+    }
+
+    const { res, body } = await requestAuditForFarmer(farmerId, accessToken);
+
+    if (res.ok) {
+      return body;
+    }
+
     const message =
       messageFromBackendJson(body) ?? `Audit fetch error: ${res.status}`;
     const scopeViolation = res.status === 403 && isFarmerScopeViolationMessage(message);
-    if (!scopeViolation) {
+    const sessionFailure = isAuthSessionApiFailure(res.status, message);
+
+    if (sessionFailure && attempt === 0) {
+      forceSyncAccessTokenRefresh();
+      continue;
+    }
+
+    if (!scopeViolation && !sessionFailure) {
       logError(new Error(message), {
         context: 'fetchAudit',
         statusCode: res.status,
         farmerId,
       });
     }
-    throw new Error(message);
+
+    throw new Error(sessionFailure ? 'sign_in_session_expired' : message);
   }
 
-  return res.json();
+  throw new Error('sign_in_session_expired');
 }
 
 export type PostAuditEventResult =

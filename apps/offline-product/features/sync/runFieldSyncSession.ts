@@ -1,7 +1,7 @@
 import {
   beginSyncAccessTokenRun,
   endSyncAccessTokenRun,
-  invalidateCachedSyncAccessToken,
+  forceSyncAccessTokenRefresh,
   verifySyncAccessToken,
   type VerifySyncAccessTokenResult,
 } from '@/features/api/syncAuthSession';
@@ -64,7 +64,7 @@ export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult
     }
 
     if (attempt === 0) {
-      invalidateCachedSyncAccessToken();
+      forceSyncAccessTokenRefresh();
       continue;
     }
 

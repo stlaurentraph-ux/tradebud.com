@@ -1,4 +1,5 @@
 import { fetchAuditForFarmer } from '@/features/api/audit';
+import { isAuthSessionError } from '@/features/api/authSessionErrors';
 import { filterFarmerIdsToAuthScope } from '@/features/api/fieldAppBootstrap';
 import { isFarmerScopeViolationError } from '@/features/api/farmerScopeErrors';
 
@@ -41,6 +42,9 @@ export async function fetchMergedAuditEventsForFarmer(
       if (isFarmerScopeViolationError(error)) {
         scopeViolationCount += 1;
         continue;
+      }
+      if (isAuthSessionError(error)) {
+        return [];
       }
       lastError = error;
     }

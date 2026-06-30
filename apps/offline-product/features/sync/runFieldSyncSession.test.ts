@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const verifySyncAccessToken = vi.fn();
 const beginSyncAccessTokenRun = vi.fn();
 const endSyncAccessTokenRun = vi.fn();
-const invalidateCachedSyncAccessToken = vi.fn();
+const forceSyncAccessTokenRefresh = vi.fn();
 const beginServerPlotFetchRun = vi.fn();
 const endServerPlotFetchRun = vi.fn();
 const probeSyncAccessTokenAccepted = vi.fn();
@@ -12,7 +12,7 @@ vi.mock('@/features/api/syncAuthSession', () => ({
   verifySyncAccessToken,
   beginSyncAccessTokenRun,
   endSyncAccessTokenRun,
-  invalidateCachedSyncAccessToken,
+  forceSyncAccessTokenRefresh,
 }));
 
 vi.mock('@/features/network/pingTracebudApi', () => ({
@@ -70,7 +70,7 @@ describe('runFieldSyncSession', () => {
     const { openFieldSyncSession } = await import('./runFieldSyncSession');
     const result = await openFieldSyncSession();
     expect(result.ok).toBe(true);
-    expect(invalidateCachedSyncAccessToken).toHaveBeenCalledTimes(1);
+    expect(forceSyncAccessTokenRefresh).toHaveBeenCalledTimes(1);
     expect(verifySyncAccessToken).toHaveBeenCalledTimes(2);
   });
 });

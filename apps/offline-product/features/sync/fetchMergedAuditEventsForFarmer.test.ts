@@ -43,4 +43,12 @@ describe('fetchMergedAuditEventsForFarmer', () => {
 
     expect(rows.map((row) => row.id)).toEqual(['b1', 'a1']);
   });
+
+  it('returns empty audit rows without throwing on session expiry', async () => {
+    filterFarmerIdsToAuthScope.mockResolvedValue(['owned-farmer']);
+    fetchAuditForFarmer.mockRejectedValue(new Error('sign_in_session_expired'));
+
+    const { fetchMergedAuditEventsForFarmer } = await import('./fetchMergedAuditEventsForFarmer');
+    await expect(fetchMergedAuditEventsForFarmer(['owned-farmer'])).resolves.toEqual([]);
+  });
 });

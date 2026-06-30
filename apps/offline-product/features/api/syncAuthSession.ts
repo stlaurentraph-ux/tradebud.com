@@ -148,6 +148,12 @@ export function invalidateCachedSyncAccessToken(): void {
   clearSessionCache();
 }
 
+/** Clear pinned Sync-now token and session cache after API rejects the bearer. */
+export function forceSyncAccessTokenRefresh(): void {
+  syncRunAccessToken = null;
+  clearSessionCache();
+}
+
 function applyPasswordAuth(email: string, password: string) {
   currentAuthMethod = 'password';
   currentEmail = email.trim();
