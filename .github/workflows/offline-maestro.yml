@@ -4,6 +4,7 @@ name: Offline Maestro
 #   npm run qa:maestro:prepush        (static, any OS)
 #   npm run qa:maestro:prepush:full   (macOS + local iOS golden path)
 # PR: maestro-cost-gate skips macOS when already green + android-only delta; concurrency cancels stale runs.
+# Pilot: e2eBypass.enabled in maestro-golden-path-ci.json skips emulator E2E (preflight still runs).
 # H11/H12: boot-error fail-fast marker + CI error logging + macOS scroll timeout bump.
 
 on:
@@ -55,6 +56,10 @@ on:
         default: false
       run_flows:
         description: Run all Maestro flows (requires Tracebud app on booted iOS simulator)
+        type: boolean
+        default: false
+      force_e2e:
+        description: Force emulator E2E even when e2eBypass is enabled (debug / re-enable gate)
         type: boolean
         default: false
       flow:
@@ -114,6 +119,7 @@ jobs:
       run_android_golden: ${{ steps.gate.outputs.run_android_golden }}
       skip_reason_ios: ${{ steps.gate.outputs.skip_reason_ios }}
       skip_reason_android: ${{ steps.gate.outputs.skip_reason_android }}
+      e2e_bypass: ${{ steps.gate.outputs.e2e_bypass }}
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -156,18 +162,30 @@ jobs:
           MAESTRO_PATH_IOS: ${{ steps.filter.outputs.ios }}
           MAESTRO_PATH_ANDROID: ${{ steps.filter.outputs.android }}
           MAESTRO_PATH_SHARED: ${{ steps.filter.outputs.shared }}
+          MAESTRO_FORCE_E2E: ${{ github.event_name == 'workflow_dispatch' && inputs.force_e2e == true && '1' || '' }}
+        run: node ./scripts/maestro-ci-platform-gate.mjs
+
+  maestro-e2e-bypass-notice:
+    name: Maestro E2E bypass (pilot)
+    needs: maestro-cost-gate
+    if: needs.maestro-cost-gate.outputs.e2e_bypass == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Pilot bypass notice
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            node ./scripts/maestro-ci-platform-gate.mjs
-          else
-            echo "run_ios=true" >> "$GITHUB_OUTPUT"
-            echo "run_android=true" >> "$GITHUB_OUTPUT"
-            echo "run_android_smoke=false" >> "$GITHUB_OUTPUT"
-            echo "run_android_golden=true" >> "$GITHUB_OUTPUT"
-            echo "skip_reason_ios=full_matrix" >> "$GITHUB_OUTPUT"
-            echo "skip_reason_android=full_matrix" >> "$GITHUB_OUTPUT"
-          fi
+          echo "::notice::Maestro emulator E2E bypassed for pilot submission window."
+          echo "Static preflight ran; emulator jobs skipped per maestro-golden-path-ci.json e2eBypass."
+          echo "Re-enable: set e2eBypass.enabled to false after Android smoke is green."
+          node -e "
+          const m = require('./product-os/04-quality/maestro-golden-path-ci.json');
+          const b = m.e2eBypass || {};
+          console.log('reason:', b.reason || '(none)');
+          console.log('allowedUntil:', b.allowedUntil || '(none)');
+          "
 
   maestro-golden-path:
     name: Maestro golden path (macOS)

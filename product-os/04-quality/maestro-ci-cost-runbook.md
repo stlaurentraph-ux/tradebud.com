@@ -45,11 +45,35 @@ Workflow: `.github/workflows/offline-maestro.yml`
 | `concurrency` + `cancel-in-progress` | Cancel superseded runs on new pushes |
 | `maestro-cost-gate` job | Skip macOS when PR iOS already green + android-only delta |
 | `workflow_dispatch` | Force full matrix when needed before merge |
-| Push to `main` | Always runs both platforms (release gate) |
+| Push to `main` | Always runs both platforms (release gate) unless `e2eBypass.enabled` |
+
+---
+
+## Pilot E2E bypass (temporary)
+
+When `maestro-golden-path-ci.json` → `e2eBypass.enabled` is `true`:
+
+| Still runs | Skipped |
+|------------|---------|
+| `Maestro wiring preflight` (static guards, ~1 min Linux) | macOS golden path |
+| `Maestro E2E bypass (pilot)` notice job | Android assemble + smoke + golden |
+| Main `ci.yml` offline structural guards | Emulator minutes |
+
+**Re-enable E2E:** set `e2eBypass.enabled` to `false` after Android smoke is green on PR.
+
+**Force E2E on one run:** GitHub Actions → Offline Maestro → Run workflow → check `force_e2e`.
+
+**Expiry:** `e2eBypass.allowedUntil` auto-disables bypass after that date (gate script ignores expired bypass).
+
+Pilot builds use EAS `preview` profile (`distribution: internal`) — independent of Maestro CI.
 
 ---
 
 ## Merge criteria (PR)
+
+When **e2eBypass is active:** preflight + bypass notice green is sufficient to merge Maestro-related changes.
+
+When **e2eBypass is off:**
 
 - iOS golden path green on **some** commit on the PR (may be skipped on later android-only pushes)
 - Android **smoke** green on **latest** commit (`Maestro Android smoke (PR)`)

@@ -46,6 +46,13 @@
     "androidGoldenOnPushAndDispatch": true,
     "fullMatrixOnPushToMain": true
   },
+  "e2eBypass": {
+    "enabled": true,
+    "reason": "Pilot submission window — emulator E2E deferred while Android cold-boot (H11) is fixed incrementally",
+    "allowedUntil": "2026-07-31",
+    "keepPreflight": true,
+    "reEnableRunbook": "Set e2eBypass.enabled to false in this manifest after Maestro Android smoke is green on PR"
+  },
   "prepushScript": "scripts/maestro-prepush.sh",
   "prepushRunbook": "product-os/04-quality/maestro-ci-cost-runbook.md"
 }

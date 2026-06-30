@@ -352,6 +352,23 @@ function assertWorkflow(manifest) {
   if (!platformGate.includes('run_android_golden')) {
     throw new Error('maestro-ci-platform-gate.mjs must output run_android_golden for push/dispatch');
   }
+  if (!platformGate.includes('e2eBypass')) {
+    throw new Error('maestro-ci-platform-gate.mjs must honor e2eBypass from maestro-golden-path-ci.json');
+  }
+  if (!workflow.includes('maestro-e2e-bypass-notice')) {
+    throw new Error(`${manifest.workflowFile} must define maestro-e2e-bypass-notice job for pilot e2eBypass`);
+  }
+  if (!workflow.includes('e2e_bypass')) {
+    throw new Error(`${manifest.workflowFile} cost gate must export e2e_bypass output`);
+  }
+  if (manifest.e2eBypass?.enabled) {
+    if (!manifest.e2eBypass.reason?.trim()) {
+      throw new Error('manifest e2eBypass.enabled requires e2eBypass.reason');
+    }
+    if (!manifest.e2eBypass.allowedUntil) {
+      throw new Error('manifest e2eBypass.enabled requires e2eBypass.allowedUntil expiry date');
+    }
+  }
   if (!platformGate.includes('ios_already_green_android_only_delta')) {
     throw new Error('maestro-ci-platform-gate.mjs must skip iOS when already green on android-only PR delta');
   }
