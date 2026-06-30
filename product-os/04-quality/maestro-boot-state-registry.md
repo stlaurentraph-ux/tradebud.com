@@ -96,3 +96,18 @@ Golden path flow waits on `maestro-boot-ready` before navigating tabs. Android C
 
 - `maestro-boot-state-guard.mjs` — JSON ↔ TS ↔ bootstrap ↔ flow ↔ app testID
 - `maestro-golden-path-guard.mjs` — H25 workflow wiring (uses manifest `goldenPathBootProfile`)
+
+## Android CI failure mode catalog (PR #318, H25)
+
+Symptom → root cause → fix → guard mapping for recurring Android Maestro failures.
+
+| ID | Symptom | Root cause | Fix | Guard |
+|----|---------|------------|-----|-------|
+| H1 | `HVF error: HV_UNSUPPORTED` / `Timeout waiting for emulator to boot` | `MAESTRO_ANDROID_ABI=arm64-v8a` on `macos-15-intel` — HVF cannot emulate arm64 on Intel | Switch to `x86_64` + `-gpu swiftshader_indirect` | Manifest `androidEmulator.emulatorArch: x86_64` + guard checks `arch: x86_64` |
+| H2 | `assertNewArchitectureEnabledTask` failed — Reanimated/Worklets require New Arch | `android/gradle.properties` missing `newArchEnabled=true` | `app.json` sets `newArchEnabled: true`; assemble script upserts it in `gradle.properties` | Assemble script `upsert('newArchEnabled', 'true')` |
+| H3 | `Missing assets/maestro/tracebud_offline.db in APK` | DB not copied to `android/app/src/main/assets/maestro/` before gradle assemble | Assemble script copies DB + preflight checks APK via `unzip -l` | Assemble script preflight |
+| H4 | `Unable to resolve module ../../assets/maestro/tracebud_offline.db` (iOS) | `generate-maestro-ci-boot-db.mjs` not run before bundle | Generator runs in assemble before `expo export:embed` | Assemble script ordering |
+| H5 | `adb run-as com.tracebud.app mkdir -p files/SQLite` failed | Legacy host-adb seed uses `run-as` which fails on CI emulator | `MAESTRO_ANDROID_IN_APP_DB_SEED=1` — DB bundled in APK, copied via `FileSystem.bundleDirectory` | Bootstrap defaults to in-app seed |
+| H6 | Bootstrap warm-up timeout → 4h31m Maestro burn | No fail-fast; Maestro waited 45m for boot marker that never appeared | `MAESTRO_JS_BOOT_FAIL_FAST=1` + `MAESTRO_JS_BOOT_FAIL_FAST_MS` — bootstrap exits 1 on timeout | Bootstrap `wait_for_android_js_boot` fail-fast logic |
+| H7 | `bash: apps/offline-product/scripts/...: No such file or directory` (exit 127) | `bash apps/offline-product/scripts/...` inside `working-directory: apps/offline-product` → doubled path | Use `bash scripts/...` (relative to working-directory) | `maestro-golden-path-guard.mjs` S1 doubled-path regex |
+| H8 | `Failure [not installed for 0]` / `DELETE_FAILED_INTERNAL_ERROR` | Intermittent adb `pm uninstall`/`pm clear` on dirty emulator | Bootstrap uses `\|\| true` fallbacks | N/A — symptom, not root cause |

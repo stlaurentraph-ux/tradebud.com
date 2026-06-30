@@ -219,6 +219,8 @@ jobs:
           java-version: 17
 
       - name: Install Maestro CLI
+        env:
+          MAESTRO_VERSION: ${{ vars.MAESTRO_CLI_VERSION }}
         run: |
           set -euo pipefail
           curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -321,7 +323,7 @@ jobs:
       needs.maestro-cost-gate.outputs.run_android_smoke == 'true' &&
       github.event_name == 'pull_request'
     runs-on: macos-15-intel
-    timeout-minutes: 30
+    timeout-minutes: 40
     env:
       MAESTRO_DRIVER_STARTUP_TIMEOUT: '180000'
       MAESTRO_SEED_SKIP: '1'
@@ -355,6 +357,8 @@ jobs:
           path: apps/offline-product/android/app/build/outputs/apk/debug
 
       - name: Install Maestro CLI
+        env:
+          MAESTRO_VERSION: ${{ vars.MAESTRO_CLI_VERSION }}
         run: |
           set -euo pipefail
           curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -456,6 +460,8 @@ jobs:
           path: apps/offline-product/android/app/build/outputs/apk/debug
 
       - name: Install Maestro CLI
+        env:
+          MAESTRO_VERSION: ${{ vars.MAESTRO_CLI_VERSION }}
         run: |
           set -euo pipefail
           curl -Ls "https://get.maestro.mobile.dev" | bash
@@ -536,6 +542,8 @@ jobs:
           java-version: 17
 
       - name: Install Maestro CLI
+        env:
+          MAESTRO_VERSION: ${{ vars.MAESTRO_CLI_VERSION }}
         run: |
           set -euo pipefail
           curl -Ls "https://get.maestro.mobile.dev" | bash

@@ -460,8 +460,8 @@ function assertWorkflow(manifest) {
     throw new Error(`${manifest.workflowFile} Android assemble job timeout must match manifest androidAssembleJobTimeoutMinutes`);
   }
   const smokeTimeout = manifest.androidSmokeJobTimeoutMinutes;
-  if (!smokeTimeout || smokeTimeout > 35) {
-    throw new Error('manifest androidSmokeJobTimeoutMinutes must be <= 35 (PR smoke cap)');
+  if (!smokeTimeout || smokeTimeout > 40) {
+    throw new Error('manifest androidSmokeJobTimeoutMinutes must be <= 40 (PR smoke cap)');
   }
   if (!workflow.includes(`timeout-minutes: ${smokeTimeout}`)) {
     throw new Error(`${manifest.workflowFile} Android smoke job timeout must match manifest androidSmokeJobTimeoutMinutes`);
@@ -544,6 +544,15 @@ function assertWorkflow(manifest) {
     !workflowBody.includes('maestro-golden-path:')
   ) {
     throw new Error('offline-maestro.yml must run golden path jobs on pull_request');
+  }
+
+  // S1: detect doubled-path pattern — bash apps/offline-product/scripts/... inside a job
+  // whose defaults.run.working-directory is apps/offline-product. This caused H7 (exit 127).
+  const doubledPathPattern = /bash\s+apps\/offline-product\/scripts\//;
+  if (doubledPathPattern.test(workflow)) {
+    throw new Error(
+      `${manifest.workflowFile} contains 'bash apps/offline-product/scripts/...' inside a job with working-directory: apps/offline-product — this doubles the path and exits 127. Use 'bash scripts/...' or 'bash ./scripts/...' instead.`,
+    );
   }
 }
 

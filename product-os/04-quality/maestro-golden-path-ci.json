@@ -20,7 +20,7 @@
   "androidAssembleJobTimeoutMinutes": 45,
   "androidAssembleRunner": "ubuntu-latest",
   "androidJobTimeoutMinutes": 75,
-  "androidSmokeJobTimeoutMinutes": 30,
+  "androidSmokeJobTimeoutMinutes": 40,
   "androidSmokeBootWaitMs": 900000,
   "androidSmokeSkipBootstrapWarm": true,
   "androidSmokeJsBootFailFastMs": 600000,

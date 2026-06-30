@@ -55,6 +55,7 @@ const upsert = (key, value) => {
   else source += `\n${key}=${value}\n`;
 };
 upsert('hermesEnabled', 'true');
+upsert('newArchEnabled', 'true');
 upsert('org.gradle.parallel', 'true');
 upsert('org.gradle.caching', 'true');
 upsert('org.gradle.configureondemand', 'true');
