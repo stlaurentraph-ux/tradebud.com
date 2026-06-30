@@ -1,4 +1,5 @@
 import { getSyncAuthUser as getSyncAuthUserFromSession } from '@/features/api/syncAuthSession';
+import { parseClaimRoleFromAuthUser } from '@/features/auth/fieldAppEligibility';
 import {
   FIELD_APP_ROLES,
   type FieldAppRole,
@@ -18,7 +19,7 @@ export function parseFieldAppRole(raw: unknown): FieldAppRole | null {
 export async function resolveFieldAppSessionRole(): Promise<FieldAppRole | null> {
   const user = await getSyncAuthUserFromSession();
   if (!user) return null;
-  return parseFieldAppRole(user.app_metadata?.role);
+  return parseFieldAppRole(parseClaimRoleFromAuthUser(user));
 }
 
 export function isFieldAgentRole(role: FieldAppRole | null | undefined): boolean {

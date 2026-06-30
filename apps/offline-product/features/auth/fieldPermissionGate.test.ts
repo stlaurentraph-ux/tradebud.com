@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { getSyncAuthUser } = vi.hoisted(() => ({
+const { getSyncAuthUser, fetchOwnedFarmerIdsFromApi } = vi.hoisted(() => ({
   getSyncAuthUser: vi.fn(),
+  fetchOwnedFarmerIdsFromApi: vi.fn(),
 }));
 
 vi.mock('@/features/api/syncAuthSession', () => ({
   getSyncAuthUser,
+}));
+
+vi.mock('@/features/api/fieldAppBootstrap', () => ({
+  fetchOwnedFarmerIdsFromApi,
 }));
 
 import {
@@ -18,6 +23,36 @@ import {
 describe('fieldPermissionGate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('allows farmer sync:manual from user_metadata role (OAuth field signup)', async () => {
+    getSyncAuthUser.mockResolvedValue({
+      user_metadata: { role: 'farmer', signup_source: 'field-app' },
+    });
+    await expect(checkFieldAppPermission('sync:manual')).resolves.toEqual({
+      allowed: true,
+      role: 'farmer',
+    });
+  });
+
+  it('allows field-app signup without explicit role claim', async () => {
+    getSyncAuthUser.mockResolvedValue({
+      user_metadata: { signup_source: 'field-app' },
+    });
+    fetchOwnedFarmerIdsFromApi.mockResolvedValue([]);
+    await expect(checkFieldAppPermission('sync:manual')).resolves.toEqual({
+      allowed: true,
+      role: 'farmer',
+    });
+  });
+
+  it('allows linked farmer profiles when role claim is missing', async () => {
+    getSyncAuthUser.mockResolvedValue({ user_metadata: {} });
+    fetchOwnedFarmerIdsFromApi.mockResolvedValue(['farmer-profile-id']);
+    await expect(checkFieldAppPermission('sync:manual')).resolves.toEqual({
+      allowed: true,
+      role: 'farmer',
+    });
   });
 
   it('allows farmer sync:manual', async () => {

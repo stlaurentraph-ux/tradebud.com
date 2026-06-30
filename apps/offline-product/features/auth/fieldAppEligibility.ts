@@ -8,6 +8,45 @@ export function getAppRoleFromSession(session: Session): string | null {
   return role.length > 0 ? role : null;
 }
 
+/** Mirror backend parseClaimRole: app_metadata.role, then user_metadata.role. */
+export function parseClaimRoleFromAuthUser(
+  user:
+    | {
+        app_metadata?: Record<string, unknown>;
+        user_metadata?: Record<string, unknown>;
+      }
+    | null
+    | undefined,
+): string | null {
+  const appRole = user?.app_metadata?.role;
+  if (typeof appRole === 'string' && appRole.trim()) {
+    return appRole.trim().toLowerCase();
+  }
+  const userRole = user?.user_metadata?.role;
+  if (typeof userRole === 'string' && userRole.trim()) {
+    return userRole.trim().toLowerCase();
+  }
+  return null;
+}
+
+/** Mirror backend isFieldAppSignupUser — native field signups and linked dashboard accounts. */
+export function isFieldAppSignupUser(
+  user:
+    | {
+        app_metadata?: Record<string, unknown>;
+        user_metadata?: Record<string, unknown>;
+      }
+    | null
+    | undefined,
+): boolean {
+  const signupSource = user?.app_metadata?.signup_source ?? user?.user_metadata?.signup_source;
+  if (signupSource === 'field-app') {
+    return true;
+  }
+  const linked = user?.user_metadata?.field_app_linked ?? user?.app_metadata?.field_app_linked;
+  return linked === true || linked === 'true';
+}
+
 export function isDashboardWorkspaceRole(role: string | null): boolean {
   if (!role) return false;
   return role !== 'farmer' && role !== 'agent';

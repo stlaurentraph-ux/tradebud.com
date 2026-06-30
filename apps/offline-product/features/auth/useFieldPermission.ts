@@ -5,6 +5,7 @@ import {
   checkFieldAppPermissionForRole,
   type FieldPermissionDenyReason,
 } from '@/features/auth/fieldPermissionGate';
+import { parseClaimRoleFromAuthUser } from '@/features/auth/fieldAppEligibility';
 import { getSyncAuthUser } from '@/features/auth/fieldAppSessionRole';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
 
@@ -14,10 +15,7 @@ export function useFieldPermission() {
 
   const refresh = useCallback(async () => {
     const user = await getSyncAuthUser();
-    const rawRole =
-      typeof user?.app_metadata?.role === 'string'
-        ? user.app_metadata.role.trim().toLowerCase()
-        : null;
+    const rawRole = parseClaimRoleFromAuthUser(user);
     setRole(rawRole);
     return rawRole;
   }, []);

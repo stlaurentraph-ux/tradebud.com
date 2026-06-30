@@ -4,6 +4,11 @@ import {
   type FieldAppPermission,
   type FieldAppRole,
 } from '@/features/auth/fieldRolePermissionRegistry';
+import {
+  isFieldAppSignupUser,
+  parseClaimRoleFromAuthUser,
+} from '@/features/auth/fieldAppEligibility';
+import { fetchOwnedFarmerIdsFromApi } from '@/features/api/fieldAppBootstrap';
 import { getSyncAuthUser, parseFieldAppRole } from '@/features/auth/fieldAppSessionRole';
 
 export type FieldPermissionDenyReason =
@@ -83,9 +88,29 @@ export async function checkFieldAppPermission(
   if (!user) {
     return { allowed: false, reason: 'not_signed_in', role: null };
   }
-  const rawRole =
-    typeof user.app_metadata?.role === 'string' ? user.app_metadata.role : null;
-  return checkFieldAppPermissionForRole(rawRole, permission);
+
+  const claimRole = parseClaimRoleFromAuthUser(user);
+  if (claimRole && isBlockedDashboardRole(claimRole)) {
+    return { allowed: false, reason: 'blocked_role', role: claimRole };
+  }
+
+  if (claimRole) {
+    const fromClaim = checkFieldAppPermissionForRole(claimRole, permission);
+    if (fromClaim.allowed || fromClaim.reason !== 'unknown_role') {
+      return fromClaim;
+    }
+  }
+
+  if (isFieldAppSignupUser(user)) {
+    return checkFieldAppPermissionForRole('farmer', permission);
+  }
+
+  const ownedFarmerIds = await fetchOwnedFarmerIdsFromApi();
+  if (ownedFarmerIds.length > 0) {
+    return checkFieldAppPermissionForRole('farmer', permission);
+  }
+
+  return { allowed: false, reason: 'unknown_role', role: claimRole };
 }
 
 export async function assertFieldAppPermission(
