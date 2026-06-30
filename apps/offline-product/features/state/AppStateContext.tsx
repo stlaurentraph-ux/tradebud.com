@@ -23,6 +23,7 @@ import {
 } from 'react';
 import { Platform } from 'react-native';
 import { hydrateSyncAuthFromSettings } from '@/features/api/syncAuthSession';
+import { shouldUseMaestroCiThinBoot } from '@/features/testing/maestroCiBootProfile';
 import {
   farmerProfilesEqual,
   hasProducerAttestationsComplete,
@@ -170,7 +171,9 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
       let bootFailed = false;
       try {
         await initDatabase();
-        await hydrateSyncAuthFromSettings();
+        if (!shouldUseMaestroCiThinBoot()) {
+          await hydrateSyncAuthFromSettings();
+        }
         const loaded = await loadAppState();
         if (!cancelled) {
           if (loaded.farmer) {

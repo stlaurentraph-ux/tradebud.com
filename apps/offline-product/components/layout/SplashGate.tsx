@@ -3,8 +3,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
 import { useAppState } from '@/features/state/AppStateContext';
+import { shouldUseMaestroCiThinBoot } from '@/features/testing/maestroCiBootProfile';
 
 const SPLASH_FADE_MS = 350;
+const MAESTRO_CI_SPLASH_FADE_MS = 0;
 
 /**
  * Hides the native splash only after AppState boot completes (SQLite + disk load).
@@ -20,8 +22,9 @@ export function SplashGate({ children }: { children: ReactNode }) {
 
     const hide = async () => {
       try {
-        if (typeof SplashScreen.setOptions === 'function') {
-          SplashScreen.setOptions({ fade: true, duration: SPLASH_FADE_MS });
+        const fadeMs = shouldUseMaestroCiThinBoot() ? MAESTRO_CI_SPLASH_FADE_MS : SPLASH_FADE_MS;
+        if (typeof SplashScreen.setOptions === 'function' && fadeMs > 0) {
+          SplashScreen.setOptions({ fade: true, duration: fadeMs });
         }
         await SplashScreen.hideAsync();
       } catch {

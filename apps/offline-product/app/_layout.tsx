@@ -5,10 +5,8 @@ import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
 import 'react-native-reanimated';
 
-import { AutoPlotUploadBridge } from '@/components/AutoPlotUploadBridge';
-import { ConsentPushBridge } from '@/components/ConsentPushBridge';
+import { MaestroCiLayoutBridges } from '@/components/MaestroCiLayoutBridges';
 import { AppErrorBoundary } from '@/components/observability/AppErrorBoundary';
-import { PushRegistrationBridge } from '@/components/PushRegistrationBridge';
 import { SplashGate } from '@/components/layout/SplashGate';
 import { MaestroBootReadyMarker } from '@/components/layout/MaestroBootReadyMarker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
@@ -35,9 +33,7 @@ export default function RootLayout() {
           <View style={{ flex: 1 }}>
             <SplashGate>
               <SignInProvider>
-                <AutoPlotUploadBridge />
-                <PushRegistrationBridge />
-                <ConsentPushBridge />
+                <MaestroCiLayoutBridges />
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                   <Stack>
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

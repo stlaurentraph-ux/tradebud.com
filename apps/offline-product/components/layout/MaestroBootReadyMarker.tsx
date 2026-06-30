@@ -5,10 +5,10 @@ import {
   MAESTRO_BOOT_READY_TEST_ID,
   MAESTRO_BOOT_SETTING_KEYS,
 } from '@/features/testing/maestroBootStateRegistry';
+import { isMaestroCiBuild } from '@/features/testing/maestroCiBootProfile';
 import { useAppState } from '@/features/state/AppStateContext';
 import { getSetting } from '@/features/state/persistence';
 
-const MAESTRO_CI_BUILD = process.env.EXPO_PUBLIC_MAESTRO_CI === '1';
 const MAESTRO_BOOT_READY_LABEL = 'Maestro boot ready';
 
 /**
@@ -23,13 +23,13 @@ export function MaestroBootReadyMarker() {
   useEffect(() => {
     if (!isAppReady || bootError) {
       setVisible(false);
-      if (MAESTRO_CI_BUILD && Platform.OS === 'android') {
+      if (isMaestroCiBuild() && Platform.OS === 'android') {
         console.warn(`[MaestroBoot] blocked isAppReady=${isAppReady} bootError=${bootError}`);
       }
       return;
     }
 
-    if (MAESTRO_CI_BUILD) {
+    if (isMaestroCiBuild()) {
       setVisible(true);
       if (Platform.OS === 'android') {
         console.warn('[MaestroBoot] marker visible (CI build, SQLite boot ok)');
@@ -54,7 +54,7 @@ export function MaestroBootReadyMarker() {
 
   // Android UiAutomator treats empty ViewGroups as invisible even with opaque bg;
   // a TextView with label text is required for Maestro extendedWaitUntil visible.
-  if (MAESTRO_CI_BUILD && Platform.OS === 'android') {
+  if (isMaestroCiBuild() && Platform.OS === 'android') {
     return (
       <Text
         testID={MAESTRO_BOOT_READY_TEST_ID}

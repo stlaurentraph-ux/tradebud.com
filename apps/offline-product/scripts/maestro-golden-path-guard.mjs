@@ -212,6 +212,23 @@ function assertAndroidRunner(manifest) {
   if (!readOffline('app.config.js').includes('reactCompiler: false')) {
     throw new Error('app.config.js must disable reactCompiler when MAESTRO_CI=1');
   }
+  const thinBootProfile = readOffline('features/testing/maestroCiBootProfile.ts');
+  if (!thinBootProfile.includes('shouldUseMaestroCiThinBoot')) {
+    throw new Error('maestroCiBootProfile.ts must define shouldUseMaestroCiThinBoot');
+  }
+  if (!readOffline('features/state/AppStateContext.tsx').includes('shouldUseMaestroCiThinBoot')) {
+    throw new Error('AppStateContext must skip hydrateSyncAuthFromSettings on Maestro CI thin boot');
+  }
+  if (!readOffline('features/auth/SignInSheetContext.tsx').includes('shouldUseMaestroCiThinBoot')) {
+    throw new Error('SignInSheetContext must skip network refreshAuth on Maestro CI thin boot');
+  }
+  const rootLayout = readOffline('app/_layout.tsx');
+  if (!rootLayout.includes('MaestroCiLayoutBridges')) {
+    throw new Error('app/_layout.tsx must defer background bridges via MaestroCiLayoutBridges on CI');
+  }
+  if (!readOffline('features/observability/initObservability.ts').includes('shouldUseMaestroCiThinBoot')) {
+    throw new Error('initObservability must no-op on Maestro CI thin boot');
+  }
   if (!bootstrap.includes('dump_tracebud_logcat')) {
     throw new Error('Android bootstrap must dump logcat after seed for Maestro diagnostics');
   }
@@ -456,7 +473,7 @@ function assertPackageScripts(manifest) {
   if (!pkg.scripts?.['qa:maestro:golden-path:assert']) {
     throw new Error('package.json must define qa:maestro:golden-path:assert');
   }
-  for (const script of ['qa:maestro:prepush', 'qa:maestro:prepush:full', 'qa:maestro:prepush:assert']) {
+  for (const script of ['qa:maestro:prepush', 'qa:maestro:prepush:full', 'qa:maestro:prepush:assert', 'qa:maestro:prepush:android:smoke']) {
     if (!pkg.scripts?.[script]) {
       throw new Error(`package.json must define ${script} (H25 cost prepush)`);
     }

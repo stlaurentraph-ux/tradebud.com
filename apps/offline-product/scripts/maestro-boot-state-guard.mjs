@@ -79,7 +79,19 @@ function main() {
     if (!iosBootstrap.includes(path.basename(profile.seedScript))) {
       issues.push(`iOS bootstrap must call ${profile.seedScript} for golden path`);
     }
-    if (!androidBootstrap.includes(path.basename(profile.seedScript))) {
+    const androidUsesInAppSeed =
+      androidBootstrap.includes('MAESTRO_ANDROID_IN_APP_DB_SEED') &&
+      androidBootstrap.includes('in-app bundled SQLite');
+    if (androidUsesInAppSeed) {
+      const bootDbNative = read('features/testing/maestroCiBootDatabase.native.ts');
+      if (!bootDbNative.includes('tracebud_offline.db')) {
+        issues.push('maestroCiBootDatabase.native.ts must copy bundled tracebud_offline.db');
+      }
+      const generateDb = read('scripts/generate-maestro-ci-boot-db.mjs');
+      if (!generateDb.includes('goldenPathBootProfile') || !generateDb.includes('profile.settings')) {
+        issues.push('generate-maestro-ci-boot-db.mjs must apply golden_path_minimal settings from baseline');
+      }
+    } else if (!androidBootstrap.includes(path.basename(profile.seedScript))) {
       issues.push(`Android bootstrap must call ${profile.seedScript} for golden path`);
     }
     if (profile.buildFromCommit) {

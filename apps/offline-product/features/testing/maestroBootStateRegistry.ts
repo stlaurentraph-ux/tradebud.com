@@ -25,3 +25,6 @@ export const MAESTRO_GOLDEN_PATH_FLOW_TEST_IDS = [
   'tab-settings',
   'welcome-account-skip',
 ] as const;
+
+/** Android CI copies this DB from APK assets — see maestroCiBootDatabase.native.ts */
+export const MAESTRO_CI_BUNDLED_BOOT_DB_ASSET = 'assets/maestro/tracebud_offline.db' as const;

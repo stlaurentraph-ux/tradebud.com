@@ -73,6 +73,7 @@ import {
 import type { OAuthProvider } from '@/features/auth/oauthSignIn';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
+import { shouldUseMaestroCiThinBoot } from '@/features/testing/maestroCiBootProfile';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { getSetting, loadAppState, loadLocalDeliveryReceiptsForFarmer, loadPendingSyncActions, setSetting, adoptOnDeviceFarmerScope } from '@/features/state/persistence';
 import { unregisterFarmerPushToken } from '@/features/notifications/registerFarmerPushToken';
@@ -496,6 +497,10 @@ export function SignInProvider({ children }: { children: ReactNode }) {
   }, [farmer?.id, plots, syncLocalFarmerFromAuth, t]);
 
   useEffect(() => {
+    if (shouldUseMaestroCiThinBoot()) {
+      setAuthReady(true);
+      return;
+    }
     void refreshAuth().finally(() => setAuthReady(true));
   }, [refreshAuth]);
 
@@ -506,6 +511,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!authReady || isSignedIn) return;
+    if (shouldUseMaestroCiThinBoot()) return;
     void (async () => {
       const dismissed = await getSetting(ACCOUNT_WELCOME_DISMISSED_KEY);
       if (dismissed !== '1') {
