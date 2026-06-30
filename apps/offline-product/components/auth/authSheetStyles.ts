@@ -27,7 +27,13 @@ export function createAuthSheetStyles(c: AppColors, isDark: boolean) {
       gap: 8,
       borderWidth: isDark ? StyleSheet.hairlineWidth : 0,
       borderColor: c.border,
+    },
+    cardScroll: {
       zIndex: 1,
+      flexGrow: 0,
+    },
+    cardScrollContent: {
+      flexGrow: 0,
     },
     headerRow: {
       flexDirection: 'row',

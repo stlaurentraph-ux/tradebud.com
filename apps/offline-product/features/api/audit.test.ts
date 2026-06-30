@@ -19,7 +19,7 @@ vi.mock('@/features/api/runtimeGuards', () => ({
   getTracebudApiBaseUrl: () => 'https://api.example.com/api',
 }));
 
-import { fetchAuditForFarmer } from './audit';
+import { fetchAuditForFarmer, postAuditEventToBackend } from './audit';
 
 describe('fetchAuditForFarmer', () => {
   beforeEach(() => {
@@ -61,6 +61,66 @@ describe('fetchAuditForFarmer', () => {
     } as Response);
 
     await expect(fetchAuditForFarmer('farmer-1')).rejects.toThrow('sign_in_session_expired');
+    expect(mocks.logError).not.toHaveBeenCalled();
+  });
+});
+
+describe('postAuditEventToBackend', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn());
+  });
+
+  it('retries once after invalid token and does not log auth noise', async () => {
+    mocks.getAccessTokenFromSupabase
+      .mockResolvedValueOnce('stale-token')
+      .mockResolvedValueOnce('fresh-token');
+
+    vi.mocked(fetch)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ message: 'Invalid token' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ id: 'audit-1', timestamp: '2026-07-01T00:00:00Z' }),
+      } as Response);
+
+    await expect(
+      postAuditEventToBackend({
+        eventType: 'field_device_preferences_updated',
+        payload: { farmerId: 'farmer-1' },
+      }),
+    ).resolves.toEqual({
+      ok: true,
+      id: 'audit-1',
+      timestamp: '2026-07-01T00:00:00Z',
+    });
+
+    expect(mocks.forceSyncAccessTokenRefresh).toHaveBeenCalledTimes(1);
+    expect(mocks.logError).not.toHaveBeenCalled();
+  });
+
+  it('returns no_access_token without logging when refresh still fails', async () => {
+    mocks.getAccessTokenFromSupabase.mockResolvedValue('stale-token');
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: async () => ({ message: 'Invalid token' }),
+    } as Response);
+
+    await expect(
+      postAuditEventToBackend({
+        eventType: 'field_device_preferences_updated',
+        payload: { farmerId: 'farmer-1' },
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      reason: 'no_access_token',
+      message: 'sign_in_session_expired',
+    });
     expect(mocks.logError).not.toHaveBeenCalled();
   });
 });

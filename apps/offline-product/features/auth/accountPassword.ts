@@ -1,10 +1,18 @@
 import {
+  getAccessTokenFromSupabase,
   getAuthCredentials,
-  getAuthenticatedSupabaseClientWithSession,
+  getSupabaseAuthClient,
+  getSyncAuthMethod,
+  getSyncAuthUser,
+  getTracebudApiBaseUrl,
   saveAndApplyPasswordSession,
 } from '@/features/api/syncAuthSession';
 import { mapSetPasswordError } from '@/features/auth/mapAuthError';
-import { loadSyncAuthCredentials } from '@/features/security/syncAuthStorage';
+import {
+  hasLinkedPasswordForOAuthUser,
+  loadSyncAuthCredentials,
+  saveLinkedPasswordForOAuthUser,
+} from '@/features/security/syncAuthStorage';
 
 export {
   getLinkedOAuthProviders,
@@ -16,46 +24,77 @@ export {
   type OAuthProviderLabel,
 } from '@/features/auth/accountPasswordPolicy';
 
+function parseApiErrorMessage(body: unknown, fallback: string): string {
+  if (!body || typeof body !== 'object') return fallback;
+  const message = (body as { message?: unknown }).message;
+  if (typeof message === 'string' && message.trim()) {
+    return message.trim();
+  }
+  if (Array.isArray(message) && message.length > 0) {
+    return String(message[0]);
+  }
+  return fallback;
+}
+
+async function setAccountPasswordViaBackend(
+  password: string,
+  accessToken: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const apiBase = getTracebudApiBaseUrl();
+  const res = await fetch(`${apiBase}/v1/me/account-password`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ password }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const rawMessage = parseApiErrorMessage(body, res.statusText || 'Request failed');
+    return { ok: false, message: mapSetPasswordError({ message: rawMessage }) };
+  }
+
+  return { ok: true };
+}
+
 export async function setAccountPasswordForCurrentUser(
   newPassword: string,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
-    const client = await getAuthenticatedSupabaseClientWithSession();
-    if (!client) {
+    const accessToken = await getAccessTokenFromSupabase();
+    if (!accessToken) {
       return { ok: false, message: 'settings_password_sign_in_required' };
     }
 
-    const { data: userData, error: userError } = await client.auth.getUser();
-    const user = userData.user;
-    if (userError || !user) {
-      return { ok: false, message: 'settings_password_sign_in_required' };
-    }
-
-    const email = user.email?.trim() || getAuthCredentials().email.trim();
+    const email =
+      getAuthCredentials().email.trim() || (await getSyncAuthUser())?.email?.trim() || '';
     if (!email) {
       return { ok: false, message: 'settings_password_no_email' };
     }
 
-    const { error: updateError } = await client.auth.updateUser({ password: newPassword });
-    if (updateError) {
-      return { ok: false, message: mapSetPasswordError(updateError) };
+    const backendResult = await setAccountPasswordViaBackend(newPassword, accessToken);
+    if (!backendResult.ok) {
+      return backendResult;
     }
 
-    const { data: signInData, error: signInError } = await client.auth.signInWithPassword({
+    const authMethod = getSyncAuthMethod();
+    if (authMethod === 'oauth') {
+      await saveLinkedPasswordForOAuthUser(email, newPassword);
+      return { ok: true };
+    }
+
+    const supabase = getSupabaseAuthClient();
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password: newPassword,
     });
     if (signInError || !signInData.session) {
-      return {
-        ok: false,
-        message: signInError
-          ? mapSetPasswordError(signInError)
-          : 'settings_password_sign_in_required',
-      };
+      return { ok: true };
     }
 
     await saveAndApplyPasswordSession(email, newPassword, signInData.session);
-
     return { ok: true };
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
@@ -68,5 +107,8 @@ export async function setAccountPasswordForCurrentUser(
 
 export async function hasStoredPasswordCredential(): Promise<boolean> {
   const credentials = await loadSyncAuthCredentials();
-  return credentials?.method === 'password' && Boolean(credentials.password);
+  if (credentials?.method === 'password' && credentials.password) {
+    return true;
+  }
+  return hasLinkedPasswordForOAuthUser();
 }

@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FieldAccountService } from '../auth/field-account.service';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PlotsService } from './plots.service';
 
@@ -17,7 +18,10 @@ import { PlotsService } from './plots.service';
 @UseGuards(SupabaseAuthGuard)
 @Controller()
 export class FieldAppController {
-  constructor(private readonly plotsService: PlotsService) {}
+  constructor(
+    private readonly plotsService: PlotsService,
+    private readonly fieldAccountService: FieldAccountService,
+  ) {}
 
   @Get('v1/me/field-farmer-ids')
   @ApiOperation({
@@ -65,5 +69,23 @@ export class FieldAppController {
     });
     const ownedFarmerIds = await this.plotsService.listFarmerProfileIdsForAuthUser(userId);
     return { ok: true, farmer_id: farmerId, owned_farmer_ids: ownedFarmerIds };
+  }
+
+  @Post('v1/me/account-password')
+  @ApiOperation({
+    summary: 'Set or change the signed-in user password (field app)',
+  })
+  async setAccountPassword(@Body() body: { password?: string }, @Req() req: any) {
+    const userId = req.user?.id as string | undefined;
+    if (!userId) {
+      throw new ForbiddenException('Missing authenticated user');
+    }
+    const password = body.password?.trim();
+    if (!password) {
+      throw new BadRequestException('password is required');
+    }
+    await this.fieldAccountService.ensureEmailIdentityForAuthUser(userId);
+    await this.fieldAccountService.setPasswordForAuthUser(userId, password);
+    return { ok: true };
   }
 }

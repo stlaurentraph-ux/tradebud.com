@@ -38,6 +38,7 @@ import {
   verifySyncAccessToken,
 } from '@/features/api/syncAuthSession';
 import { getAuthCredentials } from '@/features/api/postPlot';
+import { AuthSheetScrollCard } from '@/components/auth/AuthSheetScrollCard';
 import { BackupConsentModal } from '@/components/auth/BackupConsentModal';
 import { CreateAccountWizard } from '@/components/auth/CreateAccountWizard';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
@@ -924,7 +925,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
               accessibilityLabel={t('sign_in_skip')}
               onPress={closeSignIn}
             />
-            <View style={authSheetStyles.card}>
+            <AuthSheetScrollCard styles={authSheetStyles}>
               <View style={authSheetStyles.headerRow}>
                 {emailMode ? (
                   <Pressable
@@ -1031,7 +1032,7 @@ export function SignInProvider({ children }: { children: ReactNode }) {
                   </Pressable>
                 </View>
               ) : null}
-            </View>
+            </AuthSheetScrollCard>
           </View>
         </KeyboardAvoidingView>
       </Modal>

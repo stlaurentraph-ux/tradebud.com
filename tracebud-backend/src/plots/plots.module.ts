@@ -15,6 +15,7 @@ import { BulkPlotImportService } from './bulk-plot-import.service';
 import { BulkPlotImportSigningKeyService } from './bulk-plot-import-signing-key.service';
 import { CadastralParcelController } from './cadastral-parcel.controller';
 import { CadastralParcelLookupService } from './cadastral-parcel-lookup.service';
+import { FieldAccountService } from '../auth/field-account.service';
 import { FieldAppController } from './field-app.controller';
 import { PlotGeometryValidationService } from './plot-geometry-validation.service';
 import { PlotsController } from './plots.controller';
@@ -53,6 +54,7 @@ import { FdpCommodityService } from '../compliance/fdp-commodity.service';
     GfwService,
     GfwContextService,
     FdpCommodityService,
+    FieldAccountService,
   ],
 })
 export class PlotsModule {}

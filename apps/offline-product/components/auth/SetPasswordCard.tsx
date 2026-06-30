@@ -1,5 +1,6 @@
 import { useEffect, useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -130,10 +131,15 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
         setMessage(formatSignInErrorMessage(t, result.message));
         return;
       }
+      const wasSetMode = mode === 'set';
       resetModal();
       setOfferSet(false);
       setOfferChange(true);
       onPasswordSaved?.();
+      Alert.alert(
+        wasSetMode ? t('settings_password_saved_title') : t('settings_password_changed_title'),
+        wasSetMode ? t('settings_password_saved_body') : t('settings_password_changed_body'),
+      );
       await refresh();
     } catch (e) {
       setMessage(
@@ -144,7 +150,7 @@ export function SetPasswordCard({ signedIn, t, onPasswordSaved }: SetPasswordCar
     }
   };
 
-  if (!signedIn || loading || !mode) {
+  if (!signedIn || (loading && !mode) || !mode) {
     return null;
   }
 

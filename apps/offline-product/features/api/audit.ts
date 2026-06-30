@@ -81,59 +81,75 @@ export async function postAuditEventToBackend(params: {
   payload: Record<string, unknown>;
   deviceId?: string | null;
 }): Promise<PostAuditEventResult> {
-  let accessToken: string | null;
-  try {
-    accessToken = await getAccessTokenFromSupabase();
-  } catch {
-    accessToken = null;
-  }
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    let accessToken: string | null;
+    try {
+      accessToken = await getAccessTokenFromSupabase();
+    } catch {
+      accessToken = null;
+    }
 
-  if (!accessToken) {
-    return { ok: false, reason: 'no_access_token' };
-  }
+    if (!accessToken) {
+      return { ok: false, reason: 'no_access_token' };
+    }
 
-  try {
-    const res = await fetch(`${API_BASE_URL}/v1/audit`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        eventType: params.eventType,
-        payload: params.payload,
-        deviceId: params.deviceId ?? undefined,
-      }),
-    });
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/audit`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          eventType: params.eventType,
+          payload: params.payload,
+          deviceId: params.deviceId ?? undefined,
+        }),
+      });
 
-    if (!res.ok) {
+      if (res.ok) {
+        const row = (await res.json().catch(() => ({}))) as { id?: string; timestamp?: string };
+        return { ok: true, id: row.id, timestamp: row.timestamp };
+      }
+
       const body = await res.json().catch(() => ({}));
-      logError(new Error(body.message ?? `Audit POST failed (${res.status})`), {
+      const message =
+        messageFromBackendJson(body) ?? `Audit POST failed (${res.status})`;
+      const sessionFailure = isAuthSessionApiFailure(res.status, message);
+
+      if (sessionFailure && attempt === 0) {
+        forceSyncAccessTokenRefresh();
+        continue;
+      }
+
+      if (!sessionFailure) {
+        logError(new Error(message), {
+          context: 'postAuditEvent',
+          statusCode: res.status,
+          eventType: params.eventType,
+        });
+      }
+
+      return {
+        ok: false,
+        reason: sessionFailure ? 'no_access_token' : 'server_error',
+        message: sessionFailure ? 'sign_in_session_expired' : message,
+      };
+    } catch (e) {
+      logError(e as Error, {
         context: 'postAuditEvent',
-        statusCode: res.status,
+        phase: 'network',
         eventType: params.eventType,
       });
       return {
         ok: false,
-        reason: 'server_error',
-        message: messageFromBackendJson(body) ?? `Audit POST failed (${res.status})`,
+        reason: 'network_error',
+        message: e instanceof Error ? e.message : String(e),
       };
     }
-
-    const row = (await res.json().catch(() => ({}))) as { id?: string; timestamp?: string };
-    return { ok: true, id: row.id, timestamp: row.timestamp };
-  } catch (e) {
-    logError(e as Error, {
-      context: 'postAuditEvent',
-      phase: 'network',
-      eventType: params.eventType,
-    });
-    return {
-      ok: false,
-      reason: 'network_error',
-      message: e instanceof Error ? e.message : String(e),
-    };
   }
+
+  return { ok: false, reason: 'no_access_token', message: 'sign_in_session_expired' };
 }
 
 /**

@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ThemedText } from '@/components/themed-text';
+import { AuthSheetScrollCard } from '@/components/auth/AuthSheetScrollCard';
 import { OAuthProviderButtons } from '@/components/auth/OAuthProviderButtons';
 import { createAuthSheetStyles } from '@/components/auth/authSheetStyles';
 import { Brand, Spacing } from '@/constants/theme';
@@ -205,7 +206,7 @@ export function CreateAccountWizard({
             accessibilityLabel={t('cancel')}
             onPress={onClose}
           />
-          <View style={authSheetStyles.card}>
+          <AuthSheetScrollCard styles={authSheetStyles}>
             <View style={authSheetStyles.headerRow}>
               {showBack ? (
                 <Pressable
@@ -350,7 +351,7 @@ export function CreateAccountWizard({
                 </Pressable>
               </View>
             ) : null}
-          </View>
+          </AuthSheetScrollCard>
         </View>
       </KeyboardAvoidingView>
     </Modal>

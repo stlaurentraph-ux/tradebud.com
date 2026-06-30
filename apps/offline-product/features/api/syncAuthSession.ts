@@ -604,10 +604,14 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
       const refreshedEmail = getFieldAppEmailFromSession(data.session);
       if (refreshedEmail) {
         currentEmail = refreshedEmail;
-      } else if (data.session.user.email) {
+      } else       if (data.session.user.email) {
         currentEmail = data.session.user.email;
       }
       applySessionToCache(data.session);
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
       return supabase;
     }
 
@@ -620,6 +624,10 @@ export async function getAuthenticatedSupabaseClientWithSession(): Promise<Supab
         return null;
       }
       applySessionToCache(data.session);
+      await supabase.auth.setSession({
+        access_token: data.session.access_token,
+        refresh_token: data.session.refresh_token,
+      });
       return supabase;
     }
 

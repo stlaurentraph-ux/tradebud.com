@@ -146,6 +146,32 @@ export async function loadSyncAuthCredentials(): Promise<SyncAuthCredentials | n
   return null;
 }
 
+/** Keep Google/Apple refresh auth and add an email+password fallback on the same account. */
+export async function saveLinkedPasswordForOAuthUser(email: string, password: string): Promise<void> {
+  const normalizedEmail = email.trim();
+  if (!normalizedEmail || !password) {
+    throw new Error('Email and password are required.');
+  }
+  if (await isSyncAuthDismissedOnDevice()) {
+    return;
+  }
+  if (!(await supportsSecureStore())) {
+    throw new Error('Password sync credentials require secure storage on this device.');
+  }
+  await SecureStore.setItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY, password);
+  await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EMAIL_KEY, normalizedEmail);
+}
+
+export async function hasLinkedPasswordForOAuthUser(): Promise<boolean> {
+  if (!(await supportsSecureStore()) || (await isSyncAuthDismissedOnDevice())) {
+    return false;
+  }
+  const method = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_METHOD_KEY))?.trim() ?? '';
+  if (method !== 'oauth') return false;
+  const password = (await SecureStore.getItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY)) ?? '';
+  return password.length > 0;
+}
+
 export async function saveSyncAuthCredentials(email: string, password: string): Promise<void> {
   const normalizedEmail = email.trim();
   if (!normalizedEmail || !password) {
@@ -198,7 +224,6 @@ export async function saveOAuthSyncAuthCredentials(
         await SecureStore.setItemAsync(SECURE_SYNC_AUTH_EXPIRES_AT_KEY, String(Math.floor(expiresAt)));
       }
     }
-    await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_PASSWORD_KEY).catch(() => undefined);
     await clearLegacyCredentials();
     if (await isSyncAuthDismissedOnDevice()) {
       await SecureStore.deleteItemAsync(SECURE_SYNC_AUTH_METHOD_KEY).catch(() => undefined);
