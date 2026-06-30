@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-22T14:46:08.609Z",
-  "mobilePathCount": 26,
+  "generatedAt": "2026-06-30T22:59:32.123Z",
+  "mobilePathCount": 27,
   "openApiPathCount": 120,
   "mobilePaths": [
     "/v1/audit",
@@ -24,6 +24,7 @@
     "/v1/plots",
     "/v1/plots/{id}",
     "/v1/plots/{id}/compliance-check",
+    "/v1/plots/{id}/evidence-signed-url",
     "/v1/plots/{id}/evidence-sync",
     "/v1/plots/{id}/gfw-check",
     "/v1/plots/{id}/legal-sync",
@@ -47,6 +48,7 @@
     "/v1/me/push-devices/unregister",
     "/v1/plots/{id}",
     "/v1/plots/{id}/compliance-check",
+    "/v1/plots/{id}/evidence-signed-url",
     "/v1/plots/{id}/gfw-check",
     "/v1/plots/{id}/tenure-verification"
   ],

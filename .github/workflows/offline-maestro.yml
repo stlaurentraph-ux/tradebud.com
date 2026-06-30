@@ -376,6 +376,9 @@ jobs:
           path: apps/offline-product/android/app/build/outputs/apk/debug
           merge-multiple: true
 
+      - name: Stage Maestro Android APK
+        run: bash ./scripts/maestro-ci-stage-android-apk.sh
+
       - name: Install Maestro CLI
         env:
           MAESTRO_VERSION: ${{ vars.MAESTRO_CLI_VERSION }}
@@ -479,6 +482,9 @@ jobs:
           name: maestro-android-apk
           path: apps/offline-product/android/app/build/outputs/apk/debug
           merge-multiple: true
+
+      - name: Stage Maestro Android APK
+        run: bash ./scripts/maestro-ci-stage-android-apk.sh
 
       - name: Install Maestro CLI
         env:

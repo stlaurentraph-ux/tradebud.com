@@ -32,7 +32,7 @@ appId: com.tracebud.app
     element:
       id: "settings-cloud-parity-section"
     direction: DOWN
-    timeout: 15000
+    timeout: 30000
     speed: 40
     visibilityPercentage: 20
     optional: true
