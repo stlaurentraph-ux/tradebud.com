@@ -69,6 +69,14 @@ fs.writeFileSync(propsPath, source);
 NODE
 fi
 
+# Run expo export:embed BEFORE generating the Maestro boot DB so that Metro
+# does not see assets/maestro/tracebud_offline.db during its asset scan.
+# metro.config.js adds '.db' to assetExts; if the DB file exists at export
+# time, Metro can relocate it to a hashed asset path and the file ends up
+# absent from assets/maestro/tracebud_offline.db in the final APK.
+echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
+npx expo export:embed --eager --platform android --dev false
+
 echo "==> Generate Maestro CI boot SQLite asset (in-app seed — no host adb)"
 node ./scripts/generate-maestro-ci-boot-db.mjs
 
@@ -81,9 +89,6 @@ fi
 mkdir -p "$(dirname "$MAESTRO_BOOT_DB_DST")"
 cp "$MAESTRO_BOOT_DB_SRC" "$MAESTRO_BOOT_DB_DST"
 echo "==> Copied Maestro boot DB into Android native assets"
-
-echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
-npx expo export:embed --eager --platform android --dev false
 
 # Release assemble OOMs on GHA (Metaspace) — debug + embedded bundle is the CI path.
 export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8}"
