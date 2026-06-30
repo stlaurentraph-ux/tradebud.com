@@ -37,15 +37,24 @@ echo "==> Using Android device $DEVICE_SERIAL"
 
 APK_PATH="${MAESTRO_ANDROID_APK_PATH:-$ROOT/android/app/build/outputs/apk/debug/app-debug.apk}"
 if [[ ! -f "$APK_PATH" ]]; then
-  echo "::error::Missing prebuilt APK at $APK_PATH (assemble step must run first)."
-  find "$ROOT" -name 'app-debug.apk' 2>/dev/null | head -5 || true
-  exit 1
+  # Fallback: actions/download-artifact@v4 with merge-multiple:false places files in a subdirectory.
+  APK_SUBDIR="$(dirname "$APK_PATH")/maestro-android-apk/app-debug.apk"
+  if [[ -f "$APK_SUBDIR" ]]; then
+    echo "==> APK not at expected path; using artifact subdirectory: $APK_SUBDIR"
+    APK_PATH="$APK_SUBDIR"
+  else
+    echo "::error::Missing prebuilt APK at $APK_PATH (assemble step must run first)."
+    find "$ROOT" -name 'app-debug.apk' 2>/dev/null | head -5 || true
+    exit 1
+  fi
 fi
 
 preflight_maestro_apk() {
-  echo "==> Preflight: bundled Maestro boot DB in APK"
+  echo "==> Preflight: bundled Maestro boot DB in APK ($APK_PATH)"
   if ! unzip -l "$APK_PATH" | grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db'; then
     echo "::error::APK missing assets/maestro/tracebud_offline.db — assemble must run generate-maestro-ci-boot-db.mjs"
+    echo "==> APK contents (maestro/assets):"
+    unzip -l "$APK_PATH" 2>/dev/null | grep -iE 'maestro|assets/|\.db$' || echo "  (unzip failed or no matching entries)"
     exit 1
   fi
 }

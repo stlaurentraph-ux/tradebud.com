@@ -355,6 +355,7 @@ jobs:
         with:
           name: maestro-android-apk
           path: apps/offline-product/android/app/build/outputs/apk/debug
+          merge-multiple: true
 
       - name: Install Maestro CLI
         env:
@@ -458,6 +459,7 @@ jobs:
         with:
           name: maestro-android-apk
           path: apps/offline-product/android/app/build/outputs/apk/debug
+          merge-multiple: true
 
       - name: Install Maestro CLI
         env:
