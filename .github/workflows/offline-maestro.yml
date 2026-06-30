@@ -379,7 +379,7 @@ jobs:
           MAESTRO_EMULATOR_SNAPSHOT_NAME: maestro_ci_boot
         run: |
           set -euo pipefail
-          opts="$(bash apps/offline-product/scripts/maestro-ci-resolve-emulator-options.sh)"
+          opts="$(bash ./scripts/maestro-ci-resolve-emulator-options.sh)"
           echo "options=${opts}" >> "$GITHUB_OUTPUT"
 
       - name: Run Maestro Android PR smoke on emulator
@@ -397,7 +397,7 @@ jobs:
           script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android-smoke.sh
 
       - name: Save emulator AVD snapshot
-        if: success()
+        if: success() && steps.avd-snapshot-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ~/.android/avd
@@ -480,7 +480,7 @@ jobs:
           MAESTRO_EMULATOR_SNAPSHOT_NAME: maestro_ci_boot
         run: |
           set -euo pipefail
-          opts="$(bash apps/offline-product/scripts/maestro-ci-resolve-emulator-options.sh)"
+          opts="$(bash ./scripts/maestro-ci-resolve-emulator-options.sh)"
           echo "options=${opts}" >> "$GITHUB_OUTPUT"
 
       - name: Run Maestro golden path on Android emulator
@@ -498,7 +498,7 @@ jobs:
           script: cd apps/offline-product && bash ./scripts/maestro-ci-golden-path-android.sh
 
       - name: Save emulator AVD snapshot
-        if: success()
+        if: success() && steps.avd-snapshot-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
           path: ~/.android/avd
