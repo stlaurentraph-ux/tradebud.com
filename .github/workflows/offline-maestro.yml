@@ -379,7 +379,7 @@ jobs:
           MAESTRO_EMULATOR_SNAPSHOT_NAME: maestro_ci_boot
         run: |
           set -euo pipefail
-          opts="$(bash apps/offline-product/scripts/maestro-ci-resolve-emulator-options.sh)"
+          opts="$(bash scripts/maestro-ci-resolve-emulator-options.sh)"
           echo "options=${opts}" >> "$GITHUB_OUTPUT"
 
       - name: Run Maestro Android PR smoke on emulator
@@ -480,7 +480,7 @@ jobs:
           MAESTRO_EMULATOR_SNAPSHOT_NAME: maestro_ci_boot
         run: |
           set -euo pipefail
-          opts="$(bash apps/offline-product/scripts/maestro-ci-resolve-emulator-options.sh)"
+          opts="$(bash scripts/maestro-ci-resolve-emulator-options.sh)"
           echo "options=${opts}" >> "$GITHUB_OUTPUT"
 
       - name: Run Maestro golden path on Android emulator
