@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/themed-text';
 import { FieldMapAttribution } from '@/components/plot-map/FieldMapAttribution';
 import type { Plot } from '@/features/state/AppStateContext';
+import { FieldMapMountGate } from '@/components/plot-map/FieldMapMountGate';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
 import {
   fieldMapUsesCustomTiles,
@@ -82,40 +83,45 @@ export function PlotMapPreview({
         style,
       ]}
     >
-      <MapView
-        style={StyleSheet.absoluteFill}
-        initialRegion={region}
-        scrollEnabled={false}
-        zoomEnabled={false}
-        rotateEnabled={false}
-        pitchEnabled={false}
-        cacheEnabled
-        toolbarEnabled={false}
-        {...FIELD_MAP_VIEW_UI_PROPS}
-        mapType={fieldMapUsesCustomTiles(tileMode) ? 'none' : 'standard'}
-      >
-        <FieldMapLayers
-          lowDataMap={false}
-          offlineTilesEnabled={offlineTilesEnabled}
-          offlineTilesPackId={offlineTilesPackId}
-        />
-        {plot.kind === 'polygon' && plot.points.length > 2 ? (
-          <Polyline
-            coordinates={[...plot.points, plot.points[0]]}
-            strokeColor="#0A7F59"
-            strokeWidth={height >= 120 ? 3 : 2}
-          />
-        ) : null}
-        {plot.points[0] ? (
-          <Circle
-            center={plot.points[0]}
-            radius={plot.kind === 'point' ? 18 : 14}
-            fillColor="rgba(10, 127, 89, 0.35)"
-            strokeColor="#0A7F59"
-            strokeWidth={2}
-          />
-        ) : null}
-      </MapView>
+      <FieldMapMountGate
+        blockedStyle={StyleSheet.absoluteFill}
+        mapView={
+          <MapView
+            style={StyleSheet.absoluteFill}
+            initialRegion={region}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            rotateEnabled={false}
+            pitchEnabled={false}
+            cacheEnabled
+            toolbarEnabled={false}
+            {...FIELD_MAP_VIEW_UI_PROPS}
+            mapType={fieldMapUsesCustomTiles(tileMode) ? 'none' : 'standard'}
+          >
+            <FieldMapLayers
+              lowDataMap={false}
+              offlineTilesEnabled={offlineTilesEnabled}
+              offlineTilesPackId={offlineTilesPackId}
+            />
+            {plot.kind === 'polygon' && plot.points.length > 2 ? (
+              <Polyline
+                coordinates={[...plot.points, plot.points[0]]}
+                strokeColor="#0A7F59"
+                strokeWidth={height >= 120 ? 3 : 2}
+              />
+            ) : null}
+            {plot.points[0] ? (
+              <Circle
+                center={plot.points[0]}
+                radius={plot.kind === 'point' ? 18 : 14}
+                fillColor="rgba(10, 127, 89, 0.35)"
+                strokeColor="#0A7F59"
+                strokeWidth={2}
+              />
+            ) : null}
+          </MapView>
+        }
+      />
       {showAttribution ? (
         <FieldMapAttribution lowDataMap={false} offlineTilesEnabled={offlineTilesEnabled} />
       ) : null}

@@ -1,4 +1,4 @@
-import Svg, { Circle, Polygon } from 'react-native-svg';
+import Svg, { Circle, Line, Polygon } from 'react-native-svg';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -39,10 +39,43 @@ export function PlotBoundaryThumbnail({
 
   const projected = projectPlotToThumbnail(plot, size);
   const polygonPoints = thumbnailPointsToSvg(projected);
+  const gridStep = size / 4;
 
   return (
-    <View style={[styles.wrap, { width: size, height: size, borderRadius }, style]}>
+    <View
+      style={[styles.wrap, { width: size, height: size, borderRadius }, style]}
+      accessibilityLabel={t('plot_list_boundary_preview')}
+      accessibilityRole="image"
+    >
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {Array.from({ length: 5 }, (_, index) => {
+          const pos = index * gridStep;
+          return (
+            <Line
+              key={`grid-${index}`}
+              x1={pos}
+              y1={0}
+              x2={pos}
+              y2={size}
+              stroke="#C5DDD3"
+              strokeWidth={0.75}
+            />
+          );
+        })}
+        {Array.from({ length: 5 }, (_, index) => {
+          const pos = index * gridStep;
+          return (
+            <Line
+              key={`grid-h-${index}`}
+              x1={0}
+              y1={pos}
+              x2={size}
+              y2={pos}
+              stroke="#C5DDD3"
+              strokeWidth={0.75}
+            />
+          );
+        })}
         {plot.kind === 'polygon' && projected.length >= 3 ? (
           <Polygon
             points={polygonPoints}

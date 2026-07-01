@@ -57,6 +57,7 @@ import {
 } from '@/features/offlineTiles/manualTraceImagery';
 import { listOfflineTilePacks } from '@/features/offlineTiles/offlineTiles';
 import { pingFieldMapImagery } from '@/features/network/pingFieldMapImagery';
+import { useFieldMapOfflineBanner } from '@/features/mapping/useFieldMapOfflineBanner';
 import { FieldMapLayers } from '@/components/plot-map/FieldMapLayers';
 import { FieldMapMountGate } from '@/components/plot-map/FieldMapMountGate';
 import { FieldMapOfflineBanner } from '@/components/mapping/FieldMapOfflineBanner';
@@ -160,7 +161,6 @@ export function WalkPerimeterScreen() {
   const [lowDataMap, setLowDataMap] = useState(false);
   const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
   const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
-  const [showOfflineMapBanner, setShowOfflineMapBanner] = useState(false);
   const [plotName, setPlotName] = useState('');
   const [plotNameTouched, setPlotNameTouched] = useState(false);
   const [plotLandingNameReady, setPlotLandingNameReady] = useState(false);
@@ -1288,49 +1288,18 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     longitude: deviceRegion?.longitude ?? mapAnchorRegion.longitude,
   };
 
-  useEffect(() => {
-    if (!showCapturePage || lowDataMap) {
-      setShowOfflineMapBanner(false);
-      return;
-    }
-    let cancelled = false;
-    void (async () => {
-      const assessment = await assessManualTraceImageryAvailability({
-        latitude: mapCoordDisplay.latitude,
-        longitude: mapCoordDisplay.longitude,
-        lowDataMap: false,
-        activePackId: offlineTilesPackId,
-        listPacks: listOfflineTilePacks,
-        pingOnlineImagery: pingFieldMapImagery,
-      });
-      if (cancelled) return;
-      if (assessment.allowed && assessment.imagerySource === 'offline_pack' && assessment.packId) {
-        setShowOfflineMapBanner(false);
-        if (!offlineTilesEnabled || offlineTilesPackId !== assessment.packId) {
-          await setSetting('offlineTilesEnabled', '1');
-          await setSetting('offlineTilesActivePackId', assessment.packId);
-          setOfflineTilesEnabled(true);
-          setOfflineTilesPackId(assessment.packId);
-        }
-        return;
-      }
-      if (assessment.allowed && assessment.imagerySource === 'esri_online') {
-        setShowOfflineMapBanner(false);
-        return;
-      }
-      setShowOfflineMapBanner(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    showCapturePage,
+  const showOfflineMapBanner = useFieldMapOfflineBanner({
+    enabled: showCapturePage,
+    latitude: mapCoordDisplay.latitude,
+    longitude: mapCoordDisplay.longitude,
     lowDataMap,
-    mapCoordDisplay.latitude,
-    mapCoordDisplay.longitude,
     offlineTilesEnabled,
     offlineTilesPackId,
-  ]);
+    onOfflinePackActivated: (packId) => {
+      setOfflineTilesEnabled(true);
+      setOfflineTilesPackId(packId);
+    },
+  });
 
   const userMapPosition = useMemo((): MapCoordinate | null => {
     if (isRecording && samples.length > 0) {
@@ -2735,6 +2704,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             ) : showCapturePage && captureMethod === 'pin' ? (
               <>
                 {renderCaptureInstructionsLink()}
+                {showOfflineMapBanner ? <FieldMapOfflineBanner /> : null}
 
                 <View
                   style={[styles.walkMapPanel, { minHeight: pinMapHeight }]}
@@ -2805,6 +2775,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
             ) : showCapturePage && captureMethod === 'centroid' ? (
               <>
                 {renderCaptureInstructionsLink()}
+                {showOfflineMapBanner ? <FieldMapOfflineBanner /> : null}
 
                 <View
                   style={[styles.walkMapPanel, { minHeight: cornerMapHeight }]}
