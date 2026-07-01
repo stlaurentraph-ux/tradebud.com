@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 
 import { buildFieldMapTileUrl } from '@/features/mapping/fieldMapTiles';
 
@@ -267,9 +267,15 @@ export async function downloadOfflineTilePack(params: {
     downloadedAt: Date.now(),
     tileCount: downloaded + skipped,
   };
-  await FileSystem.writeAsStringAsync(packMetaPath(params.packId), JSON.stringify(meta)).catch(
-    () => undefined,
-  );
+
+  if (meta.tileCount === 0) {
+    await FileSystem.deleteAsync(`${OFFLINE_TILES_PACKS_DIR}/${params.packId}`, {
+      idempotent: true,
+    }).catch(() => undefined);
+    throw new Error('No map tiles were saved. Check your connection and try again.');
+  }
+
+  await FileSystem.writeAsStringAsync(packMetaPath(params.packId), JSON.stringify(meta));
 
   return { meta, downloaded, skipped, total };
 }

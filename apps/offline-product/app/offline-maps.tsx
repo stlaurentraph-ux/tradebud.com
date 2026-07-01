@@ -53,7 +53,11 @@ export default function OfflineMapsScreen() {
   const finishDownload = async (packId: string) => {
     await setSetting('offlineTilesEnabled', '1');
     await setSetting('offlineTilesActivePackId', packId);
-    await refreshPacks();
+    const rows = await listOfflineTilePacks();
+    setPacks(rows);
+    if (!rows.some((pack) => pack.id === packId)) {
+      throw new Error(t('offline_maps_download_failed_body'));
+    }
     if (farmer) {
       await queueFieldDevicePreferencesSync(farmer).catch(() => undefined);
     }
@@ -82,7 +86,7 @@ export default function OfflineMapsScreen() {
         packId,
         label: t('offline_maps_near_me_label'),
         bbox,
-        zooms: [14, 15, 16],
+        zooms: [14, 15, 16, 17],
         onProgress: setProgress,
       });
       await finishDownload(packId);

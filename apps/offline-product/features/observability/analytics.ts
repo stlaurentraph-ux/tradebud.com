@@ -45,6 +45,8 @@ export const ANALYTICS_EVENTS = {
   PUSH_PERMISSION_DENIED: 'push_permission_denied',
   WHY_TRACEBUD_VIEWED: 'why_tracebud_viewed',
   WHY_TRACEBUD_HOME_TEASER_CLICKED: 'why_tracebud_home_teaser_clicked',
+  ACTIVITY_FEED_VIEWED: 'activity_feed_viewed',
+  ACTIVITY_ROW_OPENED: 'activity_row_opened',
 } as const;
 
 export type OAuthAnalyticsSource = 'in_app' | 'cold_start';

@@ -86,6 +86,7 @@ import {
   proposeUniqueDefaultPlotName,
 } from '@/features/plots/plotNameValidation';
 import { captureAndPersistPlotListThumbnail } from '@/features/mapping/plotListThumbnailCapture';
+import { plotListThumbnailUriWithLayoutRev } from '@/features/mapping/plotListThumbnailStore';
 
 type LatLng = {
   latitude: number;
@@ -733,7 +734,7 @@ if (farmer?.declarationLatitude != null && farmer?.declarationLongitude != null)
     async (plotId: string): Promise<void> => {
       const uri = await captureAndPersistPlotListThumbnail(plotListCaptureRef.current, plotId);
       if (uri) {
-        updatePlot(plotId, { listThumbnailUri: uri });
+        updatePlot(plotId, { listThumbnailUri: plotListThumbnailUriWithLayoutRev(uri) });
       }
     },
     [updatePlot],

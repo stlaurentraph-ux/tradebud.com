@@ -7,9 +7,13 @@ import { ThemedText } from '@/components/themed-text';
 import type { Plot } from '@/features/state/AppStateContext';
 import {
   projectPlotToThumbnail,
+  plotThumbnailPointsAreDegenerate,
   thumbnailPointsToSvg,
 } from '@/features/mapping/plotThumbnailGeometry';
 import { resolvePlotListSatelliteTileLayout } from '@/features/mapping/plotListSatelliteTile';
+import {
+  PLOT_LIST_THUMB_RENDER_SCALE,
+} from '@/features/mapping/plotListThumbnailStore';
 import { listOfflineTilePacks } from '@/features/offlineTiles/offlineTiles';
 import { useLanguage } from '@/features/state/LanguageContext';
 
@@ -27,6 +31,8 @@ export type PlotBoundaryThumbnailProps = {
   onImageryPainted?: () => void;
   /** Fires when satellite tile cannot load for this plot. */
   onImageryUnavailable?: () => void;
+  /** Internal render scale for satellite + SVG (default 3× display size). */
+  renderScale?: number;
 };
 
 /** Plot list thumbnail — Esri/offline satellite tile under SVG boundary (no MapView). */
@@ -41,17 +47,25 @@ export function PlotBoundaryThumbnail({
   cacheOnlineTileLocally = false,
   onImageryPainted,
   onImageryUnavailable,
+  renderScale = PLOT_LIST_THUMB_RENDER_SCALE,
 }: PlotBoundaryThumbnailProps) {
   const { t } = useLanguage();
   const [satelliteLayout, setSatelliteLayout] = useState<Awaited<
     ReturnType<typeof resolvePlotListSatelliteTileLayout>
   > | null>(null);
 
+  const renderSize = Math.round(size * renderScale);
+  const scaleRatio = size / renderSize;
+
   const projected = useMemo(
-    () => projectPlotToThumbnail(plot, size),
-    [plot, size],
+    () => projectPlotToThumbnail(plot, renderSize),
+    [plot, renderSize],
   );
   const polygonPoints = thumbnailPointsToSvg(projected);
+  const showPolygon =
+    plot.kind === 'polygon' &&
+    projected.length >= 3 &&
+    !plotThumbnailPointsAreDegenerate(projected);
 
   useEffect(() => {
     if (!showSatelliteTiles || plot.points.length === 0) {
@@ -59,7 +73,7 @@ export function PlotBoundaryThumbnail({
       return;
     }
     let cancelled = false;
-    void resolvePlotListSatelliteTileLayout(plot, size, {
+    void resolvePlotListSatelliteTileLayout(plot, renderSize, {
       offlineTilesEnabled,
       offlineTilesPackId,
       listPacks: listOfflineTilePacks,
@@ -79,7 +93,7 @@ export function PlotBoundaryThumbnail({
     return () => {
       cancelled = true;
     };
-  }, [plot, size, showSatelliteTiles, offlineTilesEnabled, offlineTilesPackId, cacheOnlineTileLocally, onImageryUnavailable]);
+  }, [plot, renderSize, showSatelliteTiles, offlineTilesEnabled, offlineTilesPackId, cacheOnlineTileLocally, onImageryUnavailable]);
 
   if (plot.points.length === 0) {
     return (
@@ -98,42 +112,53 @@ export function PlotBoundaryThumbnail({
       accessibilityLabel={t('plot_list_satellite_preview')}
       accessibilityRole="image"
     >
-      {satelliteLayout ? (
-        <Image
-          source={{ uri: satelliteLayout.uri }}
-          style={{
-            position: 'absolute',
-            left: satelliteLayout.left,
-            top: satelliteLayout.top,
-            width: satelliteLayout.width,
-            height: satelliteLayout.height,
-          }}
-          resizeMode="stretch"
-          onLoad={() => onImageryPainted?.()}
-          onError={() => onImageryUnavailable?.()}
-        />
-      ) : (
-        <View style={StyleSheet.absoluteFillObject} />
-      )}
-      <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={styles.overlay}>
-        {plot.kind === 'polygon' && projected.length >= 3 ? (
-          <Polygon
-            points={polygonPoints}
-            fill="rgba(10, 127, 89, 0.22)"
-            stroke="#0A7F59"
-            strokeWidth={2}
+      <View
+        style={[
+          styles.renderSurface,
+          {
+            width: renderSize,
+            height: renderSize,
+            transform: [{ scale: scaleRatio }],
+          },
+        ]}
+      >
+        {satelliteLayout ? (
+          <Image
+            source={{ uri: satelliteLayout.uri }}
+            style={{
+              position: 'absolute',
+              left: satelliteLayout.left,
+              top: satelliteLayout.top,
+              width: satelliteLayout.width,
+              height: satelliteLayout.height,
+            }}
+            resizeMode="stretch"
+            onLoad={() => onImageryPainted?.()}
+            onError={() => onImageryUnavailable?.()}
           />
-        ) : projected[0] ? (
-          <Circle
-            cx={projected[0].x}
-            cy={projected[0].y}
-            r={10}
-            fill="rgba(10, 127, 89, 0.35)"
-            stroke="#0A7F59"
-            strokeWidth={2}
-          />
-        ) : null}
-      </Svg>
+        ) : (
+          <View style={[StyleSheet.absoluteFillObject, styles.noImageryFill]} />
+        )}
+        <Svg width={renderSize} height={renderSize} viewBox={`0 0 ${renderSize} ${renderSize}`} style={styles.overlay}>
+          {showPolygon ? (
+            <Polygon
+              points={polygonPoints}
+              fill="rgba(10, 127, 89, 0.22)"
+              stroke="#0A7F59"
+              strokeWidth={2 * renderScale}
+            />
+          ) : projected[0] ? (
+            <Circle
+              cx={projected[0].x}
+              cy={projected[0].y}
+              r={10 * renderScale}
+              fill="rgba(10, 127, 89, 0.35)"
+              stroke="#0A7F59"
+              strokeWidth={2 * renderScale}
+            />
+          ) : null}
+        </Svg>
+      </View>
     </View>
   );
 }
@@ -144,6 +169,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#B8CBC5',
     borderWidth: 1,
     borderColor: '#C5DDD3',
+  },
+  renderSurface: {
+    transformOrigin: 'top left',
+  },
+  noImageryFill: {
+    backgroundColor: '#B8CBC5',
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,

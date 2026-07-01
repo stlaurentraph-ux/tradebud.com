@@ -71,6 +71,18 @@ export function projectPlotToThumbnail(
   );
 }
 
+/** True when polygon vertices collapse to a point in thumbnail space. */
+export function plotThumbnailPointsAreDegenerate(
+  points: PlotThumbnailPoint[],
+): boolean {
+  if (points.length === 0) return true;
+  const first = points[0];
+  return points.every(
+    (point) =>
+      Math.abs(point.x - first.x) < 0.5 && Math.abs(point.y - first.y) < 0.5,
+  );
+}
+
 export function thumbnailPointsToSvg(points: PlotThumbnailPoint[]): string {
   return points.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ');
 }

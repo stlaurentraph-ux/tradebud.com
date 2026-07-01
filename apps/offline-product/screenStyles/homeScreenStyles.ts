@@ -100,6 +100,7 @@ export function createHomeScreenStyles(c: AppColors) {
       width: '100%',
       flexGrow: 1,
       justifyContent: 'flex-start',
+      position: 'relative',
     },
     tileTitle: {
       width: '100%',
@@ -133,6 +134,25 @@ export function createHomeScreenStyles(c: AppColors) {
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: HOME_TILE_ICON_GAP,
+    },
+    tileBadge: {
+      position: 'absolute',
+      top: -4,
+      right: -4,
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      backgroundColor: '#D97706',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 5,
+      zIndex: 1,
+    },
+    tileBadgeText: {
+      color: '#FFFFFF',
+      fontWeight: '700',
+      fontSize: 11,
+      lineHeight: 14,
     },
     actionRequired: {
       padding: 18,

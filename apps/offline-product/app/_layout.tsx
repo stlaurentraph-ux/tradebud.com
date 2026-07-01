@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import 'react-native-reanimated';
 
 import { MaestroCiLayoutBridges } from '@/components/MaestroCiLayoutBridges';
+import { AndroidNavigationBarLayoutBridge } from '@/components/layout/AndroidNavigationBarLayoutBridge';
 import { AppErrorBoundary } from '@/components/observability/AppErrorBoundary';
 import { SplashGate } from '@/components/layout/SplashGate';
 import { MaestroBootReadyMarker } from '@/components/layout/MaestroBootReadyMarker';
@@ -33,6 +34,7 @@ export default function RootLayout() {
           <View style={{ flex: 1 }}>
             <SplashGate>
               <SignInProvider>
+                <AndroidNavigationBarLayoutBridge />
                 <MaestroCiLayoutBridges />
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                   <Stack>
@@ -45,6 +47,7 @@ export default function RootLayout() {
                     <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="offline-maps" options={{ headerShown: false }} />
                     <Stack.Screen name="why-tracebud" options={{ headerShown: false }} />
+                    <Stack.Screen name="activity" options={{ headerShown: false }} />
                   </Stack>
                   <StatusBar style="auto" />
                 </ThemeProvider>

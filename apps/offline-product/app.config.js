@@ -60,7 +60,9 @@ module.exports = ({ config }) => {
   const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? '';
   const allowInsecureLanApi = isPrivateLanApiUrl(apiUrl);
 
-  const plugins = withAppleSignInPlugin(withSentryPlugin([...(config.plugins ?? appJson.expo.plugins)]));
+  const plugins = withAppleSignInPlugin(
+    withSentryPlugin([...(config.plugins ?? appJson.expo.plugins)]),
+  );
   if (includePush && !plugins.some((p) => (Array.isArray(p) ? p[0] : p) === 'expo-notifications')) {
     plugins.push(PRODUCTION_NOTIFICATIONS_PLUGIN);
   }

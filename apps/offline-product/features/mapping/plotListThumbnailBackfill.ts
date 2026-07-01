@@ -3,9 +3,12 @@ import * as FileSystem from 'expo-file-system';
 import { pingFieldMapImagery } from '@/features/network/pingFieldMapImagery';
 import { resolvePlotListSatelliteTileLayout } from '@/features/mapping/plotListSatelliteTile';
 import {
+  plotListThumbnailNeedsLayoutRefresh,
+  plotListThumbnailUriWithLayoutRev,
   plotNeedsListThumbnailBackfill,
   plotListThumbnailFilePath,
   plotListThumbnailUriBasePath,
+  PLOT_LIST_THUMB_CAPTURE_SIZE,
   PLOT_LIST_THUMB_MIN_BYTES,
 } from '@/features/mapping/plotListThumbnailStore';
 import { listOfflineTilePacks, OFFLINE_TILES_PACKS_DIR } from '@/features/offlineTiles/offlineTiles';
@@ -54,7 +57,7 @@ async function plotHasOfflineSatelliteTile(
   plot: Plot,
   offlineTilesPackId: string | null,
 ): Promise<boolean> {
-  const layout = await resolvePlotListSatelliteTileLayout(plot, 88, {
+  const layout = await resolvePlotListSatelliteTileLayout(plot, PLOT_LIST_THUMB_CAPTURE_SIZE, {
     offlineTilesEnabled: true,
     offlineTilesPackId,
     listPacks: listOfflineTilePacks,
@@ -96,6 +99,8 @@ export async function plotNeedsListThumbnailBackfillAsync(
   if (!canCapture) return false;
 
   if (!plot.listThumbnailUri?.trim()) return true;
+
+  if (plotListThumbnailNeedsLayoutRefresh(plot.listThumbnailUri)) return true;
 
   const exists = await plotListThumbnailFileExists(plot.listThumbnailUri);
   if (!exists) return true;

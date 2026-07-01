@@ -6,6 +6,7 @@ import {
   captureAndPersistPlotListThumbnail,
   PLOT_LIST_THUMB_CAPTURE_SIZE,
 } from '@/features/mapping/plotListThumbnailCapture';
+import { plotListThumbnailUriWithLayoutRev } from '@/features/mapping/plotListThumbnailStore';
 import {
   findNextPlotForListThumbnailBackfill,
   isFieldMapImageryOnline,
@@ -107,7 +108,7 @@ export function PlotListThumbnailBackfillHost({
       setPhase('capture');
       void captureAndPersistPlotListThumbnail(captureRef.current, plot.id).then((uri) => {
         if (uri) {
-          updatePlot(plot.id, { listThumbnailUri: uri });
+          updatePlot(plot.id, { listThumbnailUri: plotListThumbnailUriWithLayoutRev(uri) });
           releaseAndContinue(plot.id, true);
           return;
         }

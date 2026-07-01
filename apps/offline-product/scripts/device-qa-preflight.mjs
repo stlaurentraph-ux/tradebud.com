@@ -50,6 +50,15 @@ assertIncludes('app/(tabs)/harvests.tsx', 'submitHarvestRecord', 'Harvests uses 
 assertIncludes('app/(tabs)/harvests.tsx', 'BackHandler', 'Harvests wires Android hardware back');
 assertIncludes('app/(tabs)/harvests.tsx', 'resolveHarvestBackTarget', 'Harvests back uses shared resolver');
 assertIncludes('app/(tabs)/explore.tsx', 'PlotListThumbnail', 'My Plots list uses plot thumbnails');
+assertNotIncludes('app/_layout.tsx', 'SafeAreaProvider', 'expo-router owns the root SafeAreaProvider');
+assertIncludes('components/layout/FieldTabBar.tsx', 'useFieldTabBarBottomInset', 'tab bar applies Android edge-to-edge bottom inset');
+assertIncludes('components/layout/AndroidNavigationBarLayoutBridge.tsx', 'setPositionAsync', 'Android nav bar uses relative positioning when possible');
+assertNotIncludes('components/layout/FieldTabBar.tsx', 'SafeAreaView', 'tab bar must not rely on SafeAreaView alone on API 29');
+assertIncludes('app/(tabs)/_layout.tsx', 'FieldTabBar', 'tabs use native inset tab bar wrapper');
+assertIncludes('app/(tabs)/_layout.tsx', 'paddingBottom: 0', 'BottomTabBar JS inset padding disabled when SafeAreaView wraps bar');
+assertNotIncludes('app/(tabs)/_layout.tsx', 'useTabBarBottomInset', 'tab bar must not use hardcoded nav bar fallback padding');
+assertIncludes('ios/TracebudOffline/AppDelegate.swift', 'bindReactNativeFactory', 'iOS Expo factory wired for iOS 26 startup');
+assertIncludes('ios/TracebudOffline/AppDelegate.swift', 'nw_tls_create_options', 'iOS 26 Metro TLS workaround');
 assertIncludes('components/plot-map/PlotListThumbnail.tsx', 'PlotBoundaryThumbnail', 'plot list thumbnails are static SVG');
 assertNotIncludes('components/plot-map/PlotListThumbnail.tsx', 'PlotMapPreview', 'plot list must not mount MapView per row');
 assertIncludes('features/errors/ErrorLogger.ts', 'reportErrorToSentry', 'logError → Sentry bridge');

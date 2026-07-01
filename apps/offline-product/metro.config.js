@@ -2,7 +2,6 @@ const path = require('path');
 const { getSentryExpoConfig } = require('@sentry/react-native/metro');
 
 const projectRoot = __dirname;
-const monorepoRoot = path.resolve(projectRoot, '../..');
 const appNodeModules = path.resolve(projectRoot, 'node_modules');
 
 /** npm workspaces lockfile paths baked into older debug builds on device. */
@@ -13,7 +12,7 @@ const config = getSentryExpoConfig(projectRoot);
 
 // Field app is self-contained (Expo SDK 54 / RN 0.81). Never resolve JS from root node_modules —
 // root is Next.js and must not hoist a second react-native stack into Metro.
-config.watchFolders = [monorepoRoot];
+// Do not watch the whole monorepo — slows file watching and cold bundles on a full disk.
 config.resolver.nodeModulesPaths = [appNodeModules];
 config.resolver.assetExts = [...(config.resolver.assetExts || []), 'db'];
 

@@ -1,9 +1,13 @@
+import { useState } from 'react';
 import { Image, StyleSheet, View } from 'react-native';
 
 import type { Plot } from '@/features/state/AppStateContext';
 import { PlotBoundaryThumbnail } from '@/components/plot-map/PlotBoundaryThumbnail';
 import { PLOT_LIST_THUMB_DISPLAY_SIZE } from '@/features/mapping/plotListThumbnailCapture';
-import { plotListThumbnailUriBasePath } from '@/features/mapping/plotListThumbnailStore';
+import {
+  plotListThumbnailNeedsLayoutRefresh,
+  plotListThumbnailUriBasePath,
+} from '@/features/mapping/plotListThumbnailStore';
 
 export { PLOT_LIST_THUMB_DISPLAY_SIZE };
 
@@ -17,13 +21,17 @@ type PlotListThumbnailProps = {
 /** My Plots row preview — cached PNG first; live satellite while backfill runs. */
 export function PlotListThumbnail({
   plot,
-  mapImageryOnline = false,
+  mapImageryOnline: _mapImageryOnline = false,
   offlineTilesEnabled = false,
   offlineTilesPackId = null,
 }: PlotListThumbnailProps) {
+  const [cachedImageFailed, setCachedImageFailed] = useState(false);
   const cachedUri = plot.listThumbnailUri?.trim();
-  const imageUri = cachedUri ? plotListThumbnailUriBasePath(cachedUri) : null;
-  const canShowLiveSatellite = mapImageryOnline || offlineTilesEnabled;
+  const useCached =
+    cachedUri &&
+    !cachedImageFailed &&
+    !plotListThumbnailNeedsLayoutRefresh(cachedUri);
+  const imageUri = useCached ? plotListThumbnailUriBasePath(cachedUri) : null;
 
   if (imageUri) {
     return (
@@ -31,7 +39,12 @@ export function PlotListThumbnail({
         style={[styles.wrap, { width: PLOT_LIST_THUMB_DISPLAY_SIZE, height: PLOT_LIST_THUMB_DISPLAY_SIZE }]}
         accessibilityRole="image"
       >
-        <Image source={{ uri: imageUri }} style={styles.cachedImage} resizeMode="cover" />
+        <Image
+          source={{ uri: imageUri }}
+          style={styles.cachedImage}
+          resizeMode="cover"
+          onError={() => setCachedImageFailed(true)}
+        />
       </View>
     );
   }
@@ -43,8 +56,8 @@ export function PlotListThumbnail({
       borderRadius={12}
       offlineTilesEnabled={offlineTilesEnabled}
       offlineTilesPackId={offlineTilesPackId}
-      showSatelliteTiles={canShowLiveSatellite}
-      cacheOnlineTileLocally={mapImageryOnline}
+      showSatelliteTiles
+      cacheOnlineTileLocally={!offlineTilesEnabled}
     />
   );
 }
