@@ -54,5 +54,6 @@
     "reEnableRunbook": "Set e2eBypass.enabled to false in this manifest after Maestro Android smoke is green on PR"
   },
   "prepushScript": "scripts/maestro-prepush.sh",
+  "localAndroidScript": "scripts/maestro-local-android.sh",
   "prepushRunbook": "product-os/04-quality/maestro-ci-cost-runbook.md"
 }

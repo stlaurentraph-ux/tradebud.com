@@ -38,6 +38,7 @@ Do **not** push and poll GitHub as the first test loop — macOS runners are ~10
 |------------|--------------|
 | `qa:maestro:preflight` | Linux preflight (cheap) |
 | `qa:maestro:prepush:full` (macOS) | macOS job only when iOS delta or not yet green on PR |
+| `qa:maestro:local:android` / `:golden` | Optional local Android before push (free) |
 | `qa:maestro:golden-path:android` (optional) | Android emulator job (cost-gated) |
 
 ## Agent rules

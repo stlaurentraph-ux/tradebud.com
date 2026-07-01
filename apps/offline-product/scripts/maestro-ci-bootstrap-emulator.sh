@@ -129,7 +129,15 @@ dump_tracebud_logcat() {
     | tail -100 || true
 }
 
+logcat_has_boot_error() {
+  adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi \
+    'MaestroBoot.*bootError=true|\[AppState\] boot failed'
+}
+
 logcat_has_js_boot_signal() {
+  if logcat_has_boot_error; then
+    return 1
+  fi
   adb -s "$DEVICE_SERIAL" logcat -d 2>/dev/null | grep -qEi \
     'MaestroBoot.*marker visible|MaestroBoot.*app state ready bootError=false|MaestroBoot.*copied bundled|\[MaestroBoot\] app state ready bootError=false|\[MaestroBoot\] marker visible|Running application "main"|Running "main" with|ReactNativeJS'
 }
@@ -149,6 +157,11 @@ wait_for_android_js_boot() {
   adb -s "$DEVICE_SERIAL" logcat -c 2>/dev/null || true
 
   while [[ "$(date +%s)" -lt "$deadline" ]]; do
+    if logcat_has_boot_error; then
+      echo "::error::Maestro CI boot failed (bootError=true in logcat during $label)"
+      dump_tracebud_logcat "Logcat after boot error during $label"
+      return 1
+    fi
     if logcat_has_js_boot_signal; then
       echo "$label complete"
       return 0

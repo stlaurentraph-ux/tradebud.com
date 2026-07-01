@@ -87,6 +87,9 @@ function main() {
       if (!bootDbNative.includes('tracebud_offline.db')) {
         issues.push('maestroCiBootDatabase.android.ts must copy bundled tracebud_offline.db');
       }
+      if (!bootDbNative.includes('expo-file-system/legacy')) {
+        issues.push('maestroCiBootDatabase.android.ts must import expo-file-system/legacy (SDK 55 throws on deprecated main entry)');
+      }
       const generateDb = read('scripts/generate-maestro-ci-boot-db.mjs');
       if (!generateDb.includes('goldenPathBootProfile') || !generateDb.includes('profile.settings')) {
         issues.push('generate-maestro-ci-boot-db.mjs must apply golden_path_minimal settings from baseline');

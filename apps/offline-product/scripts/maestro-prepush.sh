@@ -85,17 +85,24 @@ elif [[ "$(uname -s)" == "Darwin" ]]; then
   booted_emulator="$(adb devices 2>/dev/null | awk '/^emulator-/{print $1; exit}')"
   if [[ -n "$booted_emulator" ]]; then
     echo ""
-    echo "==> Tier 3b: local Android PR smoke (booted emulator: $booted_emulator)"
-    export MAESTRO_ANDROID_SERIAL="$booted_emulator"
-    bash ./scripts/maestro-ci-assemble-android-apk.sh
-    npm run qa:maestro:prepush:android:smoke
-  elif [[ "${MAESTRO_PREPUSH_ANDROID_SMOKE:-}" == "1" ]]; then
-    echo "[error] MAESTRO_PREPUSH_ANDROID_SMOKE=1 but no booted Android emulator found."
+    if [[ "${MAESTRO_PREPUSH_ANDROID_GOLDEN:-}" == "1" ]]; then
+      echo "==> Tier 3b: local Android golden path (booted emulator: $booted_emulator)"
+      npm run qa:maestro:local:android:golden
+    else
+      echo "==> Tier 3b: local Android PR smoke (booted emulator: $booted_emulator)"
+      echo "    Tip: MAESTRO_PREPUSH_ANDROID_GOLDEN=1 for full golden path before main merge."
+      export MAESTRO_LOCAL_SKIP_ASSEMBLE=0
+      npm run qa:maestro:local:android
+    fi
+  elif [[ "${MAESTRO_PREPUSH_ANDROID_SMOKE:-}" == "1" || "${MAESTRO_PREPUSH_ANDROID_GOLDEN:-}" == "1" ]]; then
+    echo "[error] MAESTRO_PREPUSH_ANDROID_*=1 but no booted Android emulator found."
     exit 1
   else
     echo ""
     echo "[info] No booted Android emulator — skipping tier 3b."
-    echo "       Boot an x86_64 emulator and re-run :full, or set MAESTRO_PREPUSH_ANDROID_SMOKE=1 to require it."
+    echo "       Boot an emulator and re-run :full, or:"
+    echo "         MAESTRO_LOCAL_BOOT_EMULATOR=1 npm run qa:maestro:local:android"
+    echo "       For golden path before main: MAESTRO_PREPUSH_ANDROID_GOLDEN=1 npm run qa:maestro:prepush:full"
   fi
 fi
 

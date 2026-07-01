@@ -25,7 +25,7 @@ function readRepo(rel) {
 
 function main() {
   const pkg = JSON.parse(read('package.json'));
-  for (const script of ['qa:maestro:prepush', 'qa:maestro:prepush:full', 'qa:maestro:prepush:assert', 'qa:maestro:prepush:android:smoke']) {
+  for (const script of ['qa:maestro:prepush', 'qa:maestro:prepush:full', 'qa:maestro:prepush:assert', 'qa:maestro:prepush:android:smoke', 'qa:maestro:local:android', 'qa:maestro:local:android:golden']) {
     if (!pkg.scripts?.[script]) {
       throw new Error(`package.json must define ${script}`);
     }
@@ -41,8 +41,13 @@ function main() {
   if (!prepush.includes('maestro-ci-assemble-ios-simulator.sh')) {
     throw new Error('maestro-prepush.sh full mode must assemble iOS simulator app like CI');
   }
-  if (!prepush.includes('qa:maestro:prepush:android:smoke')) {
-    throw new Error('maestro-prepush.sh full mode must offer Android smoke when emulator is available');
+  if (!prepush.includes('qa:maestro:local:android')) {
+    throw new Error('maestro-prepush.sh full mode must offer local Android smoke via qa:maestro:local:android');
+  }
+
+  const localAndroid = read('scripts/maestro-local-android.sh');
+  if (!localAndroid.includes('maestro-ci-assemble-android-apk.sh')) {
+    throw new Error('maestro-local-android.sh must assemble CI-parity APK');
   }
 
   const manifestPath = 'product-os/04-quality/maestro-golden-path-ci.json';
@@ -50,10 +55,16 @@ function main() {
   if (!manifest.prepushScript) {
     throw new Error(`${manifestPath} must define prepushScript`);
   }
+  if (!manifest.localAndroidScript) {
+    throw new Error(`${manifestPath} must define localAndroidScript`);
+  }
 
   const runbook = readRepo('product-os/04-quality/maestro-ci-cost-runbook.md');
   if (!runbook.includes('qa:maestro:prepush:full')) {
     throw new Error('maestro-ci-cost-runbook.md must document qa:maestro:prepush:full');
+  }
+  if (!runbook.includes('qa:maestro:local:android')) {
+    throw new Error('maestro-ci-cost-runbook.md must document qa:maestro:local:android');
   }
 
   const offlineRule = readRepo('.cursor/rules/offline-automation.mdc');

@@ -13,6 +13,8 @@
 | 1 — static | `npm run qa:maestro:preflight` | Every Maestro touch | 0 (local) / ~1 min (Linux CI) |
 | 2 — regression | `npm run qa:regression` | Every offline PR | 0 local / Linux CI |
 | 3 — local iOS E2E | `npm run qa:maestro:prepush:full` | **Before push** (macOS) | 0 |
+| 3b — local Android | `npm run qa:maestro:local:android` | Booted emulator (free) | 0 |
+| 3c — local Android golden | `npm run qa:maestro:local:android:golden` | Before `main` merge / dispatch proof | 0 |
 | 4 — GitHub Android | PR workflow (cost-gated) | After push | Linux ~2h |
 | 5 — GitHub macOS | PR workflow (cost-gated) | First green or iOS delta | **macOS ~10× multiplier** |
 
@@ -32,7 +34,29 @@ npm run qa:maestro:prepush
 npm run qa:maestro:prepush:full
 ```
 
-Android-only iteration: run static prepush always; run `npm run qa:maestro:golden-path:android` locally when possible; GitHub skips macOS if already green on the PR (cost gate).
+Android-only iteration: run static prepush always; run `npm run qa:maestro:local:android` (smoke) or `npm run qa:maestro:local:android:golden` (full path) on a booted emulator before pushing; GitHub skips macOS if already green on the PR (cost gate).
+
+### Local Android (no Maestro Cloud, no GitHub minutes)
+
+```bash
+cd apps/offline-product
+
+# One-time: install Maestro CLI + Android SDK; create a Pixel API 33 AVD in Android Studio.
+
+# PR smoke (~20–40 min, matches CI smoke job):
+npm run qa:maestro:local:android
+
+# Full golden path (~45–75 min, matches push/dispatch golden job):
+npm run qa:maestro:local:android:golden
+
+# Auto-start emulator when none is booted:
+MAESTRO_LOCAL_BOOT_EMULATOR=1 npm run qa:maestro:local:android
+
+# Apple Silicon: uses arm64-v8a by default; CI uses x86_64 on macos-15-intel.
+# Force CI ABI locally: MAESTRO_ANDROID_ABI=x86_64 npm run qa:maestro:local:android
+```
+
+Before merging to `main`, prefer `MAESTRO_PREPUSH_ANDROID_GOLDEN=1 npm run qa:maestro:prepush:full` on macOS with a booted emulator.
 
 ---
 

@@ -1,3 +1,12 @@
+### 2026-07-01 (Lane 2 fix — Android Maestro golden path bootError + local runner)
+- **Context**: `main` Android golden path failed after 45+ min — `bootError=true` because Expo SDK 55 throws on deprecated `expo-file-system` APIs during in-app Maestro boot DB copy; bootstrap also treated generic RN boot log lines as success while `bootError=true`.
+- **Fixes**:
+  - `maestroCiBootDatabase.android.ts` — import `expo-file-system/legacy` for CI boot DB copy.
+  - `maestro-ci-bootstrap-emulator.sh` — fail-fast when logcat reports `bootError=true` / `[AppState] boot failed`.
+  - `maestro-local-android.sh` + `qa:maestro:local:android` / `:golden` — free local CI-parity Android Maestro (no Maestro Cloud / GitHub macOS minutes).
+  - `maestro-prepush.sh` tier 3b uses local runner; `MAESTRO_PREPUSH_ANDROID_GOLDEN=1` for full path before main.
+- **Branch**: `fix/offline-android-golden-path-boot-fs`.
+
 ### 2026-06-30 (Lane 2 fix — Android Maestro golden path H13 + re-enable E2E)
 - **Context**: `workflow_dispatch` Android golden path failed preflight (`APK missing assets/maestro/tracebud_offline.db`) while assemble verified DB; PR smoke timed out on cold boot (15 min); `e2eBypass` hid emulator E2E on main.
 - **Fixes**:

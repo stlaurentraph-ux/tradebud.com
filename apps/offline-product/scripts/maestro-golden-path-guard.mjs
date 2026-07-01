@@ -221,6 +221,9 @@ function assertAndroidRunner(manifest) {
   if (!readOffline('features/testing/maestroCiBootDatabase.android.ts').includes('maestro/tracebud_offline.db')) {
     throw new Error('maestroCiBootDatabase.android.ts must load boot DB from APK native assets');
   }
+  if (!readOffline('features/testing/maestroCiBootDatabase.android.ts').includes('expo-file-system/legacy')) {
+    throw new Error('maestroCiBootDatabase.android.ts must import expo-file-system/legacy (SDK 55 boot DB copy)');
+  }
   const androidAssemble = readOffline('scripts/maestro-ci-assemble-android-apk.sh');
   if (!androidAssemble.includes('android/app/src/main/assets/maestro/tracebud_offline.db')) {
     throw new Error('maestro-ci-assemble-android-apk.sh must copy boot DB into Android native assets');

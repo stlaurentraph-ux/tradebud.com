@@ -1,4 +1,5 @@
-import * as FileSystem from 'expo-file-system';
+// Expo SDK 55 throws when legacy helpers are imported from the main entry — CI APK boot must use /legacy.
+import * as FileSystem from 'expo-file-system/legacy';
 
 const DB_NAME = 'tracebud_offline.db';
 const BUNDLED_BOOT_DB = 'maestro/tracebud_offline.db';
