@@ -2,6 +2,7 @@ import * as SQLite from 'expo-sqlite';
 import Constants from 'expo-constants';
 
 import type { FarmerProfile, Plot } from './AppStateContext';
+import { deletePlotListThumbnailFile } from '@/features/mapping/plotListThumbnailCapture';
 import { parsePlotGeometryCaptureMetadata } from '@/features/compliance/plotGeometryCapture';
 import { generateHlcTimestamp } from '@/features/sync/hlc';
 import {
@@ -332,6 +333,9 @@ async function ensurePlotSchemaExtras(db: SQLite.SQLiteDatabase) {
   if (!has('geometryCaptureMetaJson')) {
     await db.execAsync('ALTER TABLE plots ADD COLUMN geometryCaptureMetaJson TEXT;');
   }
+  if (!has('listThumbnailUri')) {
+    await db.execAsync('ALTER TABLE plots ADD COLUMN listThumbnailUri TEXT;');
+  }
 }
 
 async function ensurePlotLegalSchemaExtras(db: SQLite.SQLiteDatabase) {
@@ -442,6 +446,10 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
         row.noDeforestationDeclared === 1 ? true : row.noDeforestationDeclared === 0 ? false : undefined,
       noDeforestationDeclaredAt: row.noDeforestationDeclaredAt ?? undefined,
       geometryCapture: parsePlotGeometryCaptureMetadata(row.geometryCaptureMetaJson) ?? undefined,
+      listThumbnailUri:
+        typeof row.listThumbnailUri === 'string' && row.listThumbnailUri.trim()
+          ? row.listThumbnailUri.trim()
+          : undefined,
     };
   });
 
@@ -499,6 +507,10 @@ export async function loadAppState(): Promise<{ farmer?: FarmerProfile; plots: P
               : undefined,
         noDeforestationDeclaredAt: row.noDeforestationDeclaredAt ?? undefined,
         geometryCapture: parsePlotGeometryCaptureMetadata(row.geometryCaptureMetaJson) ?? undefined,
+        listThumbnailUri:
+          typeof row.listThumbnailUri === 'string' && row.listThumbnailUri.trim()
+            ? row.listThumbnailUri.trim()
+            : undefined,
       };
     });
     return { farmer, plots: repairedPlots };
@@ -554,8 +566,8 @@ export async function persistPlots(plots: Plot[]) {
             id, farmerId, name, createdAt, areaSquareMeters, areaHectares, kind, pointsJson,
             declaredAreaHectares, discrepancyPercent, precisionMetersAtSave,
             landTenureDeclared, landTenureDeclaredAt, noDeforestationDeclared, noDeforestationDeclaredAt,
-            geometryCaptureMetaJson
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
+            geometryCaptureMetaJson, listThumbnailUri
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);`,
           [
             plot.id,
             plot.farmerId,
@@ -573,6 +585,7 @@ export async function persistPlots(plots: Plot[]) {
             plot.noDeforestationDeclared === true ? 1 : plot.noDeforestationDeclared === false ? 0 : null,
             plot.noDeforestationDeclaredAt ?? null,
             plot.geometryCapture ? JSON.stringify(plot.geometryCapture) : null,
+            plot.listThumbnailUri ?? null,
           ],
         );
       }
@@ -1290,6 +1303,7 @@ export async function clearPlotMappingDraft(farmerId: string): Promise<void> {
 
 export async function deletePlotLocalData(plotId: string): Promise<void> {
   const db = await getDb();
+  await deletePlotListThumbnailFile(plotId);
   const links = await loadPlotServerLinks().catch((): Record<string, string> => ({}));
   const serverPlotId = links[plotId]?.trim();
   if (serverPlotId) {
