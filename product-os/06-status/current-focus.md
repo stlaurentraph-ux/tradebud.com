@@ -50,6 +50,13 @@ When ready, complete in order:
 
 Until then: usage meters and invoices work without Stripe; failed-payment gate only applies after webhooks are live.
 
+## Release 2 — registered (not in-flight)
+
+| Slice | Doc | Notes |
+|-------|-----|-------|
+| V2.1 Password security email | `FEAT-field-farmer-notifications-v2.md` | Resend after successful set/change; deferred from build 26 |
+| V2.2 Farmer activity feed | `FEAT-field-farmer-activity-feed.md` | **v1 slice in progress** on `feature/offline-farmer-activity-v1` |
+
 ## Priority migration lanes (v1.6)
 
 - Spatial lane: enforce `GEOGRAPHY` + `ST_MakeValid` + area variance guard.

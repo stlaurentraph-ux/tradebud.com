@@ -15,6 +15,7 @@ import { Brand, Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createHomeScreenStyles } from '@/screenStyles/homeScreenStyles';
+import { loadFarmerActivityCache } from '@/features/activity/farmerActivityCache';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
@@ -45,6 +46,7 @@ export default function HomeScreen() {
     pending: number;
   } | null>(null);
   const [actionRequired, setActionRequired] = useState<{ message: string; plotId: string } | null>(null);
+  const [activityActionCount, setActivityActionCount] = useState(0);
   const [backgroundSyncWarning, setBackgroundSyncWarning] = useState<string | null>(null);
   const readinessRefreshGenRef = useRef(0);
   const { openSignIn, openCreateAccount, isSignedIn, refreshAuth } = useSignInSheet();
@@ -121,7 +123,14 @@ export default function HomeScreen() {
         .catch(() => undefined);
       void refreshBackendPlotsRef.current(false);
       void refreshPlotReadinessRef.current();
-    }, [refreshAuth]),
+      if (isSignedIn) {
+        void loadFarmerActivityCache()
+          .then((cache) => setActivityActionCount(cache?.actionCount ?? 0))
+          .catch(() => undefined);
+      } else {
+        setActivityActionCount(0);
+      }
+    }, [refreshAuth, isSignedIn]),
   );
 
   const unsyncedPlotCount = useMemo(() => {
@@ -215,12 +224,30 @@ export default function HomeScreen() {
         onPress: () => openPlotSection('documents'),
         showWhenEmpty: true,
       },
+      ...(isSignedIn
+        ? [
+            {
+              key: 'activity',
+              title: t('activity_home_tile_title'),
+              subtitle: t('activity_home_tile_sub'),
+              icon: 'notifications-outline' as const,
+              tint: '#E8F7EF',
+              iconColor: '#0B7B59',
+              onPress: () => {
+                trackEvent(ANALYTICS_EVENTS.ACTIVITY_FEED_VIEWED, { source: 'home_tile' });
+                router.push('/activity');
+              },
+              showWhenEmpty: true,
+              badgeCount: activityActionCount,
+            },
+          ]
+        : []),
     ];
     if (plots.length === 0) {
       return all.filter((tile) => tile.showWhenEmpty);
     }
     return all;
-  }, [t, plots]);
+  }, [t, plots, isSignedIn, activityActionCount]);
 
   const homeTileRows = useMemo(() => {
     const rows: (typeof homeTiles)[] = [];
@@ -406,6 +433,7 @@ export default function HomeScreen() {
                   icon={tile.icon}
                   tint={tile.tint}
                   iconColor={tile.iconColor}
+                  badgeCount={'badgeCount' in tile ? tile.badgeCount : undefined}
                   onPress={tile.onPress}
                 />
               ))}
@@ -528,6 +556,7 @@ function HomeTile(props: {
   tint: string;
   iconColor: string;
   highlighted?: boolean;
+  badgeCount?: number;
   onPress: () => void;
 }) {
   const colorScheme = useColorScheme();
@@ -552,6 +581,13 @@ function HomeTile(props: {
           <View style={[styles.tileIcon, { backgroundColor: props.tint }]}>
             <Ionicons name={props.icon} size={22} color={props.iconColor} />
           </View>
+          {props.badgeCount && props.badgeCount > 0 ? (
+            <View style={styles.tileBadge}>
+              <ThemedText type="caption" style={styles.tileBadgeText}>
+                {props.badgeCount > 9 ? '9+' : String(props.badgeCount)}
+              </ThemedText>
+            </View>
+          ) : null}
           <ThemedText style={styles.tileTitle}>{props.title}</ThemedText>
           <ThemedText style={[styles.tileSubtitle, { color: colors.textSecondary }]}>
             {props.subtitle}

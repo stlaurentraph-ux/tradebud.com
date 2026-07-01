@@ -1,5 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
+import { AppMetricsRoot } from 'expo-observe';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { View } from 'react-native';
@@ -12,6 +13,7 @@ import { MaestroBootReadyMarker } from '@/components/layout/MaestroBootReadyMark
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
 import { initObservability } from '@/features/observability/initObservability';
+import { shouldUseMaestroCiThinBoot } from '@/features/testing/maestroCiBootProfile';
 import '@/features/auth/googleOAuthEnv';
 import { AppStateProvider } from '@/features/state/AppStateContext';
 import { LanguageProvider } from '@/features/state/LanguageContext';
@@ -23,7 +25,7 @@ export const unstable_settings = {
   anchor: '(tabs)',
 };
 
-export default function RootLayout() {
+function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
@@ -45,6 +47,7 @@ export default function RootLayout() {
                     <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="offline-maps" options={{ headerShown: false }} />
                     <Stack.Screen name="why-tracebud" options={{ headerShown: false }} />
+                    <Stack.Screen name="activity" options={{ headerShown: false }} />
                   </Stack>
                   <StatusBar style="auto" />
                 </ThemeProvider>
@@ -57,3 +60,5 @@ export default function RootLayout() {
     </AppErrorBoundary>
   );
 }
+
+export default shouldUseMaestroCiThinBoot() ? RootLayout : AppMetricsRoot.wrap(RootLayout);

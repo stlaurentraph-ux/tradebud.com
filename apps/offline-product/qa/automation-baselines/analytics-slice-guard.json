@@ -1,9 +1,11 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-30T22:59:32.248Z",
-  "canonicalEventCount": 38,
+  "generatedAt": "2026-07-01T07:56:12.763Z",
+  "canonicalEventCount": 40,
   "canonicalEvents": [
     "account_switch_local_reset",
+    "activity_feed_viewed",
+    "activity_row_opened",
     "backup_confirmed",
     "backup_declined",
     "consent_grant_approved",
@@ -44,6 +46,8 @@
   ],
   "trackUsageKeys": [
     "ACCOUNT_SWITCH_LOCAL_RESET",
+    "ACTIVITY_FEED_VIEWED",
+    "ACTIVITY_ROW_OPENED",
     "BACKUP_CONFIRMED",
     "BACKUP_DECLINED",
     "CONSENT_GRANT_APPROVED",
