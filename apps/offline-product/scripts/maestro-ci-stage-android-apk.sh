@@ -17,27 +17,38 @@ apk_has_maestro_db() {
 }
 
 collect_candidates() {
-  local -a seen=()
-  local candidate
+  local -a candidates=()
+  local path seen duplicate
 
   add_candidate() {
-    local path="$1"
+    path="$1"
     [[ -n "$path" ]] || return 0
-    for candidate in "${seen[@]}"; do
-      [[ "$candidate" == "$path" ]] && return 0
-    done
-    seen+=("$path")
+    duplicate=0
+    if ((${#candidates[@]} > 0)); then
+      for seen in "${candidates[@]}"; do
+        if [[ "$seen" == "$path" ]]; then
+          duplicate=1
+          break
+        fi
+      done
+    fi
+    if [[ "$duplicate" -eq 0 ]]; then
+      candidates+=("$path")
+    fi
   }
 
   add_candidate "${MAESTRO_ANDROID_APK_PATH:-}"
   add_candidate "$DEFAULT_APK"
   add_candidate "$(dirname "$DEFAULT_APK")/maestro-android-apk/app-debug.apk"
+  add_candidate "${MAESTRO_ANDROID_APK_STAGED:-/tmp/tracebud-maestro-ci-app-debug.apk}"
 
-  while IFS= read -r candidate; do
-    add_candidate "$candidate"
+  while IFS= read -r path; do
+    add_candidate "$path"
   done < <(find "$ROOT/android" -name 'app-debug.apk' -type f 2>/dev/null || true)
 
-  printf '%s\n' "${seen[@]}"
+  if ((${#candidates[@]} > 0)); then
+    printf '%s\n' "${candidates[@]}"
+  fi
 }
 
 RESOLVED=""

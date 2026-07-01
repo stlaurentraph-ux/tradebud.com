@@ -36,17 +36,12 @@ export MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL"
 echo "==> Using Android device $DEVICE_SERIAL"
 
 resolve_maestro_apk_path() {
-  if [[ -n "${MAESTRO_ANDROID_APK_PATH:-}" && -f "${MAESTRO_ANDROID_APK_PATH}" ]]; then
-    echo "${MAESTRO_ANDROID_APK_PATH}"
-    return 0
-  fi
-
   local default_apk="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
   local -a candidates=()
+  candidates+=("${MAESTRO_ANDROID_APK_STAGED:-/tmp/tracebud-maestro-ci-app-debug.apk}")
   candidates+=("${MAESTRO_ANDROID_APK_PATH:-}")
   candidates+=("$default_apk")
   candidates+=("$(dirname "$default_apk")/maestro-android-apk/app-debug.apk")
-  candidates+=("${MAESTRO_ANDROID_APK_STAGED:-/tmp/tracebud-maestro-ci-app-debug.apk}")
 
   while IFS= read -r found; do
     candidates+=("$found")

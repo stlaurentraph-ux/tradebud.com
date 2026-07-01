@@ -6,7 +6,12 @@
   - `e2eBypass.enabled: false`; Android smoke boot wait 15→30 min; Android golden scroll timeout 15→30s (H12 parity).
   - Automation baseline refresh (`evidence-signed-url` OpenAPI parity drift).
 - **Verify**: `npm run qa:structural` + `qa:automation:phase1:strict` OK locally.
-- **Branch**: `fix/offline-android-golden-path-ci`.
+- **Branch**: `fix/offline-android-golden-path-ci` → merged PR #353.
+
+### 2026-06-30 (Lane 2 fix — H13 stage script set -u empty-array)
+- **Context**: Post-merge PR #353 Android smoke + dispatch golden failed at stage step: `seen[@]: unbound variable` under `set -u`.
+- **Fixes**: Guard empty-array iteration in `maestro-ci-stage-android-apk.sh`; bootstrap resolver always validates DB (staged path first); smoke `MAESTRO_BOOT_WAIT_MS` 1800000 in workflow.
+- **Branch**: `fix/offline-android-golden-path-h13-stage`.
 
 ### 2026-06-30 (Lane 2 — Maestro E2E pilot bypass)
 - **Context**: Android Maestro emulator E2E blocked PR merge for days (H11 cold-boot `bootError=true`); pilot users need app builds while E2E is fixed incrementally.
