@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "assets" / "images" / "tracebud-logo.png"
@@ -13,13 +13,14 @@ OUT = ROOT / "assets" / "images"
 STORE_ICON = ROOT / "store-assets" / "google-play" / "app-icon-512.png"
 
 TILE_WHITE = (255, 255, 255)
-SPLASH_TAGLINE = "Record plots. Prove origin. Access markets."
-SPLASH_TAGLINE_COLOR = (255, 255, 255, 230)
+# Neutral launch canvas colors — keep in sync with app.json expo-splash-screen + compactTabHeader.ts
+SPLASH_BACKGROUND_LIGHT = "#F9FAFB"
+SPLASH_BACKGROUND_DARK = "#111827"
 
 # Max fraction of canvas for the trimmed mark's longest side.
 # iOS HIG: keep artwork in the central ~80%; 82% is a common professional maximum.
 IOS_CONTENT_SCALE = 0.82
-SPLASH_CONTENT_SCALE = 0.74
+SPLASH_CONTENT_SCALE = 0.46
 
 # Android adaptive foreground safe zone diameter ≈ 66% of 108dp canvas.
 ANDROID_CONTENT_SCALE = 0.64
@@ -90,54 +91,11 @@ def monochrome_foreground(size: int) -> Image.Image:
     return canvas
 
 
-def load_tagline_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    candidates = [
-        "/System/Library/Fonts/Supplemental/Arial.ttf",
-        "/System/Library/Fonts/Supplemental/Helvetica.ttc",
-        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
-    ]
-    for path in candidates:
-        if Path(path).exists():
-            try:
-                return ImageFont.truetype(path, size=size)
-            except OSError:
-                continue
-    return ImageFont.load_default()
-
-
-def splash_tagline_lines(tagline: str) -> list[str]:
-    parts = [part.strip() for part in tagline.split(".") if part.strip()]
-    return [f"{part}." for part in parts]
-
-
-def splash_branded(width: int = 900) -> Image.Image:
-    """Logo + trust tagline on transparent canvas (green comes from app.json background)."""
-    logo = fit_trimmed_logo(load_logo(), width, 0.4)
-    lines = splash_tagline_lines(SPLASH_TAGLINE)
-    tagline_font = load_tagline_font(max(20, int(width * 0.028)))
-    line_gap = max(6, int(width * 0.012))
-
-    tmp = Image.new("RGBA", (width, 10), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(tmp)
-    line_metrics: list[tuple[int, int]] = []
-    for line in lines:
-        bbox = draw.textbbox((0, 0), line, font=tagline_font)
-        line_metrics.append((bbox[2] - bbox[0], bbox[3] - bbox[1]))
-    text_block_h = sum(h for _, h in line_metrics) + line_gap * max(0, len(lines) - 1)
-    text_block_w = max(w for w, _ in line_metrics)
-
-    gap = max(20, int(width * 0.04))
-    canvas_h = logo.height + gap + text_block_h + 24
-    canvas = Image.new("RGBA", (width, canvas_h), (0, 0, 0, 0))
+def splash_launch(width: int = 900) -> Image.Image:
+    """Logo on transparent canvas; neutral background comes from app.json."""
+    logo = fit_trimmed_logo(load_logo(), width, SPLASH_CONTENT_SCALE)
+    canvas = Image.new("RGBA", (width, logo.height + 32), (0, 0, 0, 0))
     paste_centered(canvas, logo)
-
-    draw = ImageDraw.Draw(canvas)
-    text_y = (canvas.height - logo.height) // 2 + logo.height + gap
-    for line, (line_w, line_h) in zip(lines, line_metrics):
-        text_x = (width - line_w) // 2
-        draw.text((text_x, text_y), line, font=tagline_font, fill=SPLASH_TAGLINE_COLOR)
-        text_y += line_h + line_gap
     return canvas
 
 
@@ -146,7 +104,7 @@ def main() -> None:
         raise SystemExit(f"Missing source logo: {SRC}")
 
     icon_on_white_tile(1024, IOS_CONTENT_SCALE).save(OUT / "icon.png", optimize=True)
-    splash_branded(900).save(OUT / "splash-icon.png", optimize=True)
+    splash_launch(900).save(OUT / "splash-icon.png", optimize=True)
     adaptive_foreground(1024).save(OUT / "android-icon-foreground.png", optimize=True)
     adaptive_background(1024).save(OUT / "android-icon-background.png", optimize=True)
     monochrome_foreground(1024).save(OUT / "android-icon-monochrome.png", optimize=True)

@@ -15,11 +15,12 @@ export const HOME_HEADER_LOGO_PX = 52;
 /** Shared with welcome card and tab headers — keep in sync with mockup green. */
 export const HEADER_GRADIENT_COLORS = ['#0A7F59', '#0B6F50'] as const;
 
-/** Native splash background — matches header green (not theme-dependent). */
-export const SPLASH_BACKGROUND_COLOR = HEADER_GRADIENT_COLORS[0];
+/** Native splash backgrounds — neutral canvas; in-app headers keep the green gradient. */
+export const SPLASH_BACKGROUND_LIGHT = '#F9FAFB';
+export const SPLASH_BACKGROUND_DARK = '#111827';
 
-/** English tagline baked into splash-icon.png (native splash is not i18n). */
-export const SPLASH_TAGLINE_EN = 'Record plots. Prove origin. Access markets.';
+/** @deprecated Use SPLASH_BACKGROUND_LIGHT — kept for scripts/docs migration. */
+export const SPLASH_BACKGROUND_COLOR = SPLASH_BACKGROUND_LIGHT;
 
 /** Text and icons on green gradient headers — always white, not theme textInverse. */
 export const HEADER_GRADIENT_TEXT = '#FFFFFF' as const;

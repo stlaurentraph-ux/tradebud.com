@@ -21,7 +21,7 @@
   "androidAssembleRunner": "ubuntu-latest",
   "androidJobTimeoutMinutes": 75,
   "androidSmokeJobTimeoutMinutes": 40,
-  "androidSmokeBootWaitMs": 900000,
+  "androidSmokeBootWaitMs": 1800000,
   "androidSmokeSkipBootstrapWarm": true,
   "androidSmokeJsBootFailFastMs": 600000,
   "androidBootstrapWarmMs": 1200000,
@@ -47,8 +47,8 @@
     "fullMatrixOnPushToMain": true
   },
   "e2eBypass": {
-    "enabled": true,
-    "reason": "Pilot submission window — emulator E2E deferred while Android cold-boot (H11) is fixed incrementally",
+    "enabled": false,
+    "reason": "Re-enabled after H13 APK staging + resolver fixes for Android golden path",
     "allowedUntil": "2026-07-31",
     "keepPreflight": true,
     "reEnableRunbook": "Set e2eBypass.enabled to false in this manifest after Maestro Android smoke is green on PR"

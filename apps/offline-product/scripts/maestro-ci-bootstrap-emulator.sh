@@ -35,26 +35,47 @@ export MAESTRO_ANDROID_SERIAL="$DEVICE_SERIAL"
 
 echo "==> Using Android device $DEVICE_SERIAL"
 
-APK_PATH="${MAESTRO_ANDROID_APK_PATH:-$ROOT/android/app/build/outputs/apk/debug/app-debug.apk}"
-if [[ ! -f "$APK_PATH" ]]; then
-  # Fallback: actions/download-artifact@v4 with merge-multiple:false places files in a subdirectory.
-  APK_SUBDIR="$(dirname "$APK_PATH")/maestro-android-apk/app-debug.apk"
-  if [[ -f "$APK_SUBDIR" ]]; then
-    echo "==> APK not at expected path; using artifact subdirectory: $APK_SUBDIR"
-    APK_PATH="$APK_SUBDIR"
-  else
-    echo "::error::Missing prebuilt APK at $APK_PATH (assemble step must run first)."
-    find "$ROOT" -name 'app-debug.apk' 2>/dev/null | head -5 || true
-    exit 1
+resolve_maestro_apk_path() {
+  if [[ -n "${MAESTRO_ANDROID_APK_PATH:-}" && -f "${MAESTRO_ANDROID_APK_PATH}" ]]; then
+    echo "${MAESTRO_ANDROID_APK_PATH}"
+    return 0
   fi
-fi
+
+  local default_apk="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
+  local -a candidates=()
+  candidates+=("${MAESTRO_ANDROID_APK_PATH:-}")
+  candidates+=("$default_apk")
+  candidates+=("$(dirname "$default_apk")/maestro-android-apk/app-debug.apk")
+  candidates+=("${MAESTRO_ANDROID_APK_STAGED:-/tmp/tracebud-maestro-ci-app-debug.apk}")
+
+  while IFS= read -r found; do
+    candidates+=("$found")
+  done < <(find "$ROOT/android" -name 'app-debug.apk' -type f 2>/dev/null || true)
+
+  local candidate apk_list
+  for candidate in "${candidates[@]}"; do
+    [[ -n "$candidate" && -f "$candidate" ]] || continue
+    apk_list="$(unzip -l "$candidate" 2>/dev/null || true)"
+    if grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db' <<< "$apk_list"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  echo "::error::No Maestro CI APK with assets/maestro/tracebud_offline.db (assemble + artifact download must run first)."
+  for candidate in "${candidates[@]}"; do
+    [[ -n "$candidate" ]] || continue
+    echo "  checked: $candidate (exists=$([[ -f "$candidate" ]] && echo yes || echo no))"
+  done
+  find "$ROOT" -name 'app-debug.apk' 2>/dev/null | head -5 || true
+  return 1
+}
+
+APK_PATH="$(resolve_maestro_apk_path)" || exit 1
+export MAESTRO_ANDROID_APK_PATH="$APK_PATH"
 
 preflight_maestro_apk() {
   echo "==> Preflight: bundled Maestro boot DB in APK ($APK_PATH)"
-  # Grep via here-string (not a pipe) to avoid SIGPIPE false-negative under pipefail:
-  # `cmd | grep -q` makes grep -q exit early on match → upstream gets SIGPIPE →
-  # pipefail returns non-zero → false "missing DB". A here-string is a redirection,
-  # not a pipeline, so pipefail doesn't apply.
   local apk_list
   apk_list="$(unzip -l "$APK_PATH" 2>/dev/null || true)"
   if ! grep -qE 'assets/maestro/tracebud_offline\.db|maestro/tracebud_offline\.db' <<< "$apk_list"; then

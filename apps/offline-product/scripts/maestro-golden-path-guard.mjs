@@ -206,8 +206,11 @@ function assertAndroidRunner(manifest) {
   if (!bootstrap.includes('MAESTRO_DRIVER_STARTUP_TIMEOUT')) {
     throw new Error('Android bootstrap must set MAESTRO_DRIVER_STARTUP_TIMEOUT');
   }
-  if (!bootstrap.includes('MAESTRO_ANDROID_APK_PATH')) {
-    throw new Error('Android bootstrap must honor MAESTRO_ANDROID_APK_PATH for prebuilt APK');
+  if (!bootstrap.includes('resolve_maestro_apk_path')) {
+    throw new Error('Android bootstrap must resolve Maestro APK by bundled boot DB presence');
+  }
+  if (!readOffline('scripts/maestro-ci-stage-android-apk.sh').includes('tracebud-maestro-ci-app-debug.apk')) {
+    throw new Error('maestro-ci-stage-android-apk.sh must stage APK outside android/build churn');
   }
   if (!bootstrap.includes('MAESTRO_ANDROID_FORCE_PROVISION')) {
     throw new Error('Android bootstrap must support legacy force-provision when in-app seed disabled');
@@ -254,8 +257,8 @@ function assertAndroidRunner(manifest) {
   if (!androidGolden.includes('dump_tracebud_logcat')) {
     throw new Error('Android golden path must dump logcat on Maestro failure');
   }
-  if (!bootstrap.includes('Missing prebuilt APK')) {
-    throw new Error('Android bootstrap must fail fast when prebuilt APK is missing');
+  if (!bootstrap.includes('resolve_maestro_apk_path') || !bootstrap.includes('No Maestro CI APK with assets/maestro/tracebud_offline.db')) {
+    throw new Error('Android bootstrap must fail fast when prebuilt APK is missing or lacks boot DB');
   }
   if (bootstrap.includes('expo run:android')) {
     throw new Error('Android golden-path bootstrap must not fall back to expo run:android');
@@ -317,6 +320,9 @@ function assertWorkflow(manifest) {
   const assembleJobName = manifest.androidAssembleJobName;
   if (!assembleJobName || !workflow.includes(assembleJobName)) {
     throw new Error(`${manifest.workflowFile} must define ${assembleJobName ?? 'androidAssembleJobName'} job`);
+  }
+  if (!workflow.includes('maestro-ci-stage-android-apk.sh')) {
+    throw new Error(`${manifest.workflowFile} must stage Maestro APK after artifact download`);
   }
   if (!workflow.includes('maestro-android-apk')) {
     throw new Error(`${manifest.workflowFile} must upload/download maestro-android-apk artifact`);

@@ -1,3 +1,13 @@
+### 2026-06-30 (Lane 2 fix — Android Maestro golden path H13 + re-enable E2E)
+- **Context**: `workflow_dispatch` Android golden path failed preflight (`APK missing assets/maestro/tracebud_offline.db`) while assemble verified DB; PR smoke timed out on cold boot (15 min); `e2eBypass` hid emulator E2E on main.
+- **Fixes**:
+  - `resolve_maestro_apk_path` + `maestro-ci-stage-android-apk.sh` — pick APK with bundled boot DB, stage to `/tmp/tracebud-maestro-ci-app-debug.apk`.
+  - `offline-maestro.yml` — stage step after artifact download (smoke + golden jobs).
+  - `e2eBypass.enabled: false`; Android smoke boot wait 15→30 min; Android golden scroll timeout 15→30s (H12 parity).
+  - Automation baseline refresh (`evidence-signed-url` OpenAPI parity drift).
+- **Verify**: `npm run qa:structural` + `qa:automation:phase1:strict` OK locally.
+- **Branch**: `fix/offline-android-golden-path-ci`.
+
 ### 2026-06-30 (Lane 2 — Maestro E2E pilot bypass)
 - **Context**: Android Maestro emulator E2E blocked PR merge for days (H11 cold-boot `bootError=true`); pilot users need app builds while E2E is fixed incrementally.
 - **Fixes**:

@@ -17,6 +17,6 @@ Stack screens (plot detail, documents, receipt, offline maps, document preview, 
 
 ## Native splash + `SplashGate`
 
-Cold start uses **`expo-splash-screen`** with green `SPLASH_BACKGROUND_COLOR` and `assets/images/splash-icon.png` (logo + English tagline). Regenerate via `python3 scripts/generate-app-icons.py`.
+Cold start uses **`expo-splash-screen`** with neutral `SPLASH_BACKGROUND_LIGHT` / `SPLASH_BACKGROUND_DARK` and `assets/images/splash-icon.png` (logo only). Regenerate via `python3 scripts/generate-app-icons.py`.
 
 **`SplashGate.tsx`** hides the native splash only after `AppStateProvider` sets `isAppReady` (SQLite + auth hydrate + disk load).
