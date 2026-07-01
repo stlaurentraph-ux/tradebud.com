@@ -5,15 +5,21 @@ type Translate = (key: string) => string;
 
 export type PushPermissionResult = 'granted' | 'denied' | 'unavailable';
 
-function isPushGranted(status: Notifications.PermissionStatus, iosStatus?: number): boolean {
-  if (status === 'granted') return true;
-  return iosStatus === Notifications.IosAuthorizationStatus.PROVISIONAL;
+type PermissionFields = {
+  granted?: boolean;
+  status?: 'granted' | 'denied' | 'undetermined';
+};
+
+function isPushGranted(permissions: Notifications.NotificationPermissionsStatus): boolean {
+  const fields = permissions as Notifications.NotificationPermissionsStatus & PermissionFields;
+  if (fields.granted === true || fields.status === 'granted') return true;
+  return permissions.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL;
 }
 
 export async function getPushPermissionStatus(): Promise<PushPermissionResult> {
   if (Platform.OS === 'web') return 'unavailable';
   const permissions = await Notifications.getPermissionsAsync();
-  if (isPushGranted(permissions.status, permissions.ios?.status)) {
+  if (isPushGranted(permissions)) {
     return 'granted';
   }
   return 'denied';
@@ -38,11 +44,11 @@ export function alertPushPermissionDenied(t: Translate): void {
 export async function requestPushPermission(): Promise<PushPermissionResult> {
   if (Platform.OS === 'web') return 'unavailable';
   const current = await Notifications.getPermissionsAsync();
-  if (isPushGranted(current.status, current.ios?.status)) {
+  if (isPushGranted(current)) {
     return 'granted';
   }
   const requested = await Notifications.requestPermissionsAsync();
-  if (isPushGranted(requested.status, requested.ios?.status)) {
+  if (isPushGranted(requested)) {
     return 'granted';
   }
   return 'denied';

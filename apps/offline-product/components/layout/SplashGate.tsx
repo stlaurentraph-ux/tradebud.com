@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
 
+import { markAppInteractive } from '@/features/observability/markAppInteractive';
 import { useAppState } from '@/features/state/AppStateContext';
 import { shouldUseMaestroCiThinBoot } from '@/features/testing/maestroCiBootProfile';
 
@@ -27,6 +28,7 @@ export function SplashGate({ children }: { children: ReactNode }) {
           SplashScreen.setOptions({ fade: true, duration: fadeMs });
         }
         await SplashScreen.hideAsync();
+        markAppInteractive();
       } catch {
         // Splash may already be hidden in dev fast refresh.
       }
