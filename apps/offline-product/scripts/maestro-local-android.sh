@@ -148,6 +148,8 @@ export EXPO_PUBLIC_SENTRY_ENABLED=0
 export SENTRY_DISABLE_AUTO_UPLOAD=true
 export MAESTRO_SEED_SKIP=1
 export MAESTRO_ANDROID_IN_APP_DB_SEED=1
+# Local machines often have a stale android/ tree from another Expo/RN revision — refresh by default.
+export MAESTRO_FORCE_PREBUILD="${MAESTRO_FORCE_PREBUILD:-${MAESTRO_LOCAL_FORCE_PREBUILD:-1}}"
 export MAESTRO_CI_ARTIFACT_DIR="${MAESTRO_CI_ARTIFACT_DIR:-$ROOT/ci-artifacts/maestro-android-local}"
 export EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-https://api.tracebud.com/api}"
 export EXPO_PUBLIC_SUPABASE_URL="${EXPO_PUBLIC_SUPABASE_URL:-https://example.supabase.co}"
