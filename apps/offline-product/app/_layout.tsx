@@ -47,6 +47,7 @@ function RootLayout() {
                     <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
                     <Stack.Screen name="offline-maps" options={{ headerShown: false }} />
                     <Stack.Screen name="why-tracebud" options={{ headerShown: false }} />
+                    <Stack.Screen name="activity" options={{ headerShown: false }} />
                   </Stack>
                   <StatusBar style="auto" />
                 </ThemeProvider>

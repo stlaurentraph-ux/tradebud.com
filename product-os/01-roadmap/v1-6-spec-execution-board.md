@@ -36,6 +36,8 @@ Execution board for converting spec gaps into implementation-ready, owner-assign
 | P2-09 | Add `audit_events` partitioning strategy | Cursor | None | Monthly partitioning and retention tier policy documented |
 | P2-10 | Draft deforestation intersection scoring algorithm | Cursor | None | Deterministic scoring steps and reconciliation logic documented |
 | P2-11 | Expand notifications to delivery model | Cursor | None | Channel config, delivery log table, payload families, retry policy documented |
+
+**P2-11 farmer slices (Release 2, registered 2026-07-01):** [`FEAT-field-farmer-notifications-v2.md`](../02-features/FEAT-field-farmer-notifications-v2.md) — V2.1 backend security email after password set/change; V2.2 in-app activity feed.
 | P2-12 | Define portability export schema | Cursor | None | JSON-LD export contract and receiving-import validation rules documented |
 | P2-13 | Draft Stripe integration spec | Cursor | None | Mapping, lifecycle, webhook handling, idempotency, retries documented |
 

@@ -1,3 +1,15 @@
+### 2026-07-01 (Lane 3 — Field farmer Activity feed v1 slice)
+- **FEAT**: `product-os/02-features/FEAT-field-farmer-activity-feed.md`
+- **Shipped (field app)**: `/activity` Updates screen; Home tile with action badge; client-derived feed (deforestation, land docs, boundary, consent, sync); SQLite cache `farmerActivityFeedV1`; analytics `activity_feed_viewed` / `activity_row_opened`.
+- **Branch**: `feature/offline-farmer-activity-v1`
+
+### 2026-07-01 (Product — Release 2 farmer notifications registered)
+- **Context**: Field device QA (Hector): password set after Google sign-in succeeded; no security email (expected v1 / build 26).
+- **Registered**: `product-os/02-features/FEAT-field-farmer-notifications-v2.md`
+  - **V2.1** — Backend Resend email after successful password set/change (`POST /v1/me/account-password`); not in v1.
+  - **V2.2** — In-app activity feed (compliance + document history); related P2-11 slice.
+- **Cross-ref**: `v1-6-spec-execution-board.md` P2-11.
+
 ### 2026-06-30 (Lane 2 fix — Android Maestro golden path H13 + re-enable E2E)
 - **Context**: `workflow_dispatch` Android golden path failed preflight (`APK missing assets/maestro/tracebud_offline.db`) while assemble verified DB; PR smoke timed out on cold boot (15 min); `e2eBypass` hid emulator E2E on main.
 - **Fixes**:
