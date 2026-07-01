@@ -157,6 +157,12 @@ export EXPO_PUBLIC_OAUTH_BRIDGE_URL="${EXPO_PUBLIC_OAUTH_BRIDGE_URL:-https://app
 export EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL="${EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL:-https://app.tracebud.com/auth/confirm}"
 
 if [[ "${MAESTRO_LOCAL_SKIP_ASSEMBLE:-}" != "1" ]]; then
+  installed_rn="$(node -p "require('react-native/package.json').version" 2>/dev/null || echo '')"
+  expected_rn="$(node -p "require('./package.json').dependencies['react-native']" 2>/dev/null || echo '')"
+  if [[ -n "$installed_rn" && -n "$expected_rn" && "$installed_rn" != "${expected_rn#~}" && "$installed_rn" != "${expected_rn#^}" ]]; then
+    echo "[warn] react-native $installed_rn installed but package.json expects $expected_rn"
+    echo "       Run: cd apps/offline-product && npm ci"
+  fi
   echo "==> Assembling CI-parity debug APK (embedded bundle + Maestro boot DB)"
   bash "$ROOT/scripts/maestro-ci-assemble-android-apk.sh"
 fi

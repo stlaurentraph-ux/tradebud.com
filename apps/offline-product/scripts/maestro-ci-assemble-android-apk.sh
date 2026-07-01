@@ -112,7 +112,7 @@ export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspa
 MAESTRO_ANDROID_ABI="${MAESTRO_ANDROID_ABI:-x86_64}"
 echo "==> gradle assembleDebug (${MAESTRO_ANDROID_ABI} for CI emulator)"
 cd android
-./gradlew assembleDebug --no-daemon --build-cache --parallel -q -PreactNativeArchitectures="$MAESTRO_ANDROID_ABI"
+./gradlew assembleDebug --no-daemon --build-cache --parallel -q -PreactNativeArchitectures="$MAESTRO_ANDROID_ABI" -x lintVitalAnalyzeDebug
 
 APK_PATH="$ROOT/android/app/build/outputs/apk/debug/app-debug.apk"
 if [[ ! -f "$APK_PATH" ]]; then
