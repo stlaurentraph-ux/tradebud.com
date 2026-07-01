@@ -83,6 +83,16 @@ boot_emulator_if_needed() {
   serial="$(adb devices 2>/dev/null | awk '/^emulator-/{print $1; exit}')"
   if [[ -n "$serial" ]]; then
     echo "==> Using booted emulator: $serial"
+    export ANDROID_SERIAL="$serial"
+    export MAESTRO_ANDROID_SERIAL="$serial"
+    return
+  fi
+
+  serial="$(adb devices 2>/dev/null | awk 'NR>1 && $2=="device" && $1 !~ /^emulator-/ { print $1; exit }')"
+  if [[ -n "$serial" ]]; then
+    echo "[warn] No emulator — using physical device $serial (Maestro CI parity expects an emulator)."
+    export ANDROID_SERIAL="$serial"
+    export MAESTRO_ANDROID_SERIAL="$serial"
     return
   fi
 
