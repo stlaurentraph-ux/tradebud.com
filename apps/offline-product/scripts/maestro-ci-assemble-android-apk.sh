@@ -85,6 +85,27 @@ echo "==> Copied Maestro boot DB into Android native assets"
 echo "==> expo export:embed (android) — bundle JS for offline APK (no Metro)"
 npx expo export:embed --eager --platform android --dev false
 
+ensure_hermesc_on_path() {
+  # RN 0.81+ ships hermesc via hermes-compiler; Gradle still probes react-native/sdks/hermesc/*.
+  local os_bin="osx-bin"
+  if [[ "$(uname -s)" != "Darwin" ]]; then
+    os_bin="linux64-bin"
+  fi
+  local rn_dir="$ROOT/node_modules/react-native/sdks/hermesc/${os_bin}"
+  local rn_hermesc="$rn_dir/hermesc"
+  local compiler_hermesc="$ROOT/node_modules/hermes-compiler/hermesc/${os_bin}/hermesc"
+  if [[ ! -x "$rn_hermesc" && -x "$compiler_hermesc" ]]; then
+    mkdir -p "$rn_dir"
+    ln -sf "$compiler_hermesc" "$rn_hermesc"
+    echo "==> Linked hermesc for Gradle: $rn_hermesc -> $compiler_hermesc"
+  elif [[ ! -x "$rn_hermesc" ]]; then
+    echo "::error::hermesc missing at $rn_hermesc (and no hermes-compiler fallback)"
+    exit 1
+  fi
+}
+
+ensure_hermesc_on_path
+
 # Release assemble OOMs on GHA (Metaspace) — debug + embedded bundle is the CI path.
 export GRADLE_OPTS="${GRADLE_OPTS:--Dorg.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8}"
 
