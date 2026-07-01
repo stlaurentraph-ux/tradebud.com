@@ -87,6 +87,11 @@ import {
 } from '@/features/plots/plotNameValidation';
 import { captureAndPersistPlotListThumbnail } from '@/features/mapping/plotListThumbnailCapture';
 import { plotListThumbnailUriWithLayoutRev } from '@/features/mapping/plotListThumbnailStore';
+import {
+  canConfirmCornerSave,
+  CORNER_CAPTURE_HOLD_SECONDS,
+  resolveCornerCaptureLiveMessage,
+} from '@/features/mapping/cornerCaptureUx';
 
 type LatLng = {
   latitude: number;
