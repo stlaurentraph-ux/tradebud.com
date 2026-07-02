@@ -91,6 +91,8 @@ export type Plot = {
   landTenureDeclaredAt?: number;
   noDeforestationDeclared?: boolean;
   noDeforestationDeclaredAt?: number;
+  /** Cached PNG for My Plots list — captured at registration when boundary is saved. */
+  listThumbnailUri?: string;
 };
 
 type AppStateContextValue = {
