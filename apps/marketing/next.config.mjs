@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
 import { withSentryConfig } from '@sentry/nextjs';
 import createNextIntlPlugin from 'next-intl/plugin';
 
@@ -28,6 +29,24 @@ const apiTraceExcludes = [
 ];
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
+
+function loadInsightSlugRedirects() {
+  const raw = fs.readFileSync(path.join(appDir, 'lib/insight-slug-redirects.json'), 'utf8');
+  const entries = JSON.parse(raw);
+  if (!Array.isArray(entries)) {
+    throw new Error('insight-slug-redirects.json must be an array');
+  }
+  return entries.map((entry) => {
+    if (!entry?.from || !entry?.to) {
+      throw new Error('Each insight slug redirect requires "from" and "to"');
+    }
+    return {
+      source: `/:locale/insights/${entry.from}`,
+      destination: `/:locale/insights/${entry.to}`,
+      permanent: true,
+    };
+  });
+}
 
 const apiRouteKeys = [
   '/api/**',
@@ -60,6 +79,9 @@ const nextConfig = {
         pathname: '/**',
       },
     ],
+  },
+  async redirects() {
+    return loadInsightSlugRedirects();
   },
 };
 

@@ -66,7 +66,7 @@ Bundles are priced below the sum of included standalone modules.
 
 | Bundle | Includes | Starter | Growth | Scale |
 | --- | --- | ---: | ---: | ---: |
-| **Compliance Starter** | Foundation + EUDR | 20 | 40 | 60 |
+| **Compliance Starter** | Foundation + EUDR | 19 | 49 | 99 |
 | **Climate Starter** | Foundation + ESG Carbon | 15 | 25 | 45 |
 | **Sustainability Bundle** | Foundation + ESG Carbon + Regenerative Ag | 20 | 35 | 60 |
 | **Due Diligence Bundle** | Foundation + EUDR + Child Labor | 30 | 50 | 85 |

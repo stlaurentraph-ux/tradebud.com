@@ -153,13 +153,13 @@ describe('BillingService', () => {
             id: 'inv_1',
             tenant_id: 'tenant_exporter',
             billing_period: '2026-06',
-            subscription_amount_eur: 20,
+            subscription_amount_eur: 19,
             origin_seal_count: 1,
             origin_seal_amount_eur: 1,
             destination_submit_count: 0,
             destination_submit_amount_eur: 0,
             marketplace_fee_amount_eur: 0,
-            total_amount_eur: 21,
+            total_amount_eur: 20,
             currency: 'EUR',
             invoice_status: 'PAID',
             stripe_invoice_id: 'in_123',
@@ -184,13 +184,13 @@ describe('BillingService', () => {
             id: 'inv_2',
             tenant_id: 'tenant_exporter',
             billing_period: '2026-05',
-            subscription_amount_eur: 20,
+            subscription_amount_eur: 19,
             origin_seal_count: 2,
             origin_seal_amount_eur: 2,
             destination_submit_count: 0,
             destination_submit_amount_eur: 0,
             marketplace_fee_amount_eur: 0,
-            total_amount_eur: 22,
+            total_amount_eur: 21,
             currency: 'EUR',
             invoice_status: 'FAILED',
             stripe_invoice_id: 'in_failed',
@@ -211,13 +211,13 @@ describe('BillingService', () => {
       id: 'inv_1',
       tenant_id: 'tenant_exporter',
       billing_period: '2026-06',
-      subscription_amount_eur: 40,
+      subscription_amount_eur: 49,
       origin_seal_count: 3,
       origin_seal_amount_eur: 3,
       destination_submit_count: 0,
       destination_submit_amount_eur: 0,
       marketplace_fee_amount_eur: 0,
-      total_amount_eur: 43,
+      total_amount_eur: 52,
       currency: 'EUR',
       invoice_status: 'FINALIZED',
       stripe_invoice_id: null,
@@ -250,9 +250,9 @@ describe('BillingService', () => {
     };
 
     const service = makeBillingService(pool);
-    const invoice = await service.finalizeMonthlyInvoice('tenant_exporter', '2026-06', 40);
+    const invoice = await service.finalizeMonthlyInvoice('tenant_exporter', '2026-06', 49);
 
-    expect(invoice.total_amount_eur).toBe(43);
+    expect(invoice.total_amount_eur).toBe(52);
     expect(invoice.origin_seal_count).toBe(3);
     expect(invoice.invoice_status).toBe('FINALIZED');
   });

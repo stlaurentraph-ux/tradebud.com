@@ -5,39 +5,40 @@ import { useTranslations } from "next-intl";
 import { Check, Sparkles, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useWaitlistDialog } from "@/components/waitlist-dialog";
+import { COMPLIANCE_STARTER_BANDS } from "@/lib/pricing-spec";
 
 const plans = [
   {
     key: "starter",
-    scale: "1–50 managed contacts",
-    shipments: "€1 / leg",
-    price: "€20",
+    scale: COMPLIANCE_STARTER_BANDS[0].sublabel,
+    price: COMPLIANCE_STARTER_BANDS[0].price,
     priceLabel: "/month",
     highlight: false,
+    showDashboard: true,
   },
   {
     key: "growth",
-    scale: "51–500 managed contacts",
-    shipments: "€1 / leg",
-    price: "€40",
+    scale: COMPLIANCE_STARTER_BANDS[1].sublabel,
+    price: COMPLIANCE_STARTER_BANDS[1].price,
     priceLabel: "/month",
     highlight: true,
+    showDashboard: true,
   },
   {
     key: "scale",
-    scale: "501–3,000 managed contacts",
-    shipments: "€1 / leg",
-    price: "€60",
+    scale: COMPLIANCE_STARTER_BANDS[2].sublabel,
+    price: COMPLIANCE_STARTER_BANDS[2].price,
     priceLabel: "/month",
     highlight: false,
+    showDashboard: true,
   },
   {
     key: "enterprise",
-    scale: "3,001+ managed contacts",
-    shipments: "Custom",
-    price: "Custom",
+    scale: COMPLIANCE_STARTER_BANDS[3].sublabel,
+    price: COMPLIANCE_STARTER_BANDS[3].price,
     priceLabel: "",
     highlight: false,
+    showDashboard: true,
   },
 ] as const;
 
@@ -120,12 +121,14 @@ export function Pricing() {
                     {plan.scale}
                   </span>
                 </div>
-                <div className="flex items-start gap-3">
-                  <Check className={`w-5 h-5 mt-0.5 shrink-0 ${plan.highlight ? "text-[var(--data-emerald)]" : "text-[var(--data-emerald)]"}`} />
-                  <span className={`text-sm ${plan.highlight ? "text-white/80" : "text-gray-600"}`}>
-                    {plan.shipments} {t("pricingSection.table.shipments").toLowerCase()}
-                  </span>
-                </div>
+                {plan.showDashboard && (
+                  <div className="flex items-start gap-3">
+                    <Check className={`w-5 h-5 mt-0.5 shrink-0 ${plan.highlight ? "text-[var(--data-emerald)]" : "text-[var(--data-emerald)]"}`} />
+                    <span className={`text-sm ${plan.highlight ? "text-white/80" : "text-gray-600"}`}>
+                      {t("pricingSection.dashboardFeature")}
+                    </span>
+                  </div>
+                )}
               </div>
 
               {/* CTA Button */}

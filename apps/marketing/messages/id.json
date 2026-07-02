@@ -144,12 +144,12 @@
       "headline": "Simple monthly pricing by network size.",
       "description": "One price. No per-seat fees.",
       "popularBadge": "Most popular",
-      "footerNote": "Extra shipments are billed separately.",
+      "footerNote": "Your monthly plan covers your network. Each shipment costs €1 when export data is sealed and €1 when import data is submitted to EU.",
+      "dashboardFeature": "Full traceability dashboard",
       "cta": "Get started",
       "table": {
         "plan": "Plan",
         "managedScale": "Managed scale",
-        "shipments": "Included shipments / month",
         "monthlyBase": "Monthly base"
       },
       "plans": {
@@ -431,6 +431,7 @@
       "howItWorks": "Cara kerjanya",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -452,6 +453,7 @@
     "tagline": "Operasi EUDR lebih sederhana. Akses pasar lebih kuat.",
     "whyTracebud": "Mengapa Tracebud",
     "products": "Produk",
+    "insights": "Insights",
     "waitlistPrompt": "Siap gabung daftar tunggu?",
     "waitlistSubline": "Jadilah yang pertama tahu saat Tracebud dibuka untuk jaringan Anda."
   },
@@ -498,5 +500,13 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Kopi dulu, lalu enam komoditas EUDR lainnya: kakao, minyak kelapa sawit, karet, kedelai, sapi, dan kayu. Lihat halaman harga untuk roadmap lengkap."
+  },
+  "homeV2": {
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
   }
 }

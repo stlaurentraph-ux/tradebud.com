@@ -15,6 +15,7 @@ const npmGuards = [
   'routes:publication:assert',
   'analytics:slice:assert',
   'insights:lint:assert',
+  'insights:seo:assert',
   'png:size:assert',
   'api:trace:size:assert',
   'e2e:golden-paths:assert',

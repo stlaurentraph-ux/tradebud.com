@@ -6,7 +6,7 @@
         {
           "ruleId": "color-contrast",
           "impact": "serious",
-          "count": 11
+          "count": 17
         },
         {
           "ruleId": "label",
