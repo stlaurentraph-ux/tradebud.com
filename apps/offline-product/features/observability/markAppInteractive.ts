@@ -1,5 +1,4 @@
-import { AppMetrics } from 'expo-observe';
-
+import { markAppInteractiveNative } from '@/features/observability/appMetricsNativeBridge';
 import { shouldUseMaestroCiThinBoot } from '@/features/testing/maestroCiBootProfile';
 
 let marked = false;
@@ -8,5 +7,5 @@ let marked = false;
 export function markAppInteractive(): void {
   if (marked || shouldUseMaestroCiThinBoot()) return;
   marked = true;
-  AppMetrics.markInteractive();
+  markAppInteractiveNative();
 }

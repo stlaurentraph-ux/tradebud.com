@@ -177,6 +177,7 @@ console.log('OK en.json: no placeholder keys');
 assertIncludes('app.config.js', 'googleMapsConfigured', 'Android maps config flag in app.config');
 assertIncludes('app.config.js', 'googleMaps: { apiKey: googleMapsApiKey }', 'Android maps API key wiring');
 assertIncludes('components/plot-map/PlotMapPreview.tsx', 'shouldBlockNativeMapView', 'plot preview maps gate');
+assertIncludes('components/plot-map/PlotMapPreview.tsx', 'FieldMapMountGate', 'plot preview maps gate');
 assertIncludes('components/plot-map/PlotMap.native.tsx', 'FieldMapMountGate', 'plot map native gate');
 assertIncludes('components/plot-photo-vault/PhotoVaultMap.native.tsx', 'FieldMapMountGate', 'photo vault map gate');
 assertIncludes('features/mapping/WalkPerimeterScreen.tsx', 'FieldMapMountGate', 'walk perimeter map gate');

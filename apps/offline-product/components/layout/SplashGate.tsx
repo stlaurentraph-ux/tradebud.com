@@ -22,11 +22,15 @@ export function SplashGate({ children }: { children: ReactNode }) {
     if (!isAppReady) return;
 
     const hide = async () => {
-      try {
-        const fadeMs = shouldUseMaestroCiThinBoot() ? MAESTRO_CI_SPLASH_FADE_MS : SPLASH_FADE_MS;
-        if (typeof SplashScreen.setOptions === 'function' && fadeMs > 0) {
+      const fadeMs = shouldUseMaestroCiThinBoot() ? MAESTRO_CI_SPLASH_FADE_MS : SPLASH_FADE_MS;
+      if (typeof SplashScreen.setOptions === 'function' && fadeMs > 0) {
+        try {
           SplashScreen.setOptions({ fade: true, duration: fadeMs });
+        } catch {
+          // Fade options unsupported on this dev client — still hide the splash.
         }
+      }
+      try {
         await SplashScreen.hideAsync();
         markAppInteractive();
       } catch {
