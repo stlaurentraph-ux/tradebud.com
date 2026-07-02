@@ -431,6 +431,7 @@
       "howItWorks": "Cómo funciona",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -452,6 +453,7 @@
     "joinWaitlist": "Unirse ahora",
     "whyTracebud": "Por qué Tracebud",
     "products": "Productos",
+    "insights": "Insights",
     "waitlistPrompt": "¿Listo para unirte a la lista de espera?",
     "waitlistSubline": "Sé el primero en saber cuando Tracebud abra para tu red."
   },
@@ -498,5 +500,13 @@
     "support": "What support is available?",
     "supportAnswer": "Cada miembro de la lista recibe seguimiento personal por correo. Una vez integrado, tienes acceso directo a nuestro equipo para configuración y cumplimiento.",
     "whyCommoditiesAnswer": "Café primero, luego los otros seis productos EUDR: cacao, aceite de palma, caucho, soja, ganado y madera. Consulta nuestra página de precios para la hoja de ruta completa."
+  },
+  "homeV2": {
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
   }
 }

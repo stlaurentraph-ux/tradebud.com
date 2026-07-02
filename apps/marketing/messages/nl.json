@@ -431,6 +431,7 @@
       "howItWorks": "Hoe het werkt",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -452,6 +453,7 @@
     "tagline": "Eenvoudigere EUDR-processen. Sterkere markttoegang.",
     "whyTracebud": "Waarom Tracebud",
     "products": "Producten",
+    "insights": "Insights",
     "waitlistPrompt": "Klaar om u aan te sluiten?",
     "waitlistSubline": "Wees als eerste op de hoogte wanneer Tracebud opent voor uw netwerk."
   },
@@ -498,5 +500,13 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Eerst koffie, daarna de andere zes EUDR-grondstoffen: cacao, palmolie, rubber, soja, vee en hout. Zie onze prijspagina voor de volledige roadmap."
+  },
+  "homeV2": {
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
   }
 }

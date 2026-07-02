@@ -431,6 +431,7 @@
       "howItWorks": "Wie es funktioniert",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -452,6 +453,7 @@
     "tagline": "Einfachere EUDR-Abläufe. Stärkerer Marktzugang.",
     "whyTracebud": "Warum Tracebud",
     "products": "Produkte",
+    "insights": "Insights",
     "waitlistPrompt": "Bereit für die Warteliste?",
     "waitlistSubline": "Erfahren Sie zuerst, wenn Tracebud für Ihr Netzwerk öffnet."
   },
@@ -498,5 +500,13 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Zuerst Kaffee, dann die anderen sechs EUDR-Waren: Kakao, Palmöl, Kautschuk, Soja, Rinder und Holz. Siehe Preisseite für die Roadmap."
+  },
+  "homeV2": {
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
   }
 }

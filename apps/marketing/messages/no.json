@@ -431,6 +431,7 @@
       "howItWorks": "Hvordan det fungerer",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -452,6 +453,7 @@
     "tagline": "Enklere EUDR-prosesser. Sterkere markedstilgang.",
     "whyTracebud": "Hvorfor Tracebud",
     "products": "Produkter",
+    "insights": "Insights",
     "waitlistPrompt": "Klar for ventelisten?",
     "waitlistSubline": "Vær først ute når Tracebud åpner for nettverket ditt."
   },
@@ -498,5 +500,13 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Kaffe først, deretter de andre seks EUDR-varene: kakao, palmeolje, gummi, soya, storfe og tre. Se prissiden for full roadmap."
+  },
+  "homeV2": {
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
   }
 }

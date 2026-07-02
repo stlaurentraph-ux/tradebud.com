@@ -59,6 +59,9 @@ export function Footer() {
               <Link href={resolvedHref("#products")} className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
                 {t("products")}
               </Link>
+              <Link href={`/${locale}/insights`} className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
+                {t("insights")}
+              </Link>
               <Link href={`/${locale}/privacy`} className="text-sm text-gray-600 hover:text-[var(--forest-canopy)]">
                 {t("privacy")}
               </Link>

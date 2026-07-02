@@ -428,6 +428,7 @@
       "howItWorks": "How it works",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -442,6 +443,7 @@
     "whyTracebud": "Why Tracebud",
     "howItWorks": "How it works",
     "products": "Products",
+    "insights": "Insights",
     "privacy": "Privacy",
     "terms": "Terms",
     "contact": "Contact",
@@ -471,7 +473,23 @@
     "eyebrow": "Insights",
     "title": "Guidance for the whole chain",
     "description": "Regulatory updates, field notes, technology explainers, and practical playbooks for EUDR traceability.",
-    "empty": "Articles are being prepared. Check back soon."
+    "empty": "Articles are being prepared. Check back soon.",
+    "article": {
+      "backToInsights": "Back to Insights",
+      "allInsights": "All Insights",
+      "readingTime": "{minutes} min read",
+      "updated": "Updated",
+      "ctaEyebrow": "Next step",
+      "ctaTitle": "Secure your geospatial data pipeline",
+      "ctaDescription": "Stop losing hours to broken field maps and overlapping polygons. See how Tracebud streamlines capture, validation, and audit-ready exports.",
+      "ctaPrimary": "Get started",
+      "ctaSecondary": "Join the pilot",
+      "relatedEyebrow": "Keep reading",
+      "relatedTitle": "Related insights",
+      "viewAll": "View all",
+      "tocTitle": "On this page",
+      "tocLabel": "Table of contents"
+    }
   },
   "homeV2": {
     "hero": {

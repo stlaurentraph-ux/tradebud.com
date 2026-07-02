@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint --config ../../packages/eslint-config/nextjs.mjs . --max-warnings 0",
@@ -14,6 +14,7 @@
     "analytics:slice:assert": "node scripts/marketing-analytics-slice-guard.mjs",
     "analytics:slice:write-baseline": "node scripts/marketing-analytics-slice-guard.mjs --write-baseline",
     "insights:lint:assert": "node scripts/marketing-insights-lint-guard.mjs",
+    "insights:seo:assert": "node scripts/marketing-insights-seo-guard.mjs",
     "png:size:assert": "node scripts/marketing-png-size-guard.mjs --strict",
     "png:size:write-baseline": "node scripts/marketing-png-size-guard.mjs --write-baseline",
     "smoke:post-deploy": "node scripts/marketing-post-deploy-smoke.mjs",
@@ -32,7 +33,7 @@
     "seo:smoke:assert": "node scripts/marketing-seo-smoke-guard.mjs",
     "email:templates:smoke": "node scripts/run-marketing-email-templates-smoke.mjs",
     "email:templates:smoke:assert": "node scripts/marketing-email-templates-smoke-guard.mjs",
-    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run analytics:slice:assert && npm run insights:lint:assert && npm run png:size:assert && npm run e2e:golden-paths:assert && npm run build && npm run api:trace:size:assert",
+    "check": "npm run lint && npm run typecheck && npm run i18n:parity:assert && npm run routes:publication:assert && npm run analytics:slice:assert && npm run insights:lint:assert && npm run insights:seo:assert && npm run png:size:assert && npm run e2e:golden-paths:assert && npm run build && npm run api:trace:size:assert",
     "sentry:env:assert": "node ../../scripts/sentry-env-tags-guard.mjs",
     "qa:structural": "node ./scripts/run-structural-guards.mjs",
     "qa:structural:ci": "node ./scripts/run-structural-guards.mjs --ci"

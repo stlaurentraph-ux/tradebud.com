@@ -431,6 +431,7 @@
       "howItWorks": "Cách hoạt động",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -452,6 +453,7 @@
     "tagline": "Vận hành EUDR đơn giản hơn. Tiếp cận thị trường mạnh hơn.",
     "whyTracebud": "Vì sao Tracebud",
     "products": "Sản phẩm",
+    "insights": "Insights",
     "waitlistPrompt": "Sẵn sàng tham gia danh sách chờ?",
     "waitlistSubline": "Hãy là người đầu tiên biết khi Tracebud mở cho mạng lưới của bạn."
   },
@@ -498,5 +500,13 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Cà phê trước, sau đó sáu hàng hóa EUDR khác: ca cao, dầu cọ, cao su, đậu nành, gia súc và gỗ. Xem trang giá để biết lộ trình đầy đủ."
+  },
+  "homeV2": {
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
   }
 }
