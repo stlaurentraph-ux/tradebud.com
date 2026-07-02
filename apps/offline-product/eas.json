@@ -8,6 +8,7 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "environment": "preview",
       "env": {
         "EXPO_APPLE_TEAM_ID": "6RT8K5RM6Z",
         "EXPO_APPLE_TEAM_TYPE": "COMPANY_OR_ORGANIZATION",
@@ -16,6 +17,8 @@
         "EXPO_PUBLIC_OAUTH_BRIDGE_URL": "https://app.tracebud.com/auth/callback",
         "EXPO_PUBLIC_FIELD_AUTH_CONFIRM_URL": "https://app.tracebud.com/auth/confirm",
         "EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME": "1",
+        "EXPO_PUBLIC_SENTRY_ENABLED": "1",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "preview",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     },

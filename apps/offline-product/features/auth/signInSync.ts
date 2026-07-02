@@ -16,6 +16,7 @@ import { completeOAuthFarmerSession } from '@/features/auth/completeOAuthFarmerS
 import { mapPasswordSignInError, normalizeSignInErrorCode } from '@/features/auth/mapAuthError';
 import { mapOAuthErrorToCode } from '@/features/auth/oauthSession';
 import { signInWithOAuthProvider, type OAuthProvider } from '@/features/auth/oauthSignIn';
+import { withSentrySpan, markActiveSentrySpanError } from '@/features/observability/sentrySpans';
 
 export type SignInSyncResult =
   | {
@@ -107,18 +108,29 @@ export async function signInWithOAuthAndSyncPlots(params: {
   farmerId?: string;
   localPlots?: Plot[];
 }): Promise<SignInSyncResult> {
-  try {
-    const session = await signInWithOAuthProvider(params.provider);
-    return completeOAuthFarmerSession({
-      session,
-      farmerId: params.farmerId,
-      localPlots: params.localPlots,
-    });
-  } catch (e) {
-    await hydrateSyncAuthFromSettings();
-    if (hasSyncAuthSession()) {
-      return { ok: true };
-    }
-    return { ok: false, message: mapOAuthErrorToCode(e) };
-  }
+  return withSentrySpan(
+    {
+      name: 'auth.oauth.sign_in_and_sync',
+      op: 'auth.oauth',
+      attributes: { oauth_provider: params.provider },
+    },
+    async () => {
+      try {
+        const session = await signInWithOAuthProvider(params.provider);
+        return completeOAuthFarmerSession({
+          session,
+          farmerId: params.farmerId,
+          localPlots: params.localPlots,
+        });
+      } catch (e) {
+        await hydrateSyncAuthFromSettings();
+        if (hasSyncAuthSession()) {
+          return { ok: true };
+        }
+        const message = mapOAuthErrorToCode(e);
+        markActiveSentrySpanError(message, { oauth_provider: params.provider });
+        return { ok: false, message };
+      }
+    },
+  );
 }

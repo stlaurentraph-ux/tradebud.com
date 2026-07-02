@@ -15,6 +15,7 @@ import {
   classifyTokenVerifyFailure,
   type SyncFailure,
 } from '@/features/sync/syncFailure';
+import { withSentrySpan } from '@/features/observability/sentrySpans';
 
 export type FieldSyncSession = {
   accessToken: string;
@@ -34,38 +35,46 @@ function failureFromVerify(result: Extract<VerifySyncAccessTokenResult, { ok: fa
  * Call `end()` in a finally block when the run finishes.
  */
 export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult> {
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const verify = await verifySyncAccessToken().catch(
-      (): Extract<VerifySyncAccessTokenResult, { ok: false }> => ({
-        ok: false,
-        reason: 'network',
-      }),
-    );
+  return withSentrySpan({ name: 'sync.session_open', op: 'sync.session' }, async () => {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const verify = await verifySyncAccessToken().catch(
+        (): Extract<VerifySyncAccessTokenResult, { ok: false }> => ({
+          ok: false,
+          reason: 'network',
+        }),
+      );
 
-    if (!verify.ok) {
-      return { ok: false, failure: failureFromVerify(verify), verify };
-    }
+      if (!verify.ok) {
+        return { ok: false, failure: failureFromVerify(verify), verify };
+      }
 
-    if (await probeSyncAccessTokenAccepted(verify.token)) {
-      beginServerPlotFetchRun();
-      beginSyncAccessTokenRun(verify.token);
+      if (await probeSyncAccessTokenAccepted(verify.token)) {
+        beginServerPlotFetchRun();
+        beginSyncAccessTokenRun(verify.token);
+
+        return {
+          ok: true,
+          session: {
+            accessToken: verify.token,
+            apiBaseUrl: getTracebudApiBaseUrl(),
+          },
+          end: () => {
+            endSyncAccessTokenRun();
+            endServerPlotFetchRun();
+          },
+        };
+      }
+
+      if (attempt === 0) {
+        forceSyncAccessTokenRefresh();
+        continue;
+      }
 
       return {
-        ok: true,
-        session: {
-          accessToken: verify.token,
-          apiBaseUrl: getTracebudApiBaseUrl(),
-        },
-        end: () => {
-          endSyncAccessTokenRun();
-          endServerPlotFetchRun();
-        },
+        ok: false,
+        failure: failureFromVerify({ ok: false, reason: 'session_expired' }),
+        verify: { ok: false, reason: 'session_expired' },
       };
-    }
-
-    if (attempt === 0) {
-      forceSyncAccessTokenRefresh();
-      continue;
     }
 
     return {
@@ -73,13 +82,7 @@ export async function openFieldSyncSession(): Promise<FieldSyncSessionOpenResult
       failure: failureFromVerify({ ok: false, reason: 'session_expired' }),
       verify: { ok: false, reason: 'session_expired' },
     };
-  }
-
-  return {
-    ok: false,
-    failure: failureFromVerify({ ok: false, reason: 'session_expired' }),
-    verify: { ok: false, reason: 'session_expired' },
-  };
+  });
 }
 
 /** Run work inside a field sync session; always closes the session. */

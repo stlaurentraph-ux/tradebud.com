@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "organizationSlug": "tracebud",
+  "projectSlug": "react-native",
+  "apiBase": "https://de.sentry.io",
+  "rules": [
+    {
+      "name": "Field — boot failure (scope:app_state_boot)",
+      "actionMatch": "all",
+      "filterMatch": "all",
+      "frequency": 60,
+      "conditions": [
+        {
+          "id": "sentry.rules.conditions.first_seen_event.FirstSeenEventCondition"
+        }
+      ],
+      "filters": [
+        {
+          "id": "sentry.rules.filters.tagged_event.TaggedEventFilter",
+          "key": "scope",
+          "match": "eq",
+          "value": "app_state_boot"
+        }
+      ],
+      "actions": [
+        {
+          "id": "sentry.mail.actions.NotifyEmailAction",
+          "targetType": "IssueOwners",
+          "fallthroughType": "ActiveMembers"
+        }
+      ]
+    },
+    {
+      "name": "Field — sync/oauth message signals",
+      "actionMatch": "all",
+      "filterMatch": "any",
+      "frequency": 60,
+      "conditions": [
+        {
+          "id": "sentry.rules.conditions.first_seen_event.FirstSeenEventCondition"
+        }
+      ],
+      "filters": [
+        {
+          "id": "sentry.rules.filters.event_attribute.EventAttributeFilter",
+          "attribute": "message",
+          "match": "co",
+          "value": "sync:"
+        },
+        {
+          "id": "sentry.rules.filters.event_attribute.EventAttributeFilter",
+          "attribute": "message",
+          "match": "co",
+          "value": "auth.oauth"
+        },
+        {
+          "id": "sentry.rules.filters.event_attribute.EventAttributeFilter",
+          "attribute": "message",
+          "match": "co",
+          "value": "analytics:sync"
+        }
+      ],
+      "actions": [
+        {
+          "id": "sentry.mail.actions.NotifyEmailAction",
+          "targetType": "IssueOwners",
+          "fallthroughType": "ActiveMembers"
+        }
+      ]
+    },
+    {
+      "name": "Field — regression on resolved",
+      "actionMatch": "all",
+      "filterMatch": "all",
+      "frequency": 60,
+      "conditions": [
+        {
+          "id": "sentry.rules.conditions.regression_event.RegressionEventCondition"
+        }
+      ],
+      "filters": [],
+      "actions": [
+        {
+          "id": "sentry.mail.actions.NotifyEmailAction",
+          "targetType": "IssueOwners",
+          "fallthroughType": "ActiveMembers"
+        }
+      ]
+    }
+  ]
+}

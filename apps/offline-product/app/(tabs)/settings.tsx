@@ -101,6 +101,7 @@ import {
 } from '@/features/sync/syncReachabilityMessage';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { ReportProblemModal } from '@/components/settings/ReportProblemModal';
 import { Brand } from '@/constants/theme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
 import { createSettingsScreenStyles } from '@/screenStyles/settingsScreenStyles';
@@ -116,6 +117,10 @@ import { roundWgs84Coordinate } from '@/features/geo/coordinates';
 import { Input } from '@/components/ui/input';
 import { useFocusEffect } from '@react-navigation/native';
 import type { PendingSyncAttemptScope } from '@/features/sync/processPendingSyncQueue';
+import {
+  collectFieldProblemReportContext,
+  submitFieldProblemReport,
+} from '@/features/observability/fieldProblemReport';
 
 const ALL_QUEUE_ACTION_TYPES: PendingSyncAction['actionType'][] = [
   'harvest',
@@ -164,7 +169,7 @@ export default function SettingsScreen() {
   const params = useLocalSearchParams<{ focus?: string; syncNow?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const syncSectionY = useRef(0);
-  const { farmer, farmerDisplayName, plots, setFarmer, updateFarmerProfilePhoto, reloadFromDisk } =
+  const { farmer, farmerDisplayName, plots, setFarmer, updateFarmerProfilePhoto, reloadFromDisk, bootError } =
     useAppState();
   const { refreshAuth, openSignIn, isSignedIn, signOutOnDevice } = useSignInSheet();
   const [nameInput, setNameInput] = useState('');
@@ -209,6 +214,8 @@ export default function SettingsScreen() {
   const [profileEditing, setProfileEditing] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [helpTipsOpen, setHelpTipsOpen] = useState(false);
+  const [reportProblemOpen, setReportProblemOpen] = useState(false);
+  const [reportProblemBusy, setReportProblemBusy] = useState(false);
   const [backupTechOpen, setBackupTechOpen] = useState(false);
   const [queueActionFilter, setQueueActionFilter] = useState<
     Record<PendingSyncAction['actionType'], boolean>
@@ -1045,6 +1052,41 @@ export default function SettingsScreen() {
         },
       },
     ]);
+  };
+
+  const onSubmitProblemReport = async (note: string) => {
+    setReportProblemBusy(true);
+    try {
+      const context = await collectFieldProblemReportContext({
+        bootError,
+        queuePendingCount,
+        queueLastError,
+        queueLastErrorActionType,
+      });
+      const result = await submitFieldProblemReport({ userNote: note, context });
+      if (!result.ok) {
+        Alert.alert(t('settings_report_problem_title'), t('settings_report_problem_failed'));
+        return;
+      }
+      setReportProblemOpen(false);
+      if (result.usedSentry) {
+        Alert.alert(t('settings_report_problem_title'), t('settings_report_problem_success'));
+        return;
+      }
+      Alert.alert(t('settings_report_problem_title'), t('settings_report_problem_open_mail'), [
+        { text: t('cancel'), style: 'cancel' },
+        {
+          text: t('contact_us_btn'),
+          onPress: () => {
+            Linking.openURL(result.mailtoUrl).catch(() => undefined);
+          },
+        },
+      ]);
+    } catch {
+      Alert.alert(t('settings_report_problem_title'), t('settings_report_problem_failed'));
+    } finally {
+      setReportProblemBusy(false);
+    }
   };
 
   const runSyncNow = async () => {
@@ -2014,6 +2056,17 @@ export default function SettingsScreen() {
                     {t('contact_us_btn')}
                   </Button>
                 </View>
+                <View style={styles.btnWrap}>
+                  <Button
+                    variant="outline"
+                    size="md"
+                    fullWidth
+                    testID="settings_report_problem_btn"
+                    onPress={() => setReportProblemOpen(true)}
+                  >
+                    {t('settings_report_problem_btn')}
+                  </Button>
+                </View>
                 <Pressable
                   onPress={() => setHelpTipsOpen((open) => !open)}
                   style={styles.helpTipsToggle}
@@ -2049,6 +2102,18 @@ export default function SettingsScreen() {
           </>
         ) : null}
       </ThemedScrollView>
+      <ReportProblemModal
+        visible={reportProblemOpen}
+        busy={reportProblemBusy}
+        title={t('settings_report_problem_title')}
+        body={t('settings_report_problem_body')}
+        noteLabel={t('settings_report_problem_note_label')}
+        notePlaceholder={t('settings_report_problem_note_placeholder')}
+        submitLabel={t('settings_report_problem_submit')}
+        cancelLabel={t('settings_report_problem_cancel')}
+        onSubmit={onSubmitProblemReport}
+        onClose={() => setReportProblemOpen(false)}
+      />
     </ThemedView>
   );
 }

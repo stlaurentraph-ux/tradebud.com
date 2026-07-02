@@ -42,6 +42,7 @@ import {
 } from './persistence';
 import { queueFieldDevicePreferencesSync } from '@/features/sync/syncFieldDevicePreferences';
 import { queueFarmerProfilePhotoSync } from '@/features/sync/syncFarmerProfilePhoto';
+import { withSentrySpan, markActiveSentrySpanError } from '@/features/observability/sentrySpans';
 
 export type Role = 'farmer';
 
@@ -169,7 +170,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    void withSentrySpan({ name: 'app.boot', op: 'app.lifecycle' }, async () => {
       let bootFailed = false;
       try {
         await initDatabase();
@@ -206,6 +207,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           console.warn('[AppState] boot failed', error);
         }
         if (!isCiBuild) {
+          markActiveSentrySpanError('app_state_boot_failed', { scope: 'app_state_boot' });
           void import('@/features/observability/sentryClient')
             .then((module) => module.reportErrorToSentry(error, { scope: 'app_state_boot' }))
             .catch(() => undefined);
@@ -218,7 +220,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
           }
         }
       }
-    })();
+    });
     return () => {
       cancelled = true;
     };

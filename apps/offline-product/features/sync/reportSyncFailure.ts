@@ -1,4 +1,5 @@
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
+import { annotateActiveSentrySpan } from '@/features/observability/sentrySpans';
 import { addSentryBreadcrumb } from '@/features/observability/sentryClient';
 import { sanitizeAnalyticsProperties } from '@/features/security/sanitizeLogContext';
 import type { SyncFailure, SyncFailureStep } from '@/features/sync/syncFailure';
@@ -27,6 +28,13 @@ export function reportSyncFailure(
   };
 
   addSentryBreadcrumb(`sync:${failure.step}`, payload, breadcrumbLevel(failure));
+
+  annotateActiveSentrySpan({
+    sync_step: failure.step,
+    sync_cause: failure.cause,
+    ...(failure.actionType ? { sync_action_type: failure.actionType } : {}),
+    ...(failure.httpStatus != null ? { sync_http_status: failure.httpStatus } : {}),
+  });
 
   trackEvent(ANALYTICS_EVENTS.SYNC_ACTION_FAILED, payload);
 }

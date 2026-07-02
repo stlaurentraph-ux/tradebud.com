@@ -45,6 +45,8 @@ export const ANALYTICS_EVENTS = {
   PUSH_PERMISSION_DENIED: 'push_permission_denied',
   WHY_TRACEBUD_VIEWED: 'why_tracebud_viewed',
   WHY_TRACEBUD_HOME_TEASER_CLICKED: 'why_tracebud_home_teaser_clicked',
+  FIELD_PROBLEM_REPORT_SUBMITTED: 'field_problem_report_submitted',
+  FIELD_PROBLEM_REPORT_FAILED: 'field_problem_report_failed',
 } as const;
 
 export type OAuthAnalyticsSource = 'in_app' | 'cold_start';
@@ -59,6 +61,7 @@ const FAILURE_EVENTS = new Set<AnalyticsEventName>([
   ANALYTICS_EVENTS.UI_ACTION_FAILED,
   ANALYTICS_EVENTS.REACT_RENDER_ERROR,
   ANALYTICS_EVENTS.PHOTO_VAULT_CAPTURE_BLOCKED,
+  ANALYTICS_EVENTS.FIELD_PROBLEM_REPORT_FAILED,
 ]);
 
 export function trackEvent(
