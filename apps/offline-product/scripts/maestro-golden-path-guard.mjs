@@ -330,7 +330,7 @@ function assertWorkflow(manifest) {
   if (!workflow.includes('maestro-android-assemble')) {
     throw new Error(`${manifest.workflowFile} must define maestro-android-assemble job`);
   }
-  if (!workflow.includes('needs: [maestro-cost-gate, maestro-android-assemble]')) {
+  if (!workflow.includes('maestro-android-assemble]')) {
     throw new Error(`${manifest.workflowFile} Android smoke/golden must depend on maestro-android-assemble`);
   }
   if (!workflow.includes('maestro-ci-golden-path-android-smoke.sh')) {
@@ -363,6 +363,32 @@ function assertWorkflow(manifest) {
   }
   if (!workflow.includes('maestro-e2e-bypass-notice')) {
     throw new Error(`${manifest.workflowFile} must define maestro-e2e-bypass-notice job for pilot e2eBypass`);
+  }
+  if (!manifest.e2eApproval?.prLabel) {
+    throw new Error('manifest must define e2eApproval.prLabel');
+  }
+  if (!manifest.e2eApproval?.githubEnvironment) {
+    throw new Error('manifest must define e2eApproval.githubEnvironment');
+  }
+  const approvalGate = readOffline(manifest.e2eApproval.approvalGateScript ?? 'scripts/maestro-ci-approval-gate.mjs');
+  if (!approvalGate.includes('e2e_approved')) {
+    throw new Error('maestro-ci-approval-gate.mjs must output e2e_approved');
+  }
+  if (!workflow.includes('maestro-e2e-approval')) {
+    throw new Error(`${manifest.workflowFile} must define maestro-e2e-approval job`);
+  }
+  if (!workflow.includes('maestro-e2e-awaiting-approval')) {
+    throw new Error(`${manifest.workflowFile} must define maestro-e2e-awaiting-approval job`);
+  }
+  if (!workflow.includes('needs.maestro-e2e-approval.outputs.e2e_approved')) {
+    throw new Error(`${manifest.workflowFile} emulator jobs must honor maestro-e2e-approval`);
+  }
+  if (!workflow.includes(`environment: ${manifest.e2eApproval.githubEnvironment}`)) {
+    throw new Error(`${manifest.workflowFile} emulator jobs must use environment ${manifest.e2eApproval.githubEnvironment}`);
+  }
+  const runbook = readRepo('product-os/04-quality/maestro-ci-cost-runbook.md');
+  if (!runbook.includes(manifest.e2eApproval.prLabel)) {
+    throw new Error('maestro-ci-cost-runbook.md must document e2eApproval.prLabel');
   }
   if (!workflow.includes('e2e_bypass')) {
     throw new Error(`${manifest.workflowFile} cost gate must export e2e_bypass output`);

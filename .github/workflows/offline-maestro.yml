@@ -4,6 +4,7 @@ name: Offline Maestro
 #   npm run qa:maestro:prepush        (static, any OS)
 #   npm run qa:maestro:prepush:full   (macOS + local iOS golden path)
 # PR: maestro-cost-gate skips macOS when already green + android-only delta; concurrency cancels stale runs.
+# PR E2E: requires label `maestro:run` + GitHub Environment `maestro-e2e` approval (see maestro-ci-cost-runbook.md § E2E approval).
 # Pilot: e2eBypass.enabled in maestro-golden-path-ci.json skips emulator E2E (preflight still runs).
 # H11/H12: boot-error fail-fast marker + CI error logging + macOS scroll timeout bump.
 
@@ -165,6 +166,41 @@ jobs:
           MAESTRO_FORCE_E2E: ${{ github.event_name == 'workflow_dispatch' && inputs.force_e2e == true && '1' || '' }}
         run: node ./scripts/maestro-ci-platform-gate.mjs
 
+  maestro-e2e-approval:
+    name: Maestro E2E approval gate
+    needs: maestro-cost-gate
+    if: >
+      always() &&
+      needs.maestro-cost-gate.result == 'success' &&
+      needs.maestro-cost-gate.outputs.e2e_bypass != 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      e2e_approved: ${{ steps.approval.outputs.e2e_approved }}
+      e2e_approval_reason: ${{ steps.approval.outputs.e2e_approval_reason }}
+    steps:
+      - name: Decide E2E approval
+        id: approval
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node apps/offline-product/scripts/maestro-ci-approval-gate.mjs
+
+  maestro-e2e-awaiting-approval:
+    name: Maestro E2E awaiting approval
+    needs: [maestro-cost-gate, maestro-e2e-approval]
+    if: >
+      needs.maestro-cost-gate.outputs.e2e_bypass != 'true' &&
+      needs.maestro-e2e-approval.outputs.e2e_approved != 'true' &&
+      (
+        needs.maestro-cost-gate.outputs.run_ios == 'true' ||
+        needs.maestro-cost-gate.outputs.run_android == 'true'
+      )
+    runs-on: ubuntu-latest
+    steps:
+      - name: Awaiting maestro:run label
+        run: |
+          set -euo pipefail
+          echo "::notice title=Maestro E2E skipped::Add the \`maestro:run\` label to this PR to approve emulator Maestro runs (see product-os/04-quality/maestro-ci-cost-runbook.md § E2E approval)."
+
   maestro-e2e-bypass-notice:
     name: Maestro E2E bypass (pilot)
     needs: maestro-cost-gate
@@ -189,14 +225,16 @@ jobs:
 
   maestro-golden-path:
     name: Maestro golden path (macOS)
-    needs: maestro-cost-gate
+    needs: [maestro-cost-gate, maestro-e2e-approval]
     if: >
       needs.maestro-cost-gate.outputs.run_ios == 'true' &&
+      needs.maestro-e2e-approval.outputs.e2e_approved == 'true' &&
       (
         github.event_name == 'pull_request' ||
         github.event_name == 'push' ||
         (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
       )
+    environment: maestro-e2e
     runs-on: macos-latest
     timeout-minutes: 120
     env:
@@ -256,8 +294,11 @@ jobs:
 
   maestro-android-assemble:
     name: Maestro Android APK assemble
-    needs: maestro-cost-gate
-    if: needs.maestro-cost-gate.outputs.run_android == 'true'
+    needs: [maestro-cost-gate, maestro-e2e-approval]
+    if: >
+      needs.maestro-cost-gate.outputs.run_android == 'true' &&
+      needs.maestro-e2e-approval.outputs.e2e_approved == 'true'
+    environment: maestro-e2e
     runs-on: ubuntu-latest
     timeout-minutes: 45
     env:
@@ -337,10 +378,12 @@ jobs:
 
   maestro-android-smoke:
     name: Maestro Android smoke (PR)
-    needs: [maestro-cost-gate, maestro-android-assemble]
+    needs: [maestro-cost-gate, maestro-e2e-approval, maestro-android-assemble]
     if: >
       needs.maestro-cost-gate.outputs.run_android_smoke == 'true' &&
+      needs.maestro-e2e-approval.outputs.e2e_approved == 'true' &&
       github.event_name == 'pull_request'
+    environment: maestro-e2e
     runs-on: macos-15-intel
     timeout-minutes: 40
     env:
@@ -440,13 +483,15 @@ jobs:
 
   maestro-golden-path-android:
     name: Maestro golden path (Android)
-    needs: [maestro-cost-gate, maestro-android-assemble]
+    needs: [maestro-cost-gate, maestro-e2e-approval, maestro-android-assemble]
     if: >
       needs.maestro-cost-gate.outputs.run_android_golden == 'true' &&
+      needs.maestro-e2e-approval.outputs.e2e_approved == 'true' &&
       (
         github.event_name == 'push' ||
         (github.event_name == 'workflow_dispatch' && inputs.run_golden_path == true)
       )
+    environment: maestro-e2e
     runs-on: macos-15-intel
     timeout-minutes: 75
     env:
@@ -549,6 +594,7 @@ jobs:
     name: Maestro macOS CLI smoke
     needs: maestro-preflight
     if: github.event_name == 'workflow_dispatch' && inputs.run_flows == true
+    environment: maestro-e2e
     runs-on: macos-latest
     defaults:
       run:

@@ -57,6 +57,16 @@ Human configures these in the n8n instance after importing workflow specs from `
 
 ---
 
+## GitHub Environments (human setup — not secrets)
+
+| Environment | Used by | Setup |
+|-------------|---------|--------|
+| `maestro-e2e` | Offline Maestro emulator jobs | Settings → Environments → `maestro-e2e` → **Required reviewers** → add founder(s) |
+
+PRs also require label `maestro:run` before emulator jobs queue. See `maestro-ci-cost-runbook.md` § E2E approval gate.
+
+---
+
 ## Vercel-only (not in GitHub)
 
 | Secret | Purpose |
