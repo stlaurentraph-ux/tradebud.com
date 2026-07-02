@@ -162,10 +162,13 @@ Code: `features/observability/fieldProblemReport.ts`, `components/settings/Repor
 
 ```bash
 cd apps/offline-product
-node scripts/setup-sentry-mobile-alerts.mjs
+npm run sentry:alerts:setup
+npm run sentry:alerts:check
 ```
 
-Requires `SENTRY_AUTH_TOKEN` with `alerts:write`. Manual UI fallback: `product-os/04-quality/sentry-mobile-alert-rules.md`.
+Requires `SENTRY_AUTH_TOKEN` with `alerts:write` for setup; `project:read` is enough for check. CI reuses `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` when configured. Manual UI fallback: `product-os/04-quality/sentry-mobile-alert-rules.md`.
+
+**CI guard:** offline `app` job runs `npm run sentry:alerts:check` (wiring always; remote parity when token present).
 
 ---
 

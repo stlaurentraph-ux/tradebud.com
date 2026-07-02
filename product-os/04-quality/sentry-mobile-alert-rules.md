@@ -20,8 +20,11 @@ node scripts/set-sentry-auth-token-local.mjs
 3. Create rules (idempotent — skips existing names):
 
 ```bash
-node scripts/setup-sentry-mobile-alerts.mjs
+npm run sentry:alerts:setup
+npm run sentry:alerts:check
 ```
+
+`npm run sentry:alerts:check` validates manifest wiring and, when a `project:read` token is available, confirms every manifest rule name exists in Sentry. CI runs the same check on offline PRs.
 
 ## Rules created
 

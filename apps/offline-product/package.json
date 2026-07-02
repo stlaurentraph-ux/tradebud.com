@@ -111,7 +111,9 @@
     "oauth:redirects:merge": "node ./scripts/merge-supabase-redirect-urls.mjs",
     "oauth:supabase:configure": "node ./scripts/configure-supabase-oauth.mjs",
     "sentry:token:local": "node ./scripts/set-sentry-auth-token-local.mjs",
-    "sentry:alerts:setup": "node ./scripts/setup-sentry-mobile-alerts.mjs"
+    "sentry:alerts:setup": "node ./scripts/setup-sentry-mobile-alerts.mjs",
+    "sentry:alerts:check": "node ./scripts/check-sentry-mobile-alerts.mjs",
+    "sentry:alerts:assert": "node ./scripts/sentry-mobile-alerts-guard.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

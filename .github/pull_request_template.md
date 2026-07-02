@@ -91,6 +91,7 @@ cd apps/offline-product
 npm run qa:regression
 npm run qa:structural
 npm run qa:automation:phase1
+npm run sentry:alerts:check
 ```
 
 **marketing:**
@@ -119,6 +120,18 @@ npm test -w tracebud-backend
 ### Offline automation phase
 
 Phase 1: guard scripts in **report mode** unless this PR enables Phase 2 strict. See `offline-automation-runbook.md`.
+
+### Field observability (offline — sync / auth / Sentry)
+
+Check when touching `features/observability/*`, `sentryClient.ts`, sync pipeline, OAuth sign-in, or `eas.json` preview Sentry env:
+
+- [ ] New sync/oauth paths use `withSentrySpan` where latency is debuggable
+- [ ] `reportSyncFailure` / active span annotations cover new failure classes
+- [ ] New analytics events → `analytics.ts` + `analytics-slice-guard.json` baseline
+- [ ] If `sentry-mobile-alert-rules.json` changed: `npm run sentry:alerts:setup` then `npm run sentry:alerts:check`
+- [ ] `offline-automation-runbook.md` updated for new observability surfaces
+- [ ] Preview device smoke: Settings → **Report a problem** (when in-app report touched)
+- [ ] Local: `npm run sentry:alerts:check` (remote parity when `SENTRY_AUTH_TOKEN` or release-health token set)
 
 ---
 

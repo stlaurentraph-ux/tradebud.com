@@ -13,50 +13,12 @@
  *   1. SENTRY_AUTH_TOKEN env
  *   2. local/sentry-auth.env (see set-sentry-auth-token-local.mjs)
  */
-import fs from 'node:fs';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-import { sentryAuthEnvPath } from './sentryAuthEnvPath.mjs';
-
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const repoRoot = path.resolve(root, '../..');
-const manifestPath = path.join(
-  repoRoot,
-  'product-os/04-quality/sentry-mobile-alert-rules.json',
-);
-
-function loadToken() {
-  if (process.env.SENTRY_AUTH_TOKEN?.trim()) {
-    return process.env.SENTRY_AUTH_TOKEN.trim();
-  }
-  const envFile = sentryAuthEnvPath(root);
-  if (!fs.existsSync(envFile)) return undefined;
-  const line = fs
-    .readFileSync(envFile, 'utf8')
-    .split('\n')
-    .find((entry) => entry.startsWith('SENTRY_AUTH_TOKEN='));
-  return line?.slice('SENTRY_AUTH_TOKEN='.length).trim() || undefined;
-}
-
-async function sentryFetch(token, apiBase, pathname, init = {}) {
-  const res = await fetch(`${apiBase}${pathname}`, {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-      ...(init.headers ?? {}),
-    },
-  });
-  const text = await res.text();
-  let body;
-  try {
-    body = text ? JSON.parse(text) : null;
-  } catch {
-    body = text;
-  }
-  return { res, body };
-}
+import {
+  loadManifest,
+  loadToken,
+  listProjectAlertRules,
+  sentryFetch,
+} from './sentryMobileAlertsLib.mjs';
 
 async function main() {
   const dryRun = process.argv.includes('--dry-run');
@@ -70,14 +32,16 @@ async function main() {
     process.exit(1);
   }
 
-  const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const manifest = loadManifest();
   const { organizationSlug, projectSlug, apiBase, rules } = manifest;
   const listPath = `/api/0/projects/${organizationSlug}/${projectSlug}/rules/`;
 
-  const listed = await sentryFetch(token, apiBase, listPath);
-  if (!listed.res.ok) {
-    console.error(`List rules failed HTTP ${listed.res.status}:`, listed.body);
-    if (listed.res.status === 403) {
+  let existing;
+  try {
+    existing = await listProjectAlertRules(token, manifest);
+  } catch (error) {
+    console.error(error.message);
+    if (error.status === 403) {
       console.error(
         '\nToken needs alerts:write scope. Create at:\n' +
           'https://tracebud.sentry.io/settings/account/api/auth-tokens/',
@@ -86,7 +50,6 @@ async function main() {
     process.exit(1);
   }
 
-  const existing = Array.isArray(listed.body) ? listed.body : [];
   const existingNames = new Set(existing.map((rule) => rule.name));
 
   for (const rule of rules) {

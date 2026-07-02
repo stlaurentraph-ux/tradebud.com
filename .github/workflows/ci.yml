@@ -124,6 +124,8 @@ jobs:
               - 'product-os/04-quality/maestro-*.json'
               - 'product-os/04-quality/maestro-*.md'
               - 'product-os/04-quality/offline-automation-runbook.md'
+              - 'product-os/04-quality/sentry-mobile-alert-rules.json'
+              - 'product-os/04-quality/sentry-mobile-alert-rules.md'
               - 'product-os/04-quality/field-app-regression-ledger.md'
               - 'product-os/04-quality/farmer-artifact-sync-registry.md'
               - 'product-os/04-quality/field-role-permission-registry.md'
@@ -1149,6 +1151,11 @@ jobs:
 
       - name: Mobile rollout SLO wiring guard
         run: npm run mobile:slo:assert
+
+      - name: Sentry mobile alert manifest check
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_RELEASE_HEALTH_AUTH_TOKEN }}
+        run: npm run sentry:alerts:check
 
       - name: OTA production gate wiring guard
         run: npm run ota:production:assert
