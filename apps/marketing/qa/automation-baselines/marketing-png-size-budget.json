@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-21T12:32:34.193Z",
+  "generatedAt": "2026-07-02T11:17:10.026Z",
   "hardMaxSingleBytes": 11534336,
-  "fileCount": 55,
-  "totalBytes": 182400902,
+  "fileCount": 72,
+  "totalBytes": 208760879,
   "files": {
     "public/favicon-16x16-v2.png": {
       "maxBytes": 406
@@ -127,6 +127,57 @@
     },
     "public/images/One ship filled with containers.png": {
       "maxBytes": 3836186
+    },
+    "public/images/placeholders/hero-farmer.png": {
+      "maxBytes": 1658040
+    },
+    "public/images/placeholders/hero-forest.png": {
+      "maxBytes": 1805288
+    },
+    "public/images/placeholders/hero-home.png": {
+      "maxBytes": 1295784
+    },
+    "public/images/placeholders/hero-impact.png": {
+      "maxBytes": 1706908
+    },
+    "public/images/placeholders/hero-inclusivity.png": {
+      "maxBytes": 1656362
+    },
+    "public/images/placeholders/hero-insights.png": {
+      "maxBytes": 1415930
+    },
+    "public/images/placeholders/hero-market-access.png": {
+      "maxBytes": 1483083
+    },
+    "public/images/placeholders/hero-supply-chain.png": {
+      "maxBytes": 1465782
+    },
+    "public/images/placeholders/platform-dashboard.png": {
+      "maxBytes": 1242594
+    },
+    "public/images/placeholders/platform-field-app.png": {
+      "maxBytes": 1460667
+    },
+    "public/images/placeholders/section-paths.png": {
+      "maxBytes": 1558153
+    },
+    "public/images/placeholders/section-resilience.png": {
+      "maxBytes": 1566071
+    },
+    "public/images/placeholders/who-we-serve-brands.png": {
+      "maxBytes": 1373773
+    },
+    "public/images/placeholders/who-we-serve-exporters.png": {
+      "maxBytes": 1471539
+    },
+    "public/images/placeholders/who-we-serve-governments.png": {
+      "maxBytes": 1527358
+    },
+    "public/images/placeholders/who-we-serve-producers.png": {
+      "maxBytes": 1571676
+    },
+    "public/images/placeholders/who-we-serve-sponsors.png": {
+      "maxBytes": 2100969
     },
     "public/images/port + ships + containers.png": {
       "maxBytes": 6412021
