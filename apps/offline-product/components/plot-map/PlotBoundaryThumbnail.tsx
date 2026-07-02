@@ -57,10 +57,10 @@ export function PlotBoundaryThumbnail({
   const renderSize = Math.round(size * renderScale);
   const scaleRatio = size / renderSize;
 
-  const projected = useMemo(
-    () => projectPlotToThumbnail(plot, renderSize),
-    [plot, renderSize],
-  );
+  const projected = useMemo(() => {
+    const marginScale = satelliteLayout?.geoMarginScale ?? 1;
+    return projectPlotToThumbnail(plot, renderSize, 10, marginScale);
+  }, [plot, renderSize, satelliteLayout?.geoMarginScale]);
   const polygonPoints = thumbnailPointsToSvg(projected);
   const showPolygon =
     plot.kind === 'polygon' &&

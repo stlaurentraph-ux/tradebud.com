@@ -24,7 +24,7 @@ export function plotListThumbnailUriBasePath(uri: string): string {
   return q >= 0 ? trimmed.slice(0, q) : trimmed;
 }
 
-export const PLOT_LIST_THUMB_LAYOUT_REV = 4;
+export const PLOT_LIST_THUMB_LAYOUT_REV = 5;
 
 export function plotListThumbnailUriWithLayoutRev(filePath: string): string {
   return `${filePath}?v=${PLOT_LIST_THUMB_LAYOUT_REV}`;

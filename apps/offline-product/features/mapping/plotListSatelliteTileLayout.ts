@@ -1,8 +1,5 @@
 import { buildFieldMapTileUrl, FIELD_MAP_TILE_MAX_ZOOM } from '@/features/mapping/fieldMapTiles';
 import { PLOT_LIST_THUMB_DISPLAY_SIZE } from '@/features/mapping/plotListThumbnailStore';
-
-/** Lowest Esri zoom used when a plot spans multiple tiles at higher levels. */
-export const PLOT_LIST_THUMB_MIN_TILE_ZOOM = 6;
 import {
   projectGeoToThumbnail,
   readThumbnailGeoFrame,
@@ -10,12 +7,17 @@ import {
 } from '@/features/mapping/plotThumbnailGeometry';
 import type { Plot } from '@/features/state/AppStateContext';
 
+/** Lowest Esri zoom used when a plot spans multiple tiles at higher levels. */
+export const PLOT_LIST_THUMB_MIN_TILE_ZOOM = 6;
+
 export type PlotListSatelliteTileLayout = {
   uri: string;
   left: number;
   top: number;
   width: number;
   height: number;
+  /** Geo frame scale shared with polygon projection (tile + boundary stay aligned). */
+  geoMarginScale: number;
 };
 
 export function lonToTileX(lon: number, z: number): number {
@@ -37,20 +39,18 @@ export function plotCentroid(plot: Plot): { latitude: number; longitude: number 
   return { latitude, longitude };
 }
 
-/** Padded geo bounds that match the thumbnail SVG frame (with margin). */
+/** Geo bounds used for tile selection — matches the centered thumbnail frame. */
 export function paddedPlotGeoBounds(
   plot: Plot,
   size: number = PLOT_LIST_THUMB_DISPLAY_SIZE,
 ): { north: number; south: number; west: number; east: number } | null {
   const frame = readThumbnailGeoFrame(plot, size);
   if (!frame) return null;
-  const padLat = frame.latSpan * 0.12;
-  const padLon = frame.lonSpan * 0.12;
   return {
-    north: frame.maxLat + padLat,
-    south: frame.minLat - padLat,
-    west: frame.minLon - padLon,
-    east: frame.maxLon + padLon,
+    north: frame.maxLat,
+    south: frame.minLat,
+    west: frame.minLon,
+    east: frame.maxLon,
   };
 }
 
@@ -107,6 +107,38 @@ export function ensureTileLayoutCoversCanvas(
     top: centerY - height / 2,
     width,
     height,
+    geoMarginScale: layout.geoMarginScale,
+  };
+}
+
+const THUMB_TILE_MARGIN_SCALES = [1, 0.94, 0.88, 0.82, 0.76, 0.7] as const;
+
+function layoutTileInThumbnailAtMarginScale(
+  plot: Plot,
+  size: number,
+  z: number,
+  x: number,
+  y: number,
+  uri: string,
+  marginScale: number,
+): PlotListSatelliteTileLayout | null {
+  const frame = readThumbnailGeoFrame(plot, size, 10, marginScale);
+  if (!frame) return null;
+
+  const bounds = tileGeoBounds(z, x, y);
+  const nw = projectGeoToThumbnail(bounds.north, bounds.west, frame);
+  const se = projectGeoToThumbnail(bounds.south, bounds.east, frame);
+  const width = se.x - nw.x;
+  const height = se.y - nw.y;
+  if (width <= 0 || height <= 0) return null;
+
+  return {
+    uri,
+    left: nw.x,
+    top: nw.y,
+    width,
+    height,
+    geoMarginScale: marginScale,
   };
 }
 
@@ -250,26 +282,18 @@ export function layoutTileInThumbnail(
   y: number,
   uri: string,
 ): PlotListSatelliteTileLayout | null {
-  const frame = readThumbnailGeoFrame(plot, size);
-  if (!frame) return null;
+  for (const marginScale of THUMB_TILE_MARGIN_SCALES) {
+    const layout = layoutTileInThumbnailAtMarginScale(plot, size, z, x, y, uri, marginScale);
+    if (layout && tileLayoutCoversThumbnailCanvas(layout, size)) {
+      return layout;
+    }
+  }
 
-  const bounds = tileGeoBounds(z, x, y);
-  const nw = projectGeoToThumbnail(bounds.north, bounds.west, frame);
-  const se = projectGeoToThumbnail(bounds.south, bounds.east, frame);
-  const width = se.x - nw.x;
-  const height = se.y - nw.y;
-  if (width <= 0 || height <= 0) return null;
-
-  return ensureTileLayoutCoversCanvas(
-    {
-      uri,
-      left: nw.x,
-      top: nw.y,
-      width,
-      height,
-    },
-    size,
-  );
+  const fallback =
+    layoutTileInThumbnailAtMarginScale(plot, size, z, x, y, uri, 1) ??
+    layoutTileInThumbnailAtMarginScale(plot, size, z, x, y, uri, THUMB_TILE_MARGIN_SCALES.at(-1)!);
+  if (!fallback) return null;
+  return ensureTileLayoutCoversCanvas(fallback, size);
 }
 
 /** Use the best zoom stored in the pack (packs are often z14–16; list preview must not ask z18+). */
@@ -301,8 +325,9 @@ export function layoutOnlineTileForPlot(plot: Plot, size: number): PlotListSatel
 export function thumbPointsFromGeo(
   plot: Plot,
   size: number,
+  marginScale = 1,
 ): PlotThumbnailPoint[] {
-  const frame = readThumbnailGeoFrame(plot, size);
+  const frame = readThumbnailGeoFrame(plot, size, 10, marginScale);
   if (!frame) return [];
   return plot.points.map((point) =>
     projectGeoToThumbnail(point.latitude, point.longitude, frame),

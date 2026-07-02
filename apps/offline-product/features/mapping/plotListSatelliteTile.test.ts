@@ -98,6 +98,7 @@ describe('pickListThumbnailZoom', () => {
       top: 42,
       width: 96,
       height: 96,
+      geoMarginScale: 1,
     };
     const expanded = ensureTileLayoutCoversCanvas(undersized, PLOT_LIST_THUMB_DISPLAY_SIZE);
     expect(tileLayoutCoversThumbnailCanvas(expanded, PLOT_LIST_THUMB_DISPLAY_SIZE)).toBe(true);
