@@ -26,12 +26,12 @@ jobs:
       founder_os: ${{ steps.filter.outputs.founder_os }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Paths filter
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -153,10 +153,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -239,7 +239,7 @@ jobs:
 
       - name: Upload OpenAPI governance README metrics artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-readme-governance-metrics
           path: openapi-governance-readme-report.json
@@ -285,7 +285,7 @@ jobs:
 
       - name: Upload snapshot registry metrics artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-snapshot-registry-metrics
           path: openapi-snapshot-registry-report.json
@@ -327,7 +327,7 @@ jobs:
 
       - name: Upload markdown reference metrics artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-markdown-reference-metrics
           path: openapi-markdown-reference-report.json
@@ -405,7 +405,7 @@ jobs:
 
       - name: Upload evidence-document parity JSON contract artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-evidence-doc-parity-contract
           path: |
@@ -415,7 +415,7 @@ jobs:
 
       - name: Upload evidence-document parity JSON metrics artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-evidence-doc-parity-metrics
           path: openapi-evidence-doc-parity-metrics.json
@@ -457,7 +457,7 @@ jobs:
 
       - name: Upload OpenAPI governance metrics artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-governance-metrics
           path: openapi-governance-metrics.json
@@ -631,21 +631,21 @@ jobs:
 
       - name: Upload governance presentation trend artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-governance-presentation-trend
           path: openapi-governance-presentation-trend.json
 
       - name: Upload governance presentation trend delta artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-governance-presentation-trend-delta
           path: openapi-governance-presentation-trend-delta.json
 
       - name: Upload OpenAPI governance raw reports artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-governance-reports
           path: |
@@ -737,7 +737,7 @@ jobs:
 
       - name: Upload OpenAPI lint metrics artifact
         if: always()
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: contracts-openapi-lint-metrics
           path: openapi-lint-metrics.json
@@ -750,10 +750,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -775,10 +775,10 @@ jobs:
       BENCHMARK_ADMIN_ROLE_CLAIMS: ${{ secrets.BENCHMARK_ADMIN_ROLE_CLAIMS }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -855,7 +855,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload ownership integration log artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: backend-ownership-integration-log
           path: tracebud-backend/ownership-integration-output.txt
@@ -872,10 +872,10 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -933,10 +933,10 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -957,10 +957,10 @@ jobs:
       NEXT_PUBLIC_SENTRY_ENABLED: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -981,10 +981,10 @@ jobs:
       NEXT_PUBLIC_SENTRY_ENABLED: "0"
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -1086,10 +1086,10 @@ jobs:
         working-directory: apps/offline-product
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Use Node 20
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v6
         with:
           node-version: 20
           cache: 'npm'
@@ -1362,7 +1362,7 @@ jobs:
           NODE
 
       - name: Upload queue i18n smoke summary artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: offline-app-queue-i18n-smoke-summary
           path: |
