@@ -69,7 +69,7 @@ export default function AuthCallbackScreen() {
       }
 
       if (deliverOAuthCallbackUrl(url)) {
-        router.replace('/(tabs)');
+        router.replace('/(tabs)/settings');
         return;
       }
 

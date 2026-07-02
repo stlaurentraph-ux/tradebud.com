@@ -33,7 +33,23 @@ async function openOAuthBrowser(
       const prefixes = Array.isArray(redirectMatch) ? redirectMatch : [redirectMatch];
       console.log('[oauth] Android browser redirect prefixes:', prefixes);
     }
-    return openOAuthBrowserOnAndroid(authUrl, redirectMatch);
+
+    let linkingSubscription: { remove: () => void } | null = null;
+    beginOAuthCallbackWait();
+    linkingSubscription = Linking.addEventListener('url', (event) => {
+      deliverOAuthCallbackUrl(event.url);
+    });
+
+    try {
+      const callbackUrl = await openOAuthBrowserOnAndroid(authUrl, redirectMatch);
+      endOAuthCallbackWait();
+      return callbackUrl;
+    } catch (error) {
+      cancelOAuthCallbackWait();
+      throw error;
+    } finally {
+      linkingSubscription?.remove();
+    }
   }
 
   const redirectTo = Array.isArray(redirectMatch) ? redirectMatch[0] : redirectMatch;

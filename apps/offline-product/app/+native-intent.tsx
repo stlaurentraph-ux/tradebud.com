@@ -2,6 +2,33 @@
  * Rewrites tracebudoffline:// and Google native OAuth deep links before expo-router matches them.
  * Keep import-free — expo-router loads this module at deep-link bootstrap time.
  */
+function rewriteHttpsAuthCallback(path: string): string | null {
+  const lower = path.toLowerCase();
+  if (!lower.startsWith('https://')) return null;
+  if (!lower.includes('/auth/callback')) return null;
+
+  try {
+    const url = new URL(path);
+    const host = url.hostname.toLowerCase();
+    if (host !== 'app.tracebud.com' && !host.endsWith('.tracebud.com')) {
+      return null;
+    }
+    const query = url.search || '';
+    const hashQuery = url.hash ? url.hash.replace('#', '?') : '';
+    return `/auth/callback${query || hashQuery}`;
+  } catch {
+    const queryIndex = path.indexOf('?');
+    const hashIndex = path.indexOf('#');
+    if (queryIndex >= 0) {
+      return `/auth/callback${path.slice(queryIndex)}`;
+    }
+    if (hashIndex >= 0) {
+      return `/auth/callback${path.slice(hashIndex).replace('#', '?')}`;
+    }
+    return '/auth/callback';
+  }
+}
+
 function rewriteGoogleNativeOAuth(path: string): string | null {
   const lower = path.toLowerCase();
   if (!lower.includes('oauth2redirect') && !lower.includes('googleusercontent.apps')) {
@@ -66,6 +93,9 @@ export function redirectSystemPath({
   }
 
   try {
+    const httpsCallback = rewriteHttpsAuthCallback(path);
+    if (httpsCallback) return httpsCallback;
+
     const rewritten = rewriteTracebudDeepLink(path);
     if (rewritten) return rewritten;
 

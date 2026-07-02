@@ -2,6 +2,8 @@ import * as Linking from 'expo-linking';
 import { AppState, type AppStateStatus } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 
+import { deliverOAuthCallbackUrl } from '@/features/auth/oauthCallbackBridge';
+
 const OAUTH_WAIT_MS = 120_000;
 
 function redirectBase(url: string): string {
@@ -65,6 +67,7 @@ export async function openOAuthBrowserOnAndroid(
 
     const tryDeliver = (url: string | null) => {
       if (!url || !oauthRedirectUrlMatchesAny(url, prefixes)) return false;
+      deliverOAuthCallbackUrl(url);
       finish(() => resolve(url));
       return true;
     };
