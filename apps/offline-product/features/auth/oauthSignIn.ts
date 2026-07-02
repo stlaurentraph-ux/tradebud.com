@@ -1,6 +1,5 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import type { Session } from '@supabase/supabase-js';
 
@@ -13,18 +12,32 @@ import {
   endOAuthCallbackWait,
   resolveOAuthCallbackAfterDismiss,
 } from '@/features/auth/oauthCallbackBridge';
+import { openOAuthBrowserOnAndroid } from '@/features/auth/oauthBrowserAndroid';
 import {
   shouldUseGoogleNativeSignIn,
 } from '@/features/auth/googleOAuthConfig';
 import { signInWithGoogleNative } from '@/features/auth/googleSignIn.native';
-import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
+import { getOAuthRedirectMatchPrefixes, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
 import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export type OAuthProvider = 'google' | 'apple';
 
-async function openOAuthBrowser(authUrl: string, redirectTo: string): Promise<string> {
+async function openOAuthBrowser(
+  authUrl: string,
+  redirectMatch: string | string[],
+): Promise<string> {
+  if (Platform.OS === 'android') {
+    if (__DEV__) {
+      const prefixes = Array.isArray(redirectMatch) ? redirectMatch : [redirectMatch];
+      console.log('[oauth] Android browser redirect prefixes:', prefixes);
+    }
+    return openOAuthBrowserOnAndroid(authUrl, redirectMatch);
+  }
+
+  const redirectTo = Array.isArray(redirectMatch) ? redirectMatch[0] : redirectMatch;
+
   let linkingSubscription: { remove: () => void } | null = null;
 
   const stopLinkingWait = () => {
@@ -69,7 +82,7 @@ async function openOAuthBrowser(authUrl: string, redirectTo: string): Promise<st
 async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<Session> {
   const supabase = getSupabaseAuthClient();
   const redirectTo = getOAuthRedirectUri();
-  const redirectMatchPrefix = getOAuthRedirectMatchPrefix();
+  const redirectMatchPrefixes = getOAuthRedirectMatchPrefixes();
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider,
@@ -87,7 +100,7 @@ async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<Session>
     throw new Error('Could not start OAuth sign-in.');
   }
 
-  const callbackUrl = await openOAuthBrowser(data.url, redirectMatchPrefix);
+  const callbackUrl = await openOAuthBrowser(data.url, redirectMatchPrefixes);
   return sessionFromOAuthCallbackUrl(callbackUrl);
 }
 
@@ -98,22 +111,7 @@ export async function signInWithOAuthProvider(provider: OAuthProvider): Promise<
 
   if (provider === 'google' && Platform.OS !== 'web') {
     if (shouldUseGoogleNativeSignIn()) {
-      try {
-        return await signInWithGoogleNative();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message === 'sign_in_oauth_cancelled') {
-          throw error;
-        }
-        if (__DEV__ && Constants.isDevice === false) {
-          console.warn('[oauth] Native Google sign-in failed; falling back to browser OAuth:', message);
-          return signInWithOAuthBrowser(provider);
-        }
-        throw error;
-      }
-    }
-    if (__DEV__) {
-      console.log('[oauth] Using browser Google sign-in (simulator or native not available)');
+      return signInWithGoogleNative();
     }
   }
 

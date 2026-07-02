@@ -1,5 +1,8 @@
 import { buildFieldMapTileUrl, FIELD_MAP_TILE_MAX_ZOOM } from '@/features/mapping/fieldMapTiles';
 import { PLOT_LIST_THUMB_DISPLAY_SIZE } from '@/features/mapping/plotListThumbnailStore';
+
+/** Lowest Esri zoom used when a plot spans multiple tiles at higher levels. */
+export const PLOT_LIST_THUMB_MIN_TILE_ZOOM = 6;
 import {
   projectGeoToThumbnail,
   readThumbnailGeoFrame,
@@ -41,8 +44,8 @@ export function paddedPlotGeoBounds(
 ): { north: number; south: number; west: number; east: number } | null {
   const frame = readThumbnailGeoFrame(plot, size);
   if (!frame) return null;
-  const padLat = frame.latSpan * 0.08;
-  const padLon = frame.lonSpan * 0.08;
+  const padLat = frame.latSpan * 0.12;
+  const padLon = frame.lonSpan * 0.12;
   return {
     north: frame.maxLat + padLat,
     south: frame.minLat - padLat,
@@ -66,6 +69,114 @@ function tileContainsGeoBounds(
   );
 }
 
+/** True when a projected tile fills the square thumbnail canvas (no grey bands). */
+export function tileLayoutCoversThumbnailCanvas(
+  layout: PlotListSatelliteTileLayout,
+  size: number,
+): boolean {
+  const slack = 2;
+  return (
+    layout.left <= slack &&
+    layout.top <= slack &&
+    layout.left + layout.width >= size - slack &&
+    layout.top + layout.height >= size - slack
+  );
+}
+
+/** Scale a tile layout uniformly so it fully covers the thumbnail canvas (no grey bands). */
+export function ensureTileLayoutCoversCanvas(
+  layout: PlotListSatelliteTileLayout,
+  size: number,
+): PlotListSatelliteTileLayout {
+  if (tileLayoutCoversThumbnailCanvas(layout, size)) return layout;
+
+  const centerX = layout.left + layout.width / 2;
+  const centerY = layout.top + layout.height / 2;
+  const scale = Math.max(
+    1,
+    (2 * centerX) / layout.width,
+    (2 * centerY) / layout.height,
+    (2 * (size - centerX)) / layout.width,
+    (2 * (size - centerY)) / layout.height,
+  );
+  const width = layout.width * scale;
+  const height = layout.height * scale;
+  return {
+    uri: layout.uri,
+    left: centerX - width / 2,
+    top: centerY - height / 2,
+    width,
+    height,
+  };
+}
+
+function pickSingleTileCoveringBounds(
+  bbox: { north: number; south: number; west: number; east: number },
+  zValues: number[],
+): { z: number; x: number; y: number } | null {
+  for (const z of zValues) {
+    const xMin = lonToTileX(bbox.west, z);
+    const xMax = lonToTileX(bbox.east, z);
+    const yNorth = latToTileY(bbox.north, z);
+    const ySouth = latToTileY(bbox.south, z);
+    if (xMin !== xMax || yNorth !== ySouth) continue;
+    if (tileContainsGeoBounds(z, xMin, yNorth, bbox)) {
+      return { z, x: xMin, y: yNorth };
+    }
+  }
+  return null;
+}
+
+function pickCentroidTileCoveringCanvas(
+  plot: Plot,
+  size: number,
+  zValues: number[],
+): { z: number; x: number; y: number } | null {
+  const centroid = plotCentroid(plot);
+  for (const z of zValues) {
+    const x = lonToTileX(centroid.longitude, z);
+    const y = latToTileY(centroid.latitude, z);
+    const layout = layoutTileInThumbnail(plot, size, z, x, y, 'tile://probe');
+    if (layout && tileLayoutCoversThumbnailCanvas(layout, size)) {
+      return { z, x, y };
+    }
+  }
+  return null;
+}
+
+/** Try adjacent tiles when centroid tile leaves grey bands near a Web Mercator edge. */
+function pickNeighborTileCoveringCanvas(
+  plot: Plot,
+  size: number,
+  zValues: number[],
+): { z: number; x: number; y: number } | null {
+  const bbox = paddedPlotGeoBounds(plot, size);
+  if (!bbox) return null;
+
+  for (const z of zValues) {
+    const xMin = lonToTileX(bbox.west, z);
+    const xMax = lonToTileX(bbox.east, z);
+    const yNorth = latToTileY(bbox.north, z);
+    const ySouth = latToTileY(bbox.south, z);
+
+    for (let x = xMin - 1; x <= xMax + 1; x++) {
+      if (x < 0) continue;
+      for (let y = Math.max(0, yNorth - 1); y <= ySouth + 1; y++) {
+        const layout = layoutTileInThumbnail(plot, size, z, x, y, 'tile://probe');
+        if (layout && tileLayoutCoversThumbnailCanvas(layout, size)) {
+          return { z, x, y };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function descendingZoomRange(maxZ: number, minZ: number): number[] {
+  const span = Math.max(0, maxZ - minZ + 1);
+  return Array.from({ length: span }, (_, i) => maxZ - i);
+}
+
 /**
  * Pick one Web Mercator tile that fully covers the plot thumbnail geo frame.
  * Centroid-only tile selection leaves empty bands when the plot sits near a tile edge.
@@ -81,18 +192,16 @@ export function pickPlotListSatelliteTile(
   const zValues =
     forcedZ != null
       ? [forcedZ]
-      : Array.from({ length: FIELD_MAP_TILE_MAX_ZOOM - 9 }, (_, i) => FIELD_MAP_TILE_MAX_ZOOM - i);
+      : descendingZoomRange(FIELD_MAP_TILE_MAX_ZOOM, PLOT_LIST_THUMB_MIN_TILE_ZOOM);
 
-  for (const z of zValues) {
-    const xMin = lonToTileX(bbox.west, z);
-    const xMax = lonToTileX(bbox.east, z);
-    const yNorth = latToTileY(bbox.north, z);
-    const ySouth = latToTileY(bbox.south, z);
-    if (xMin !== xMax || yNorth !== ySouth) continue;
-    if (tileContainsGeoBounds(z, xMin, yNorth, bbox)) {
-      return { z, x: xMin, y: yNorth };
-    }
-  }
+  const covering = pickSingleTileCoveringBounds(bbox, zValues);
+  if (covering) return covering;
+
+  const centroidCovering = pickCentroidTileCoveringCanvas(plot, size, zValues);
+  if (centroidCovering) return centroidCovering;
+
+  const neighborCovering = pickNeighborTileCoveringCanvas(plot, size, zValues);
+  if (neighborCovering) return neighborCovering;
 
   if (forcedZ != null) {
     const centroid = plotCentroid(plot);
@@ -104,7 +213,7 @@ export function pickPlotListSatelliteTile(
   }
 
   const centroid = plotCentroid(plot);
-  const z = 10;
+  const z = PLOT_LIST_THUMB_MIN_TILE_ZOOM;
   return { z, x: lonToTileX(centroid.longitude, z), y: latToTileY(centroid.latitude, z) };
 }
 
@@ -151,13 +260,16 @@ export function layoutTileInThumbnail(
   const height = se.y - nw.y;
   if (width <= 0 || height <= 0) return null;
 
-  return {
-    uri,
-    left: nw.x,
-    top: nw.y,
-    width,
-    height,
-  };
+  return ensureTileLayoutCoversCanvas(
+    {
+      uri,
+      left: nw.x,
+      top: nw.y,
+      width,
+      height,
+    },
+    size,
+  );
 }
 
 /** Use the best zoom stored in the pack (packs are often z14–16; list preview must not ask z18+). */

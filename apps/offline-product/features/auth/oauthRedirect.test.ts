@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('react-native', () => ({
+  Platform: { OS: 'ios' },
+}));
+
 vi.mock('expo-constants', () => ({
   default: {
     appOwnership: 'expo',
@@ -22,9 +26,12 @@ describe('oauthRedirect', () => {
 });
 
 describe('oauthRedirect native build', () => {
-  it('uses universal link callback in release builds', async () => {
+  it('uses universal link callback in release builds on iOS', async () => {
     vi.stubGlobal('__DEV__', false);
     vi.resetModules();
+    vi.doMock('react-native', () => ({
+      Platform: { OS: 'ios' },
+    }));
     vi.doMock('expo-constants', () => ({
       default: {
         appOwnership: 'user',
@@ -40,9 +47,12 @@ describe('oauthRedirect native build', () => {
     vi.unstubAllGlobals();
   });
 
-  it('uses custom scheme in local debug builds', async () => {
+  it('uses custom scheme in local debug builds on iOS', async () => {
     vi.stubGlobal('__DEV__', true);
     vi.resetModules();
+    vi.doMock('react-native', () => ({
+      Platform: { OS: 'ios' },
+    }));
     vi.doMock('expo-constants', () => ({
       default: {
         appOwnership: 'user',
@@ -59,10 +69,39 @@ describe('oauthRedirect native build', () => {
     vi.unstubAllGlobals();
   });
 
-  it('uses custom scheme in preview when EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME=1', async () => {
+  it('uses HTTPS bridge on Android installable builds', async () => {
+    vi.stubGlobal('__DEV__', true);
+    vi.resetModules();
+    vi.doMock('react-native', () => ({
+      Platform: { OS: 'android' },
+    }));
+    vi.doMock('expo-constants', () => ({
+      default: {
+        appOwnership: 'user',
+        expoConfig: { scheme: 'tracebudoffline' },
+      },
+    }));
+    vi.doMock('expo-auth-session', () => ({
+      makeRedirectUri: ({ scheme, path }: { scheme?: string; path?: string }) =>
+        `${scheme}://${path ?? ''}`,
+    }));
+    const { getOAuthRedirectUri, getOAuthRedirectMatchPrefixes } = await import('./oauthRedirect');
+    expect(getOAuthRedirectUri()).toContain('https://app.tracebud.com/auth/callback');
+    expect(getOAuthRedirectUri()).toContain('app_redirect=');
+    expect(getOAuthRedirectMatchPrefixes()).toEqual([
+      'https://app.tracebud.com/auth/callback',
+      'tracebudoffline://auth/callback',
+    ]);
+    vi.unstubAllGlobals();
+  });
+
+  it('uses custom scheme in preview when EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME=1 on iOS', async () => {
     vi.stubGlobal('__DEV__', false);
     process.env.EXPO_PUBLIC_OAUTH_USE_CUSTOM_SCHEME = '1';
     vi.resetModules();
+    vi.doMock('react-native', () => ({
+      Platform: { OS: 'ios' },
+    }));
     vi.doMock('expo-constants', () => ({
       default: {
         appOwnership: 'user',

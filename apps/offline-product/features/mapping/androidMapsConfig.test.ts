@@ -17,14 +17,24 @@ vi.mock('react-native', () => ({
       return mockPlatformOs;
     },
   },
+  TurboModuleRegistry: {
+    get: (name: string) => (name === 'RNMapsAirModule' ? mockRnMapsModule : null),
+  },
 }));
 
-import { isAndroidGoogleMapsConfigured, shouldBlockNativeMapView } from '@/features/mapping/androidMapsConfig';
+let mockRnMapsModule: Record<string, unknown> | null = { getConstants: () => ({}) };
+
+import {
+  isAndroidGoogleMapsConfigured,
+  isRnMapsNativeModuleAvailable,
+  shouldBlockNativeMapView,
+} from '@/features/mapping/androidMapsConfig';
 
 describe('isAndroidGoogleMapsConfigured', () => {
   beforeEach(() => {
     mockExpoConfig = {};
     mockPlatformOs = 'ios';
+    mockRnMapsModule = { getConstants: () => ({}) };
   });
 
   it('returns true when extra.googleMapsConfigured is true', () => {
@@ -53,6 +63,7 @@ describe('shouldBlockNativeMapView', () => {
   beforeEach(() => {
     mockExpoConfig = {};
     mockPlatformOs = 'ios';
+    mockRnMapsModule = { getConstants: () => ({}) };
   });
 
   it('returns false on iOS even without maps key', () => {
@@ -67,9 +78,18 @@ describe('shouldBlockNativeMapView', () => {
     expect(shouldBlockNativeMapView()).toBe(true);
   });
 
-  it('returns false on Android when maps key is configured', () => {
+  it('returns false on Android when maps key is configured and native module is present', () => {
     mockPlatformOs = 'android';
     mockExpoConfig = { extra: { googleMapsConfigured: true } };
+    mockRnMapsModule = { getConstants: () => ({}) };
     expect(shouldBlockNativeMapView()).toBe(false);
+  });
+
+  it('returns true on Android when RNMapsAirModule is missing from the binary', () => {
+    mockPlatformOs = 'android';
+    mockExpoConfig = { extra: { googleMapsConfigured: true } };
+    mockRnMapsModule = null;
+    expect(isRnMapsNativeModuleAvailable()).toBe(false);
+    expect(shouldBlockNativeMapView()).toBe(true);
   });
 });

@@ -1,8 +1,19 @@
+import { makeRedirectUri } from 'expo-auth-session';
 import { Platform } from 'react-native';
 import Constants from 'expo-constants';
 
 import { GOOGLE_OAUTH_ENV } from '@/features/auth/googleOAuthEnv';
 import { getNativeOAuthCallbackUri } from '@/features/auth/oauthRedirect';
+
+function appDeepLinkScheme(): string {
+  const scheme = Constants.expoConfig?.scheme ?? 'tracebudoffline';
+  return typeof scheme === 'string' ? scheme : 'tracebudoffline';
+}
+
+/** Canonical Android Google OAuth return — do not use makeRedirectUri (injects Metro host in dev). */
+export function getAndroidGoogleOAuthRedirectUri(): string {
+  return `${appDeepLinkScheme()}://oauth2redirect`;
+}
 
 export type GoogleOAuthClientIds = {
   /** Web client ID (required for Supabase id_token validation). */
@@ -38,12 +49,22 @@ function readGoogleOAuthExtra(): GoogleOAuthExtra {
 
 /**
  * Redirect URI for Google native OAuth (iOS/Android installable clients).
- * Do not register this on the Web OAuth client — Google only allows HTTPS there.
+ * Android returns `tracebudoffline://oauth2redirect` — must match WebBrowser.openAuthSessionAsync.
+ * iOS uses the reversed Google client scheme on installable builds.
  */
 export function getGoogleOAuthRedirectUri(clientId: string): string {
+  if (Platform.OS === 'android') {
+    return getAndroidGoogleOAuthRedirectUri();
+  }
+
+  const scheme = appDeepLinkScheme();
   const match = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(clientId.trim());
   if (match) {
-    return `com.googleusercontent.apps.${match[1]}:/oauth2redirect`;
+    return makeRedirectUri({
+      scheme,
+      path: 'oauth2redirect',
+      native: `com.googleusercontent.apps.${match[1]}:/oauth2redirect`,
+    });
   }
   return getNativeOAuthCallbackUri();
 }
@@ -77,12 +98,12 @@ export function isGoogleNativeSignInConfigured(): boolean {
 }
 
 /**
- * Native Google (account picker) only works on physical iOS/Android devices.
- * Simulator/emulator must use Supabase browser OAuth — native promptAsync returns dismiss with no UI.
+ * Native Google (account picker) on iOS installable builds only.
+ * Android uses Supabase browser OAuth — Custom Tabs + oauth2redirect is unreliable in dev.
  */
 export function shouldUseGoogleNativeSignIn(): boolean {
+  if (Platform.OS === 'android') return false;
   if (!isGoogleNativeSignInConfigured()) return false;
   if (Platform.OS === 'ios' && Constants.isDevice === false) return false;
-  if (Platform.OS === 'android' && Constants.isDevice === false) return false;
   return true;
 }

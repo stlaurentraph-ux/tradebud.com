@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import type { Plot } from '@/features/state/AppStateContext';
 import {
+  ensureTileLayoutCoversCanvas,
   layoutOnlineTileForPlot,
   pickListThumbnailZoom,
   pickOfflinePackZoom,
   pickPlotListSatelliteTile,
   tileGeoBounds,
+  tileLayoutCoversThumbnailCanvas,
 } from '@/features/mapping/plotListSatelliteTileLayout';
 import { PLOT_LIST_THUMB_DISPLAY_SIZE } from '@/features/mapping/plotListThumbnailStore';
 
@@ -70,5 +72,48 @@ describe('pickListThumbnailZoom', () => {
     const bounds = tileGeoBounds(tile!.z, tile!.x, tile!.y);
     expect(bounds.north).toBeGreaterThan(offsetPlot.points[1]!.latitude);
     expect(bounds.south).toBeLessThan(offsetPlot.points[3]!.latitude);
+  });
+
+  it('covers the canvas when the plot straddles a z=10 tile boundary', () => {
+    const widePlot: Plot = {
+      ...smallFieldPlot,
+      id: 'plot-wide',
+      points: [
+        { latitude: 4.7120, longitude: -74.0735 },
+        { latitude: 4.7125, longitude: -74.0705 },
+        { latitude: 4.7115, longitude: -74.0700 },
+        { latitude: 4.7110, longitude: -74.0730 },
+      ],
+    };
+    const layout = layoutOnlineTileForPlot(widePlot, PLOT_LIST_THUMB_DISPLAY_SIZE);
+    expect(layout).not.toBeNull();
+    expect(tileLayoutCoversThumbnailCanvas(layout!, PLOT_LIST_THUMB_DISPLAY_SIZE)).toBe(true);
+    expect(pickListThumbnailZoom(widePlot, PLOT_LIST_THUMB_DISPLAY_SIZE)).toBeLessThan(10);
+  });
+
+  it('expands undersized tile layouts so the canvas has no grey bands', () => {
+    const undersized = {
+      uri: 'https://example.com/tile.png',
+      left: 18,
+      top: 42,
+      width: 96,
+      height: 96,
+    };
+    const expanded = ensureTileLayoutCoversCanvas(undersized, PLOT_LIST_THUMB_DISPLAY_SIZE);
+    expect(tileLayoutCoversThumbnailCanvas(expanded, PLOT_LIST_THUMB_DISPLAY_SIZE)).toBe(true);
+  });
+
+  it('covers canvas for point plots declared without a walked polygon', () => {
+    const pointPlot: Plot = {
+      ...smallFieldPlot,
+      id: 'plot-point',
+      kind: 'point',
+      areaHectares: 0,
+      areaSquareMeters: 0,
+      points: [{ latitude: 4.7122, longitude: -74.07205 }],
+    };
+    const layout = layoutOnlineTileForPlot(pointPlot, PLOT_LIST_THUMB_DISPLAY_SIZE);
+    expect(layout).not.toBeNull();
+    expect(tileLayoutCoversThumbnailCanvas(layout!, PLOT_LIST_THUMB_DISPLAY_SIZE)).toBe(true);
   });
 });

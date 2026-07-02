@@ -16,7 +16,7 @@ export type ThumbnailGeoFrame = {
 export function readThumbnailGeoFrame(
   plot: Plot,
   size: number,
-  padding = 8,
+  padding = 10,
 ): ThumbnailGeoFrame | null {
   if (plot.points.length === 0) return null;
 
@@ -59,7 +59,7 @@ export function projectGeoToThumbnail(
 export function projectPlotToThumbnail(
   plot: Plot,
   size: number,
-  padding = 8,
+  padding = 10,
 ): PlotThumbnailPoint[] {
   if (plot.points.length === 0) return [];
 

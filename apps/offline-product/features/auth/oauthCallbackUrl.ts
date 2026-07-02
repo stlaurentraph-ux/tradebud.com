@@ -145,12 +145,4 @@ export function clearOAuthCallbackDedupState(): void {
   exchangeChain = Promise.resolve();
 }
 
-export function isOAuthCallbackUrl(url: string): boolean {
-  return (
-    url.includes('auth/callback') ||
-    url.includes('app.tracebud.com/auth/') ||
-    url.includes('code=') ||
-    url.includes('access_token=') ||
-    url.includes('error=')
-  );
-}
+export { isOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrlPolicy';

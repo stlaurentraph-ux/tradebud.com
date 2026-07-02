@@ -4,9 +4,9 @@ vi.mock('expo-linking', () => ({
   getInitialURL: vi.fn(async () => null),
 }));
 
-vi.mock('@/features/auth/oauthCallbackUrl', () => ({
+vi.mock('@/features/auth/oauthCallbackUrlPolicy', () => ({
   isOAuthCallbackUrl: (url: string) =>
-    url.includes('auth/callback') || url.includes('code=') || url.includes('access_token='),
+    url.includes('auth/callback') || url.includes('access_token='),
 }));
 
 import {
@@ -32,6 +32,16 @@ describe('oauthCallbackBridge', () => {
   it('ignores non-callback URLs', () => {
     beginOAuthCallbackWait(5000);
     expect(deliverOAuthCallbackUrl('tracebudoffline://other')).toBe(false);
+    endOAuthCallbackWait();
+  });
+
+  it('ignores Google native oauth2redirect URLs', () => {
+    beginOAuthCallbackWait(5000);
+    expect(
+      deliverOAuthCallbackUrl(
+        'com.googleusercontent.apps.123:/oauth2redirect?code=4%2F0AeanS0q_example',
+      ),
+    ).toBe(false);
     endOAuthCallbackWait();
   });
 

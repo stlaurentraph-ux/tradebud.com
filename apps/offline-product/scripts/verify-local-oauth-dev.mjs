@@ -30,6 +30,7 @@ const apiUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:4000/api').
 const googleIds = [
   ['EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID', process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID],
   ['EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID', process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID],
+  ['EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID', process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID],
 ].filter(([, v]) => Boolean(v?.trim()));
 
 let failed = false;
@@ -48,21 +49,38 @@ if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_A
   ok('Supabase env present');
 }
 
-if (googleIds.length < 2) {
-  fail('Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID and EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID in .env.local');
+if (googleIds.length < 3) {
+  fail(
+    'Set EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID, and EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in .env.local',
+  );
 } else {
   ok('Google OAuth client IDs present');
   const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID?.trim() ?? '';
-  const schemeMatch = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(iosClientId);
+  const iosSchemeMatch = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(iosClientId);
   const plistPath = path.join(root, 'ios/TracebudOffline/Info.plist');
-  if (schemeMatch && fs.existsSync(plistPath)) {
-    const scheme = `com.googleusercontent.apps.${schemeMatch[1]}`;
+  if (iosSchemeMatch && fs.existsSync(plistPath)) {
+    const scheme = `com.googleusercontent.apps.${iosSchemeMatch[1]}`;
     const plist = fs.readFileSync(plistPath, 'utf8');
     if (plist.includes(scheme)) {
       ok(`Info.plist includes Google OAuth URL scheme (${scheme})`);
     } else {
       fail(
         `Info.plist missing Google OAuth URL scheme. Run: node ./scripts/sync-ios-google-url-scheme.mjs`,
+      );
+    }
+  }
+
+  const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim() ?? '';
+  const androidSchemeMatch = /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(androidClientId);
+  const manifestPath = path.join(root, 'android/app/src/main/AndroidManifest.xml');
+  if (androidSchemeMatch && fs.existsSync(manifestPath)) {
+    const scheme = `com.googleusercontent.apps.${androidSchemeMatch[1]}`;
+    const manifest = fs.readFileSync(manifestPath, 'utf8');
+    if (manifest.includes(`android:scheme="${scheme}"`)) {
+      ok(`AndroidManifest includes Google OAuth intent filter (${scheme})`);
+    } else {
+      fail(
+        `AndroidManifest missing Google OAuth intent filter. Run: node ./scripts/sync-android-google-oauth-intent.mjs`,
       );
     }
   }
@@ -95,5 +113,7 @@ const oauthVerify = spawnSync('node', ['./scripts/verify-oauth-providers.mjs'], 
 });
 if (oauthVerify.status !== 0) failed = true;
 
-console.log('\nNext: npm run dev:oauth:ios  (simulator)  or  npm run dev:oauth:device  (USB iPhone)\n');
+console.log(
+  '\nNext: npm run dev:oauth:ios  (simulator)  |  npm run dev:oauth:device  (USB iPhone)  |  npx expo run:android --device\n',
+);
 process.exit(failed ? 1 : 0);

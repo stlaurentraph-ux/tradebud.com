@@ -1,5 +1,7 @@
 import * as Crypto from 'expo-crypto';
+import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import { Platform } from 'react-native';
 import {
   AuthRequest,
   ResponseType,
@@ -9,6 +11,8 @@ import type { Session } from '@supabase/supabase-js';
 
 import { getSupabaseAuthClient } from '@/features/api/syncAuthSession';
 import { getGoogleOAuthClientIds, getGoogleOAuthRedirectUri } from '@/features/auth/googleOAuthConfig';
+import { promptGoogleAuthCodeOnAndroid } from '@/features/auth/googleSignInAndroid';
+import { isGoogleNativeOAuthRedirectUrl } from '@/features/auth/oauthCallbackUrlPolicy';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -25,6 +29,9 @@ export async function signInWithGoogleNative(): Promise<Session> {
   }
 
   const redirectUri = getGoogleOAuthRedirectUri(ids.clientId);
+  if (__DEV__) {
+    console.log('[oauth] Native Google redirectUri:', redirectUri);
+  }
   const rawNonce = Crypto.randomUUID();
   const hashedNonce = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
@@ -40,18 +47,42 @@ export async function signInWithGoogleNative(): Promise<Session> {
     extraParams: { nonce: hashedNonce },
   });
 
-  const result = await request.promptAsync(GOOGLE_DISCOVERY);
-  if (result.type !== 'success' || !result.params.code) {
-    if (result.type === 'cancel' || result.type === 'dismiss') {
-      throw new Error('sign_in_oauth_cancelled');
-    }
+  const authUrl = await request.makeAuthUrlAsync(GOOGLE_DISCOVERY);
+  if (!authUrl) {
     throw new Error('sign_in_oauth_failed');
+  }
+
+  let authCode: string;
+
+  if (Platform.OS === 'android') {
+    authCode = await promptGoogleAuthCodeOnAndroid(authUrl, redirectUri);
+  } else {
+    const linkingSubscription = Linking.addEventListener('url', (event) => {
+      if (isGoogleNativeOAuthRedirectUrl(event.url)) {
+        WebBrowser.maybeCompleteAuthSession();
+      }
+    });
+
+    let result;
+    try {
+      result = await request.promptAsync(GOOGLE_DISCOVERY, { url: authUrl });
+    } finally {
+      linkingSubscription.remove();
+    }
+
+    if (result.type !== 'success' || !result.params.code) {
+      if (result.type === 'cancel' || result.type === 'dismiss') {
+        throw new Error('sign_in_oauth_cancelled');
+      }
+      throw new Error('sign_in_oauth_failed');
+    }
+    authCode = result.params.code;
   }
 
   const tokenResult = await exchangeCodeAsync(
     {
       clientId: ids.clientId,
-      code: result.params.code,
+      code: authCode,
       redirectUri,
       extraParams: {
         code_verifier: request.codeVerifier ?? '',

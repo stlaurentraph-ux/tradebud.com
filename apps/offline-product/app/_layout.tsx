@@ -12,6 +12,7 @@ import { SplashGate } from '@/components/layout/SplashGate';
 import { MaestroBootReadyMarker } from '@/components/layout/MaestroBootReadyMarker';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { SignInProvider } from '@/features/auth/SignInSheetContext';
+import { GoogleOAuthRedirectBridge } from '@/features/auth/GoogleOAuthRedirectBridge';
 import { initObservability } from '@/features/observability/initObservability';
 import '@/features/auth/googleOAuthEnv';
 import { AppStateProvider } from '@/features/state/AppStateContext';
@@ -34,12 +35,14 @@ export default function RootLayout() {
           <View style={{ flex: 1 }}>
             <SplashGate>
               <SignInProvider>
+                <GoogleOAuthRedirectBridge />
                 <AndroidNavigationBarLayoutBridge />
                 <MaestroCiLayoutBridges />
                 <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
                   <Stack>
                     <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                     <Stack.Screen name="auth/callback" options={{ headerShown: false }} />
+                    <Stack.Screen name="oauth2redirect" options={{ headerShown: false }} />
                     <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
                     <Stack.Screen name="documents" options={{ headerShown: false }} />
                     <Stack.Screen name="data-sharing" options={{ headerShown: false }} />

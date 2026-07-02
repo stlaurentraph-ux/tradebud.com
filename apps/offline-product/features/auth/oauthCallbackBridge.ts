@@ -1,6 +1,6 @@
 import * as Linking from 'expo-linking';
 
-import { isOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
+import { isOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrlPolicy';
 
 type OAuthWaiter = {
   resolve: (url: string) => void;

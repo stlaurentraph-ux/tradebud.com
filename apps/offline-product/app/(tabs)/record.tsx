@@ -1,13 +1,12 @@
 import { ThemedView } from '@/components/themed-view';
-import { WalkPerimeterScreen } from '@/features/mapping/WalkPerimeterScreen';
+import { MappingScreenLoader } from '@/features/mapping/MappingScreenLoader';
 
 export default function RecordScreen() {
   return (
     <ThemedView style={styles.screen}>
-      <WalkPerimeterScreen />
+      <MappingScreenLoader />
     </ThemedView>
   );
 }
 
 const styles = { screen: { flex: 1 } } as const;
-

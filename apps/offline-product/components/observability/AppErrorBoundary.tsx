@@ -46,6 +46,11 @@ export class AppErrorBoundary extends Component<Props, State> {
           <ThemedText type="default" style={styles.body}>
             The app hit an unexpected error. You can try again — your local data is still on this device.
           </ThemedText>
+          {__DEV__ && this.state.error?.message ? (
+            <ThemedText type="caption" style={styles.devError}>
+              {this.state.error.message}
+            </ThemedText>
+          ) : null}
           <Button variant="primary" onPress={this.reset}>
             Try again
           </Button>
@@ -71,5 +76,10 @@ const styles = StyleSheet.create({
   body: {
     textAlign: 'center',
     opacity: 0.85,
+  },
+  devError: {
+    textAlign: 'center',
+    opacity: 0.7,
+    fontFamily: 'monospace',
   },
 });

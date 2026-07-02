@@ -122,23 +122,57 @@ module.exports = ({ config }) => {
     (filter) =>
       filter.data?.some((d) => d.host === 'app.tracebud.com'),
   );
-  if (!hasAppLinkFilter) {
-    android.intentFilters = [
-      ...existingFilters,
+  let androidIntentFilters = hasAppLinkFilter ? existingFilters : [
+    ...existingFilters,
+    {
+      action: 'VIEW',
+      autoVerify: true,
+      data: [
+        {
+          scheme: 'https',
+          host: 'app.tracebud.com',
+          pathPrefix: '/auth',
+        },
+      ],
+      category: ['BROWSABLE', 'DEFAULT'],
+    },
+  ];
+
+  const androidGoogleClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID?.trim();
+  const androidGoogleSchemeMatch =
+    androidGoogleClientId && /^([\w-]+)\.apps\.googleusercontent\.com$/.exec(androidGoogleClientId);
+  if (androidGoogleSchemeMatch) {
+    const reversedScheme = `com.googleusercontent.apps.${androidGoogleSchemeMatch[1]}`;
+    const hasGoogleOAuthFilter = androidIntentFilters.some((filter) =>
+      filter.data?.some((d) => d.scheme === reversedScheme),
+    );
+    if (!hasGoogleOAuthFilter) {
+      androidIntentFilters = [
+        ...androidIntentFilters,
+        {
+          action: 'VIEW',
+          data: [{ scheme: reversedScheme, path: '/oauth2redirect' }],
+          category: ['BROWSABLE', 'DEFAULT'],
+        },
+      ];
+    }
+  }
+
+  const appScheme = (config.scheme ?? appJson.expo.scheme ?? 'tracebudoffline').trim();
+  const hasAppSchemeOAuthFilter = androidIntentFilters.some((filter) =>
+    filter.data?.some((d) => d.scheme === appScheme && d.host === 'oauth2redirect'),
+  );
+  if (!hasAppSchemeOAuthFilter) {
+    androidIntentFilters = [
+      ...androidIntentFilters,
       {
         action: 'VIEW',
-        autoVerify: true,
-        data: [
-          {
-            scheme: 'https',
-            host: 'app.tracebud.com',
-            pathPrefix: '/auth',
-          },
-        ],
+        data: [{ scheme: appScheme, host: 'oauth2redirect' }],
         category: ['BROWSABLE', 'DEFAULT'],
       },
     ];
   }
+  android.intentFilters = androidIntentFilters;
 
   const googleMapsApiKey =
     process.env.GOOGLE_MAPS_API_KEY?.trim() || process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY?.trim();
