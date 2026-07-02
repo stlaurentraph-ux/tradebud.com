@@ -26,7 +26,7 @@ describe('BillingSubscriptionResolverService', () => {
     const service = new BillingSubscriptionResolverService(pool as any);
     const breakdown = await service.resolveMonthlySubscriptionEur('tenant_1');
 
-    expect(breakdown.amount_eur).toBe(20);
+    expect(breakdown.amount_eur).toBe(19);
     expect(breakdown.pricing_source).toBe('bundle');
   });
 });

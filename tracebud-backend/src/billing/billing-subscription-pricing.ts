@@ -37,7 +37,7 @@ const BUNDLE_PRICES: Record<
   SubscriptionBundleKey,
   Record<Exclude<BillingBand, 'enterprise'>, number>
 > = {
-  compliance_starter: { starter: 20, growth: 40, scale: 60 },
+  compliance_starter: { starter: 19, growth: 49, scale: 99 },
   climate_starter: { starter: 15, growth: 25, scale: 45 },
   sustainability_bundle: { starter: 20, growth: 35, scale: 60 },
   due_diligence_bundle: { starter: 30, growth: 50, scale: 85 },

@@ -31,7 +31,7 @@ describe('BillingSubscriptionBandService', () => {
         billing_band: 'starter',
         subscription_bundle: 'compliance_starter',
         enabled_modules: ['foundation', 'eudr'],
-        amount_eur: 20,
+        amount_eur: 19,
         pricing_source: 'bundle',
       }),
     };
@@ -61,7 +61,7 @@ describe('BillingSubscriptionBandService', () => {
         billing_band: 'starter',
         subscription_bundle: 'compliance_starter',
         enabled_modules: ['foundation', 'eudr'],
-        amount_eur: 20,
+        amount_eur: 19,
         pricing_source: 'bundle',
       }),
     };
@@ -98,7 +98,7 @@ describe('BillingSubscriptionBandService', () => {
         billing_band: 'starter',
         subscription_bundle: 'compliance_starter',
         enabled_modules: ['foundation', 'eudr'],
-        amount_eur: 20,
+        amount_eur: 19,
         pricing_source: 'bundle',
       }),
     };
