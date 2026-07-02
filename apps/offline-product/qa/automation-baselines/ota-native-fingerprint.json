@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-06-30T22:59:32.158Z",
-  "sha256": "cf88eb7dff5dbde7f5f8df754ff8784add04e923eb5dd81f8452a8e54ed8e7a8",
+  "generatedAt": "2026-07-02T12:06:19.061Z",
+  "sha256": "1a3b99aff1e0d582489f43c33dde2607f3adb7abd2e79739c7b15df844e79a11",
   "fingerprint": {
     "expoSdk": null,
     "runtimeVersion": {
@@ -23,10 +23,13 @@
       "READ_MEDIA_IMAGES"
     ],
     "plugins": [
+      "expo-asset",
       "expo-camera",
       "expo-font",
+      "expo-image",
       "expo-router",
       "expo-secure-store",
+      "expo-sharing",
       "expo-splash-screen",
       "expo-sqlite",
       "expo-web-browser"

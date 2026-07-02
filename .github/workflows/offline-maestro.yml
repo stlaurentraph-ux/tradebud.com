@@ -178,6 +178,9 @@ jobs:
       e2e_approved: ${{ steps.approval.outputs.e2e_approved }}
       e2e_approval_reason: ${{ steps.approval.outputs.e2e_approval_reason }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
       - name: Decide E2E approval
         id: approval
         env:
