@@ -138,3 +138,10 @@ Check when touching `features/observability/*`, `sentryClient.ts`, sync pipeline
 ## Parallel work note
 
 <!-- Optional: "Safe to merge alongside feature/xxx on dashboard — different app" -->
+
+### Maestro emulator E2E (offline — when paths trigger Offline Maestro)
+
+- [ ] Cheap checks green first (`qa:maestro:prepush`, CI preflight)
+- [ ] **Do not** add `maestro:run` label until you intend to spend Actions minutes
+- [ ] After adding `maestro:run`: approve **`maestro-e2e`** environment in GitHub when prompted
+- [ ] `maestro-ci-cost-runbook.md` § E2E approval gate followed

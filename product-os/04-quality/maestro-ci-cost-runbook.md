@@ -44,8 +44,46 @@ Workflow: `.github/workflows/offline-maestro.yml`
 |-----------|---------|
 | `concurrency` + `cancel-in-progress` | Cancel superseded runs on new pushes |
 | `maestro-cost-gate` job | Skip macOS when PR iOS already green + android-only delta |
+| `maestro-e2e-approval` job | **Block emulator E2E until human approves** (see below) |
 | `workflow_dispatch` | Force full matrix when needed before merge |
-| Push to `main` | Always runs both platforms (release gate) unless `e2eBypass.enabled` |
+| Push to `main` | Runs both platforms after environment approval unless `e2eBypass.enabled` |
+
+---
+
+## E2E approval gate (human opt-in)
+
+**Goal:** Never burn macOS/Android emulator minutes on a PR until you explicitly approve.
+
+| Step | What runs | Cost |
+|------|-----------|------|
+| 1 — auto | `Maestro wiring preflight` + `Maestro platform cost gate` | ~1–2 min Linux |
+| 2 — waiting | `Maestro E2E awaiting approval` (notice only) when paths would trigger E2E | 0 |
+| 3 — you approve | Add label **`maestro:run`** to the PR | 0 |
+| 4 — GitHub | Approve **`maestro-e2e`** environment when jobs pause (one-time repo setup) | 0 until approved |
+| 5 — then | macOS golden path / Android assemble+smoke | billed minutes |
+
+### One-time GitHub setup (required)
+
+1. Repo → **Settings** → **Environments** → **New environment** → name: `maestro-e2e`
+2. **Required reviewers** → add yourself (and any co-founders)
+3. Save
+
+Without this environment, approved PRs will fail when emulator jobs start.
+
+### PR workflow
+
+1. Push branch — preflight runs automatically; emulator jobs **do not** start.
+2. When ready to spend minutes: add label `maestro:run` to the PR.
+3. Re-run failed/skipped workflow or push an empty commit — emulator jobs queue.
+4. GitHub shows **Review pending deployments** → **Approve and deploy** for `maestro-e2e`.
+5. Golden path / Android smoke run.
+
+Remove the label to block future E2E on new pushes until you add it again.
+
+### push / workflow_dispatch
+
+- **push to `main`:** no label; jobs wait on `maestro-e2e` environment approval each run.
+- **workflow_dispatch:** operator already opted in; jobs still use `maestro-e2e` environment.
 
 ---
 
@@ -75,6 +113,7 @@ When **e2eBypass is active:** preflight + bypass notice green is sufficient to m
 
 When **e2eBypass is off:**
 
+- **PR emulator E2E only after** label `maestro:run` **and** `maestro-e2e` environment approval
 - iOS golden path green on **some** commit on the PR (may be skipped on later android-only pushes)
 - Android **smoke** green on **latest** commit (`Maestro Android smoke (PR)`)
 - Full Android golden path green on **push to main** or `workflow_dispatch` with `run_golden_path`
