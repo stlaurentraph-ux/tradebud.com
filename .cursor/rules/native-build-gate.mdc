@@ -1,0 +1,42 @@
+---
+description: Require main branch sync before native offline builds (local, preview, production)
+alwaysApply: true
+---
+
+# Native build gate (offline field app)
+
+Before **any** native binary work — local `prebuild`, `./gradlew installDebug`, `npm run dev:device`, or EAS preview/production — verify fixes are on **`main`** and pushed.
+
+## Required checks (human or agent)
+
+```bash
+cd apps/offline-product && npm run native:preflight:main
+```
+
+Gate fails unless:
+1. Current branch is **`main`**
+2. Working tree is **clean** (no uncommitted changes)
+3. **`origin/main` is fetched** and local HEAD **matches** remote (not behind, not ahead)
+
+## When to run
+
+| Action | Run gate first |
+| --- | --- |
+| `expo prebuild --clean` | Yes |
+| `./gradlew installDebug` | Yes |
+| `npm run dev:device` | Yes |
+| `npm run release:preview*` / `release:production*` | Yes (also in `release-preflight.mjs`) |
+| Metro-only JS reload (`dev:metro`) | No |
+
+## Agent workflow
+
+1. Commit fixes on `main` (or merge PR to `main` first).
+2. `git push origin main`
+3. `npm run native:preflight:main`
+4. Then prebuild / install / EAS.
+
+Do **not** rebuild from a feature branch, dirty tree, or unpushed local commits — stale dev clients caused splash/OAuth/tab-bar regressions.
+
+## Bypass (emergency only)
+
+`NATIVE_BUILD_GATE_SKIP=1` — document why in `product-os/06-status/daily-log.md`. Never bypass for production EAS.

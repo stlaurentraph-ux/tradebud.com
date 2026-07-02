@@ -5,6 +5,7 @@
 **Work queue:** `product-os/06-status/agent-queue.md`  
 **Exhaustive plan:** `product-os/06-status/automation-ops-plan.md`  
 **Offline annex:** `product-os/04-quality/offline-automation-runbook.md`  
+**Native build gate:** `.cursor/rules/native-build-gate.mdc` — run `npm run native:preflight:main` in `apps/offline-product` before prebuild / device install / EAS  
 **CI secrets (doc only):** `product-os/04-quality/ci-secrets-and-fixtures.md`
 
 Use this file when tooling does not load `.cursor/rules/*.mdc` (Cloud Agents, external bots).

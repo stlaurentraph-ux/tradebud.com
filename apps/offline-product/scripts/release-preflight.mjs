@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { assertMainBeforeNativeBuild } from './main-before-native-build.mjs';
 import { sentryAuthEnvPath } from './sentryAuthEnvPath.mjs';
 
 const VALID_PROFILES = new Set(['preview', 'production']);
@@ -260,6 +261,13 @@ function runOAuthVerify(projectRoot) {
 }
 
 function main() {
+  try {
+    assertMainBeforeNativeBuild();
+  } catch (error) {
+    console.error(`[error] ${error instanceof Error ? error.message : error}`);
+    process.exit(1);
+  }
+
   const { profile, verifyOAuth } = parseArgs(process.argv.slice(2));
   const projectRoot = process.cwd();
   loadEnvFileIfPresent(path.join(projectRoot, '.env.local'));
