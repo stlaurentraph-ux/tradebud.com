@@ -12,7 +12,7 @@ describe('billing-subscription-pricing', () => {
       subscriptionBundle: 'compliance_starter',
       enabledModules: ['foundation', 'eudr'],
     });
-    expect(price.amount_eur).toBe(40);
+    expect(price.amount_eur).toBe(49);
     expect(price.pricing_source).toBe('bundle');
   });
 

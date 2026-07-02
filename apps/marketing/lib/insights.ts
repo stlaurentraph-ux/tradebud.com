@@ -7,6 +7,8 @@ import { parseFrontmatter, parseTags } from '@/lib/markdown';
 export const INSIGHT_CATEGORIES = [
   'regulation',
   'field-notes',
+  'field-mapping',
+  'onboarding',
   'technology',
   'playbooks',
   'product',
@@ -128,10 +130,47 @@ export function getInsightSlugs(locale: Locale, options?: { includeDrafts?: bool
   return getInsightPosts(locale, options).map((post) => post.slug);
 }
 
+export function estimateInsightReadingMinutes(body: string): number {
+  const words = body.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 220));
+}
+
+export function getRelatedInsightPosts(
+  slug: string,
+  locale: Locale,
+  options?: { includeDrafts?: boolean; limit?: number },
+): InsightSummary[] {
+  const limit = options?.limit ?? 3;
+  const includeDrafts = options?.includeDrafts ?? false;
+  const current = getInsightPostBySlug(slug, locale, { includeDrafts });
+  if (!current) {
+    return [];
+  }
+
+  const candidates = getInsightPosts(locale, { includeDrafts }).filter((post) => post.slug !== slug);
+
+  return candidates
+    .map((post) => {
+      const sharedTags = post.tags.filter((tag) => current.tags.includes(tag)).length;
+      const categoryBonus = post.category === current.category ? 2 : 0;
+      return { post, score: sharedTags + categoryBonus };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+      return new Date(b.post.publishedAt).getTime() - new Date(a.post.publishedAt).getTime();
+    })
+    .slice(0, limit)
+    .map((entry) => entry.post);
+}
+
 export function getInsightCategoryLabel(category: InsightCategory): string {
   const labels: Record<InsightCategory, string> = {
     regulation: 'Regulation & EUDR',
     'field-notes': 'Field notes',
+    'field-mapping': 'Field mapping',
+    onboarding: 'Onboarding',
     technology: 'Technology',
     playbooks: 'Playbooks',
     product: 'Product updates',

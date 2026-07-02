@@ -144,12 +144,12 @@
       "headline": "Simple monthly pricing by network size.",
       "description": "One price. No per-seat fees.",
       "popularBadge": "Most popular",
-      "footerNote": "Extra shipments are billed separately.",
+      "footerNote": "Your monthly plan covers your network. Each shipment costs €1 when export data is sealed and €1 when import data is submitted to EU.",
+      "dashboardFeature": "Full traceability dashboard",
       "cta": "Get started",
       "table": {
         "plan": "Plan",
         "managedScale": "Managed scale",
-        "shipments": "Included shipments / month",
         "monthlyBase": "Monthly base"
       },
       "plans": {
@@ -431,6 +431,7 @@
       "howItWorks": "Come funziona",
       "products": "Products",
       "pricing": "Pricing",
+      "insights": "Insights",
       "pilot": "Pilot",
       "faq": "FAQ"
     },
@@ -452,6 +453,7 @@
     "tagline": "Operazioni EUDR più semplici. Accesso al mercato più forte.",
     "whyTracebud": "Perché Tracebud",
     "products": "Prodotti",
+    "insights": "Insights",
     "waitlistPrompt": "Pronto a unirti alla lista d'attesa?",
     "waitlistSubline": "Sii il primo a sapere quando Tracebud aprirà per la tua rete."
   },
@@ -498,5 +500,13 @@
     "waitlistPrompt": "Ready to join the waitlist?",
     "joinNow": "Join now",
     "whyCommoditiesAnswer": "Prima il caffè, poi le altre sei commodity EUDR: cacao, olio di palma, gomma, soia, bestiame e legno. Vedi la pagina prezzi per la roadmap completa."
+  },
+  "homeV2": {
+    "latestInsights": {
+      "title": "Latest insights",
+      "description": "Regulatory guidance, field notes, and playbooks.",
+      "viewAll": "View all",
+      "empty": "No articles yet."
+    }
   }
 }

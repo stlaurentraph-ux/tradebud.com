@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import {
   COMPLIANCE_STARTER_BANDS,
-  DESTINATION_SHIPMENT_USAGE_FEE,
-  ORIGIN_SHIPMENT_USAGE_FEE,
+  PRICING_SHIPMENT_USAGE_NOTE,
 } from "@/lib/pricing-spec";
 
 const DASHBOARD_URL = "https://dashboard.tracebud.com";
@@ -36,10 +35,11 @@ const plans = [
   },
   {
     name: "Exporters & Cooperatives",
-    description: "Modular dashboard subscription by managed contacts, plus metered origin seal usage at month-end.",
+    description: "Monthly dashboard subscription by managed contacts.",
     priceTiers: [...COMPLIANCE_STARTER_BANDS],
     subPrice: null,
     highlights: [
+      "Full traceability dashboard",
       "Aggregate unlimited farmers & cooperative data",
       "Yield-cap anti-laundering validation",
       "Automated batch management & pre-export EUDR preparation",
@@ -52,9 +52,10 @@ const plans = [
   {
     name: "EU Importers & Roasters",
     priceTiers: [...COMPLIANCE_STARTER_BANDS],
-    description: "Same modular bands by managed contacts, plus metered destination TRACES submit usage at month-end.",
+    description: "Monthly dashboard subscription by managed contacts.",
     subPrice: null,
     highlights: [
+      "Full traceability dashboard",
       "Automated TRACES NT submission to the EU system",
       "Zero-Risk pre-flight check before every EU filing",
       "Multi-supplier risk dashboard across your sourcing network",
@@ -175,17 +176,12 @@ function PriceTierToggle({
   tiers,
   active,
   onChange,
-  feeNote,
 }: {
   tiers: { label: string; sublabel: string; price: string }[];
   active: string;
   onChange: (label: string) => void;
-  feeNote?: string;
 }) {
   const current = tiers.find((t) => t.label === active) ?? tiers[0];
-  const feeParts = feeNote ? feeNote.split(" ") : null;
-  const feeAmount = feeParts ? feeParts[0] : "";
-  const feeRemainder = feeParts ? feeParts.slice(1).join(" ") : "";
   return (
     <div className="space-y-2">
       {current.price === "Custom" ? (
@@ -215,12 +211,6 @@ function PriceTierToggle({
         ))}
       </div>
       <p className="text-xs text-muted-foreground">{current.sublabel}</p>
-      {feeNote && (
-        <p className="text-xs text-muted-foreground">
-          <span className="text-sm font-semibold text-foreground">{feeAmount}</span>{" "}
-          <span>{feeRemainder}</span>
-        </p>
-      )}
     </div>
   );
 }
@@ -328,13 +318,6 @@ export default function PricingPage() {
                           tiers={plan.priceTiers}
                           active={plan.tier === "Tier 2" ? exporterBand : importerBand}
                           onChange={plan.tier === "Tier 2" ? setExporterBand : setImporterBand}
-                          feeNote={
-                            plan.tier === "Tier 2"
-                              ? `+${ORIGIN_SHIPMENT_USAGE_FEE} / origin seal*`
-                              : plan.tier === "Tier 3"
-                                ? `+${DESTINATION_SHIPMENT_USAGE_FEE} / TRACES submit**`
-                                : undefined
-                          }
                         />
                       ) : plan.price === "Custom" ? (
                         <div>
@@ -423,12 +406,7 @@ export default function PricingPage() {
             })}
           </div>
           <div className="mt-4 text-center space-y-1">
-            <p className="text-xs text-muted-foreground">
-              * Origin seal usage ({ORIGIN_SHIPMENT_USAGE_FEE}) is metered when exporters or cooperatives seal a shipment; billed on the monthly invoice.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              ** Destination submit usage ({DESTINATION_SHIPMENT_USAGE_FEE}) is metered when importers submit DDS to TRACES; billed on the monthly invoice.
-            </p>
+            <p className="text-xs text-muted-foreground">{PRICING_SHIPMENT_USAGE_NOTE}</p>
             <p className="text-xs text-muted-foreground">
               Shown subscription bands use the Compliance Starter bundle (Foundation + EUDR). Modular add-ons available in-dashboard.
             </p>

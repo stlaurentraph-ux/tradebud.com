@@ -19,6 +19,7 @@ function isHomePath(pathname: string) {
 
 export function Header() {
   const t = useTranslations("header");
+  const tSiteNav = useTranslations("siteNav");
   const locale = useLocale();
   const pathname = usePathname();
   const homePath = `/${locale}`;
@@ -29,6 +30,7 @@ export function Header() {
   const navLinks = [
     { label: t("nav.products"), href: "#products" },
     { label: t("nav.pricing"), href: "#pricing" },
+    { label: tSiteNav("insights"), href: "/insights" },
     { label: t("nav.pilot"), href: "/pilot" },
   ];
 

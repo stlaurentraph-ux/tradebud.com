@@ -14,6 +14,8 @@ const insightsDir = path.join(marketingRoot, 'content/insights');
 const INSIGHT_CATEGORIES = [
   'regulation',
   'field-notes',
+  'field-mapping',
+  'onboarding',
   'technology',
   'playbooks',
   'product',
@@ -25,7 +27,54 @@ const LOCALES = ['en', 'fr', 'es', 'pt', 'id', 'vi', 'de', 'nl', 'it', 'am', 'no
 
 const REQUIRED_FIELDS = ['title', 'description', 'category', 'locale', 'publishedAt', 'author', 'draft'];
 
+const DESCRIPTION_MIN = 80;
+const DESCRIPTION_MAX = 320;
+const TAGS_MIN_PUBLISHED = 2;
+
 const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function parseTags(value) {
+  if (!value?.trim()) return [];
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+}
+
+function loadInsightSlugRedirects() {
+  const redirectPath = path.join(marketingRoot, 'lib/insight-slug-redirects.json');
+  if (!fs.existsSync(redirectPath)) {
+    throw new Error('Missing lib/insight-slug-redirects.json');
+  }
+  const entries = JSON.parse(fs.readFileSync(redirectPath, 'utf8'));
+  if (!Array.isArray(entries)) {
+    throw new Error('insight-slug-redirects.json must be an array');
+  }
+  return entries;
+}
+
+function validateInsightSlugRedirects(allSlugs) {
+  const entries = loadInsightSlugRedirects();
+  for (const entry of entries) {
+    if (!entry?.from || !entry?.to) {
+      throw new Error('Each insight slug redirect requires "from" and "to"');
+    }
+    if (!SLUG_PATTERN.test(entry.from) || !SLUG_PATTERN.test(entry.to)) {
+      throw new Error(`Invalid redirect slug pair: ${entry.from} -> ${entry.to}`);
+    }
+    if (allSlugs.has(entry.from)) {
+      throw new Error(
+        `Redirect source slug "${entry.from}" still has a markdown file — remove the file and keep only the redirect`,
+      );
+    }
+    if (!allSlugs.has(entry.to)) {
+      throw new Error(`Redirect target slug "${entry.to}" has no markdown file`);
+    }
+    if (entry.from === entry.to) {
+      throw new Error(`Redirect source and target must differ (${entry.from})`);
+    }
+  }
+}
 
 function readUtf8(relativePath) {
   return fs.readFileSync(path.join(marketingRoot, relativePath), 'utf8');
@@ -120,6 +169,29 @@ function validateInsightFile(filename, staticHrefs, allSlugs) {
     throw new Error(`${fileLabel}: heroImage must be a root-relative path`);
   }
 
+  const description = data.description.trim();
+  if (description.length < DESCRIPTION_MIN || description.length > DESCRIPTION_MAX) {
+    throw new Error(
+      `${fileLabel}: description must be ${DESCRIPTION_MIN}-${DESCRIPTION_MAX} characters (got ${description.length})`,
+    );
+  }
+
+  const tags = parseTags(data.tags);
+  const isDraft = data.draft.trim() === 'true';
+  if (!isDraft) {
+    if (!data.heroImage?.trim()) {
+      throw new Error(`${fileLabel}: published articles (draft: false) require heroImage`);
+    }
+    if (!data.updatedAt?.trim()) {
+      throw new Error(`${fileLabel}: published articles (draft: false) require updatedAt`);
+    }
+    if (tags.length < TAGS_MIN_PUBLISHED) {
+      throw new Error(
+        `${fileLabel}: published articles require at least ${TAGS_MIN_PUBLISHED} comma-separated tags`,
+      );
+    }
+  }
+
   for (const href of extractMarkdownLinks(body)) {
     if (/^(https?:|mailto:|#)/.test(href)) continue;
 
@@ -180,6 +252,13 @@ function main() {
 
   for (const filename of files) {
     validateInsightFile(filename, staticHrefs, allSlugs);
+  }
+
+  validateInsightSlugRedirects(allSlugs);
+
+  const seoModule = path.join(marketingRoot, 'lib/insight-seo.ts');
+  if (!fs.existsSync(seoModule)) {
+    throw new Error('Missing lib/insight-seo.ts (shared article SEO pipeline)');
   }
 
   console.log(`marketing-insights-lint: OK — ${files.length} insight articles validated`);
