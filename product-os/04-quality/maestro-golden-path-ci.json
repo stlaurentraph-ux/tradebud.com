@@ -53,6 +53,12 @@
     "keepPreflight": true,
     "reEnableRunbook": "Set e2eBypass.enabled to false in this manifest after Maestro Android smoke is green on PR"
   },
+  "e2eApproval": {
+    "prLabel": "maestro:run",
+    "githubEnvironment": "maestro-e2e",
+    "approvalGateScript": "scripts/maestro-ci-approval-gate.mjs",
+    "runbookSection": "E2E approval gate (human opt-in)"
+  },
   "prepushScript": "scripts/maestro-prepush.sh",
   "prepushRunbook": "product-os/04-quality/maestro-ci-cost-runbook.md"
 }

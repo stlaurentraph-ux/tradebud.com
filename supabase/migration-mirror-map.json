@@ -165,6 +165,10 @@
     {
       "file": "202606221500_fix_postgis_search_path.sql",
       "reason": "no backend mirror"
+    },
+    {
+      "file": "202606302300_enable_password_sign_in_for_oauth_users.sql",
+      "reason": "one-time auth.users data fix; runtime handled in field-account.service"
     }
   ]
 }

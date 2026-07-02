@@ -112,6 +112,159 @@ Blocking E2E on `main` is slice **3.O.1** — golden path job in `offline-maestr
 
 ---
 
+## Field app release discipline
+
+Applies to **every** preview OTA, store build, and production promote — not pilot-only.
+
+| Gate | When | What |
+|------|------|------|
+| Fast automated | Every PR | Tier 0–2 verify (`qa:regression`, `qa:structural`, `qa:automation:phase1`) |
+| Flow smoke | Sync / auth / mapping / documents touched | Relevant `DEVICE_SMOKE_CHECKLIST.md` sections on a physical device |
+| Local E2E | Maestro / Android / OAuth / native config touched | `qa:maestro:prepush` (+ local Android golden before `main` — see cost runbook) |
+| Bug-class guard | Every fix merge | Row in `field-app-regression-ledger.md` + test or structural guard |
+| UI honesty | Farmer-facing slice | Success UI requires real preconditions (server link **and** empty queue, fresh SQLite read — not stale closure) |
+| Promote | Preview → production | `release:preflight`, device sign-off, release health (see `release-health-gate.md`) |
+
+**Pilot E2E bypass** (`e2eBypass.enabled` in `maestro-golden-path-ci.json`) is a **time-boxed exception** with an owner and `allowedUntil` date — not the default. Re-enable full E2E after local golden is green.
+
+**Do not** ship production OTA from Metro-only validation. Preview channel first (`RELEASE_MODEL.md`).
+
+### Sentry performance spans (Phase B)
+
+Parent/child spans (sampled at `tracesSampleRate` in `sentryClient.ts`) cover:
+
+| Span `op` | Name | Surface |
+|-----------|------|---------|
+| `app.lifecycle` | `app.boot` | SQLite + auth hydrate |
+| `auth.oauth` | `auth.oauth.*` | OAuth sign-in + cold-start callback |
+| `sync.session` | `sync.session_open` | Token verify before sync |
+| `sync.pipeline` | `field.sync.pipeline` | Manual/auto backup pipeline |
+| `sync.restore` / `sync.upload` / `sync.enqueue` / `sync.queue_drain` | step names under pipeline | Per-step latency in Sentry Performance |
+
+`reportSyncFailure` annotates the active span with `sync_step`, `sync_cause`, and optional `sync_action_type`.
+
+Helper: `features/observability/sentrySpans.ts` — always no-ops when Sentry is disabled (dev / Maestro CI thin boot).
+
+### In-app problem report (Phase C)
+
+Settings → **Need help?** → **Report a problem** opens a modal with an optional farmer note. Submission attaches a **sanitized** diagnostic snapshot (build/OTA, queue counts, classified sync step/cause — no PII or raw queue errors).
+
+| Path | Behavior |
+|------|----------|
+| Sentry enabled | `captureFieldProblemFeedback` → Sentry User Feedback + `field_problem_report_submitted` analytics |
+| Sentry disabled (local dev) | Pre-filled `mailto:support@tracebud.com` fallback |
+
+Code: `features/observability/fieldProblemReport.ts`, `components/settings/ReportProblemModal.tsx`, wired from `app/(tabs)/settings.tsx`.
+
+**Preview QA reporting:** `eas.json` preview profile sets `EXPO_PUBLIC_SENTRY_ENABLED=1` and `EXPO_PUBLIC_SENTRY_ENVIRONMENT=preview`. Ensure `EXPO_PUBLIC_SENTRY_DSN` is set on the EAS **preview** environment (same `react-native` DSN as production).
+
+**Issue alerts (react-native):** manifest `product-os/04-quality/sentry-mobile-alert-rules.json` — apply with:
+
+```bash
+cd apps/offline-product
+npm run sentry:alerts:setup
+npm run sentry:alerts:check
+```
+
+Requires `SENTRY_AUTH_TOKEN` with `alerts:write` for setup; `project:read` is enough for check. CI reuses `SENTRY_RELEASE_HEALTH_AUTH_TOKEN` when configured. Manual UI fallback: `product-os/04-quality/sentry-mobile-alert-rules.md`.
+
+**CI guard:** offline `app` job runs `npm run sentry:alerts:check` (wiring always; remote parity when token present).
+
+---
+
+## Minute-aware merge checklist
+
+**Principle:** local verify **discovers**; GitHub Actions **confirms**. CI is the receipt, not the debugger.
+
+**Cost runbook:** `maestro-ci-cost-runbook.md` (cost pyramid, cost gate, bypass rules).
+
+### What costs minutes
+
+| Expensive | Cheap / free |
+|-----------|----------------|
+| macOS Maestro (~10× Linux multiplier) | `qa:regression` + `qa:structural` locally |
+| Android emulator assemble + smoke (~2h Linux) | `qa:maestro:prepush` (~2 min local) |
+| Repeated pushes (cancel + restart billing) | One push per logical fix |
+| Unrelated app jobs | Path filters skip marketing/backend/dashboard |
+
+### Commit → push → merge
+
+| Step | When satisfied locally? | Notes |
+|------|-------------------------|-------|
+| **Commit** | Yes | On `fix/*` or `feature/*` branch — never directly on `main` |
+| **Push** | Yes | Opens/updates PR; **batch work first** — one push per fix slice |
+| **Merge** | After minimum bar below | `main` merge triggers another CI run — avoid merge/revert loops |
+
+### Local verify (before every push)
+
+```bash
+cd apps/offline-product
+npm run qa:regression
+npm run qa:structural    # when sync / registry / Maestro manifest touched
+```
+
+**Maestro / Android / OAuth / native paths** — also:
+
+```bash
+npm run qa:maestro:prepush
+# macOS + booted emulator, before merge to main or native/Maestro release:
+npm run qa:maestro:local:android:golden
+# or: MAESTRO_PREPUSH_ANDROID_GOLDEN=1 npm run qa:maestro:prepush:full
+```
+
+### Minimum merge bar
+
+**Default fix PR** (with `e2eBypass` active):
+
+- [ ] Local tier 0 (+ structural if relevant) passed
+- [ ] One push (or minimal push loop after local fix)
+- [ ] PR CI green for jobs that **ran** (offline Linux `app` job + Maestro preflight ~1 min)
+- [ ] Device smoke on phone when farmers would notice the change
+
+**Higher bar** (re-enable E2E, Maestro/native release, or bypass off):
+
+- [ ] Local Android golden green (`qa:maestro:local:android:golden`)
+- [ ] `workflow_dispatch` on **Offline Maestro** with `force_e2e` / `run_golden_path` when PR matrix is insufficient
+- [ ] Regression ledger row + guard for recurring bug class
+
+**Production OTA / store** (additional — not every fix PR):
+
+- [ ] Preview channel validated on tester device
+- [ ] `npm run ota:production:preflight` or `update:preview:safe` path per `RELEASE_MODEL.md`
+- [ ] DB migration applied on production **before** deploy when slice requires it (see `daily-log.md` ops notes)
+
+### Minute-saving habits
+
+1. **Work locally until green, then push once** — biggest saver.
+2. **One app per PR** — path filters skip unrelated CI jobs.
+3. **Android-only delta** — cost gate may skip macOS if iOS already green on the PR; avoid touching iOS Maestro files unnecessarily.
+4. **`workflow_dispatch` sparingly** — full matrix on demand, not every iteration.
+5. **Don't use CI to debug** — failed 45 min emulator runs mean local golden was skipped.
+6. **Monitor billing** — GitHub → Settings → Billing → Actions; `gh run list --workflow=offline-maestro.yml`.
+
+### Decision tree
+
+```
+Fix done and verified locally?
+  └─ No  → keep working (free)
+  └─ Yes → commit on branch → push ONCE
+           └─ PR CI green for jobs that ran?
+                └─ No  → fix locally; avoid push loops
+                └─ Yes → farmer-visible field change?
+                         └─ Yes → device smoke (free) → merge
+                         └─ No  → merge
+```
+
+### Do not merge yet when
+
+- CI red or still running for a **required** job
+- Maestro/Android/oauth changed but only tested in Metro (not device/emulator)
+- Fix bundled with unrelated feature work (hard to bisect)
+- Production DB migration required but not applied
+- Temporary bypass treated as full E2E sign-off
+
+---
+
 ## Mobile rollout SLO (4.O.1)
 
 Weekly field-app health without Vercel/marketing smoke. Uses Sentry `tracebud/react-native` session stats + analytics failure proxies.

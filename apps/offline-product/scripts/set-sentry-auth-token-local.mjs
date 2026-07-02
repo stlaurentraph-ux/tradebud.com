@@ -8,7 +8,7 @@
  *   node scripts/set-sentry-auth-token-local.mjs sntrys_...
  *
  * Create a token: https://tracebud.sentry.io/settings/account/api/auth-tokens/
- * Scopes: org:read, project:releases (project: react-native)
+ * Scopes: org:read, project:releases, alerts:write (alerts:write required for sentry:alerts:setup)
  */
 import fs from 'node:fs';
 import path from 'node:path';

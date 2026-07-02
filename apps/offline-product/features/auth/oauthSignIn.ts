@@ -19,6 +19,7 @@ import {
 import { signInWithGoogleNative } from '@/features/auth/googleSignIn.native';
 import { getOAuthRedirectMatchPrefix, getOAuthRedirectUri } from '@/features/auth/oauthRedirect';
 import { isOAuthCallbackUrl, sessionFromOAuthCallbackUrl } from '@/features/auth/oauthCallbackUrl';
+import { withSentrySpan } from '@/features/observability/sentrySpans';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -92,30 +93,48 @@ async function signInWithOAuthBrowser(provider: OAuthProvider): Promise<Session>
 }
 
 export async function signInWithOAuthProvider(provider: OAuthProvider): Promise<Session> {
-  if (provider === 'apple' && Platform.OS === 'ios') {
-    return signInWithAppleNative();
-  }
-
-  if (provider === 'google' && Platform.OS !== 'web') {
-    if (shouldUseGoogleNativeSignIn()) {
-      try {
-        return await signInWithGoogleNative();
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        if (message === 'sign_in_oauth_cancelled') {
-          throw error;
-        }
-        if (__DEV__ && Constants.isDevice === false) {
-          console.warn('[oauth] Native Google sign-in failed; falling back to browser OAuth:', message);
-          return signInWithOAuthBrowser(provider);
-        }
-        throw error;
+  return withSentrySpan(
+    {
+      name: 'auth.oauth.sign_in',
+      op: 'auth.oauth',
+      attributes: { oauth_provider: provider, oauth_platform: Platform.OS },
+    },
+    async () => {
+      if (provider === 'apple' && Platform.OS === 'ios') {
+        return withSentrySpan(
+          { name: 'auth.oauth.apple_native', op: 'auth.oauth', attributes: { oauth_provider: 'apple' } },
+          () => signInWithAppleNative(),
+        );
       }
-    }
-    if (__DEV__) {
-      console.log('[oauth] Using browser Google sign-in (simulator or native not available)');
-    }
-  }
 
-  return signInWithOAuthBrowser(provider);
+      if (provider === 'google' && Platform.OS !== 'web') {
+        if (shouldUseGoogleNativeSignIn()) {
+          try {
+            return await withSentrySpan(
+              { name: 'auth.oauth.google_native', op: 'auth.oauth', attributes: { oauth_provider: 'google' } },
+              () => signInWithGoogleNative(),
+            );
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message === 'sign_in_oauth_cancelled') {
+              throw error;
+            }
+            if (__DEV__ && Constants.isDevice === false) {
+              console.warn('[oauth] Native Google sign-in failed; falling back to browser OAuth:', message);
+              return signInWithOAuthBrowser(provider);
+            }
+            throw error;
+          }
+        }
+        if (__DEV__) {
+          console.log('[oauth] Using browser Google sign-in (simulator or native not available)');
+        }
+      }
+
+      return withSentrySpan(
+        { name: 'auth.oauth.browser', op: 'auth.oauth', attributes: { oauth_provider: provider } },
+        () => signInWithOAuthBrowser(provider),
+      );
+    },
+  );
 }

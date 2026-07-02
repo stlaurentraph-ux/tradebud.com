@@ -44,6 +44,7 @@ import {
   assertFieldAppPermission,
   FieldPermissionDeniedError,
 } from '@/features/auth/fieldPermissionGate';
+import { withSentrySpan, annotateActiveSentrySpan } from '@/features/observability/sentrySpans';
 
 export type FieldSyncPipelineParams = {
   accessToken: string;
@@ -122,6 +123,22 @@ function reportPlotUploadFailure(
 export async function runFieldSyncPipeline(
   params: FieldSyncPipelineParams,
 ): Promise<FieldSyncPipelineResult> {
+  return withSentrySpan(
+    {
+      name: 'field.sync.pipeline',
+      op: 'sync.pipeline',
+      attributes: {
+        plot_count: params.syncPlots.length,
+        max_queue_passes: params.maxQueuePasses ?? 4,
+      },
+    },
+    () => executeFieldSyncPipeline(params),
+  );
+}
+
+async function executeFieldSyncPipeline(
+  params: FieldSyncPipelineParams,
+): Promise<FieldSyncPipelineResult> {
   const {
     accessToken,
     apiFarmerId,
@@ -165,11 +182,15 @@ export async function runFieldSyncPipeline(
   setPhase('restoring_plots');
   reportSyncStepStart('plot_list', { phase: 'restore', plotCount: syncPlots.length });
   let activePlots = syncPlots;
-  const restoreResult = await restoreLocalPlotsFromServer({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: syncPlots,
-  });
+  const restoreResult = await withSentrySpan(
+    { name: 'sync.restore_plots', op: 'sync.restore', attributes: { plot_count: syncPlots.length } },
+    () =>
+      restoreLocalPlotsFromServer({
+        apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localPlots: syncPlots,
+      }),
+  );
   if (restoreResult.restoredCount > 0) {
     activePlots = restoreResult.mergedPlots;
     outcome.plotsRestored = restoreResult.restoredCount;
@@ -180,21 +201,29 @@ export async function runFieldSyncPipeline(
   }
 
   // Reconcile local↔server plot ids before pulling receipts, evidence, or declarations.
-  const warmResult = await warmPlotServerLinksForSync({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
+  const warmResult = await withSentrySpan(
+    { name: 'sync.warm_plot_links', op: 'sync.link', attributes: { plot_count: activePlots.length } },
+    () =>
+      warmPlotServerLinksForSync({
+        farmerId: apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localPlots: activePlots,
+      }),
+  );
   if (warmResult.fetchFailed) {
     outcome.plotsFetchFailed = true;
   }
 
-  const receiptRestoreResult = await restoreLocalDeliveryReceiptsFromServer({
-    apiFarmerId,
-    profileFarmerId: syncFarmer.id,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
+  const receiptRestoreResult = await withSentrySpan(
+    { name: 'sync.restore_receipts', op: 'sync.restore' },
+    () =>
+      restoreLocalDeliveryReceiptsFromServer({
+        apiFarmerId,
+        profileFarmerId: syncFarmer.id,
+        ownedFarmerIds: farmerScopeIds,
+        localPlots: activePlots,
+      }),
+  );
   if (receiptRestoreResult.restoredCount > 0) {
     outcome.receiptsRestored = receiptRestoreResult.restoredCount;
   }
@@ -215,12 +244,16 @@ export async function runFieldSyncPipeline(
     outcome.receiptsRequeued = receiptReconcileResult.requeuedCount;
   }
 
-  const cloudRestoreResult = await restoreFarmerCloudState({
-    apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localFarmer: syncFarmer,
-    localPlots: activePlots,
-  });
+  const cloudRestoreResult = await withSentrySpan(
+    { name: 'sync.restore_cloud', op: 'sync.restore' },
+    () =>
+      restoreFarmerCloudState({
+        apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localFarmer: syncFarmer,
+        localPlots: activePlots,
+      }),
+  );
   if (cloudRestoreResult.declarationsRestored > 0) {
     outcome.declarationsRestored = cloudRestoreResult.declarationsRestored;
   }
@@ -239,11 +272,15 @@ export async function runFieldSyncPipeline(
   }
 
   reportSyncStepStart('plot_upload', { plotCount: activePlots.length });
-  const warmUploadResult = await warmPlotServerLinksForSync({
-    farmerId: apiFarmerId,
-    ownedFarmerIds: farmerScopeIds,
-    localPlots: activePlots,
-  });
+  const warmUploadResult = await withSentrySpan(
+    { name: 'sync.warm_plot_links_upload', op: 'sync.link', attributes: { plot_count: activePlots.length } },
+    () =>
+      warmPlotServerLinksForSync({
+        farmerId: apiFarmerId,
+        ownedFarmerIds: farmerScopeIds,
+        localPlots: activePlots,
+      }),
+  );
   if (warmUploadResult.fetchFailed) {
     outcome.plotsFetchFailed = true;
   }
@@ -261,14 +298,22 @@ export async function runFieldSyncPipeline(
   if (activePlots.length === 0) {
     outcome.plotsNone = true;
   } else {
-    let syncRes = await uploadUnsyncedPlotsForFarmer({
-      farmerId: apiFarmerId,
-      ownedFarmerIds: farmerScopeIds,
-      localPlots: activePlots,
-      farmerDisplayName: syncFarmer?.name?.trim() || undefined,
-      t,
-      surface: 'settings',
-    });
+    let syncRes = await withSentrySpan(
+      {
+        name: 'sync.plot_upload',
+        op: 'sync.upload',
+        attributes: { plot_count: activePlots.length },
+      },
+      () =>
+        uploadUnsyncedPlotsForFarmer({
+          farmerId: apiFarmerId,
+          ownedFarmerIds: farmerScopeIds,
+          localPlots: activePlots,
+          farmerDisplayName: syncFarmer?.name?.trim() || undefined,
+          t,
+          surface: 'settings',
+        }),
+    );
     if (!syncRes.fetchFailed && syncRes.unsyncedBefore === 0) {
       const verifyBeforeQueue = await measureTotalSyncPending({
         farmerId: apiFarmerId,
@@ -337,24 +382,28 @@ export async function runFieldSyncPipeline(
 
   if (activePlots.length > 0) {
     const plotServerLinks = (await loadPlotServerLinks().catch(() => ({}))) as Record<string, string>;
-    const plotDependentError = await enqueuePlotDependentSyncForLinkedPlots({
-      farmerId: apiFarmerId,
-      farmer: syncFarmer,
-      plots: activePlots,
-      plotServerLinks,
-    }).catch((error: unknown) => {
-      // Surface enqueue failure — a silent swallow here leaves the queue empty
-      // and the farmer believes everything is backed up when it is not.
-      console.warn('[sync] enqueuePlotDependentSyncForLinkedPlots failed', error);
-      outcome.enqueueFailed = true;
-      return undefined;
+    await withSentrySpan({ name: 'sync.enqueue_plot_dependent', op: 'sync.enqueue' }, async () => {
+      const plotDependentError = await enqueuePlotDependentSyncForLinkedPlots({
+        farmerId: apiFarmerId,
+        farmer: syncFarmer,
+        plots: activePlots,
+        plotServerLinks,
+      }).catch((error: unknown) => {
+        // Surface enqueue failure — a silent swallow here leaves the queue empty
+        // and the farmer believes everything is backed up when it is not.
+        console.warn('[sync] enqueuePlotDependentSyncForLinkedPlots failed', error);
+        outcome.enqueueFailed = true;
+        return undefined;
+      });
+      void plotDependentError;
     });
-    void plotDependentError;
   }
 
-  await enqueueFarmerCloudSyncActions(syncFarmer).catch((error: unknown) => {
-    console.warn('[sync] enqueueFarmerCloudSyncActions failed', error);
-    outcome.enqueueFailed = true;
+  await withSentrySpan({ name: 'sync.enqueue_farmer_cloud', op: 'sync.enqueue' }, async () => {
+    await enqueueFarmerCloudSyncActions(syncFarmer).catch((error: unknown) => {
+      console.warn('[sync] enqueueFarmerCloudSyncActions failed', error);
+      outcome.enqueueFailed = true;
+    });
   });
 
   let queueFirstError: string | undefined;
@@ -362,7 +411,10 @@ export async function runFieldSyncPipeline(
   if (shouldProcessConsent) {
     setPhase('processing_consent');
     reportSyncStepStart('queue', { phase: 'consent' });
-    const consentRes = await processPendingConsentQueue();
+    const consentRes = await withSentrySpan(
+      { name: 'sync.queue_consent', op: 'sync.queue_drain', attributes: { phase: 'consent' } },
+      () => processPendingConsentQueue(),
+    );
     outcome.queueCompleted = (outcome.queueCompleted ?? 0) + consentRes.completed;
     outcome.queueFailed = (outcome.queueFailed ?? 0) + consentRes.failedActions;
   }
@@ -401,15 +453,26 @@ export async function runFieldSyncPipeline(
         if (firstAttemptPass.firstError) queueFirstError = firstAttemptPass.firstError;
       }
     } else {
-      const queueRes = await drainPendingSyncQueueForManualSync({
-        farmerId: apiFarmerId,
-        localPlots: activePlots,
-        farmerScopeIds,
-        actionTypes: queueDrainTypes,
-        attemptScope: 'all',
-        maxPasses: maxQueuePasses,
-        accessToken,
-      });
+      const queueRes = await withSentrySpan(
+        {
+          name: 'sync.queue_drain',
+          op: 'sync.queue_drain',
+          attributes: {
+            action_type_count: queueDrainTypes.length,
+            max_passes: maxQueuePasses,
+          },
+        },
+        () =>
+          drainPendingSyncQueueForManualSync({
+            farmerId: apiFarmerId,
+            localPlots: activePlots,
+            farmerScopeIds,
+            actionTypes: queueDrainTypes,
+            attemptScope: 'all',
+            maxPasses: maxQueuePasses,
+            accessToken,
+          }),
+      );
       mergeQueueResult(outcome, queueRes);
       if (queueRes.firstError) queueFirstError = queueRes.firstError;
     }
@@ -499,6 +562,15 @@ export async function runFieldSyncPipeline(
   }
 
   const syncResultMessage = formatSyncNowUserMessage(outcome, t);
+
+  annotateActiveSentrySpan({
+    sync_remaining_pending: outcome.remainingPending ?? 0,
+    sync_queue_failed: outcome.queueFailed ?? 0,
+    sync_queue_completed: outcome.queueCompleted ?? 0,
+    sync_plots_fetch_failed: outcome.plotsFetchFailed === true,
+    sync_enqueue_failed: outcome.enqueueFailed === true,
+    sync_skip_queue_drain: skipQueueDrain,
+  });
 
   // Refresh Harvests / My Plots after every completed sync, including restore-only runs.
   emitServerPlotSyncChanged();

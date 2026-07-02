@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "generatedAt": "2026-06-30T22:59:32.248Z",
-  "canonicalEventCount": 38,
+  "canonicalEventCount": 40,
   "canonicalEvents": [
     "account_switch_local_reset",
     "backup_confirmed",
@@ -13,6 +13,8 @@
     "delivery_receipt_removed_from_device",
     "email_confirm_signup_sent",
     "email_confirm_signup_session",
+    "field_problem_report_failed",
+    "field_problem_report_submitted",
     "geometry_confidence_assessed",
     "geometry_confidence_cta_clicked",
     "geometry_low_confidence_saved",
@@ -53,6 +55,8 @@
     "DELIVERY_RECEIPT_REMOVED_FROM_DEVICE",
     "EMAIL_CONFIRM_SIGNUP_SENT",
     "EMAIL_CONFIRM_SIGNUP_SESSION",
+    "FIELD_PROBLEM_REPORT_FAILED",
+    "FIELD_PROBLEM_REPORT_SUBMITTED",
     "GEOMETRY_CONFIDENCE_ASSESSED",
     "GEOMETRY_CONFIDENCE_CTA_CLICKED",
     "GEOMETRY_LOW_CONFIDENCE_SAVED",

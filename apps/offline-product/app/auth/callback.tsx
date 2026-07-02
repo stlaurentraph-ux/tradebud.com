@@ -15,6 +15,7 @@ import {
   hydrateSyncAuthFromSettings,
 } from '@/features/api/syncAuthSession';
 import { ANALYTICS_EVENTS, trackEvent } from '@/features/observability/analytics';
+import { withSentrySpan, markActiveSentrySpanError } from '@/features/observability/sentrySpans';
 import { useAppState } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 
@@ -42,86 +43,96 @@ export default function AuthCallbackScreen() {
   }, []);
 
   const runCallback = useCallback(async () => {
-    const runId = ++runIdRef.current;
-    setPhase('loading');
-    setErrorMessage(null);
-    trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_STARTED, { source: 'cold_start' });
+    await withSentrySpan(
+      { name: 'auth.oauth.callback', op: 'auth.oauth', attributes: { oauth_source: 'cold_start' } },
+      async () => {
+        const runId = ++runIdRef.current;
+        setPhase('loading');
+        setErrorMessage(null);
+        trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_STARTED, { source: 'cold_start' });
 
-    try {
-      const { getInitialURL } = await import('expo-linking');
-      const url = await getInitialURL();
-      if (runId !== runIdRef.current) return;
+        try {
+          const { getInitialURL } = await import('expo-linking');
+          const url = await getInitialURL();
+          if (runId !== runIdRef.current) return;
 
-      if (!url) {
-        const message = t('auth_callback_missing_url');
-        setErrorMessage(message);
-        setPhase('error');
-        trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
-          source: 'cold_start',
-          reason: 'missing_initial_url',
-        });
-        trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
-          method: 'oauth',
-          source: 'cold_start',
-          reason: 'missing_initial_url',
-        });
-        return;
-      }
+          if (!url) {
+            const message = t('auth_callback_missing_url');
+            setErrorMessage(message);
+            setPhase('error');
+            markActiveSentrySpanError('missing_initial_url', { oauth_source: 'cold_start' });
+            trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
+              source: 'cold_start',
+              reason: 'missing_initial_url',
+            });
+            trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+              method: 'oauth',
+              source: 'cold_start',
+              reason: 'missing_initial_url',
+            });
+            return;
+          }
 
-      if (deliverOAuthCallbackUrl(url)) {
-        router.replace('/(tabs)');
-        return;
-      }
+          if (deliverOAuthCallbackUrl(url)) {
+            router.replace('/(tabs)');
+            return;
+          }
 
-      await hydrateSyncAuthFromSettings();
-      if (hasSyncAuthSession()) {
-        finishSuccess();
-        return;
-      }
+          await hydrateSyncAuthFromSettings();
+          if (hasSyncAuthSession()) {
+            finishSuccess();
+            return;
+          }
 
-      const session = await sessionFromOAuthCallbackUrl(url);
-      if (runId !== runIdRef.current) return;
+          const session = await sessionFromOAuthCallbackUrl(url);
+          if (runId !== runIdRef.current) return;
 
-      const result = await completeOAuthFarmerSession({
-        session,
-        farmerId: farmer?.id,
-        localPlots: plots,
-      });
-      if (runId !== runIdRef.current) return;
+          const result = await completeOAuthFarmerSession({
+            session,
+            farmerId: farmer?.id,
+            localPlots: plots,
+          });
+          if (runId !== runIdRef.current) return;
 
-      if (!result.ok) {
-        const message = formatSignInErrorMessage(t, result.message);
-        setErrorMessage(message);
-        setPhase('error');
-        trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
-          source: 'cold_start',
-          reason: normalizeAuthAnalyticsReason(result.message),
-        });
-        trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
-          method: 'oauth',
-          source: 'cold_start',
-          reason: normalizeAuthAnalyticsReason(result.message),
-        });
-        return;
-      }
+          if (!result.ok) {
+            const message = formatSignInErrorMessage(t, result.message);
+            setErrorMessage(message);
+            setPhase('error');
+            markActiveSentrySpanError(normalizeAuthAnalyticsReason(result.message), {
+              oauth_source: 'cold_start',
+            });
+            trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
+              source: 'cold_start',
+              reason: normalizeAuthAnalyticsReason(result.message),
+            });
+            trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+              method: 'oauth',
+              source: 'cold_start',
+              reason: normalizeAuthAnalyticsReason(result.message),
+            });
+            return;
+          }
 
-      finishSuccess();
-    } catch (e) {
-      if (runId !== runIdRef.current) return;
-      const raw = e instanceof Error ? e.message : String(e);
-      const message = formatSignInErrorMessage(t, raw);
-      setErrorMessage(message);
-      setPhase('error');
-      trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
-        source: 'cold_start',
-        reason: 'exception',
-      });
-      trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
-        method: 'oauth',
-        source: 'cold_start',
-        reason: 'exception',
-      });
-    }
+          finishSuccess();
+        } catch (e) {
+          if (runId !== runIdRef.current) return;
+          const raw = e instanceof Error ? e.message : String(e);
+          const message = formatSignInErrorMessage(t, raw);
+          setErrorMessage(message);
+          setPhase('error');
+          markActiveSentrySpanError('exception', { oauth_source: 'cold_start' });
+          trackEvent(ANALYTICS_EVENTS.OAUTH_CALLBACK_FAILURE, {
+            source: 'cold_start',
+            reason: 'exception',
+          });
+          trackEvent(ANALYTICS_EVENTS.SIGN_IN_FAILURE, {
+            method: 'oauth',
+            source: 'cold_start',
+            reason: 'exception',
+          });
+        }
+      },
+    );
   }, [farmer?.id, finishSuccess, plots, t]);
 
   useEffect(() => {

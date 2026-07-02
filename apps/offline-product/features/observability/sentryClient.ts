@@ -103,4 +103,36 @@ export function captureAnalyticsSignal(
   }
 }
 
+/** Farmer-initiated problem report (Settings → Report a problem). */
+export function captureFieldProblemFeedback(params: {
+  message: string;
+  context?: Record<string, unknown>;
+}): string | undefined {
+  if (!initialized) return undefined;
+
+  return Sentry.withScope((scope) => {
+    const safeContext = sanitizeAnalyticsProperties(params.context);
+    if (safeContext) {
+      scope.setContext('field_problem_report', safeContext);
+      for (const [key, value] of Object.entries(safeContext)) {
+        scope.setTag(`report_${key}`, String(value));
+      }
+    }
+    scope.setTag('report_source', 'settings');
+
+    if (typeof Sentry.captureFeedback === 'function') {
+      return Sentry.captureFeedback({
+        message: params.message,
+        source: 'user_report',
+        tags: { report_source: 'settings' },
+      });
+    }
+
+    return scope.captureMessage(params.message, {
+      level: 'info',
+      tags: { report_source: 'settings', feedback_fallback: 'capture_message' },
+    });
+  });
+}
+
 export { Sentry };
