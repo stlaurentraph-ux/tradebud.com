@@ -8,7 +8,6 @@ import { useFocusEffect } from '@react-navigation/native';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedScrollView, ThemedView } from '@/components/themed-view';
 import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { useAppState, type Plot } from '@/features/state/AppStateContext';
 import { useLanguage } from '@/features/state/LanguageContext';
 import { useSignInSheet } from '@/features/auth/SignInSheetContext';
@@ -20,9 +19,13 @@ import {
   countDeliveryReceiptsForPlots,
   normalizeLocalDeliveryReceipts,
 } from '@/features/harvest/localDeliveryReceipts';
-import { loadAllLocalDeliveryReceipts, loadPendingSyncActions, loadPlotServerLinks } from '@/features/state/persistence';
+import { loadAllLocalDeliveryReceipts, loadPendingSyncActions, loadPlotServerLinks, getSetting } from '@/features/state/persistence';
 import { CompactTabHeader, TabHeaderSpacer } from '@/components/layout/CompactTabHeader';
 import { PlotListThumbnail } from '@/components/plot-map/PlotListThumbnail';
+import { PlotListStatusDot } from '@/components/plot-map/PlotListStatusDot';
+import { PlotListCloudIcon } from '@/components/plot-map/PlotListCloudIcon';
+import { PlotListThumbnailBackfillHost } from '@/components/plot-map/PlotListThumbnailBackfillHost';
+import { isFieldMapImageryOnline } from '@/features/mapping/plotListThumbnailBackfill';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useThemedStyles } from '@/features/theme/useThemedStyles';
@@ -65,7 +68,7 @@ export default function PlotsScreen() {
   const colors = Colors[colorScheme ?? 'light'];
   const styles = useThemedStyles(createExploreScreenStyles);
   const params = useLocalSearchParams<{ plotId?: string; focus?: string }>();
-  const { plots, farmer, reloadFromDisk } = useAppState();
+  const { plots, farmer, reloadFromDisk, updatePlot } = useAppState();
   const { t, languageCode, openLanguagePicker } = useLanguage();
   const { isSignedIn } = useSignInSheet();
 
@@ -76,6 +79,9 @@ export default function PlotsScreen() {
   const [plotChecklistDoneByPlotId, setPlotChecklistDoneByPlotId] = useState<Record<string, boolean>>({});
   const [plotServerLinks, setPlotServerLinks] = useState<Record<string, string>>({});
   const [pendingSyncPlotIds, setPendingSyncPlotIds] = useState<Set<string>>(new Set());
+  const [offlineTilesEnabled, setOfflineTilesEnabled] = useState(false);
+  const [offlineTilesPackId, setOfflineTilesPackId] = useState<string | null>(null);
+  const [mapImageryOnline, setMapImageryOnline] = useState(false);
   const [selectedPlotId, setSelectedPlotId] = useState<string | undefined>(plots[0]?.id);
   /** One-shot section from Home (vouchers/documents); cleared after first plot open. */
   const [pickerIntent, setPickerIntent] = useState<PlotPickerIntent | null>(null);
@@ -220,6 +226,16 @@ export default function PlotsScreen() {
       if (farmer?.id) {
         void refreshPlotDeliveryData(false);
       }
+      void (async () => {
+        const [enabled, packId, imageryOnline] = await Promise.all([
+          getSetting('offlineTilesEnabled').catch(() => null),
+          getSetting('offlineTilesActivePackId').catch(() => null),
+          isFieldMapImageryOnline().catch(() => false),
+        ]);
+        setOfflineTilesEnabled(enabled === '1');
+        setOfflineTilesPackId(packId?.trim() || null);
+        setMapImageryOnline(imageryOnline);
+      })();
     }, [farmer?.id, refreshPlotDeliveryData]),
   );
 
@@ -253,8 +269,6 @@ export default function PlotsScreen() {
     }, [refreshPlotChecklists]),
   );
 
-  const statusForPlot = (plot: Plot): 'Compliant' | 'Action Needed' =>
-    plotChecklistDoneByPlotId[plot.id] === true ? 'Compliant' : 'Action Needed';
 
   return (
     <ThemedView style={styles.screen}>
@@ -303,19 +317,13 @@ export default function PlotsScreen() {
         ) : null}
 
         {plots.map((plot) => {
-          const status = statusForPlot(plot);
-          const isComplete = status === 'Compliant';
           const uploadBlock = getPlotUploadGeometryBlock(plot, plots, t);
           const needsBoundaryFix = uploadBlock != null;
+          const isReady =
+            plotChecklistDoneByPlotId[plot.id] === true && !needsBoundaryFix;
           const hasServerLink = Boolean(plotServerLinks[plot.id]?.trim());
           const hasPendingQueueRows = pendingSyncPlotIds.has(plot.id);
           const isUnsynced = !hasServerLink || hasPendingQueueRows;
-          const statusLabel = needsBoundaryFix
-            ? t('plot_needs_boundary_fix')
-            : isComplete
-              ? t('status_compliant')
-              : t('finish_setup_chip');
-          const badgeVariant = needsBoundaryFix ? 'error' : isComplete ? 'success' : 'warning';
           const photosCount = photoCountByPlotId[plot.id] ?? 0;
           const harvestCount = deliveryCountForPlot(plot);
           return (
@@ -332,39 +340,61 @@ export default function PlotsScreen() {
                   selectedPlotId === plot.id && styles.plotProtoCardSelected,
                 ]}
               >
-                <View style={styles.plotCardRow}>
-                  <PlotListThumbnail plot={plot} />
-                  <View style={styles.plotCardBody}>
-                    <View style={styles.rowHeader}>
-                      <ThemedText type="subtitle" numberOfLines={2} style={styles.plotName}>
-                        {plot.name}
-                      </ThemedText>
-                      <Badge variant={badgeVariant} size="sm">
-                        {statusLabel}
-                      </Badge>
-                      {isUnsynced ? (
-                        <Badge variant="default" size="sm">
-                          {t('plot_unsynced_badge')}
-                        </Badge>
-                      ) : null}
-                    </View>
+                <View style={styles.plotCardShell}>
+                  <View style={styles.plotCardStatusCorner}>
+                    {!isReady ? (
+                      <PlotListStatusDot accessibilityLabel={t('plot_list_to_finish')} />
+                    ) : null}
+                    <PlotListCloudIcon
+                      synced={!isUnsynced}
+                      accessibilityLabel={
+                        isUnsynced ? t('plot_unsynced_badge') : t('plot_list_synced_cloud')
+                      }
+                    />
+                  </View>
+                  <View style={styles.plotCardRow}>
+                    <PlotListThumbnail
+                      plot={plot}
+                      mapImageryOnline={mapImageryOnline}
+                      offlineTilesEnabled={offlineTilesEnabled}
+                      offlineTilesPackId={offlineTilesPackId}
+                    />
+                  <View
+                    style={[
+                      styles.plotCardBody,
+                      styles.plotCardBodyWithCloudIcon,
+                      !isReady && styles.plotCardBodyWithStatusDot,
+                    ]}
+                  >
+                    <ThemedText type="subtitle" numberOfLines={2} style={styles.plotName}>
+                      {plot.name}
+                    </ThemedText>
                     <PlotListAreaCaption plot={plot} tr={t} />
                     <View style={styles.plotMetaRow}>
-                      <View style={styles.plotMetaItem}>
+                      <View
+                        style={styles.plotMetaItem}
+                        accessibilityLabel={t('photos_meta', { n: photosCount })}
+                      >
                         <Ionicons name="camera-outline" size={15} color="#8A8A8A" />
-                        <ThemedText type="caption" numberOfLines={1} style={styles.plotMetaText}>
-                          {t('photos_meta_short', { n: photosCount })}
+                        <ThemedText type="caption" style={styles.plotMetaCount}>
+                          {photosCount}
                         </ThemedText>
                       </View>
-                      <View style={styles.plotMetaItem}>
-                        <Ionicons name="scale-outline" size={15} color="#8A8A8A" />
-                        <ThemedText type="caption" numberOfLines={1} style={styles.plotMetaText}>
-                          {harvestCount === 1
+                      <View
+                        style={styles.plotMetaItem}
+                        accessibilityLabel={
+                          harvestCount === 1
                             ? t('harvests_meta_short_one', { n: harvestCount })
-                            : t('harvests_meta_short', { n: harvestCount })}
+                            : t('harvests_meta', { n: harvestCount })
+                        }
+                      >
+                        <Ionicons name="scale-outline" size={15} color="#8A8A8A" />
+                        <ThemedText type="caption" style={styles.plotMetaCount}>
+                          {harvestCount}
                         </ThemedText>
                       </View>
                     </View>
+                  </View>
                   </View>
                 </View>
               </Card>
@@ -379,6 +409,14 @@ export default function PlotsScreen() {
           </ThemedText>
         </Pressable>
       </ThemedScrollView>
+      <PlotListThumbnailBackfillHost
+        plots={plots}
+        offlineTilesEnabled={offlineTilesEnabled}
+        offlineTilesPackId={offlineTilesPackId}
+        mapImageryOnline={mapImageryOnline}
+        onMapImageryOnlineChange={setMapImageryOnline}
+        updatePlot={updatePlot}
+      />
     </ThemedView>
   );
 }
